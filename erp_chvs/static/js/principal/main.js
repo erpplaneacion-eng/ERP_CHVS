@@ -292,127 +292,43 @@ function setupAlertMessages() {
 }
 
 /**
+ * Función helper para cargar estadísticas de una API específica
+ * @param {string} url - URL de la API
+ * @param {string} elementId - ID del elemento HTML donde mostrar el resultado
+ * @param {string} dataKey - Clave del objeto JSON que contiene el array de datos
+ */
+async function loadStatFromAPI(url, elementId, dataKey) {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = data[dataKey]?.length || 0;
+        }
+    } catch (error) {
+        console.error(`Error loading ${dataKey}:`, error);
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = '0';
+        }
+    }
+}
+
+/**
  * Carga las estadísticas para la página principal del módulo
  */
 function loadPrincipalStats() {
-    // Cargar total de departamentos
-    fetch('/principal/api/departamentos/')
-        .then(response => response.json())
-        .then(data => {
-            const element = document.getElementById('total-departamentos');
-            if (element) {
-                element.textContent = data.departamentos.length;
-            }
-        })
-        .catch(error => {
-            console.error('Error loading departamentos:', error);
-            const element = document.getElementById('total-departamentos');
-            if (element) {
-                element.textContent = '0';
-            }
-        });
-
-    // Cargar total de municipios
-    fetch('/principal/api/municipios/')
-        .then(response => response.json())
-        .then(data => {
-            const element = document.getElementById('total-municipios');
-            if (element) {
-                element.textContent = data.municipios.length;
-            }
-        })
-        .catch(error => {
-            console.error('Error loading municipios:', error);
-            const element = document.getElementById('total-municipios');
-            if (element) {
-                element.textContent = '0';
-            }
-        });
-
-    // Cargar total de tipos de documento
-    fetch('/principal/api/tipos-documento/')
-        .then(response => response.json())
-        .then(data => {
-            const element = document.getElementById('total-tipos-documento');
-            if (element) {
-                element.textContent = data.tipos_documento.length;
-            }
-        })
-        .catch(error => {
-            console.error('Error loading tipos documento:', error);
-            const element = document.getElementById('total-tipos-documento');
-            if (element) {
-                element.textContent = '0';
-            }
-        });
-
-    // Cargar total de tipos de género
-    fetch('/principal/api/tipos-genero/')
-        .then(response => response.json())
-        .then(data => {
-            const element = document.getElementById('total-tipos-genero');
-            if (element) {
-                element.textContent = data.tipos_genero.length;
-            }
-        })
-        .catch(error => {
-            console.error('Error loading tipos genero:', error);
-            const element = document.getElementById('total-tipos-genero');
-            if (element) {
-                element.textContent = '0';
-            }
-        });
-
-    // Cargar total de modalidades de consumo
-    fetch('/principal/api/modalidades-consumo/')
-        .then(response => response.json())
-        .then(data => {
-            const element = document.getElementById('total-modalidades');
-            if (element) {
-                element.textContent = data.modalidades.length;
-            }
-        })
-        .catch(error => {
-            console.error('Error loading modalidades:', error);
-            const element = document.getElementById('total-modalidades');
-            if (element) {
-                element.textContent = '0';
-            }
-        });
-
-    // Cargar total de instituciones educativas
-    fetch('/principal/api/instituciones/')
-        .then(response => response.json())
-        .then(data => {
-            const element = document.getElementById('total-instituciones');
-            if (element) {
-                element.textContent = data.instituciones.length;
-            }
-        })
-        .catch(error => {
-            console.error('Error loading instituciones:', error);
-            const element = document.getElementById('total-instituciones');
-            if (element) {
-                element.textContent = '0';
-            }
-        });
-
-    // Cargar total de sedes educativas
-    fetch('/principal/api/sedes/')
-        .then(response => response.json())
-        .then(data => {
-            const element = document.getElementById('total-sedes');
-            if (element) {
-                element.textContent = data.sedes.length;
-            }
-        })
-        .catch(error => {
-            console.error('Error loading sedes:', error);
-            const element = document.getElementById('total-sedes');
-            if (element) {
-                element.textContent = '0';
-            }
-        });
+    // Cargar estadísticas de todas las APIs
+    loadStatFromAPI('/principal/api/departamentos/', 'total-departamentos', 'departamentos');
+    loadStatFromAPI('/principal/api/municipios/', 'total-municipios', 'municipios');
+    loadStatFromAPI('/principal/api/tipos-documento/', 'total-tipos-documento', 'tipos_documento');
+    loadStatFromAPI('/principal/api/tipos-genero/', 'total-tipos-genero', 'tipos_genero');
+    loadStatFromAPI('/principal/api/modalidades-consumo/', 'total-modalidades', 'modalidades');
+    loadStatFromAPI('/principal/api/instituciones/', 'total-instituciones', 'instituciones');
+    loadStatFromAPI('/principal/api/sedes/', 'total-sedes', 'sedes');
 }
 
 /**
@@ -428,11 +344,39 @@ function loadPrincipalStats() {
 function showNotification(message, type = 'info') {
     // Crear elemento de notificación
     const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
+    notification.className = `alert alert-${type}`;
     notification.innerHTML = `
+        <i class="fas fa-${getAlertIcon(type)}"></i>
         <span>${message}</span>
-        <button onclick="this.parentElement.remove()">&times;</button>
+        <button class="alert-close" onclick="this.parentElement.remove()">×</button>
     `;
+
+    // Estilos para la alerta
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 10000;
+        padding: 15px 20px;
+        border-radius: 5px;
+        color: white;
+        font-weight: 500;
+        min-width: 300px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        animation: slideIn 0.3s ease;
+    `;
+
+    // Color según el tipo
+    const colors = {
+        success: '#27ae60',
+        error: '#e74c3c',
+        warning: '#f39c12',
+        info: '#3498db'
+    };
+    notification.style.backgroundColor = colors[type] || colors.info;
 
     // Agregar al DOM
     document.body.appendChild(notification);
@@ -443,6 +387,57 @@ function showNotification(message, type = 'info') {
             notification.remove();
         }
     }, 5000);
+}
+
+/**
+ * Función auxiliar para obtener el icono de la notificación
+ * @param {string} type - Tipo de notificación
+ * @returns {string} - Nombre del icono
+ */
+function getAlertIcon(type) {
+    const icons = {
+        success: 'check-circle',
+        error: 'exclamation-circle',
+        warning: 'exclamation-triangle',
+        info: 'info-circle'
+    };
+    return icons[type] || icons.info;
+}
+
+// Exponer función globalmente para asegurar disponibilidad inmediata
+window.showNotification = showNotification;
+
+
+// Agregar estilos CSS para las animaciones si no existen
+if (!document.querySelector('#main-notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'main-notification-styles';
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .alert-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            margin-left: auto;
+        }
+
+        .alert-close:hover {
+            opacity: 0.7;
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 /**
@@ -473,3 +468,11 @@ function setupModalEventListeners() {
         document.body.setAttribute('data-modal-listeners-setup', 'true');
     }
 }
+
+// Exponer función globalmente para asegurar disponibilidad
+window.setupModalEventListeners = setupModalEventListeners;
+
+// Configurar automáticamente los event listeners de modales cuando se carga el DOM
+document.addEventListener('DOMContentLoaded', function() {
+    setupModalEventListeners();
+});

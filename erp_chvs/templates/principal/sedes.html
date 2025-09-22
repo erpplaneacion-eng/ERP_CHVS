@@ -19,6 +19,20 @@
         </div>
     </div>
 
+    <!-- Barra de búsqueda -->
+    <div class="search-container">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Buscar sedes por nombre, código, institución o zona..." autocomplete="off">
+            <button id="clearSearch" class="btn-clear-search" title="Limpiar búsqueda">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="search-results-info">
+            <span id="searchResultsCount">Mostrando todas las sedes</span>
+        </div>
+    </div>
+
     <div class="table-container">
         <table class="data-table" id="sedesTable">
             <thead>
@@ -45,8 +59,16 @@
                             {{ sede.zona }}
                         </span>
                     </td>
-                    <td>{{ sede.preparado }}</td>
-                    <td>{{ sede.industrializado }}</td>
+                    <td>
+                        <span class="badge badge-{{ sede.preparado|lower }}">
+                            {{ sede.preparado }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ sede.industrializado|lower }}">
+                            {{ sede.industrializado }}
+                        </span>
+                    </td>
                     <td>
                         <button class="btn btn-sm btn-info" onclick="viewSede('{{ sede.cod_interprise }}')" title="Ver detalles">
                             <i class="fas fa-eye"></i>
@@ -139,8 +161,8 @@
                             <label for="zona">Zona *</label>
                             <select id="zona" name="zona" required>
                                 <option value="">Seleccione una zona</option>
-                                <option value="U">Urbana</option>
-                                <option value="R">Rural</option>
+                                <option value="URBANO">URBANO</option>
+                                <option value="RURAL">RURAL</option>
                             </select>
                         </div>
                     </div>
@@ -153,11 +175,19 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="preparado">Preparado *</label>
-                            <input type="text" id="preparado" name="preparado" required maxlength="50">
+                            <select id="preparado" name="preparado" required>
+                                <option value="">Seleccione una opción</option>
+                                <option value="VERDADERO">VERDADERO</option>
+                                <option value="FALSO">FALSO</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="industrializado">Industrializado *</label>
-                            <input type="text" id="industrializado" name="industrializado" required maxlength="50">
+                            <select id="industrializado" name="industrializado" required>
+                                <option value="">Seleccione una opción</option>
+                                <option value="VERDADERO">VERDADERO</option>
+                                <option value="FALSO">FALSO</option>
+                            </select>
                         </div>
                     </div>
                 </form>

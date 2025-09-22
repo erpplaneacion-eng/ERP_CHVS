@@ -13,7 +13,8 @@ class InstitucionesEducativas(models.Model):
     id_municipios = models.ForeignKey(
         PrincipalMunicipio,
         on_delete=models.PROTECT,
-        verbose_name="Municipio"
+        verbose_name="Municipio",
+        db_column="id_municipios"
     )
 
     class Meta:
@@ -52,7 +53,8 @@ class SedesEducativas(models.Model):
     codigo_ie = models.ForeignKey(
         InstitucionesEducativas,
         on_delete=models.PROTECT,
-        verbose_name="Institución Educativa"
+        verbose_name="Institución Educativa",
+        db_column="codigo_ie"
     )
 
     class Meta:
