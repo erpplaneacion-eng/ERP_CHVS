@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Generar Listados - Facturación{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Generar Listados a partir de Excel</h2>
+    <p>
+        Sube un archivo de Excel para procesarlo. El sistema aplicará las reglas de limpieza y transformación definidas.
+    </p>
+
+    <div class="card">
+        <div class="card-header">
+            <h4>Cargar Archivo</h4>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group mb-3">
+                    <label for="archivo_excel" class="form-label">Selecciona el archivo Excel:</label>
+                    <input type="file" class="form-control" name="archivo_excel" id="archivo_excel" required accept=".xls,.xlsx">
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="focalizacion" class="form-label">Focalización:</label>
+                    <input list="focalizaciones" name="focalizacion" id="focalizacion" class="form-control" placeholder="Escribe o selecciona una focalización">
+                    <datalist id="focalizaciones">
+                        <option value="Programa de Alimentación Escolar">
+                        <option value="Transporte Escolar">
+                        <option value="Jornada Extendida">
+                    </datalist>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Procesar Archivo</button>
+            </form>
+        </div>
+    </div>
+
+    {% if dataframe_html %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4>Resultado del Procesamiento (Primeras 5 Filas)</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                {{ dataframe_html|safe }}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

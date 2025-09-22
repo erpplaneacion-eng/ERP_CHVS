@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard de Nutrición{% endblock %}
+
+{% block content %}
+<div id="nutricion-dashboard-background">
+    
+
+    <div class="module-dashboard">
+        <!-- Tarjeta para ver y editar la tabla de alimentos -->
+        <a href="{% url 'nutricion:lista_alimentos' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-carrot"></i>
+            </div>
+            <div class="card-content">
+                <h3>Gestionar Alimentos</h3>
+                <p>Visualiza, busca y edita los alimentos de la tabla ICBF.</p>
+            </div>
+        </a>
+
+        <!-- Tarjeta para crear dietas (a futuro) -->
+        <a href="#" class="card">
+            <div class="card-icon">
+                <i class="fas fa-file-alt"></i>
+            </div>
+            <div class="card-content">
+                <h3>Crear Plan Nutricional</h3>
+                <p>Diseña nuevos planes nutricionales para pacientes.</p>
+            </div>
+        </a>
+
+        <!-- Puedes añadir más tarjetas aquí -->
+        <a href="#" class="card">
+            <div class="card-icon">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <div class="card-content">
+                <h3>Reportes</h3>
+                <p>Genera reportes y estadísticas del módulo.</p>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

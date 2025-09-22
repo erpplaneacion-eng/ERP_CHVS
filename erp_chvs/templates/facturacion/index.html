@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard de Facturación{% endblock %}
+
+{% block content %}
+<div id="facturacion-dashboard-background"> 
+
+    <div class="module-dashboard">
+        <!-- Tarjeta para crear listados, focalizaciones, matriz  -->
+        <a href="{% url 'facturacion:generar_listados' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-file-invoice"></i>
+            </div>
+            <div class="card-content">
+                <h3>Generar Listados</h3>
+                <p>Crea y emite listados de las entidades.</p>
+            </div>
+        </a>
+
+        <!-- Tarjeta para gestión de clientes -->
+        <a href="#" class="card">
+            <div class="card-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="card-content">
+                <h3>Gestionar Clientes</h3>
+                <p>Administra la información de clientes y contactos.</p>
+            </div>
+        </a>
+
+        <!-- Tarjeta para reportes de facturación -->
+        <a href="#" class="card">
+            <div class="card-icon">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <div class="card-content">
+                <h3>Reportes de Facturación</h3>
+                <p>Genera reportes de ventas, ingresos y estadísticas.</p>
+            </div>
+        </a>
+
+        <!-- Tarjeta para pagos y cobranza -->
+        <a href="#" class="card">
+            <div class="card-icon">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <div class="card-content">
+                <h3>Pagos y Cobranza</h3>
+                <p>Gestiona los pagos recibidos y cuentas por cobrar.</p>
+            </div>
+        </a>
+
+        <!-- Tarjeta para productos y servicios -->
+        <a href="#" class="card">
+            <div class="card-icon">
+                <i class="fas fa-box"></i>
+            </div>
+            <div class="card-content">
+                <h3>Productos y Servicios</h3>
+                <p>Administra el catálogo de productos y servicios.</p>
+            </div>
+        </a>
+
+        <!-- Tarjeta para configuración fiscal -->
+        <a href="#" class="card">
+            <div class="card-icon">
+                <i class="fas fa-calculator"></i>
+            </div>
+            <div class="card-content">
+                <h3>Configuración Fiscal</h3>
+                <p>Gestiona impuestos, tarifas y parámetros fiscales.</p>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

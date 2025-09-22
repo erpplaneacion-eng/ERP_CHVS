@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block title %}Departamentos - ERP CHVS{% endblock %}
+
+{% block content %}
+<div class="departamentos-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-map"></i> Gestión de Departamentos</h2>
+            <p>Total de departamentos: <strong>{{ total_departamentos }}</strong></p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="showCreateModal()">
+                <i class="fas fa-plus"></i> Nuevo Departamento
+            </button>
+            <a href="{% url 'principal:principal_index' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table" id="departamentosTable">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Nombre del Departamento</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for departamento in departamentos %}
+                <tr data-codigo="{{ departamento.codigo_departamento }}">
+                    <td>{{ departamento.codigo_departamento }}</td>
+                    <td>{{ departamento.nombre_departamento }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="editDepartamento('{{ departamento.codigo_departamento }}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteDepartamento('{{ departamento.codigo_departamento }}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-center">No hay departamentos registrados</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación -->
+    {% if departamentos.has_other_pages %}
+    <div class="pagination-container">
+        <div class="pagination">
+            {% if departamentos.has_previous %}
+                <a href="?page=1" class="page-link">&laquo; Primera</a>
+                <a href="?page={{ departamentos.previous_page_number }}" class="page-link">Anterior</a>
+            {% endif %}
+
+            <span class="page-info">
+                Página {{ departamentos.number }} de {{ departamentos.paginator.num_pages }}
+            </span>
+
+            {% if departamentos.has_next %}
+                <a href="?page={{ departamentos.next_page_number }}" class="page-link">Siguiente</a>
+                <a href="?page={{ departamentos.paginator.num_pages }}" class="page-link">Última &raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal para Crear/Editar Departamento -->
+<div id="departamentoModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Nuevo Departamento</h3>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="departamentoForm">
+                <div class="form-group">
+                    <label for="codigo_departamento">Código del Departamento:</label>
+                    <input type="text" id="codigo_departamento" name="codigo_departamento" required maxlength="20">
+                </div>
+                <div class="form-group">
+                    <label for="nombre_departamento">Nombre del Departamento:</label>
+                    <input type="text" id="nombre_departamento" name="nombre_departamento" required maxlength="100">
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="saveDepartamento()">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación -->
+<div id="confirmModal" class="modal">
+    <div class="modal-content small">
+        <div class="modal-header">
+            <h3>Confirmar Eliminación</h3>
+            <span class="close" onclick="closeConfirmModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>¿Está seguro que desea eliminar este departamento?</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Cancelar</button>
+            <button type="button" class="btn btn-danger" onclick="confirmDelete()">Eliminar</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+

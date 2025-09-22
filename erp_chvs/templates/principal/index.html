@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}Configuración - ERP CHVS{% endblock %}
+
+{% block content %}
+<div class="configuration-container">
+    <div class="configuration-header">
+        <h2><i class="fas fa-cogs"></i> Configuración del Sistema</h2>
+        <p>Administra los datos base del sistema: departamentos, municipios, tipos de documento, géneros y modalidades de consumo</p>
+    </div>
+
+    <div class="configuration-grid">
+        <!-- Card Departamentos -->
+        <div class="config-card">
+            <div class="card-header">
+                <i class="fas fa-map"></i>
+                <h3>Departamentos</h3>
+            </div>
+            <div class="card-body">
+                <p>Gestiona los departamentos del país</p>
+                <div class="card-stats">
+                    <span class="stat-number" id="total-departamentos">--</span>
+                    <span class="stat-label">Departamentos registrados</span>
+                </div>
+            </div>
+            <div class="card-actions">
+                <a href="{% url 'principal:lista_departamentos' %}" class="btn btn-primary">
+                    <i class="fas fa-list"></i> Administrar
+                </a>
+            </div>
+        </div>
+
+        <!-- Card Municipios -->
+        <div class="config-card">
+            <div class="card-header">
+                <i class="fas fa-city"></i>
+                <h3>Municipios</h3>
+            </div>
+            <div class="card-body">
+                <p>Gestiona los municipios por departamento</p>
+                <div class="card-stats">
+                    <span class="stat-number" id="total-municipios">--</span>
+                    <span class="stat-label">Municipios registrados</span>
+                </div>
+            </div>
+            <div class="card-actions">
+                <a href="{% url 'principal:lista_municipios' %}" class="btn btn-primary">
+                    <i class="fas fa-list"></i> Administrar
+                </a>
+            </div>
+        </div>
+
+        <!-- Card Tipos de Documento -->
+        <div class="config-card">
+            <div class="card-header">
+                <i class="fas fa-id-card"></i>
+                <h3>Tipos de Documento</h3>
+            </div>
+            <div class="card-body">
+                <p>Gestiona los tipos de documento de identidad</p>
+                <div class="card-stats">
+                    <span class="stat-number" id="total-tipos-documento">--</span>
+                    <span class="stat-label">Tipos registrados</span>
+                </div>
+            </div>
+            <div class="card-actions">
+                <a href="{% url 'principal:lista_tipos_documento' %}" class="btn btn-primary">
+                    <i class="fas fa-list"></i> Administrar
+                </a>
+            </div>
+        </div>
+
+        <!-- Card Tipos de Género -->
+        <div class="config-card">
+            <div class="card-header">
+                <i class="fas fa-venus-mars"></i>
+                <h3>Tipos de Género</h3>
+            </div>
+            <div class="card-body">
+                <p>Gestiona los tipos de género</p>
+                <div class="card-stats">
+                    <span class="stat-number" id="total-tipos-genero">--</span>
+                    <span class="stat-label">Tipos registrados</span>
+                </div>
+            </div>
+            <div class="card-actions">
+                <a href="{% url 'principal:lista_tipos_genero' %}" class="btn btn-primary">
+                    <i class="fas fa-list"></i> Administrar
+                </a>
+            </div>
+        </div>
+
+        <!-- Card Modalidades de Consumo -->
+        <div class="config-card">
+            <div class="card-header">
+                <i class="fas fa-utensils"></i>
+                <h3>Modalidades de Consumo</h3>
+            </div>
+            <div class="card-body">
+                <p>Gestiona las modalidades de consumo</p>
+                <div class="card-stats">
+                    <span class="stat-number" id="total-modalidades">--</span>
+                    <span class="stat-label">Modalidades registradas</span>
+                </div>
+            </div>
+            <div class="card-actions">
+                <a href="{% url 'principal:lista_modalidades_consumo' %}" class="btn btn-primary">
+                    <i class="fas fa-list"></i> Administrar
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

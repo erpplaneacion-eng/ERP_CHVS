@@ -1,0 +1,811 @@
+/* ==========================================================================
+Base Styles and Reset
+========================================================================== */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f4f7f6;
+    height: 100%;
+    color: #333;
+}
+
+/* ==========================================================================
+Main Layout
+========================================================================== */
+.main-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* ==========================================================================
+Header
+========================================================================== */
+.header {
+    background: linear-gradient(90deg, #212529, #343a40);
+    color: white;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.header-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.header-user {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+}
+
+/* ==========================================================================
+Sidebar
+========================================================================== */
+.sidebar {
+    width: 250px;
+    background-color: #212529;
+    color: white;
+    padding: 1.25rem;
+    flex-shrink: 0;
+    box-shadow: 2px 0 15px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar h3 {
+    margin: 0 0 1.25rem;
+    border-bottom: 1px solid #495057;
+    padding-bottom: 0.625rem;
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+.sidebar-nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-nav a {
+    color: #adb5bd;
+    text-decoration: none;
+    display: block;
+    padding: 0.75rem 1rem;
+    border-radius: 5px;
+    margin-bottom: 0.3125rem;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.sidebar-nav a:hover,
+.sidebar-nav a.active {
+    background-color: #0a8f17;
+    color: white;
+}
+
+/* ==========================================================================
+Content Area
+========================================================================== */
+.content-area {
+    flex-grow: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    background-color: #f4f7f6;
+}
+
+/* ==========================================================================
+Logout Button
+========================================================================== */
+.logout-form {
+    margin: 0;
+    padding: 0;
+    display: inline;
+}
+
+.logout-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #ff6f00, #ff9500);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    padding: 0.6rem 1.2rem;
+    font: inherit;
+    font-weight: 600;
+    color: #ffffff;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+}
+
+.logout-link:hover {
+    background: linear-gradient(135deg, #ff9500, #ff6f00);
+    border-color: #ffca28;
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+}
+
+.logout-link:active {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.logout-link i {
+    font-size: 1rem;
+}
+
+.user-info {
+    margin-top: auto; /* Empuja esta sección hacia el final */
+    padding-top: 20px;
+    border-top: 1px solid #495057;
+    font-size: 0.9em;
+}
+
+/* ==========================================================================
+Responsive Design
+========================================================================== */
+@media (max-width: 768px) {
+    .main-container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        box-shadow: none;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.625rem;
+    }
+
+    .header-user {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
+/* ==========================================================================
+HOME.HTML STYLES (Login Page)
+========================================================================== */
+body, html { 
+    height: 100%;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #333;
+}
+
+.bg-image {
+    background-image: url("/static/images/CHVS.jpeg");
+    height: 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 4vw;
+    box-sizing: border-box;
+}
+
+.login-card {
+    background-color: rgba(255, 255, 255, 0.70);
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    width: 100%;
+    max-width: 300px;
+    text-align: center;
+}
+
+.logo-container img {
+    max-width: 150px;
+    margin-bottom: 20px;
+}
+
+.login-card h2 {
+    margin-top: 0;
+    margin-bottom: 25px;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.login-card form p {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.login-card form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.login-card form input[type="text"],
+.login-card form input[type="password"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-sizing: border-box;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.login-card form input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+}
+
+.login-card button {
+    width: 100%;
+    padding: 12px;
+    background-color: #0a8f17fc;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.3s ease;
+}
+
+.login-card button:hover {
+    background-color: #0056b3;
+}
+
+/* ==========================================================================
+NUTRICION INDEX BACKGROUND (nutricion/index.html)
+========================================================================== */
+#nutricion-dashboard-background {
+    background-image: url('/static/nutricion/images/fondo.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    min-height: calc(100vh - 80px - 30px);
+    padding: 20px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+
+#nutricion-dashboard-background h1,
+#nutricion-dashboard-background p {
+    background-color: rgba(255, 255, 255, 0.7);
+    padding: 10px;
+    border-radius: 5px;
+    display: inline-block;
+    margin-bottom: 15px;
+}
+
+/* ==========================================================================
+DASHBOARD NUTRICIÓN STYLES (nutricion/index.html)
+========================================================================== */
+.module-dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 25px;
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+    width: 100%;
+}
+
+.card {
+    background-color: rgba(255, 255, 255, 0.55);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease, border 0.3s ease;
+    position: relative;
+    z-index: 2; 
+}
+
+.card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    background-color: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.card-icon {
+    font-size: 48px;
+    padding: 2px;
+    text-align: center;
+    background-color: rgba(10, 143, 23, 0.5);
+    color: white;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+}
+
+.card:hover .card-icon {
+    background-color: rgba(10, 143, 23, 1);
+}
+
+.card-content {
+    padding: 20px;
+    flex-grow: 1;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-bottom-left-radius: 15px;
+    border-bottom-right-radius: 15px;
+}
+
+.card-content h3 {
+    margin-top: 0;
+    font-size: 1.25rem;
+    color: #333;
+}
+
+.card-content p {
+    color: #555;
+    font-size: 0.9rem;
+}
+
+/* ==========================================================================
+LISTA ALIMENTOS STYLES (nutricion/lista_alimentos.html)
+========================================================================== */
+.table-container {
+    overflow-x: auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+.alimentos-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.alimentos-table th, .alimentos-table td {
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+.alimentos-table th {
+    background-color: #f4f4f4;
+    font-weight: bold;
+}
+.alimentos-table tbody tr:nth-of-type(even) {
+    background-color: #f9f9f9;
+}
+.alimentos-table tbody tr:hover {
+    background-color: #f1f1f1;
+}
+.btn-edit {
+    padding: 5px 10px;
+    background-color: #0a8f17fc;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 0.9em;
+}
+.btn-edit:hover {
+    background-color: #0056b3;
+}
+
+/* ==========================================================================
+LISTA COMEDORES – ACCIONES Y BUSCADOR
+========================================================================== */
+.actions-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.search-form {
+    display: flex;
+    gap: 10px;
+    flex-grow: 1;
+    max-width: 600px;
+}
+
+.search-form input[type="text"] {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    min-width: 250px;
+}
+
+.search-form button {
+    padding: 10px 15px;
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.search-form button:hover {
+    background-color: #0b5ed7;
+}
+
+/* static/css/erp_style.css */
+
+/* ==========================================================================
+ESTILOS PARA RESUMEN ANIDADO
+========================================================================== */
+.summary-container {
+    margin-top: 30px;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    border: 1px solid #e0e0e0;
+}
+
+.summary-container h3 {
+    margin-top: 0;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.summary-columns {
+    /* Usamos CSS Grid para un diseño de columnas robusto */
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.summary-department h4 {
+    margin: 10px 0 5px;
+    font-size: 1.1em;
+    color: #333;
+}
+
+.summary-department ul {
+    list-style: none;
+    padding-left: 15px;
+    margin: 0;
+}
+
+.summary-department li {
+    padding: 4px 0;
+    font-size: 0.9em;
+    color: #555;
+    display: flex;
+    justify-content: space-between;
+}
+
+.summary-department li span {
+    font-weight: bold;
+    color: #0a8f17; /* Color verde para el conteo */
+}
+
+/* ==========================================================================
+BOTONES GENERALES
+========================================================================== */
+.btn {
+    padding: 10px 15px;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background-color: #0d6efd;
+}
+.btn-primary:hover {
+    background-color: #0b5ed7;
+}
+
+.btn-success {
+    background-color: #0a8f17fc;
+}
+.btn-success:hover {
+    background-color: #087013;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+}
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+/* ==========================================================================
+PAGINACIÓN LISTA COMEDORES
+========================================================================== */
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.pagination-controls .btn {
+    padding: 8px 12px;
+    font-size: 0.9em;
+}
+
+.current-page-info {
+    font-weight: bold;
+    color: #333;
+}
+
+/* ==========================================================================
+PLANEACION INDEX BACKGROUND (planeacion/index.html)
+========================================================================== */
+#planeacion-dashboard-background {
+    background-image: url('/static/planeacion/images/fondoplanificacion.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    min-height: calc(100vh - 110px);
+    padding: 20px;
+    box-sizing: border-box;
+    border-radius: 8px;
+}
+
+#facturacion-dashboard-background {
+    background-image: url('/static/facturacion/images/fondofaacturacion.jpg');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    min-height: calc(100vh - 110px);
+    padding: 20px;
+    box-sizing: border-box;
+    border-radius: 8px;
+}
+
+/* ==========================================================================
+ESTILOS PARA VENTANA MODAL de la vista planeacion/lista_comedores.html
+========================================================================== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.modal-overlay:target,
+.modal-overlay[style*="display: flex"] {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    transform: translateY(-50px);
+    transition: transform 0.3s ease-out;
+}
+
+.modal-overlay:target .modal-content,
+.modal-overlay[style*="display: flex"] .modal-content {
+    transform: translateY(0);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.modal-close-btn {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.modal-close-btn:hover {
+    color: #333;
+}
+
+.modal-body form p {
+    margin-bottom: 15px;
+}
+
+.modal-body form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.modal-body form input[type="text"],
+.modal-body form input[type="date"],
+.modal-body form input[type="file"],
+.modal-body form select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+    margin-top: 25px;
+}
+
+/* ========================================================== */
+/* ESTILOS PARA MODALES DE ALIMENTOS (FORMULARIOS LARGOS)   */
+/* ========================================================== */
+
+.modal-large .modal-content {
+    width: 90%;
+    max-width: 1000px;
+    max-height: 90vh;
+}
+
+.form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.form-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #0a8f17;
+}
+
+.form-section h3 {
+    margin: 0 0 15px 0;
+    color: #0a8f17;
+    font-size: 1.1em;
+    font-weight: 600;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 8px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-weight: 500;
+    margin-bottom: 5px;
+    color: #333;
+    font-size: 0.9em;
+}
+
+.form-group label::after {
+    content: " *";
+    color: #e74c3c;
+    font-weight: bold;
+    display: none; /* Solo se mostrará para campos requeridos */
+}
+
+.form-group input[required] + label::after,
+label[for$="_codigo"]::after,
+label[for$="_nombre_del_alimento"]::after,
+label[for$="_humedad_g"]::after,
+label[for$="_energia_kcal"]::after,
+label[for$="_energia_kj"]::after,
+label[for$="_proteina_g"]::after,
+label[for$="_lipidos_g"]::after,
+label[for$="_carbohidratos_totales_g"]::after {
+    display: inline;
+}
+
+.form-control {
+    padding: 10px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 0.9em;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus {
+    outline: 0;
+    border-color: #0a8f17;
+    box-shadow: 0 0 0 0.2rem rgba(10, 143, 23, 0.25);
+}
+
+.form-control:disabled {
+    background-color: #e9ecef;
+    opacity: 1;
+}
+
+/* Estilos para inputs numéricos */
+.form-control[type="number"] {
+    text-align: right;
+}
+
+/* Responsividad para modales en pantallas pequeñas */
+@media (max-width: 768px) {
+    .modal-large .modal-content {
+        width: 95%;
+        margin: 20px auto;
+        max-height: 95vh;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .form-section {
+        padding: 15px;
+    }
+    
+    .form-scroll-container {
+        max-height: 60vh !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-large .modal-content {
+        width: 98%;
+        margin: 10px auto;
+    }
+    
+    .form-section h3 {
+        font-size: 1em;
+    }
+    
+    .form-control {
+        font-size: 0.85em;
+        padding: 8px 10px;
+    }
+}

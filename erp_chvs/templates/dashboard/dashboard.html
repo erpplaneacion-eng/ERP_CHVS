@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - ERP CHVS{% endblock %}
+
+{% block content %}
+    <h1>¡Bienvenido al Dashboard!</h1>
+    <p>Hola, {{ user.first_name|default:user.username }}.</p>
+    <p>Desde la barra lateral a la derecha puedes seleccionar el módulo con el que deseas trabajar.</p>
+{% endblock %}

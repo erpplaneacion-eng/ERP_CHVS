@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}Modalidades de Consumo - ERP CHVS{% endblock %}
+
+{% block content %}
+<div class="modalidades-consumo-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-utensils"></i> Gestión de Modalidades de Consumo</h2>
+            <p>Total de modalidades: <strong>{{ total_modalidades }}</strong></p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="showCreateModal()">
+                <i class="fas fa-plus"></i> Nueva Modalidad
+            </button>
+            <a href="{% url 'principal:principal_index' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table" id="modalidadesTable">
+            <thead>
+                <tr>
+                    <th>ID Modalidad</th>
+                    <th>Modalidad</th>
+                    <th>Código Modalidad</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for modalidad in modalidades %}
+                <tr data-id="{{ modalidad.id_modalidades }}">
+                    <td>{{ modalidad.id_modalidades }}</td>
+                    <td>{{ modalidad.modalidad }}</td>
+                    <td>{{ modalidad.cod_modalidad }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="editModalidad('{{ modalidad.id_modalidades }}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteModalidad('{{ modalidad.id_modalidades }}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center">No hay modalidades registradas</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación -->
+    {% if modalidades.has_other_pages %}
+    <div class="pagination-container">
+        <div class="pagination">
+            {% if modalidades.has_previous %}
+                <a href="?page=1" class="page-link">&laquo; Primera</a>
+                <a href="?page={{ modalidades.previous_page_number }}" class="page-link">Anterior</a>
+            {% endif %}
+
+            <span class="page-info">
+                Página {{ modalidades.number }} de {{ modalidades.paginator.num_pages }}
+            </span>
+
+            {% if modalidades.has_next %}
+                <a href="?page={{ modalidades.next_page_number }}" class="page-link">Siguiente</a>
+                <a href="?page={{ modalidades.paginator.num_pages }}" class="page-link">Última &raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal para Crear/Editar Modalidad -->
+<div id="modalidadModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Nueva Modalidad</h3>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="modalidadForm">
+                <div class="form-group">
+                    <label for="id_modalidades">ID Modalidad:</label>
+                    <input type="text" id="id_modalidades" name="id_modalidades" required maxlength="10">
+                </div>
+                <div class="form-group">
+                    <label for="modalidad">Modalidad:</label>
+                    <input type="text" id="modalidad" name="modalidad" required maxlength="150">
+                </div>
+                <div class="form-group">
+                    <label for="cod_modalidad">Código Modalidad:</label>
+                    <input type="text" id="cod_modalidad" name="cod_modalidad" required maxlength="20">
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="saveModalidad()">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación -->
+<div id="confirmModal" class="modal">
+    <div class="modal-content small">
+        <div class="modal-header">
+            <h3>Confirmar Eliminación</h3>
+            <span class="close" onclick="closeConfirmModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>¿Está seguro que desea eliminar esta modalidad?</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Cancelar</button>
+            <button type="button" class="btn btn-danger" onclick="confirmDelete()">Eliminar</button>
+        </div>
+    </div>
+</div>
+
+{% load static %}
+<script src="{% static 'js/principal/modalidades_consumo.js' %}"></script>
+
+{% endblock %}

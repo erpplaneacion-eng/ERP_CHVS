@@ -1,0 +1,112 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ERP CHVS{% endblock %}</title>
+    <!-- CSS Base -->
+    <link rel="stylesheet" href="{% static 'css/erp_style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components/modals.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+    <!-- CSS específico por módulo -->
+    {% if request.resolver_match.app_name == 'principal' %}
+        <link rel="stylesheet" href="{% static 'css/modules/principal.css' %}">
+    {% elif request.resolver_match.app_name == 'planeacion' %}
+        <link rel="stylesheet" href="{% static 'css/modules/planeacion.css' %}">
+    {% elif request.resolver_match.app_name == 'nutricion' %}
+        <link rel="stylesheet" href="{% static 'css/modules/nutricion.css' %}">
+    {% elif request.resolver_match.app_name == 'facturacion' %}
+        <link rel="stylesheet" href="{% static 'css/modules/facturacion.css' %}">
+    {% endif %}
+</head>
+<body>
+
+    <div class="main-container">
+
+        <!-- ========================================================== -->
+        <!-- Barra Lateral Izquierda (Sidebar)                          -->
+        <!-- ========================================================== -->
+        <aside class="sidebar">
+            <h3>Módulos del ERP</h3>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="{% url 'dashboard:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Dashboard</a></li>
+                    <li><a href="{% url 'principal:principal_index' %}" class="{% if request.resolver_match.url_name == 'principal_index' %}active{% endif %}">Configuración</a></li>
+                    <li><a href="{% url 'nutricion:nutricion_index' %}" class="{% if request.resolver_match.url_name == 'nutricion_index' %}active{% endif %}">Nutrición</a></li>
+                    <li><a href="{% url 'planeacion:planeacion_index' %}" class="{% if request.resolver_match.url_name == 'planeacion_index' %}active{% endif %}">Planeación</a></li>
+                    <li><a href="{% url 'facturacion:facturacion_index' %}" class="{% if request.resolver_match.url_name == 'facturacion_index' %}active{% endif %}">Facturación</a></li>
+                </ul>
+            </nav>
+            <!-- La sección user-info se ha movido al header -->
+        </aside>
+
+        <!-- ========================================================== -->
+        <!-- Contenedor Principal (Derecha)                             -->
+        <!-- ========================================================== -->
+        <div class="content-wrapper" style="width: 100%; display: flex; flex-direction: column;">
+            
+            <!-- ========================================================== -->
+            <!-- Cabecera Superior (Header)                                 -->
+            <!-- ========================================================== -->
+            <header class="header">
+                <h2 class="header-title">CHVS ERP System</h2>
+                <div class="header-user">
+                    <span>Usuario: <strong>{{ user.username }}</strong></span>
+                    <form class="logout-form" method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="logout-link">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Cerrar Sesión</span>
+                        </button>
+                    </form>
+                </div>
+            </header>
+        
+            <main class="content-area">
+                {% block content %}
+                    
+                {% endblock %}
+            </main>
+        </div>
+
+    </div>
+    <!-- ========================================================== -->
+    <!-- CARGA DE ARCHIVOS JAVASCRIPT GLOBALES                      -->
+    <!-- ========================================================== -->
+    <!-- Archivos JS comunes -->
+    <script src="{% static 'js/common/utils.js' %}"></script>
+    
+    <!-- Archivo principal del sitio -->
+    <script src="{% static 'js/principal/main.js' %}"></script>
+    
+    <!-- Archivos específicos según módulo y página -->
+    {% if request.resolver_match.app_name == 'dashboard' or request.path == '/' %}
+        <script src="{% static 'js/dashboard/dashboard.js' %}"></script>
+    {% elif request.resolver_match.app_name == 'principal' %}
+        {% if 'departamentos' in request.path or request.resolver_match.url_name == 'lista_departamentos' %}
+            <script src="{% static 'js/principal/departamentos.js' %}"></script>
+        {% elif 'municipios' in request.path or request.resolver_match.url_name == 'lista_municipios' %}
+            <script src="{% static 'js/principal/municipios.js' %}"></script>
+        {% endif %}
+    {% elif request.resolver_match.app_name == 'nutricion' %}
+        {% if 'alimentos' in request.path %}
+            <script src="{% static 'js/nutricion/alimentos.js' %}"></script>
+        {% else %}
+            <script src="{% static 'js/nutricion/beneficiarios.js' %}"></script>
+        {% endif %}
+    {% elif request.resolver_match.app_name == 'planeacion' %}
+        {% if 'comedores' in request.path %}
+            <script src="{% static 'js/planeacion/comedores.js' %}"></script>
+        {% elif 'programas' in request.path %}
+            <script src="{% static 'js/planeacion/programas.js' %}"></script>
+        {% endif %}
+    {% elif request.resolver_match.app_name == 'facturacion' %}
+        <script src="{% static 'js/facturacion/facturas.js' %}"></script>
+    {% endif %}
+    
+    <!-- Scripts adicionales por página -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>

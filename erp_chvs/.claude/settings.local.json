@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python manage.py collectstatic:*)",
+      "Bash(python3 manage.py collectstatic:*)",
+      "Bash(sqlite3:*)",
+      "Bash(find:*)",
+      "Bash(python3:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

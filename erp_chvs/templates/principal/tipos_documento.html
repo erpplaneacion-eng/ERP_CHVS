@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}Tipos de Documento - ERP CHVS{% endblock %}
+
+{% block content %}
+<div class="tipos-documento-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-id-card"></i> Gestión de Tipos de Documento</h2>
+            <p>Total de tipos de documento: <strong>{{ total_tipos_documento }}</strong></p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="showCreateModal()">
+                <i class="fas fa-plus"></i> Nuevo Tipo de Documento
+            </button>
+            <a href="{% url 'principal:principal_index' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table" id="tiposDocumentoTable">
+            <thead>
+                <tr>
+                    <th>ID Documento</th>
+                    <th>Tipo de Documento</th>
+                    <th>Código Documento</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tipo in tipos_documento %}
+                <tr data-id="{{ tipo.id_documento }}">
+                    <td>{{ tipo.id_documento }}</td>
+                    <td>{{ tipo.tipo_documento }}</td>
+                    <td>{{ tipo.codigo_documento }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="editTipoDocumento('{{ tipo.id_documento }}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteTipoDocumento('{{ tipo.id_documento }}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center">No hay tipos de documento registrados</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación -->
+    {% if tipos_documento.has_other_pages %}
+    <div class="pagination-container">
+        <div class="pagination">
+            {% if tipos_documento.has_previous %}
+                <a href="?page=1" class="page-link">&laquo; Primera</a>
+                <a href="?page={{ tipos_documento.previous_page_number }}" class="page-link">Anterior</a>
+            {% endif %}
+
+            <span class="page-info">
+                Página {{ tipos_documento.number }} de {{ tipos_documento.paginator.num_pages }}
+            </span>
+
+            {% if tipos_documento.has_next %}
+                <a href="?page={{ tipos_documento.next_page_number }}" class="page-link">Siguiente</a>
+                <a href="?page={{ tipos_documento.paginator.num_pages }}" class="page-link">Última &raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal para Crear/Editar Tipo de Documento -->
+<div id="tipoDocumentoModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Nuevo Tipo de Documento</h3>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="tipoDocumentoForm">
+                <div class="form-group">
+                    <label for="id_documento">ID Documento:</label>
+                    <input type="text" id="id_documento" name="id_documento" required maxlength="10">
+                </div>
+                <div class="form-group">
+                    <label for="tipo_documento">Tipo de Documento:</label>
+                    <input type="text" id="tipo_documento" name="tipo_documento" required maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label for="codigo_documento">Código Documento:</label>
+                    <input type="number" id="codigo_documento" name="codigo_documento" required>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="saveTipoDocumento()">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación -->
+<div id="confirmModal" class="modal">
+    <div class="modal-content small">
+        <div class="modal-header">
+            <h3>Confirmar Eliminación</h3>
+            <span class="close" onclick="closeConfirmModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>¿Está seguro que desea eliminar este tipo de documento?</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Cancelar</button>
+            <button type="button" class="btn btn-danger" onclick="confirmDelete()">Eliminar</button>
+        </div>
+    </div>
+</div>
+
+{% load static %}
+<script src="{% static 'js/principal/tipos_documento.js' %}"></script>
+
+{% endblock %}

@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenido al ERP CHVS</title>
+    <link rel="stylesheet" href="{% static 'css/erp_style.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+</head>
+<body>
+
+    <div class="bg-image">
+        <div class="login-card">
+            
+            <!-- MEJORA: Logo (opcional). Reemplaza 'path/to/your/logo.png' -->
+            <div class="logo-container">
+                <!-- Si tienes un logo, descomenta la siguiente línea y pon la ruta correcta -->
+                <!-- <img src="{% static 'images/logo_empresa.png' %}" alt="Logo Empresa"> -->
+            </div>
+
+            <h2>Acceso al Sistema</h2>
+            <form method="post" action="{% url 'login' %}">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit">Ingresar</button>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>

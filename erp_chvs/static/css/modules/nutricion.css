@@ -1,0 +1,287 @@
+/* ===================================== */
+/* MÓDULO NUTRICIÓN                      */
+/* ===================================== */
+
+/* Contenedores de nutrición */
+.nutricion-container {
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Headers específicos de nutrición */
+.nutricion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #27ae60;
+}
+
+.nutricion-header h1 {
+    color: #27ae60;
+    margin: 0;
+    font-size: 28px;
+    font-weight: 600;
+}
+
+/* Campos de formulario específicos para alimentos */
+.alimentos-form .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.alimentos-form .form-group-full {
+    grid-column: 1 / -1;
+}
+
+.alimentos-form .form-section {
+    border: 1px solid #e8f5e8;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    background: #f8fff8;
+}
+
+.alimentos-form .form-section h4 {
+    color: #27ae60;
+    margin-bottom: 15px;
+    font-size: 16px;
+    font-weight: 600;
+    border-bottom: 2px solid #27ae60;
+    padding-bottom: 8px;
+}
+
+/* Validaciones de campos numéricos */
+.field-error {
+    border-color: #e74c3c !important;
+    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2) !important;
+}
+
+.field-success {
+    border-color: #27ae60 !important;
+    box-shadow: 0 0 0 2px rgba(39, 174, 96, 0.2) !important;
+}
+
+.error-message {
+    color: #e74c3c;
+    font-size: 0.8em;
+    margin-top: 4px;
+    display: block;
+}
+
+/* Tabla de alimentos */
+.alimentos-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.alimentos-table th {
+    background: linear-gradient(135deg, #27ae60, #229954);
+    color: white;
+    padding: 15px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.alimentos-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e8f5e8;
+    vertical-align: top;
+}
+
+.alimentos-table tr:hover {
+    background-color: #f8fff8;
+}
+
+.alimentos-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Códigos de alimentos */
+.alimento-codigo {
+    font-family: 'Courier New', monospace;
+    background: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    font-weight: bold;
+    color: #495057;
+}
+
+/* Valores nutricionales */
+.valor-nutricional {
+    text-align: right;
+    font-weight: 500;
+}
+
+.valor-nutricional.alto {
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+.valor-nutricional.medio {
+    color: #f39c12;
+}
+
+.valor-nutricional.bajo {
+    color: #27ae60;
+}
+
+/* Stats cards específicas para nutrición */
+.nutricion-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.nutricion-stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #27ae60;
+    transition: transform 0.3s ease;
+}
+
+.nutricion-stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.nutricion-stat-card .stat-icon {
+    font-size: 32px;
+    color: #27ae60;
+    margin-bottom: 10px;
+}
+
+.nutricion-stat-card .stat-number {
+    font-size: 28px;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.nutricion-stat-card .stat-label {
+    color: #7f8c8d;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Filtros de búsqueda */
+.nutricion-filters {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.nutricion-filters .filter-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    align-items: end;
+}
+
+.nutricion-filters .filter-group .form-group {
+    margin-bottom: 0;
+}
+
+/* Badges para categorías */
+.categoria-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.categoria-badge.cereales {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.categoria-badge.lacteos {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.categoria-badge.carnes {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.categoria-badge.frutas {
+    background: #d4edda;
+    color: #155724;
+}
+
+.categoria-badge.verduras {
+    background: #d4edda;
+    color: #155724;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .nutricion-container {
+        padding: 10px;
+    }
+
+    .nutricion-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+
+    .alimentos-form .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .nutricion-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .alimentos-table {
+        font-size: 12px;
+    }
+
+    .alimentos-table th,
+    .alimentos-table td {
+        padding: 8px 6px;
+    }
+
+    .nutricion-filters .filter-group {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .nutricion-header h1 {
+        font-size: 24px;
+    }
+
+    .alimentos-form .form-section {
+        padding: 15px;
+    }
+
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+    }
+
+    .modal-body {
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+}

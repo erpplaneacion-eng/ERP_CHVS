@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}Tipos de Género - ERP CHVS{% endblock %}
+
+{% block content %}
+<div class="tipos-genero-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-venus-mars"></i> Gestión de Tipos de Género</h2>
+            <p>Total de tipos de género: <strong>{{ total_tipos_genero }}</strong></p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="showCreateModal()">
+                <i class="fas fa-plus"></i> Nuevo Tipo de Género
+            </button>
+            <a href="{% url 'principal:principal_index' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table" id="tiposGeneroTable">
+            <thead>
+                <tr>
+                    <th>ID Género</th>
+                    <th>Género</th>
+                    <th>Código Género</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tipo in tipos_genero %}
+                <tr data-id="{{ tipo.id_genero }}">
+                    <td>{{ tipo.id_genero }}</td>
+                    <td>{{ tipo.genero }}</td>
+                    <td>{{ tipo.codigo_genero }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="editTipoGenero('{{ tipo.id_genero }}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteTipoGenero('{{ tipo.id_genero }}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center">No hay tipos de género registrados</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación -->
+    {% if tipos_genero.has_other_pages %}
+    <div class="pagination-container">
+        <div class="pagination">
+            {% if tipos_genero.has_previous %}
+                <a href="?page=1" class="page-link">&laquo; Primera</a>
+                <a href="?page={{ tipos_genero.previous_page_number }}" class="page-link">Anterior</a>
+            {% endif %}
+
+            <span class="page-info">
+                Página {{ tipos_genero.number }} de {{ tipos_genero.paginator.num_pages }}
+            </span>
+
+            {% if tipos_genero.has_next %}
+                <a href="?page={{ tipos_genero.next_page_number }}" class="page-link">Siguiente</a>
+                <a href="?page={{ tipos_genero.paginator.num_pages }}" class="page-link">Última &raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal para Crear/Editar Tipo de Género -->
+<div id="tipoGeneroModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Nuevo Tipo de Género</h3>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="tipoGeneroForm">
+                <div class="form-group">
+                    <label for="id_genero">ID Género:</label>
+                    <input type="text" id="id_genero" name="id_genero" required maxlength="10">
+                </div>
+                <div class="form-group">
+                    <label for="genero">Género:</label>
+                    <input type="text" id="genero" name="genero" required maxlength="50">
+                </div>
+                <div class="form-group">
+                    <label for="codigo_genero">Código Género:</label>
+                    <input type="number" id="codigo_genero" name="codigo_genero" required>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="saveTipoGenero()">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación -->
+<div id="confirmModal" class="modal">
+    <div class="modal-content small">
+        <div class="modal-header">
+            <h3>Confirmar Eliminación</h3>
+            <span class="close" onclick="closeConfirmModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>¿Está seguro que desea eliminar este tipo de género?</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeConfirmModal()">Cancelar</button>
+            <button type="button" class="btn btn-danger" onclick="confirmDelete()">Eliminar</button>
+        </div>
+    </div>
+</div>
+
+{% load static %}
+<script src="{% static 'js/principal/tipos_genero.js' %}"></script>
+
+{% endblock %}
