@@ -23,52 +23,38 @@
         <table class="data-table" id="sedesTable">
             <thead>
                 <tr>
-                    <th>Código Sede</th>
+                    <th>Código Interprise</th>
+                    <th>Código DANE</th>
                     <th>Nombre Sede</th>
                     <th>Institución</th>
-                    <th>Municipio</th>
                     <th>Zona</th>
-                    <th>Comedor</th>
-                    <th>Estado</th>
+                    <th>Preparado</th>
+                    <th>Industrializado</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 {% for sede in sedes %}
-                <tr data-codigo="{{ sede.codigo_sede }}">
-                    <td>{{ sede.codigo_sede }}</td>
-                    <td>{{ sede.nombre_sede }}</td>
-                    <td>{{ sede.institucion.nombre_institucion }}</td>
-                    <td>{{ sede.institucion.municipio.nombre_municipio }}</td>
+                <tr data-codigo="{{ sede.cod_interprise }}">
+                    <td>{{ sede.cod_interprise }}</td>
+                    <td>{{ sede.cod_dane }}</td>
+                    <td>{{ sede.nombre_sede_educativa }}</td>
+                    <td>{{ sede.codigo_ie.nombre_institucion }}</td>
                     <td>
                         <span class="badge badge-{{ sede.zona|lower }}">
                             {{ sede.zona }}
                         </span>
                     </td>
+                    <td>{{ sede.preparado }}</td>
+                    <td>{{ sede.industrializado }}</td>
                     <td>
-                        {% if sede.tiene_comedor %}
-                            <span class="badge badge-success">
-                                <i class="fas fa-check"></i> Sí
-                            </span>
-                        {% else %}
-                            <span class="badge badge-secondary">
-                                <i class="fas fa-times"></i> No
-                            </span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <span class="badge badge-{{ sede.estado|lower }}">
-                            {{ sede.estado }}
-                        </span>
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-info" onclick="viewSede('{{ sede.codigo_sede }}')" title="Ver detalles">
+                        <button class="btn btn-sm btn-info" onclick="viewSede('{{ sede.cod_interprise }}')" title="Ver detalles">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-warning" onclick="editSede('{{ sede.codigo_sede }}')" title="Editar">
+                        <button class="btn btn-sm btn-warning" onclick="editSede('{{ sede.cod_interprise }}')" title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteSede('{{ sede.codigo_sede }}')" title="Eliminar">
+                        <button class="btn btn-sm btn-danger" onclick="deleteSede('{{ sede.cod_interprise }}')" title="Eliminar">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -128,19 +114,24 @@
                 <form id="sedeForm">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="codigo_sede">Código Sede *</label>
-                            <input type="text" id="codigo_sede" name="codigo_sede" required maxlength="20">
+                            <label for="cod_interprise">Código Interprise *</label>
+                            <input type="text" id="cod_interprise" name="cod_interprise" required maxlength="50">
                         </div>
                         <div class="form-group">
-                            <label for="nombre_sede">Nombre Sede *</label>
-                            <input type="text" id="nombre_sede" name="nombre_sede" required maxlength="255">
+                            <label for="cod_dane">Código DANE *</label>
+                            <input type="text" id="cod_dane" name="cod_dane" required maxlength="50">
                         </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="nombre_sede_educativa">Nombre Sede Educativa *</label>
+                        <input type="text" id="nombre_sede_educativa" name="nombre_sede_educativa" required maxlength="255">
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="institucion_id">Institución Educativa *</label>
-                            <select id="institucion_id" name="institucion_id" required>
+                            <label for="codigo_ie">Institución Educativa *</label>
+                            <select id="codigo_ie" name="codigo_ie" required>
                                 <option value="">Seleccione una institución</option>
                             </select>
                         </div>
@@ -148,102 +139,26 @@
                             <label for="zona">Zona *</label>
                             <select id="zona" name="zona" required>
                                 <option value="">Seleccione una zona</option>
-                                <option value="URBANA">Urbana</option>
-                                <option value="RURAL">Rural</option>
+                                <option value="U">Urbana</option>
+                                <option value="R">Rural</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label for="direccion">Dirección *</label>
-                        <textarea id="direccion" name="direccion" rows="3" required></textarea>
+                        <label for="direccion">Dirección</label>
+                        <textarea id="direccion" name="direccion" rows="3"></textarea>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="telefono">Teléfono</label>
-                            <input type="text" id="telefono" name="telefono" maxlength="30">
+                            <label for="preparado">Preparado *</label>
+                            <input type="text" id="preparado" name="preparado" required maxlength="50">
                         </div>
                         <div class="form-group">
-                            <label for="coordinador">Coordinador</label>
-                            <input type="text" id="coordinador" name="coordinador" maxlength="255">
+                            <label for="industrializado">Industrializado *</label>
+                            <input type="text" id="industrializado" name="industrializado" required maxlength="50">
                         </div>
-                    </div>
-
-                    <!-- Información del comedor -->
-                    <div class="form-section">
-                        <h4><i class="fas fa-utensils"></i> Información del Comedor</h4>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="tiene_comedor" name="tiene_comedor">
-                                    <span class="checkmark"></span>
-                                    Tiene Comedor
-                                </label>
-                            </div>
-                            <div class="form-group">
-                                <label for="tipo_atencion">Tipo de Atención</label>
-                                <select id="tipo_atencion" name="tipo_atencion">
-                                    <option value="">Seleccione tipo</option>
-                                    <option value="DESAYUNO">Desayuno</option>
-                                    <option value="ALMUERZO">Almuerzo</option>
-                                    <option value="REFRIGERIO_AM">Refrigerio AM</option>
-                                    <option value="REFRIGERIO_PM">Refrigerio PM</option>
-                                    <option value="COMPLEMENTO">Complemento Alimentario</option>
-                                    <option value="MULTIPLE">Múltiples Atenciones</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="capacidad_beneficiarios">Capacidad de Beneficiarios</label>
-                            <input type="number" id="capacidad_beneficiarios" name="capacidad_beneficiarios" min="0">
-                        </div>
-                    </div>
-
-                    <!-- Jornadas disponibles -->
-                    <div class="form-section">
-                        <h4><i class="fas fa-clock"></i> Jornadas Disponibles</h4>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="jornada_manana" name="jornada_manana">
-                                    <span class="checkmark"></span>
-                                    Jornada Mañana
-                                </label>
-                            </div>
-                            <div class="form-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="jornada_tarde" name="jornada_tarde">
-                                    <span class="checkmark"></span>
-                                    Jornada Tarde
-                                </label>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="jornada_nocturna" name="jornada_nocturna">
-                                    <span class="checkmark"></span>
-                                    Jornada Nocturna
-                                </label>
-                            </div>
-                            <div class="form-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="jornada_unica" name="jornada_unica">
-                                    <span class="checkmark"></span>
-                                    Jornada Única
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="estado">Estado *</label>
-                        <select id="estado" name="estado" required>
-                            <option value="ACTIVO">Activo</option>
-                            <option value="INACTIVO">Inactivo</option>
-                            <option value="MANTENIMIENTO">En Mantenimiento</option>
-                        </select>
                     </div>
                 </form>
             </div>

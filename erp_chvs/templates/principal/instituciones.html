@@ -23,47 +23,33 @@
         <table class="data-table" id="institucionesTable">
             <thead>
                 <tr>
-                    <th>Código DANE</th>
+                    <th>Código IE</th>
                     <th>Nombre Institución</th>
-                    <th>Departamento</th>
                     <th>Municipio</th>
-                    <th>Sector</th>
-                    <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 {% for institucion in instituciones %}
-                <tr data-codigo="{{ institucion.codigo_dane }}">
-                    <td>{{ institucion.codigo_dane }}</td>
+                <tr data-codigo="{{ institucion.codigo_ie }}">
+                    <td>{{ institucion.codigo_ie }}</td>
                     <td>{{ institucion.nombre_institucion }}</td>
-                    <td>{{ institucion.departamento.nombre_departamento }}</td>
-                    <td>{{ institucion.municipio.nombre_municipio }}</td>
+                    <td>{{ institucion.id_municipios.nombre_municipio }}</td>
                     <td>
-                        <span class="badge badge-{{ institucion.sector|lower }}">
-                            {{ institucion.sector }}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="badge badge-{{ institucion.estado|lower }}">
-                            {{ institucion.estado }}
-                        </span>
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-info" onclick="viewInstitucion('{{ institucion.codigo_dane }}')" title="Ver detalles">
+                        <button class="btn btn-sm btn-info" onclick="viewInstitucion('{{ institucion.codigo_ie }}')" title="Ver detalles">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-warning" onclick="editInstitucion('{{ institucion.codigo_dane }}')" title="Editar">
+                        <button class="btn btn-sm btn-warning" onclick="editInstitucion('{{ institucion.codigo_ie }}')" title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteInstitucion('{{ institucion.codigo_dane }}')" title="Eliminar">
+                        <button class="btn btn-sm btn-danger" onclick="deleteInstitucion('{{ institucion.codigo_ie }}')" title="Eliminar">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="text-center">No hay instituciones registradas</td>
+                    <td colspan="4" class="text-center">No hay instituciones registradas</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -116,8 +102,8 @@
                 <form id="institucionForm">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="codigo_dane">Código DANE *</label>
-                            <input type="text" id="codigo_dane" name="codigo_dane" required maxlength="20">
+                            <label for="codigo_ie">Código IE *</label>
+                            <input type="text" id="codigo_ie" name="codigo_ie" required maxlength="50">
                         </div>
                         <div class="form-group">
                             <label for="nombre_institucion">Nombre Institución *</label>
@@ -125,60 +111,13 @@
                         </div>
                     </div>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="departamento_id">Departamento *</label>
-                            <select id="departamento_id" name="departamento_id" required>
-                                <option value="">Seleccione un departamento</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="municipio_id">Municipio *</label>
-                            <select id="municipio_id" name="municipio_id" required>
-                                <option value="">Seleccione un municipio</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="sector">Sector *</label>
-                            <select id="sector" name="sector" required>
-                                <option value="OFICIAL">Oficial</option>
-                                <option value="PRIVADO">Privado</option>
-                                <option value="MIXTO">Mixto</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="estado">Estado *</label>
-                            <select id="estado" name="estado" required>
-                                <option value="ACTIVO">Activo</option>
-                                <option value="INACTIVO">Inactivo</option>
-                                <option value="SUSPENDIDO">Suspendido</option>
-                            </select>
-                        </div>
-                    </div>
-
                     <div class="form-group">
-                        <label for="direccion">Dirección</label>
-                        <textarea id="direccion" name="direccion" rows="3"></textarea>
+                        <label for="id_municipios">Municipio *</label>
+                        <select id="id_municipios" name="id_municipios" required>
+                            <option value="">Seleccione un municipio</option>
+                        </select>
                     </div>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="telefono">Teléfono</label>
-                            <input type="text" id="telefono" name="telefono" maxlength="30">
-                        </div>
-                        <div class="form-group">
-                            <label for="email">Correo Electrónico</label>
-                            <input type="email" id="email" name="email">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="rector">Rector/Director</label>
-                        <input type="text" id="rector" name="rector" maxlength="255">
-                    </div>
                 </form>
             </div>
             <div class="modal-footer">

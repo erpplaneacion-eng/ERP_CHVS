@@ -31,9 +31,9 @@ urlpatterns = [
 
     # APIs para instituciones educativas
     path('api/instituciones/', views.api_instituciones, name='api_instituciones'),
-    path('api/instituciones/<str:codigo_dane>/', views.api_institucion_detail, name='api_institucion_detail'),
+    path('api/instituciones/<str:codigo_ie>/', views.api_institucion_detail, name='api_institucion_detail'),
 
     # APIs para sedes educativas
     path('api/sedes/', views.api_sedes, name='api_sedes'),
-    path('api/sedes/<str:codigo_sede>/', views.api_sede_detail, name='api_sede_detail'),
+    path('api/sedes/<str:cod_interprise>/', views.api_sede_detail, name='api_sede_detail'),
 ]

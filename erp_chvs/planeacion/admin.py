@@ -4,45 +4,36 @@ from .models import InstitucionesEducativas, SedesEducativas, Programa
 
 @admin.register(InstitucionesEducativas)
 class InstitucionesEducativasAdmin(admin.ModelAdmin):
-    list_display = ('codigo_dane', 'nombre_institucion', 'departamento', 'municipio', 'sector', 'estado')
-    list_filter = ('sector', 'estado', 'departamento')
-    search_fields = ('codigo_dane', 'nombre_institucion', 'municipio__nombre_municipio')
+    list_display = ('codigo_ie', 'nombre_institucion', 'id_municipios')
+    list_filter = ('id_municipios',)
+    search_fields = ('codigo_ie', 'nombre_institucion', 'id_municipios__nombre_municipio')
     list_per_page = 25
     ordering = ('nombre_institucion',)
 
     fieldsets = (
         ('Información Básica', {
-            'fields': ('codigo_dane', 'nombre_institucion', 'sector', 'estado')
-        }),
-        ('Ubicación', {
-            'fields': ('departamento', 'municipio', 'direccion')
-        }),
-        ('Contacto', {
-            'fields': ('telefono', 'email', 'rector')
+            'fields': ('codigo_ie', 'nombre_institucion', 'id_municipios')
         }),
     )
 
 
 @admin.register(SedesEducativas)
 class SedesEducativasAdmin(admin.ModelAdmin):
-    list_display = ('codigo_sede', 'nombre_sede', 'institucion', 'zona', 'tiene_comedor', 'estado')
-    list_filter = ('zona', 'tiene_comedor', 'estado', 'tipo_atencion')
-    search_fields = ('codigo_sede', 'nombre_sede', 'institucion__nombre_institucion')
+    list_display = ('cod_interprise', 'nombre_sede_educativa', 'codigo_ie', 'zona')
+    list_filter = ('zona', 'codigo_ie')
+    search_fields = ('cod_interprise', 'cod_dane', 'nombre_sede_educativa', 'codigo_ie__nombre_institucion')
     list_per_page = 25
-    ordering = ('institucion__nombre_institucion', 'nombre_sede')
+    ordering = ('codigo_ie__nombre_institucion', 'nombre_sede_educativa')
 
     fieldsets = (
         ('Información Básica', {
-            'fields': ('codigo_sede', 'nombre_sede', 'institucion', 'estado')
+            'fields': ('cod_interprise', 'cod_dane', 'nombre_sede_educativa', 'codigo_ie')
         }),
-        ('Ubicación y Contacto', {
-            'fields': ('direccion', 'zona', 'telefono', 'coordinador')
+        ('Ubicación', {
+            'fields': ('direccion', 'zona')
         }),
-        ('Información del Comedor', {
-            'fields': ('tiene_comedor', 'tipo_atencion', 'capacidad_beneficiarios')
-        }),
-        ('Jornadas Disponibles', {
-            'fields': ('jornada_manana', 'jornada_tarde', 'jornada_nocturna', 'jornada_unica')
+        ('Información de Alimentación', {
+            'fields': ('preparado', 'industrializado')
         }),
     )
 

@@ -443,7 +443,7 @@ def api_modalidad_consumo_detail(request, id_modalidades):
 @login_required
 def lista_instituciones(request):
     """Vista para listar instituciones educativas"""
-    instituciones = InstitucionesEducativas.objects.select_related('departamento', 'municipio').all().order_by('nombre_institucion')
+    instituciones = InstitucionesEducativas.objects.select_related('id_municipios').all().order_by('nombre_institucion')
     paginator = Paginator(instituciones, 15)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -458,9 +458,8 @@ def lista_instituciones(request):
 def api_instituciones(request):
     """API para manejar instituciones educativas via AJAX"""
     if request.method == 'GET':
-        instituciones = InstitucionesEducativas.objects.select_related('departamento', 'municipio').all().values(
-            'codigo_dane', 'nombre_institucion', 'departamento__nombre_departamento',
-            'municipio__nombre_municipio', 'sector', 'estado', 'direccion', 'telefono', 'email', 'rector'
+        instituciones = InstitucionesEducativas.objects.select_related('id_municipios').all().values(
+            'codigo_ie', 'nombre_institucion', 'id_municipios__nombre_municipio'
         )
         return JsonResponse({'instituciones': list(instituciones)})
 
@@ -468,72 +467,48 @@ def api_instituciones(request):
         try:
             data = json.loads(request.body)
 
-            # Verificar si ya existe una institución con este código DANE
-            if InstitucionesEducativas.objects.filter(codigo_dane=data['codigo_dane']).exists():
-                return JsonResponse({'success': False, 'error': 'Error: Ya existe una institución con este código DANE'})
+            # Verificar si ya existe una institución con este código IE
+            if InstitucionesEducativas.objects.filter(codigo_ie=data['codigo_ie']).exists():
+                return JsonResponse({'success': False, 'error': 'Error: Ya existe una institución con este código IE'})
 
             institucion = InstitucionesEducativas.objects.create(
-                codigo_dane=data['codigo_dane'],
+                codigo_ie=data['codigo_ie'],
                 nombre_institucion=data['nombre_institucion'],
-                departamento_id=data['departamento_id'],
-                municipio_id=data['municipio_id'],
-                direccion=data.get('direccion', ''),
-                telefono=data.get('telefono', ''),
-                email=data.get('email', ''),
-                sector=data.get('sector', 'OFICIAL'),
-                rector=data.get('rector', ''),
-                estado=data.get('estado', 'ACTIVO')
+                id_municipios_id=data['id_municipios']
             )
 
             return JsonResponse({
                 'success': True,
                 'institucion': {
-                    'codigo_dane': institucion.codigo_dane,
+                    'codigo_ie': institucion.codigo_ie,
                     'nombre_institucion': institucion.nombre_institucion,
-                    'departamento': institucion.departamento.nombre_departamento,
-                    'municipio': institucion.municipio.nombre_municipio,
-                    'sector': institucion.sector,
-                    'estado': institucion.estado
+                    'municipio': institucion.id_municipios.nombre_municipio
                 }
             })
 
         except IntegrityError:
-            return JsonResponse({'success': False, 'error': 'Error: Ya existe una institución con este código DANE'})
+            return JsonResponse({'success': False, 'error': 'Error: Ya existe una institución con este código IE'})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})
 
 @login_required
 @csrf_exempt
-def api_institucion_detail(request, codigo_dane):
+def api_institucion_detail(request, codigo_ie):
     """API para manejar una institución educativa específica"""
-    institucion = get_object_or_404(InstitucionesEducativas, codigo_dane=codigo_dane)
+    institucion = get_object_or_404(InstitucionesEducativas, codigo_ie=codigo_ie)
 
     if request.method == 'GET':
         return JsonResponse({
-            'codigo_dane': institucion.codigo_dane,
+            'codigo_ie': institucion.codigo_ie,
             'nombre_institucion': institucion.nombre_institucion,
-            'departamento_id': institucion.departamento.codigo_departamento,
-            'municipio_id': institucion.municipio.id,
-            'direccion': institucion.direccion,
-            'telefono': institucion.telefono,
-            'email': institucion.email,
-            'sector': institucion.sector,
-            'rector': institucion.rector,
-            'estado': institucion.estado
+            'id_municipios': institucion.id_municipios.id
         })
 
     elif request.method == 'PUT':
         try:
             data = json.loads(request.body)
             institucion.nombre_institucion = data['nombre_institucion']
-            institucion.departamento_id = data['departamento_id']
-            institucion.municipio_id = data['municipio_id']
-            institucion.direccion = data.get('direccion', '')
-            institucion.telefono = data.get('telefono', '')
-            institucion.email = data.get('email', '')
-            institucion.sector = data.get('sector', 'OFICIAL')
-            institucion.rector = data.get('rector', '')
-            institucion.estado = data.get('estado', 'ACTIVO')
+            institucion.id_municipios_id = data['id_municipios']
             institucion.save()
             return JsonResponse({'success': True})
         except Exception as e:
@@ -551,7 +526,7 @@ def api_institucion_detail(request, codigo_dane):
 @login_required
 def lista_sedes(request):
     """Vista para listar sedes educativas"""
-    sedes = SedesEducativas.objects.select_related('institucion', 'institucion__departamento', 'institucion__municipio').all().order_by('institucion__nombre_institucion', 'nombre_sede')
+    sedes = SedesEducativas.objects.select_related('codigo_ie').all().order_by('codigo_ie__nombre_institucion', 'nombre_sede_educativa')
     paginator = Paginator(sedes, 15)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -566,11 +541,9 @@ def lista_sedes(request):
 def api_sedes(request):
     """API para manejar sedes educativas via AJAX"""
     if request.method == 'GET':
-        sedes = SedesEducativas.objects.select_related('institucion').all().values(
-            'codigo_sede', 'nombre_sede', 'institucion__codigo_dane', 'institucion__nombre_institucion',
-            'direccion', 'zona', 'telefono', 'coordinador', 'tiene_comedor', 'tipo_atencion',
-            'capacidad_beneficiarios', 'jornada_manana', 'jornada_tarde', 'jornada_nocturna',
-            'jornada_unica', 'estado'
+        sedes = SedesEducativas.objects.select_related('codigo_ie').all().values(
+            'cod_interprise', 'cod_dane', 'nombre_sede_educativa', 'codigo_ie__codigo_ie', 'codigo_ie__nombre_institucion',
+            'direccion', 'zona', 'preparado', 'industrializado'
         )
         return JsonResponse({'sedes': list(sedes)})
 
@@ -579,35 +552,27 @@ def api_sedes(request):
             data = json.loads(request.body)
 
             # Verificar si ya existe una sede con este código
-            if SedesEducativas.objects.filter(codigo_sede=data['codigo_sede']).exists():
+            if SedesEducativas.objects.filter(cod_interprise=data['cod_interprise']).exists():
                 return JsonResponse({'success': False, 'error': 'Error: Ya existe una sede con este código'})
 
             sede = SedesEducativas.objects.create(
-                codigo_sede=data['codigo_sede'],
-                nombre_sede=data['nombre_sede'],
-                institucion_id=data['institucion_id'],
-                direccion=data['direccion'],
+                cod_interprise=data['cod_interprise'],
+                cod_dane=data['cod_dane'],
+                nombre_sede_educativa=data['nombre_sede_educativa'],
+                codigo_ie_id=data['codigo_ie'],
+                direccion=data.get('direccion', ''),
                 zona=data['zona'],
-                telefono=data.get('telefono', ''),
-                coordinador=data.get('coordinador', ''),
-                tiene_comedor=data.get('tiene_comedor', False),
-                tipo_atencion=data.get('tipo_atencion', ''),
-                capacidad_beneficiarios=data.get('capacidad_beneficiarios'),
-                jornada_manana=data.get('jornada_manana', False),
-                jornada_tarde=data.get('jornada_tarde', False),
-                jornada_nocturna=data.get('jornada_nocturna', False),
-                jornada_unica=data.get('jornada_unica', False),
-                estado=data.get('estado', 'ACTIVO')
+                preparado=data['preparado'],
+                industrializado=data['industrializado']
             )
 
             return JsonResponse({
                 'success': True,
                 'sede': {
-                    'codigo_sede': sede.codigo_sede,
-                    'nombre_sede': sede.nombre_sede,
-                    'institucion': sede.institucion.nombre_institucion,
-                    'zona': sede.zona,
-                    'estado': sede.estado
+                    'cod_interprise': sede.cod_interprise,
+                    'nombre_sede_educativa': sede.nombre_sede_educativa,
+                    'institucion': sede.codigo_ie.nombre_institucion,
+                    'zona': sede.zona
                 }
             })
 
@@ -618,46 +583,32 @@ def api_sedes(request):
 
 @login_required
 @csrf_exempt
-def api_sede_detail(request, codigo_sede):
+def api_sede_detail(request, cod_interprise):
     """API para manejar una sede educativa específica"""
-    sede = get_object_or_404(SedesEducativas, codigo_sede=codigo_sede)
+    sede = get_object_or_404(SedesEducativas, cod_interprise=cod_interprise)
 
     if request.method == 'GET':
         return JsonResponse({
-            'codigo_sede': sede.codigo_sede,
-            'nombre_sede': sede.nombre_sede,
-            'institucion_id': sede.institucion.codigo_dane,
+            'cod_interprise': sede.cod_interprise,
+            'cod_dane': sede.cod_dane,
+            'nombre_sede_educativa': sede.nombre_sede_educativa,
+            'codigo_ie': sede.codigo_ie.codigo_ie,
             'direccion': sede.direccion,
             'zona': sede.zona,
-            'telefono': sede.telefono,
-            'coordinador': sede.coordinador,
-            'tiene_comedor': sede.tiene_comedor,
-            'tipo_atencion': sede.tipo_atencion,
-            'capacidad_beneficiarios': sede.capacidad_beneficiarios,
-            'jornada_manana': sede.jornada_manana,
-            'jornada_tarde': sede.jornada_tarde,
-            'jornada_nocturna': sede.jornada_nocturna,
-            'jornada_unica': sede.jornada_unica,
-            'estado': sede.estado
+            'preparado': sede.preparado,
+            'industrializado': sede.industrializado
         })
 
     elif request.method == 'PUT':
         try:
             data = json.loads(request.body)
-            sede.nombre_sede = data['nombre_sede']
-            sede.institucion_id = data['institucion_id']
-            sede.direccion = data['direccion']
+            sede.cod_dane = data['cod_dane']
+            sede.nombre_sede_educativa = data['nombre_sede_educativa']
+            sede.codigo_ie_id = data['codigo_ie']
+            sede.direccion = data.get('direccion', '')
             sede.zona = data['zona']
-            sede.telefono = data.get('telefono', '')
-            sede.coordinador = data.get('coordinador', '')
-            sede.tiene_comedor = data.get('tiene_comedor', False)
-            sede.tipo_atencion = data.get('tipo_atencion', '')
-            sede.capacidad_beneficiarios = data.get('capacidad_beneficiarios')
-            sede.jornada_manana = data.get('jornada_manana', False)
-            sede.jornada_tarde = data.get('jornada_tarde', False)
-            sede.jornada_nocturna = data.get('jornada_nocturna', False)
-            sede.jornada_unica = data.get('jornada_unica', False)
-            sede.estado = data.get('estado', 'ACTIVO')
+            sede.preparado = data['preparado']
+            sede.industrializado = data['industrializado']
             sede.save()
             return JsonResponse({'success': True})
         except Exception as e:

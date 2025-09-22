@@ -414,3 +414,62 @@ function loadPrincipalStats() {
             }
         });
 }
+
+/**
+ * ===== FUNCIONES COMUNES REUTILIZABLES =====
+ * Estas funciones son utilizadas por múltiples módulos del sistema
+ */
+
+/**
+ * Muestra una notificación temporal en la pantalla
+ * @param {string} message - Mensaje a mostrar
+ * @param {string} type - Tipo de notificación: 'info', 'success', 'error', 'warning'
+ */
+function showNotification(message, type = 'info') {
+    // Crear elemento de notificación
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()">&times;</button>
+    `;
+
+    // Agregar al DOM
+    document.body.appendChild(notification);
+
+    // Remover automáticamente después de 5 segundos
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+/**
+ * Configura los event listeners globales para el manejo de modales
+ * Esta función debe ser llamada desde cada página que use modales
+ */
+function setupModalEventListeners() {
+    // Event listener para cerrar modales con ESC (solo agregar una vez)
+    if (!document.body.hasAttribute('data-modal-listeners-setup')) {
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                // Buscar funciones closeModal y closeDetailModal en el contexto global
+                if (typeof closeModal === 'function') closeModal();
+                if (typeof closeDetailModal === 'function') closeDetailModal();
+            }
+        });
+
+        // Event listener para cerrar modales haciendo clic fuera
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('modal-overlay')) {
+                // Buscar funciones closeModal y closeDetailModal en el contexto global
+                if (typeof closeModal === 'function') closeModal();
+                if (typeof closeDetailModal === 'function') closeDetailModal();
+            }
+        });
+
+        // Marcar que los listeners ya fueron configurados
+        document.body.setAttribute('data-modal-listeners-setup', 'true');
+    }
+}

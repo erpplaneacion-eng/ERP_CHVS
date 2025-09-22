@@ -7,6 +7,7 @@ let instituciones = [];
 document.addEventListener('DOMContentLoaded', function() {
     loadInstituciones();
     updateStats();
+    setupModalEventListeners(); // Configurar event listeners globales para modales
 });
 
 // Funciones para cargar datos de referencia
@@ -16,11 +17,11 @@ async function loadInstituciones() {
         const data = await response.json();
         instituciones = data.instituciones;
 
-        const select = document.getElementById('institucion_id');
+        const select = document.getElementById('codigo_ie');
         select.innerHTML = '<option value="">Seleccione una institución</option>';
 
         instituciones.forEach(inst => {
-            select.innerHTML += `<option value="${inst.codigo_dane}">${inst.nombre_institucion} - ${inst.municipio__nombre_municipio}</option>`;
+            select.innerHTML += `<option value="${inst.codigo_ie}">${inst.nombre_institucion}</option>`;
         });
     } catch (error) {
         console.error('Error al cargar instituciones:', error);
@@ -35,7 +36,7 @@ function showCreateModal() {
 
     document.getElementById('modalTitle').textContent = 'Nueva Sede Educativa';
     document.getElementById('sedeForm').reset();
-    document.getElementById('codigo_sede').readOnly = false;
+    document.getElementById('cod_interprise').readOnly = false;
 
     document.getElementById('sedeModal').style.display = 'flex';
 }
@@ -54,28 +55,22 @@ async function saveSede() {
     const formData = new FormData(form);
 
     // Validar campos requeridos
-    if (!formData.get('codigo_sede') || !formData.get('nombre_sede') ||
-        !formData.get('institucion_id') || !formData.get('direccion') || !formData.get('zona')) {
+    if (!formData.get('cod_interprise') || !formData.get('cod_dane') ||
+        !formData.get('nombre_sede_educativa') || !formData.get('codigo_ie') ||
+        !formData.get('zona') || !formData.get('preparado') || !formData.get('industrializado')) {
         showNotification('Por favor complete todos los campos requeridos', 'error');
         return;
     }
 
     const data = {
-        codigo_sede: formData.get('codigo_sede'),
-        nombre_sede: formData.get('nombre_sede'),
-        institucion_id: formData.get('institucion_id'),
-        direccion: formData.get('direccion'),
+        cod_interprise: formData.get('cod_interprise'),
+        cod_dane: formData.get('cod_dane'),
+        nombre_sede_educativa: formData.get('nombre_sede_educativa'),
+        codigo_ie: formData.get('codigo_ie'),
         zona: formData.get('zona'),
-        telefono: formData.get('telefono') || '',
-        coordinador: formData.get('coordinador') || '',
-        tiene_comedor: formData.has('tiene_comedor'),
-        tipo_atencion: formData.get('tipo_atencion') || '',
-        capacidad_beneficiarios: formData.get('capacidad_beneficiarios') ? parseInt(formData.get('capacidad_beneficiarios')) : null,
-        jornada_manana: formData.has('jornada_manana'),
-        jornada_tarde: formData.has('jornada_tarde'),
-        jornada_nocturna: formData.has('jornada_nocturna'),
-        jornada_unica: formData.has('jornada_unica'),
-        estado: formData.get('estado') || 'ACTIVO'
+        direccion: formData.get('direccion') || '',
+        preparado: formData.get('preparado'),
+        industrializado: formData.get('industrializado')
     };
 
     try {
@@ -117,31 +112,24 @@ async function saveSede() {
 }
 
 // Función para editar sede
-async function editSede(codigoSede) {
+async function editSede(codInterprise) {
     try {
-        const response = await fetch(`/principal/api/sedes/${codigoSede}/`);
+        const response = await fetch(`/principal/api/sedes/${codInterprise}/`);
         const sede = await response.json();
 
         editingMode = true;
-        currentSedeId = codigoSede;
+        currentSedeId = codInterprise;
 
         document.getElementById('modalTitle').textContent = 'Editar Sede Educativa';
-        document.getElementById('codigo_sede').value = sede.codigo_sede;
-        document.getElementById('codigo_sede').readOnly = true;
-        document.getElementById('nombre_sede').value = sede.nombre_sede;
-        document.getElementById('institucion_id').value = sede.institucion_id;
-        document.getElementById('direccion').value = sede.direccion;
+        document.getElementById('cod_interprise').value = sede.cod_interprise;
+        document.getElementById('cod_interprise').readOnly = true;
+        document.getElementById('cod_dane').value = sede.cod_dane;
+        document.getElementById('nombre_sede_educativa').value = sede.nombre_sede_educativa;
+        document.getElementById('codigo_ie').value = sede.codigo_ie;
+        document.getElementById('direccion').value = sede.direccion || '';
         document.getElementById('zona').value = sede.zona;
-        document.getElementById('telefono').value = sede.telefono || '';
-        document.getElementById('coordinador').value = sede.coordinador || '';
-        document.getElementById('tiene_comedor').checked = sede.tiene_comedor;
-        document.getElementById('tipo_atencion').value = sede.tipo_atencion || '';
-        document.getElementById('capacidad_beneficiarios').value = sede.capacidad_beneficiarios || '';
-        document.getElementById('jornada_manana').checked = sede.jornada_manana;
-        document.getElementById('jornada_tarde').checked = sede.jornada_tarde;
-        document.getElementById('jornada_nocturna').checked = sede.jornada_nocturna;
-        document.getElementById('jornada_unica').checked = sede.jornada_unica;
-        document.getElementById('estado').value = sede.estado;
+        document.getElementById('preparado').value = sede.preparado;
+        document.getElementById('industrializado').value = sede.industrializado;
 
         document.getElementById('sedeModal').style.display = 'flex';
     } catch (error) {
@@ -151,30 +139,27 @@ async function editSede(codigoSede) {
 }
 
 // Función para ver detalles
-async function viewSede(codigoSede) {
+async function viewSede(codInterprise) {
     try {
-        const response = await fetch(`/principal/api/sedes/${codigoSede}/`);
+        const response = await fetch(`/principal/api/sedes/${codInterprise}/`);
         const sede = await response.json();
 
         // Obtener información de la institución
-        const institucion = instituciones.find(i => i.codigo_dane === sede.institucion_id);
-
-        // Generar lista de jornadas
-        const jornadas = [];
-        if (sede.jornada_manana) jornadas.push('Mañana');
-        if (sede.jornada_tarde) jornadas.push('Tarde');
-        if (sede.jornada_nocturna) jornadas.push('Nocturna');
-        if (sede.jornada_unica) jornadas.push('Única');
+        const institucion = instituciones.find(i => i.codigo_ie === sede.codigo_ie);
 
         const detailContent = `
             <div class="detail-grid">
                 <div class="detail-item">
-                    <label>Código Sede:</label>
-                    <span>${sede.codigo_sede}</span>
+                    <label>Código Interprise:</label>
+                    <span>${sede.cod_interprise}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Código DANE:</label>
+                    <span>${sede.cod_dane}</span>
                 </div>
                 <div class="detail-item">
                     <label>Nombre:</label>
-                    <span>${sede.nombre_sede}</span>
+                    <span>${sede.nombre_sede_educativa}</span>
                 </div>
                 <div class="detail-item full-width">
                     <label>Institución:</label>
@@ -182,47 +167,19 @@ async function viewSede(codigoSede) {
                 </div>
                 <div class="detail-item full-width">
                     <label>Dirección:</label>
-                    <span>${sede.direccion}</span>
+                    <span>${sede.direccion || 'No especificada'}</span>
                 </div>
                 <div class="detail-item">
                     <label>Zona:</label>
                     <span class="badge badge-${sede.zona.toLowerCase()}">${sede.zona}</span>
                 </div>
                 <div class="detail-item">
-                    <label>Estado:</label>
-                    <span class="badge badge-${sede.estado.toLowerCase()}">${sede.estado}</span>
+                    <label>Preparado:</label>
+                    <span>${sede.preparado}</span>
                 </div>
                 <div class="detail-item">
-                    <label>Teléfono:</label>
-                    <span>${sede.telefono || 'No especificado'}</span>
-                </div>
-                <div class="detail-item">
-                    <label>Coordinador:</label>
-                    <span>${sede.coordinador || 'No especificado'}</span>
-                </div>
-                <div class="detail-section">
-                    <h4><i class="fas fa-utensils"></i> Información del Comedor</h4>
-                    <div class="detail-item">
-                        <label>Tiene Comedor:</label>
-                        <span class="badge ${sede.tiene_comedor ? 'badge-success' : 'badge-secondary'}">
-                            ${sede.tiene_comedor ? 'Sí' : 'No'}
-                        </span>
-                    </div>
-                    <div class="detail-item">
-                        <label>Tipo de Atención:</label>
-                        <span>${sede.tipo_atencion || 'No especificado'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <label>Capacidad:</label>
-                        <span>${sede.capacidad_beneficiarios || 'No especificada'} beneficiarios</span>
-                    </div>
-                </div>
-                <div class="detail-section">
-                    <h4><i class="fas fa-clock"></i> Jornadas Disponibles</h4>
-                    <div class="detail-item full-width">
-                        <label>Jornadas:</label>
-                        <span>${jornadas.length > 0 ? jornadas.join(', ') : 'No especificadas'}</span>
-                    </div>
+                    <label>Industrializado:</label>
+                    <span>${sede.industrializado}</span>
                 </div>
             </div>
         `;
@@ -236,13 +193,13 @@ async function viewSede(codigoSede) {
 }
 
 // Función para eliminar sede
-async function deleteSede(codigoSede) {
+async function deleteSede(codInterprise) {
     if (!confirm('¿Está seguro de que desea eliminar esta sede? Esta acción no se puede deshacer.')) {
         return;
     }
 
     try {
-        const response = await fetch(`/principal/api/sedes/${codigoSede}/`, {
+        const response = await fetch(`/principal/api/sedes/${codInterprise}/`, {
             method: 'DELETE',
             headers: {
                 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
@@ -285,39 +242,4 @@ async function updateStats() {
     }
 }
 
-// Función para mostrar notificaciones
-function showNotification(message, type = 'info') {
-    // Crear elemento de notificación
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.innerHTML = `
-        <span>${message}</span>
-        <button onclick="this.parentElement.remove()">&times;</button>
-    `;
-
-    // Agregar al DOM
-    document.body.appendChild(notification);
-
-    // Remover automáticamente después de 5 segundos
-    setTimeout(() => {
-        if (notification.parentElement) {
-            notification.remove();
-        }
-    }, 5000);
-}
-
-// Event listeners para cerrar modales con ESC
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeModal();
-        closeDetailModal();
-    }
-});
-
-// Event listeners para cerrar modales haciendo clic fuera
-document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('modal-overlay')) {
-        closeModal();
-        closeDetailModal();
-    }
-});
+// Función showNotification y event listeners para modales ahora están disponibles globalmente desde main.js
