@@ -9,7 +9,7 @@ from datetime import date
 class ProgramaForm(forms.ModelForm):
     class Meta:
         model = Programa
-        fields = ['programa', 'fecha_inicial', 'fecha_final', 'estado', 'imagen']
+        fields = ['programa', 'fecha_inicial', 'fecha_final', 'estado', 'contrato', 'imagen']
         
         widgets = {
             'fecha_inicial': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
@@ -20,6 +20,11 @@ class ProgramaForm(forms.ModelForm):
                 'maxlength': '200'
             }),
             'estado': forms.Select(attrs={'class': 'form-control'}),
+            'contrato': forms.TextInput(attrs={
+                'placeholder': 'Ej: CONTRATO-2025-001',
+                'class': 'form-control',
+                'maxlength': '100'
+            }),
             'imagen': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
         }
 
@@ -62,6 +67,20 @@ class ProgramaForm(forms.ModelForm):
             raise ValidationError("La fecha final no puede ser posterior al año 2030.")
         
         return fecha_final
+
+    def clean_contrato(self):
+        contrato = self.cleaned_data.get('contrato')
+        if not contrato:
+            raise ValidationError("El número de contrato es obligatorio.")
+
+        if len(contrato.strip()) < 3:
+            raise ValidationError("El número de contrato debe tener al menos 3 caracteres.")
+
+        # Solo permitir letras, números, guiones y guiones bajos
+        if not re.match(r'^[a-zA-Z0-9\-_]+$', contrato):
+            raise ValidationError("El número de contrato solo puede contener letras, números, guiones y guiones bajos.")
+
+        return contrato.strip().upper()
 
     def clean(self):
         cleaned_data = super().clean()

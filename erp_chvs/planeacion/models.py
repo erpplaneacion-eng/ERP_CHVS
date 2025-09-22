@@ -100,6 +100,13 @@ class Programa(models.Model):
         null=True,   # Permite que el valor en la base de datos sea NULL
         verbose_name="Imagen del Programa"
     )
+
+    # Campo para el contrato
+    contrato = models.CharField(
+        max_length=100,
+        default='SIN_CONTRATO',  # Valor por defecto para registros existentes
+        verbose_name="Contrato"
+    )
     
     def __str__(self):
         return self.programa

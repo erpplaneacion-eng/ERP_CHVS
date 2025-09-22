@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 modalForm.querySelector('[name="fecha_inicial"]').value = data.fechaInicial;
                 modalForm.querySelector('[name="fecha_final"]').value = data.fechaFinal;
                 modalForm.querySelector('[name="estado"]').value = data.estado;
+                modalForm.querySelector('[name="contrato"]').value = data.contrato;
                 
                 if (data.imagenUrl && currentImageContainer && currentImageLink) {
                     currentImageLink.href = data.imagenUrl;
@@ -88,7 +89,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const requiredFields = [
                 {name: 'programa', label: 'Nombre del Programa'},
                 {name: 'fecha_inicial', label: 'Fecha Inicial'},
-                {name: 'fecha_final', label: 'Fecha Final'}
+                {name: 'fecha_final', label: 'Fecha Final'},
+                {name: 'contrato', label: 'Número de Contrato'}
             ];
             
             requiredFields.forEach(function(field) {
