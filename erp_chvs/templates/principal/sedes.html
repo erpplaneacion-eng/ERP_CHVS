@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+
+{% block title %}Sedes Educativas - ERP CHVS{% endblock %}
+
+{% block content %}
+<div class="sedes-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-school"></i> Gestión de Sedes Educativas</h2>
+            <p>Total de sedes: <strong>{{ total_sedes }}</strong></p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="showCreateModal()">
+                <i class="fas fa-plus"></i> Nueva Sede
+            </button>
+            <a href="{% url 'principal:principal_index' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table" id="sedesTable">
+            <thead>
+                <tr>
+                    <th>Código Sede</th>
+                    <th>Nombre Sede</th>
+                    <th>Institución</th>
+                    <th>Municipio</th>
+                    <th>Zona</th>
+                    <th>Comedor</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sede in sedes %}
+                <tr data-codigo="{{ sede.codigo_sede }}">
+                    <td>{{ sede.codigo_sede }}</td>
+                    <td>{{ sede.nombre_sede }}</td>
+                    <td>{{ sede.institucion.nombre_institucion }}</td>
+                    <td>{{ sede.institucion.municipio.nombre_municipio }}</td>
+                    <td>
+                        <span class="badge badge-{{ sede.zona|lower }}">
+                            {{ sede.zona }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if sede.tiene_comedor %}
+                            <span class="badge badge-success">
+                                <i class="fas fa-check"></i> Sí
+                            </span>
+                        {% else %}
+                            <span class="badge badge-secondary">
+                                <i class="fas fa-times"></i> No
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ sede.estado|lower }}">
+                            {{ sede.estado }}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-info" onclick="viewSede('{{ sede.codigo_sede }}')" title="Ver detalles">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-warning" onclick="editSede('{{ sede.codigo_sede }}')" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteSede('{{ sede.codigo_sede }}')" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center">No hay sedes registradas</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación -->
+    {% if sedes.has_other_pages %}
+    <div class="pagination-container">
+        <nav aria-label="Paginación de sedes">
+            <ul class="pagination">
+                {% if sedes.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">Primera</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ sedes.previous_page_number }}">Anterior</a>
+                    </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        Página {{ sedes.number }} de {{ sedes.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if sedes.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ sedes.next_page_number }}">Siguiente</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ sedes.paginator.num_pages }}">Última</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal para crear/editar sede -->
+<div class="modal-overlay" id="sedeModal" style="display: none;">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Nueva Sede Educativa</h3>
+                <span class="modal-close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="sedeForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="codigo_sede">Código Sede *</label>
+                            <input type="text" id="codigo_sede" name="codigo_sede" required maxlength="20">
+                        </div>
+                        <div class="form-group">
+                            <label for="nombre_sede">Nombre Sede *</label>
+                            <input type="text" id="nombre_sede" name="nombre_sede" required maxlength="255">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="institucion_id">Institución Educativa *</label>
+                            <select id="institucion_id" name="institucion_id" required>
+                                <option value="">Seleccione una institución</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="zona">Zona *</label>
+                            <select id="zona" name="zona" required>
+                                <option value="">Seleccione una zona</option>
+                                <option value="URBANA">Urbana</option>
+                                <option value="RURAL">Rural</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="direccion">Dirección *</label>
+                        <textarea id="direccion" name="direccion" rows="3" required></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="telefono">Teléfono</label>
+                            <input type="text" id="telefono" name="telefono" maxlength="30">
+                        </div>
+                        <div class="form-group">
+                            <label for="coordinador">Coordinador</label>
+                            <input type="text" id="coordinador" name="coordinador" maxlength="255">
+                        </div>
+                    </div>
+
+                    <!-- Información del comedor -->
+                    <div class="form-section">
+                        <h4><i class="fas fa-utensils"></i> Información del Comedor</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tiene_comedor" name="tiene_comedor">
+                                    <span class="checkmark"></span>
+                                    Tiene Comedor
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label for="tipo_atencion">Tipo de Atención</label>
+                                <select id="tipo_atencion" name="tipo_atencion">
+                                    <option value="">Seleccione tipo</option>
+                                    <option value="DESAYUNO">Desayuno</option>
+                                    <option value="ALMUERZO">Almuerzo</option>
+                                    <option value="REFRIGERIO_AM">Refrigerio AM</option>
+                                    <option value="REFRIGERIO_PM">Refrigerio PM</option>
+                                    <option value="COMPLEMENTO">Complemento Alimentario</option>
+                                    <option value="MULTIPLE">Múltiples Atenciones</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="capacidad_beneficiarios">Capacidad de Beneficiarios</label>
+                            <input type="number" id="capacidad_beneficiarios" name="capacidad_beneficiarios" min="0">
+                        </div>
+                    </div>
+
+                    <!-- Jornadas disponibles -->
+                    <div class="form-section">
+                        <h4><i class="fas fa-clock"></i> Jornadas Disponibles</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="jornada_manana" name="jornada_manana">
+                                    <span class="checkmark"></span>
+                                    Jornada Mañana
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="jornada_tarde" name="jornada_tarde">
+                                    <span class="checkmark"></span>
+                                    Jornada Tarde
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="jornada_nocturna" name="jornada_nocturna">
+                                    <span class="checkmark"></span>
+                                    Jornada Nocturna
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="jornada_unica" name="jornada_unica">
+                                    <span class="checkmark"></span>
+                                    Jornada Única
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="estado">Estado *</label>
+                        <select id="estado" name="estado" required>
+                            <option value="ACTIVO">Activo</option>
+                            <option value="INACTIVO">Inactivo</option>
+                            <option value="MANTENIMIENTO">En Mantenimiento</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveSede()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para ver detalles -->
+<div class="modal-overlay" id="detailModal" style="display: none;">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Detalles de la Sede</h3>
+                <span class="modal-close" onclick="closeDetailModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="detailContent">
+                <!-- Contenido dinámico -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeDetailModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

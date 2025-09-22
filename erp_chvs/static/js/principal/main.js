@@ -328,4 +328,89 @@ function loadPrincipalStats() {
                 element.textContent = '0';
             }
         });
+
+    // Cargar total de tipos de documento
+    fetch('/principal/api/tipos-documento/')
+        .then(response => response.json())
+        .then(data => {
+            const element = document.getElementById('total-tipos-documento');
+            if (element) {
+                element.textContent = data.tipos_documento.length;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading tipos documento:', error);
+            const element = document.getElementById('total-tipos-documento');
+            if (element) {
+                element.textContent = '0';
+            }
+        });
+
+    // Cargar total de tipos de género
+    fetch('/principal/api/tipos-genero/')
+        .then(response => response.json())
+        .then(data => {
+            const element = document.getElementById('total-tipos-genero');
+            if (element) {
+                element.textContent = data.tipos_genero.length;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading tipos genero:', error);
+            const element = document.getElementById('total-tipos-genero');
+            if (element) {
+                element.textContent = '0';
+            }
+        });
+
+    // Cargar total de modalidades de consumo
+    fetch('/principal/api/modalidades-consumo/')
+        .then(response => response.json())
+        .then(data => {
+            const element = document.getElementById('total-modalidades');
+            if (element) {
+                element.textContent = data.modalidades.length;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading modalidades:', error);
+            const element = document.getElementById('total-modalidades');
+            if (element) {
+                element.textContent = '0';
+            }
+        });
+
+    // Cargar total de instituciones educativas
+    fetch('/principal/api/instituciones/')
+        .then(response => response.json())
+        .then(data => {
+            const element = document.getElementById('total-instituciones');
+            if (element) {
+                element.textContent = data.instituciones.length;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading instituciones:', error);
+            const element = document.getElementById('total-instituciones');
+            if (element) {
+                element.textContent = '0';
+            }
+        });
+
+    // Cargar total de sedes educativas
+    fetch('/principal/api/sedes/')
+        .then(response => response.json())
+        .then(data => {
+            const element = document.getElementById('total-sedes');
+            if (element) {
+                element.textContent = data.sedes.length;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading sedes:', error);
+            const element = document.getElementById('total-sedes');
+            if (element) {
+                element.textContent = '0';
+            }
+        });
 }

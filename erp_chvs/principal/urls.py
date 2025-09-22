@@ -8,6 +8,8 @@ urlpatterns = [
     path('tipos-documento/', views.lista_tipos_documento, name='lista_tipos_documento'),
     path('tipos-genero/', views.lista_tipos_genero, name='lista_tipos_genero'),
     path('modalidades-consumo/', views.lista_modalidades_consumo, name='lista_modalidades_consumo'),
+    path('instituciones/', views.lista_instituciones, name='lista_instituciones'),
+    path('sedes/', views.lista_sedes, name='lista_sedes'),
     
     # APIs para departamentos y municipios
     path('api/departamentos/', views.api_departamentos, name='api_departamentos'),
@@ -26,4 +28,12 @@ urlpatterns = [
     # APIs para modalidades de consumo
     path('api/modalidades-consumo/', views.api_modalidades_consumo, name='api_modalidades_consumo'),
     path('api/modalidades-consumo/<str:id_modalidades>/', views.api_modalidad_consumo_detail, name='api_modalidad_consumo_detail'),
+
+    # APIs para instituciones educativas
+    path('api/instituciones/', views.api_instituciones, name='api_instituciones'),
+    path('api/instituciones/<str:codigo_dane>/', views.api_institucion_detail, name='api_institucion_detail'),
+
+    # APIs para sedes educativas
+    path('api/sedes/', views.api_sedes, name='api_sedes'),
+    path('api/sedes/<str:codigo_sede>/', views.api_sede_detail, name='api_sede_detail'),
 ]

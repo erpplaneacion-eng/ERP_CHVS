@@ -89,6 +89,10 @@
             <script src="{% static 'js/principal/departamentos.js' %}"></script>
         {% elif 'municipios' in request.path or request.resolver_match.url_name == 'lista_municipios' %}
             <script src="{% static 'js/principal/municipios.js' %}"></script>
+        {% elif 'instituciones' in request.path or request.resolver_match.url_name == 'lista_instituciones' %}
+            <script src="{% static 'js/principal/instituciones.js' %}"></script>
+        {% elif 'sedes' in request.path or request.resolver_match.url_name == 'lista_sedes' %}
+            <script src="{% static 'js/principal/sedes.js' %}"></script>
         {% endif %}
     {% elif request.resolver_match.app_name == 'nutricion' %}
         {% if 'alimentos' in request.path %}
@@ -97,9 +101,7 @@
             <script src="{% static 'js/nutricion/beneficiarios.js' %}"></script>
         {% endif %}
     {% elif request.resolver_match.app_name == 'planeacion' %}
-        {% if 'comedores' in request.path %}
-            <script src="{% static 'js/planeacion/comedores.js' %}"></script>
-        {% elif 'programas' in request.path %}
+        {% if 'programas' in request.path %}
             <script src="{% static 'js/planeacion/programas.js' %}"></script>
         {% endif %}
     {% elif request.resolver_match.app_name == 'facturacion' %}

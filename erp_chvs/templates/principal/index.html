@@ -109,6 +109,46 @@
                 </a>
             </div>
         </div>
+
+        <!-- Card Instituciones Educativas -->
+        <div class="config-card">
+            <div class="card-header">
+                <i class="fas fa-university"></i>
+                <h3>Instituciones Educativas</h3>
+            </div>
+            <div class="card-body">
+                <p>Gestiona las instituciones educativas registradas</p>
+                <div class="card-stats">
+                    <span class="stat-number" id="total-instituciones">--</span>
+                    <span class="stat-label">Instituciones registradas</span>
+                </div>
+            </div>
+            <div class="card-actions">
+                <a href="{% url 'principal:lista_instituciones' %}" class="btn btn-primary">
+                    <i class="fas fa-list"></i> Administrar
+                </a>
+            </div>
+        </div>
+
+        <!-- Card Sedes Educativas -->
+        <div class="config-card">
+            <div class="card-header">
+                <i class="fas fa-school"></i>
+                <h3>Sedes Educativas</h3>
+            </div>
+            <div class="card-body">
+                <p>Gestiona las sedes de las instituciones educativas</p>
+                <div class="card-stats">
+                    <span class="stat-number" id="total-sedes">--</span>
+                    <span class="stat-label">Sedes registradas</span>
+                </div>
+            </div>
+            <div class="card-actions">
+                <a href="{% url 'principal:lista_sedes' %}" class="btn btn-primary">
+                    <i class="fas fa-list"></i> Administrar
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 
