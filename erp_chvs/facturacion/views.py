@@ -84,6 +84,7 @@ def generar_listados_view(request):
     verified_message = None
     invalid_sedes = []
     coincidencias_parciales = []
+    coincidencias_genericas = []
     agrupacion_sedes = []
 
     if request.method == 'POST' and request.FILES.get('archivo_excel'):
@@ -157,79 +158,168 @@ def generar_listados_view(request):
             # Combinar GRADO_COD y GRUPO
             df['grado_grupos'] = df['GRADO_COD_clean'] + '-' + df['GRUPO'].astype(str)
 
-            # Lógica para JORNADA y nuevas columnas (si ETC es YUMBO)
-            if 'YUMBO' in df['ETC'].unique():
+            # Lógica para JORNADA y nuevas columnas (si ETC es YUMBO o GUADALAJARA DE BUGA)
+            if 'YUMBO' in df['ETC'].unique() or 'GUADALAJARA DE BUGA' in df['ETC'].unique():
                 # Inicializar nuevas columnas
                 df['COMPLEMENTO ALIMENTARIO PREPARADO AM'] = ''
                 df['COMPLEMENTO ALIMENTARIO PREPARADO PM'] = ''
-                df['COMPLEMENTO AM/PM INDUSTRIALIZADO'] = ''
                 df['ALMUERZO JORNADA UNICA'] = ''
                 df['REFUERZO COMPLEMENTO AM/PM'] = ''
 
                 # Aplicar lógica condicional para YUMBO
-                df.loc[(df['ETC'] == 'YUMBO') & (df['JORNADA'] == 'ÚNICA'), ['COMPLEMENTO ALIMENTARIO PREPARADO AM', 'ALMUERZO JORNADA UNICA']] = 'x'
-                df.loc[(df['ETC'] == 'YUMBO') & (df['JORNADA'].isin(['TARDE', 'MAÑANA'])), ['COMPLEMENTO ALIMENTARIO PREPARADO AM', 'COMPLEMENTO ALIMENTARIO PREPARADO PM', 'REFUERZO COMPLEMENTO AM/PM']] = 'x'
+                if 'YUMBO' in df['ETC'].unique():
+                    logger.info("Aplicando lógica de complementos para YUMBO")
+                    df.loc[(df['ETC'] == 'YUMBO') & (df['JORNADA'] == 'ÚNICA'), ['COMPLEMENTO ALIMENTARIO PREPARADO AM', 'ALMUERZO JORNADA UNICA']] = 'x'
+                    df.loc[(df['ETC'] == 'YUMBO') & (df['JORNADA'].isin(['TARDE', 'MAÑANA'])), ['COMPLEMENTO ALIMENTARIO PREPARADO AM', 'COMPLEMENTO ALIMENTARIO PREPARADO PM', 'REFUERZO COMPLEMENTO AM/PM']] = 'x'
+
+                # Aplicar lógica condicional para GUADALAJARA DE BUGA
+                if 'GUADALAJARA DE BUGA' in df['ETC'].unique():
+                    logger.info("Aplicando lógica de complementos para GUADALAJARA DE BUGA")
+                    df.loc[(df['ETC'] == 'GUADALAJARA DE BUGA') & (df['JORNADA'] == 'ÚNICA'), ['COMPLEMENTO ALIMENTARIO PREPARADO AM', 'ALMUERZO JORNADA UNICA']] = 'x'
+                    df.loc[(df['ETC'] == 'GUADALAJARA DE BUGA') & (df['JORNADA'].isin(['TARDE', 'MAÑANA'])), ['COMPLEMENTO ALIMENTARIO PREPARADO AM', 'COMPLEMENTO ALIMENTARIO PREPARADO PM']] = 'x'
 
             # Añadir columna de focalización
             df['focalizacion'] = focalizacion
 
-            # --- VALIDACIÓN DE SEDES CON COINCIDENCIA DIFUSA ---
+            # --- VALIDACIÓN DE SEDES CON COINCIDENCIA DIFUSA (DOBLE VALIDACIÓN) ---
             logger.info("Iniciando validación de sedes con coincidencia difusa...")
-            
-            # Extraer valores únicos de la columna SEDE
+
+            # Extraer valores únicos de la columna SEDE y ETC
             unique_sedes = df['SEDE'].dropna().unique()
+            unique_etc = df['ETC'].unique()
             logger.info(f"Sedes encontradas en el archivo: {len(unique_sedes)}")
-            
-            # Obtener sedes de la base de datos y crear mapeo optimizado
-            db_sedes_raw = list(SedesEducativas.objects.values_list('nombre_sede_educativa', flat=True))
-            
-            # Crear mapeo optimizado para búsqueda O(1)
-            db_sedes_mapeo = {}
-            db_sedes_normalizadas = []
-            
-            for sede_raw in db_sedes_raw:
+            logger.info(f"ETC únicos encontrados en el Excel: {unique_etc}")
+
+            # Obtener sedes de la base de datos y crear mapeos optimizados
+            # MAPEO 1: Por nombre_sede_educativa (validación principal) - FILTRADO POR MUNICIPIO
+            db_sedes_principales = list(SedesEducativas.objects.filter(
+                codigo_ie__id_municipios__nombre_municipio__in=unique_etc
+            ).values_list('nombre_sede_educativa', flat=True))
+            db_sedes_mapeo_principal = {}
+            db_sedes_normalizadas_principal = []
+
+            for sede_raw in db_sedes_principales:
                 sede_normalizada = normalizar_texto(sede_raw)
-                db_sedes_normalizadas.append(sede_normalizada)
-                db_sedes_mapeo[sede_normalizada] = sede_raw
+                db_sedes_normalizadas_principal.append(sede_normalizada)
+                db_sedes_mapeo_principal[sede_normalizada] = sede_raw
+
+            # MAPEO 2: Por nombre_generico_sede (validación de respaldo) - FILTRADO POR MUNICIPIO
+            db_sedes_genericas = list(SedesEducativas.objects.exclude(
+                nombre_generico_sede__isnull=True
+            ).exclude(
+                nombre_generico_sede__exact=''
+            ).exclude(
+                nombre_generico_sede__exact='Sin especificar'
+            ).filter(
+                codigo_ie__id_municipios__nombre_municipio__in=unique_etc
+            ).values_list('nombre_generico_sede', 'nombre_sede_educativa', 'codigo_ie__id_municipios__nombre_municipio'))
+
+            db_sedes_mapeo_generico = {}
+            db_sedes_normalizadas_generico = []
+
+            for nombre_generico, nombre_completo, municipio in db_sedes_genericas:
+                sede_normalizada = normalizar_texto(nombre_generico)
+                if sede_normalizada and sede_normalizada not in db_sedes_normalizadas_generico:
+                    db_sedes_normalizadas_generico.append(sede_normalizada)
+                    # Crear clave única: nombre_generico + municipio para evitar conflictos
+                    clave_unica = f"{sede_normalizada}_{municipio}"
+                    db_sedes_mapeo_generico[clave_unica] = {
+                        'nombre_completo': nombre_completo,
+                        'municipio': municipio,
+                        'nombre_generico': nombre_generico
+                    }
+
+            logger.info(f"Sedes principales en BD (filtradas por ETC): {len(db_sedes_normalizadas_principal)}")
+            logger.info(f"Sedes genéricas en BD (filtradas por ETC): {len(db_sedes_normalizadas_generico)}")
             
-            logger.info(f"Sedes en base de datos: {len(db_sedes_normalizadas)}")
-            
+            # Log adicional para verificar el filtro
+            if len(db_sedes_normalizadas_principal) == 0:
+                logger.warning(f"No se encontraron sedes para los ETC: {unique_etc}. Verificar que los nombres coincidan exactamente con la tabla principal_municipio.")
+            else:
+                logger.info(f"Filtro por ETC aplicado correctamente. Sedes encontradas para: {unique_etc}")
+
             # Variables para tracking
             sedes_validas = []
             sedes_invalidas = []
             coincidencias_parciales = []
+            coincidencias_genericas = []  # Nueva lista para coincidencias por nombre genérico
             mapeo_sedes = {}  # Para mapear sede original -> sede encontrada
-            
+
             # Validar cada sede del Excel
             for sede_excel in unique_sedes:
-                sede_encontrada, porcentaje = encontrar_coincidencia_difusa(sede_excel, db_sedes_normalizadas, umbral=90)
-                
+                sede_validada = False
+
+                # PRIMERA VALIDACIÓN: Por nombre completo de sede
+                sede_encontrada, porcentaje = encontrar_coincidencia_difusa(
+                    sede_excel,
+                    db_sedes_normalizadas_principal,
+                    umbral=90
+                )
+
                 if sede_encontrada:
-                    # Búsqueda optimizada O(1) en lugar de O(n)
-                    sede_original_bd = db_sedes_mapeo.get(sede_encontrada)
-                    
-                    if sede_original_bd:  # Verificación adicional de seguridad
+                    sede_original_bd = db_sedes_mapeo_principal.get(sede_encontrada)
+
+                    if sede_original_bd:
                         sedes_validas.append(sede_excel)
                         mapeo_sedes[sede_excel] = sede_original_bd
-                        
+                        sede_validada = True
+
                         if porcentaje < 100:
                             coincidencias_parciales.append({
                                 'excel': sede_excel,
                                 'bd': sede_original_bd,
-                                'porcentaje': porcentaje
+                                'porcentaje': porcentaje,
+                                'tipo': 'nombre_completo'
                             })
-                            logger.info(f"Coincidencia parcial: '{sede_excel}' -> '{sede_original_bd}' ({porcentaje}%)")
+                            logger.info(f"Coincidencia parcial (nombre completo): '{sede_excel}' -> '{sede_original_bd}' ({porcentaje}%)")
                         else:
-                            logger.info(f"Coincidencia exacta: '{sede_excel}' -> '{sede_original_bd}'")
-                    else:
-                        # Fallback si no se encuentra en el mapeo
-                        sedes_invalidas.append(sede_excel)
-                        logger.warning(f"Sede encontrada pero no mapeada: '{sede_excel}'")
-                else:
+                            logger.info(f"Coincidencia exacta (nombre completo): '{sede_excel}' -> '{sede_original_bd}'")
+
+                # SEGUNDA VALIDACIÓN: Si la primera falló, intentar por nombre genérico (considerando municipio)
+                if not sede_validada and db_sedes_normalizadas_generico:
+                    logger.info(f"Intentando validación por nombre genérico para: '{sede_excel}'")
+
+                    sede_encontrada_generica, porcentaje_generico = encontrar_coincidencia_difusa(
+                        sede_excel,
+                        db_sedes_normalizadas_generico,
+                        umbral=90
+                    )
+
+                    if sede_encontrada_generica:
+                        # Buscar en el mapeo genérico considerando el municipio del ETC
+                        # Obtener el ETC de la fila actual para determinar el municipio
+                        etc_actual = df[df['SEDE'] == sede_excel]['ETC'].iloc[0] if len(df[df['SEDE'] == sede_excel]) > 0 else None
+                        
+                        if etc_actual:
+                            clave_unica = f"{sede_encontrada_generica}_{etc_actual}"
+                            sede_info_generica = db_sedes_mapeo_generico.get(clave_unica)
+                            
+                            if sede_info_generica:
+                                sedes_validas.append(sede_excel)
+                                mapeo_sedes[sede_excel] = sede_info_generica['nombre_completo']
+                                sede_validada = True
+
+                                coincidencias_genericas.append({
+                                    'excel': sede_excel,
+                                    'bd': sede_info_generica['nombre_completo'],
+                                    'nombre_generico': sede_info_generica['nombre_generico'],
+                                    'municipio': sede_info_generica['municipio'],
+                                    'porcentaje': porcentaje_generico
+                                })
+                                logger.info(f"Coincidencia por nombre genérico (municipio {etc_actual}): '{sede_excel}' -> '{sede_info_generica['nombre_completo']}' via '{sede_info_generica['nombre_generico']}' ({porcentaje_generico}%)")
+                            else:
+                                logger.warning(f"Nombre genérico '{sede_encontrada_generica}' encontrado pero no coincide con municipio '{etc_actual}' para sede '{sede_excel}'")
+                        else:
+                            logger.warning(f"No se pudo determinar ETC para sede '{sede_excel}' en validación genérica")
+
+                # Si ninguna validación funcionó, marcar como inválida
+                if not sede_validada:
                     sedes_invalidas.append(sede_excel)
-                    logger.warning(f"Sede no encontrada: '{sede_excel}'")
-            
-            logger.info(f"Sedes válidas: {len(sedes_validas)}, inválidas: {len(sedes_invalidas)}, coincidencias parciales: {len(coincidencias_parciales)}")
+                    logger.warning(f"Sede no encontrada en ninguna validación: '{sede_excel}'")
+
+            logger.info(f"Resultado validación: Válidas: {len(sedes_validas)}, Inválidas: {len(sedes_invalidas)}")
+            logger.info(f"Coincidencias parciales (nombre completo): {len(coincidencias_parciales)}")
+            logger.info(f"Coincidencias por nombre genérico: {len(coincidencias_genericas)}")
             
             # Filtrar DataFrame para incluir solo sedes válidas
             if sedes_invalidas:
@@ -248,20 +338,27 @@ def generar_listados_view(request):
                 # Generar mensajes de verificación
                 total_registros = len(df)
                 if not sedes_invalidas:
+                    # Construir mensaje detallado sobre tipos de coincidencias
+                    mensaje_detalles = []
+
                     if coincidencias_parciales:
-                        verified_message = f"Los archivos generados en el DataFrame han sido verificados exitosamente. Se procesaron {total_registros} registros. Se encontraron {len(coincidencias_parciales)} coincidencias parciales que fueron aceptadas."
+                        mensaje_detalles.append(f"{len(coincidencias_parciales)} coincidencias parciales por nombre completo")
+
+                    if coincidencias_genericas:
+                        mensaje_detalles.append(f"{len(coincidencias_genericas)} coincidencias por nombre genérico")
+
+                    if mensaje_detalles:
+                        detalles_str = " y ".join(mensaje_detalles)
+                        verified_message = f"Los archivos generados en el DataFrame han sido verificados exitosamente. Se procesaron {total_registros} registros. Se encontraron {detalles_str} que fueron aceptadas."
                     else:
                         verified_message = f"Los archivos generados en el DataFrame han sido verificados exitosamente. Se procesaron {total_registros} registros. Todas las sedes coinciden exactamente con la base de datos."
                 else:
-                    verified_message = f"Las siguientes sedes no se pudieron cargar porque no se encontraron coincidencias en la base de datos: {', '.join(sedes_invalidas)}. Se procesaron {total_registros} registros con sedes válidas."
+                    verified_message = f"Las siguientes sedes no se pudieron cargar porque no se encontraron coincidencias en ninguna validación (nombre completo ni genérico): {', '.join(sedes_invalidas)}. Se procesaron {total_registros} registros con sedes válidas."
                 
                 # Crear agrupación por sedes de BD para mostrar estadísticas
                 agrupacion_sedes = []
 
                 # Obtener solo sedes de municipios que coinciden con ETC del Excel
-                unique_etc = df['ETC'].unique()
-                logger.info(f"ETC únicos encontrados en el Excel: {unique_etc}")
-                
                 todas_sedes_bd = list(SedesEducativas.objects.filter(
                     codigo_ie__id_municipios__nombre_municipio__in=unique_etc
                 ).values_list('nombre_sede_educativa', flat=True))
@@ -322,6 +419,7 @@ def generar_listados_view(request):
             verified_message = None
             invalid_sedes = []
             coincidencias_parciales = []
+            coincidencias_genericas = []
             agrupacion_sedes = []
 
     return render(request, 'facturacion/generar_listados.html', {
@@ -329,5 +427,6 @@ def generar_listados_view(request):
         'verified_message': verified_message,
         'invalid_sedes': invalid_sedes,
         'coincidencias_parciales': coincidencias_parciales,
+        'coincidencias_genericas': coincidencias_genericas,
         'agrupacion_sedes': agrupacion_sedes
     })

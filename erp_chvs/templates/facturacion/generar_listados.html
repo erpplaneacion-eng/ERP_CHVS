@@ -82,8 +82,8 @@
             
             {% if coincidencias_parciales %}
             <div class="alert alert-info mt-3">
-                <strong>Coincidencias Parciales Aceptadas:</strong>
-                <p class="mb-2">Las siguientes sedes fueron aceptadas con coincidencia parcial (≥90%):</p>
+                <strong>Coincidencias Parciales por Nombre Completo:</strong>
+                <p class="mb-2">Las siguientes sedes fueron aceptadas con coincidencia parcial por nombre completo (≥90%):</p>
                 <div class="table-responsive">
                     <table class="table table-sm table-bordered">
                         <thead class="table-light">
@@ -100,6 +100,37 @@
                                 <td>{{ coincidencia.bd }}</td>
                                 <td class="text-center">
                                     <span class="badge bg-info">{{ coincidencia.porcentaje }}%</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if coincidencias_genericas %}
+            <div class="alert alert-success mt-3">
+                <strong>Coincidencias por Nombre Genérico:</strong>
+                <p class="mb-2">Las siguientes sedes fueron aceptadas mediante validación por nombre genérico (≥90%):</p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Sede en Excel</th>
+                                <th>Sede en Base de Datos</th>
+                                <th>Nombre Genérico Usado</th>
+                                <th>% Similitud</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for coincidencia in coincidencias_genericas %}
+                            <tr>
+                                <td>{{ coincidencia.excel }}</td>
+                                <td>{{ coincidencia.bd }}</td>
+                                <td class="text-muted">{{ coincidencia.nombre_generico }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-success">{{ coincidencia.porcentaje }}%</span>
                                 </td>
                             </tr>
                             {% endfor %}

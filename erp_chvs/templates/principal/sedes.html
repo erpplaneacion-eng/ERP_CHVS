@@ -40,6 +40,7 @@
                     <th>Código Interprise</th>
                     <th>Código DANE</th>
                     <th>Nombre Sede</th>
+                    <th>Nombre Genérico</th>
                     <th>Institución</th>
                     <th>Zona</th>
                     <th>Preparado</th>
@@ -53,6 +54,7 @@
                     <td>{{ sede.cod_interprise }}</td>
                     <td>{{ sede.cod_dane }}</td>
                     <td>{{ sede.nombre_sede_educativa }}</td>
+                    <td>{{ sede.nombre_generico_sede|default:"Sin especificar" }}</td>
                     <td>{{ sede.codigo_ie.nombre_institucion }}</td>
                     <td>
                         <span class="badge badge-{{ sede.zona|lower }}">
@@ -83,7 +85,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" class="text-center">No hay sedes registradas</td>
+                    <td colspan="9" class="text-center">No hay sedes registradas</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -148,6 +150,11 @@
                     <div class="form-group">
                         <label for="nombre_sede_educativa">Nombre Sede Educativa *</label>
                         <input type="text" id="nombre_sede_educativa" name="nombre_sede_educativa" required maxlength="255">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="nombre_generico_sede">Nombre Genérico Sede</label>
+                        <input type="text" id="nombre_generico_sede" name="nombre_generico_sede" maxlength="255" placeholder="Ej: Primaria, Básica, Completa...">
                     </div>
 
                     <div class="form-row">

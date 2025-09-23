@@ -77,6 +77,7 @@ async function saveSede() {
         cod_interprise: formData.get('cod_interprise'),
         cod_dane: formData.get('cod_dane'),
         nombre_sede_educativa: formData.get('nombre_sede_educativa'),
+        nombre_generico_sede: formData.get('nombre_generico_sede') || 'Sin especificar',
         codigo_ie: formData.get('codigo_ie'),
         zona: formData.get('zona'),
         direccion: formData.get('direccion') || '',
@@ -136,6 +137,7 @@ async function editSede(codInterprise) {
         document.getElementById('cod_interprise').readOnly = true;
         document.getElementById('cod_dane').value = sede.cod_dane;
         document.getElementById('nombre_sede_educativa').value = sede.nombre_sede_educativa;
+        document.getElementById('nombre_generico_sede').value = sede.nombre_generico_sede || '';
         document.getElementById('codigo_ie').value = sede.codigo_ie;
         document.getElementById('direccion').value = sede.direccion || '';
         document.getElementById('zona').value = sede.zona;
@@ -172,6 +174,10 @@ async function viewSede(codInterprise) {
                 <div class="detail-item">
                     <label>Nombre:</label>
                     <span>${sede.nombre_sede_educativa}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Nombre Genérico:</label>
+                    <span>${sede.nombre_generico_sede || 'Sin especificar'}</span>
                 </div>
                 <div class="detail-item full-width">
                     <label>Institución:</label>
@@ -253,7 +259,7 @@ function updateSedesTable(sedes) {
     tbody.innerHTML = '';
 
     if (sedes.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No hay sedes registradas</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center">No hay sedes registradas</td></tr>';
         return;
     }
 
@@ -264,6 +270,7 @@ function updateSedesTable(sedes) {
             <td>${sede.cod_interprise}</td>
             <td>${sede.cod_dane}</td>
             <td>${sede.nombre_sede_educativa}</td>
+            <td>${sede.nombre_generico_sede || 'Sin especificar'}</td>
             <td>${sede.codigo_ie__nombre_institucion || 'N/A'}</td>
             <td>
                 <span class="badge badge-${sede.zona.toLowerCase()}">
@@ -489,6 +496,7 @@ function performSearch() {
             sede.cod_interprise.toLowerCase().includes(searchTerm) ||
             sede.cod_dane.toLowerCase().includes(searchTerm) ||
             sede.nombre_sede_educativa.toLowerCase().includes(searchTerm) ||
+            (sede.nombre_generico_sede && sede.nombre_generico_sede.toLowerCase().includes(searchTerm)) ||
             (sede.codigo_ie__nombre_institucion && sede.codigo_ie__nombre_institucion.toLowerCase().includes(searchTerm)) ||
             sede.zona.toLowerCase().includes(searchTerm) ||
             sede.preparado.toLowerCase().includes(searchTerm) ||

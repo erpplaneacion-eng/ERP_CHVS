@@ -19,15 +19,15 @@ class InstitucionesEducativasAdmin(admin.ModelAdmin):
 
 @admin.register(SedesEducativas)
 class SedesEducativasAdmin(admin.ModelAdmin):
-    list_display = ('cod_interprise', 'nombre_sede_educativa', 'codigo_ie', 'zona')
+    list_display = ('cod_interprise', 'nombre_sede_educativa', 'nombre_generico_sede', 'codigo_ie', 'zona')
     list_filter = ('zona', 'codigo_ie')
-    search_fields = ('cod_interprise', 'cod_dane', 'nombre_sede_educativa', 'codigo_ie__nombre_institucion')
+    search_fields = ('cod_interprise', 'cod_dane', 'nombre_sede_educativa', 'nombre_generico_sede', 'codigo_ie__nombre_institucion')
     list_per_page = 25
     ordering = ('codigo_ie__nombre_institucion', 'nombre_sede_educativa')
 
     fieldsets = (
         ('Información Básica', {
-            'fields': ('cod_interprise', 'cod_dane', 'nombre_sede_educativa', 'codigo_ie')
+            'fields': ('cod_interprise', 'cod_dane', 'nombre_sede_educativa', 'nombre_generico_sede', 'codigo_ie')
         }),
         ('Ubicación', {
             'fields': ('direccion', 'zona')

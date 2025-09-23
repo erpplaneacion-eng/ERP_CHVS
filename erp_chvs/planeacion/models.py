@@ -37,6 +37,9 @@ class SedesEducativas(models.Model):
     # Nombre de la sede educativa
     nombre_sede_educativa = models.CharField(max_length=255, verbose_name="Nombre Sede Educativa")
 
+    # Nombre genérico de la sede
+    nombre_generico_sede = models.CharField(max_length=255, verbose_name="Nombre Genérico Sede", default="Sin especificar")
+
     # Zona (char)
     zona = models.CharField(max_length=1, verbose_name="Zona")
 

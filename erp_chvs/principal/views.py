@@ -542,7 +542,7 @@ def api_sedes(request):
     """API para manejar sedes educativas via AJAX"""
     if request.method == 'GET':
         sedes = SedesEducativas.objects.select_related('codigo_ie').all().values(
-            'cod_interprise', 'cod_dane', 'nombre_sede_educativa', 'codigo_ie__codigo_ie', 'codigo_ie__nombre_institucion',
+            'cod_interprise', 'cod_dane', 'nombre_sede_educativa', 'nombre_generico_sede', 'codigo_ie__codigo_ie', 'codigo_ie__nombre_institucion',
             'direccion', 'zona', 'preparado', 'industrializado'
         )
         return JsonResponse({'sedes': list(sedes)})
@@ -559,6 +559,7 @@ def api_sedes(request):
                 cod_interprise=data['cod_interprise'],
                 cod_dane=data['cod_dane'],
                 nombre_sede_educativa=data['nombre_sede_educativa'],
+                nombre_generico_sede=data.get('nombre_generico_sede', 'Sin especificar'),
                 codigo_ie_id=data['codigo_ie'],
                 direccion=data.get('direccion', ''),
                 zona=data['zona'],
@@ -592,6 +593,7 @@ def api_sede_detail(request, cod_interprise):
             'cod_interprise': sede.cod_interprise,
             'cod_dane': sede.cod_dane,
             'nombre_sede_educativa': sede.nombre_sede_educativa,
+            'nombre_generico_sede': sede.nombre_generico_sede,
             'codigo_ie': sede.codigo_ie.codigo_ie,
             'direccion': sede.direccion,
             'zona': sede.zona,
@@ -604,6 +606,7 @@ def api_sede_detail(request, cod_interprise):
             data = json.loads(request.body)
             sede.cod_dane = data['cod_dane']
             sede.nombre_sede_educativa = data['nombre_sede_educativa']
+            sede.nombre_generico_sede = data.get('nombre_generico_sede', 'Sin especificar')
             sede.codigo_ie_id = data['codigo_ie']
             sede.direccion = data.get('direccion', '')
             sede.zona = data['zona']
