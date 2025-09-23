@@ -32,11 +32,21 @@
             <h3>Módulos del ERP</h3>
             <nav class="sidebar-nav">
                 <ul>
-                    <li><a href="{% url 'dashboard:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Dashboard</a></li>
-                    <li><a href="{% url 'principal:principal_index' %}" class="{% if request.resolver_match.url_name == 'principal_index' %}active{% endif %}">Configuración</a></li>
-                    <li><a href="{% url 'nutricion:nutricion_index' %}" class="{% if request.resolver_match.url_name == 'nutricion_index' %}active{% endif %}">Nutrición</a></li>
-                    <li><a href="{% url 'planeacion:planeacion_index' %}" class="{% if request.resolver_match.url_name == 'planeacion_index' %}active{% endif %}">Planeación</a></li>
-                    <li><a href="{% url 'facturacion:facturacion_index' %}" class="{% if request.resolver_match.url_name == 'facturacion_index' %}active{% endif %}">Facturación</a></li>
+                    <li><a href="{% url 'dashboard:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                        <i class="fas fa-tachometer-alt"></i><span>Dashboard</span>
+                    </a></li>
+                    <li><a href="{% url 'principal:principal_index' %}" class="{% if request.resolver_match.url_name == 'principal_index' %}active{% endif %}">
+                        <i class="fas fa-cog"></i><span>Configuración</span>
+                    </a></li>
+                    <li><a href="{% url 'nutricion:nutricion_index' %}" class="{% if request.resolver_match.url_name == 'nutricion_index' %}active{% endif %}">
+                        <i class="fas fa-apple-alt"></i><span>Nutrición</span>
+                    </a></li>
+                    <li><a href="{% url 'planeacion:planeacion_index' %}" class="{% if request.resolver_match.url_name == 'planeacion_index' %}active{% endif %}">
+                        <i class="fas fa-calendar-alt"></i><span>Planeación</span>
+                    </a></li>
+                    <li><a href="{% url 'facturacion:facturacion_index' %}" class="{% if request.resolver_match.url_name == 'facturacion_index' %}active{% endif %}">
+                        <i class="fas fa-file-invoice-dollar"></i><span>Facturación</span>
+                    </a></li>
                 </ul>
             </nav>
             <!-- La sección user-info se ha movido al header -->
@@ -51,7 +61,12 @@
             <!-- Cabecera Superior (Header)                                 -->
             <!-- ========================================================== -->
             <header class="header">
-                <h2 class="header-title">CHVS ERP System</h2>
+                <div class="header-left">
+                    <button id="sidebar-toggle" class="sidebar-toggle-btn" title="Expandir/Colapsar menú">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h2 class="header-title">CHVS ERP System</h2>
+                </div>
                 <div class="header-user">
                     <span>Usuario: <strong>{{ user.username }}</strong></span>
                     <form class="logout-form" method="post" action="{% url 'logout' %}">

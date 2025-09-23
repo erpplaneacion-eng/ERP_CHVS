@@ -26,26 +26,108 @@ document.addEventListener('DOMContentLoaded', function() {
  * Inicializa la funcionalidad del sidebar/menú lateral
  */
 function initializeSidebar() {
-    // Toggle para el menú lateral en móviles
+    // Toggle para expandir/colapsar sidebar
     const sidebarToggle = document.getElementById('sidebar-toggle');
     const sidebar = document.querySelector('.sidebar');
-    
+
     if (sidebarToggle && sidebar) {
-        sidebarToggle.addEventListener('click', function() {
-            sidebar.classList.toggle('active');
-            document.body.classList.toggle('sidebar-open');
-        });
-        
-        // Cerrar sidebar al hacer clic fuera en dispositivos móviles
-        document.addEventListener('click', function(event) {
-            const isMobile = window.innerWidth < 992;
-            const clickedOutsideSidebar = !sidebar.contains(event.target) && event.target !== sidebarToggle;
-            
-            if (isMobile && sidebar.classList.contains('active') && clickedOutsideSidebar) {
-                sidebar.classList.remove('active');
-                document.body.classList.remove('sidebar-open');
+        // Restaurar estado guardado al cargar la página
+        const savedState = localStorage.getItem('sidebarCollapsed');
+        if (savedState === 'true') {
+            sidebar.classList.add('collapsed');
+        }
+
+        // Event listener para el botón toggle
+        sidebarToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            const isMobile = window.innerWidth < 769;
+
+            if (isMobile) {
+                // En móvil, usar la lógica móvil
+                sidebar.classList.toggle('active');
+                toggleOverlay();
+                return;
+            }
+
+            // Lógica desktop
+            sidebar.classList.toggle('collapsed');
+
+            // Guardar estado en localStorage
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+
+            // Cambiar icono del botón
+            const icon = this.querySelector('i');
+            if (isCollapsed) {
+                icon.className = 'fas fa-bars';
+            } else {
+                icon.className = 'fas fa-bars';
             }
         });
+
+        // Manejo para dispositivos móviles (funcionalidad mejorada)
+        const handleMobileClick = function(event) {
+            const isMobile = window.innerWidth < 769;
+
+            if (isMobile) {
+                // En móviles, toggle between active/inactive instead of collapsed
+                if (event.target === sidebarToggle || sidebarToggle.contains(event.target)) {
+                    event.preventDefault();
+                    sidebar.classList.toggle('active');
+                    toggleOverlay();
+                } else {
+                    // Click outside sidebar in mobile
+                    const clickedOutsideSidebar = !sidebar.contains(event.target);
+                    if (sidebar.classList.contains('active') && clickedOutsideSidebar) {
+                        sidebar.classList.remove('active');
+                        removeOverlay();
+                    }
+                }
+            }
+        };
+
+        // Function to toggle overlay for mobile
+        function toggleOverlay() {
+            let overlay = document.querySelector('.sidebar-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.className = 'sidebar-overlay';
+                document.body.appendChild(overlay);
+
+                overlay.addEventListener('click', function() {
+                    sidebar.classList.remove('active');
+                    removeOverlay();
+                });
+            }
+
+            if (sidebar.classList.contains('active')) {
+                overlay.classList.add('active');
+            } else {
+                overlay.classList.remove('active');
+            }
+        }
+
+        // Function to remove overlay
+        function removeOverlay() {
+            const overlay = document.querySelector('.sidebar-overlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+            }
+        }
+
+        // Handle responsive behavior on resize
+        window.addEventListener('resize', function() {
+            const isMobile = window.innerWidth < 769;
+
+            if (!isMobile) {
+                // Desktop: remove mobile classes and overlay
+                sidebar.classList.remove('active');
+                removeOverlay();
+            }
+        });
+
+        document.addEventListener('click', handleMobileClick);
     }
     
     // Expandir/colapsar submenús
