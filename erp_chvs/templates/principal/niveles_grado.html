@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}Niveles Grado Escolar - ERP CHVS{% endblock %}
+
+{% block content %}
+<div class="niveles-grado-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-graduation-cap"></i> Gestión de Niveles Grado Escolar</h2>
+            <p>Total de niveles de grado: <strong>{{ total_niveles_grado }}</strong></p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="showCreateModal()">
+                <i class="fas fa-plus"></i> Nuevo Nivel Grado
+            </button>
+            <a href="{% url 'principal:principal_index' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table" id="nivelesGradoTable">
+            <thead>
+                <tr>
+                    <th>ID Grado Escolar</th>
+                    <th>Grados Sedes</th>
+                    <th>Nivel Escolar UAPA</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="niveles-grado-tbody">
+                <!-- Los datos se cargarán vía JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación -->
+    <div class="pagination-container" id="pagination-container">
+        <!-- La paginación se generará vía JavaScript -->
+    </div>
+</div>
+
+<!-- Modal para Crear/Editar Nivel Grado -->
+<div id="nivelGradoModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Nuevo Nivel Grado Escolar</h3>
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="nivelGradoForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="id_grado_escolar">ID Grado Escolar:</label>
+                    <input type="text" id="id_grado_escolar" name="id_grado_escolar" class="form-control" required maxlength="50">
+                    <small class="form-help">Identificador único para el grado escolar</small>
+                </div>
+                <div class="form-group">
+                    <label for="grados_sedes">Grados Sedes:</label>
+                    <input type="text" id="grados_sedes" name="grados_sedes" class="form-control" required maxlength="200">
+                    <small class="form-help">Descripción de los grados en las sedes</small>
+                </div>
+                <div class="form-group">
+                    <label for="nivel_escolar_uapa">Nivel Escolar UAPA:</label>
+                    <input type="text" id="nivel_escolar_uapa" name="nivel_escolar_uapa" class="form-control" required maxlength="100">
+                    <small class="form-help">Nivel escolar según UAPA</small>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="saveNivelGrado()">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación para Eliminar -->
+<div id="deleteModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h3>Confirmar Eliminación</h3>
+            <span class="modal-close" onclick="closeDeleteModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>¿Está seguro de que desea eliminar este nivel grado escolar?</p>
+            <p><strong id="deleteItemName"></strong></p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancelar</button>
+            <button type="button" class="btn btn-danger" onclick="confirmDelete()">Eliminar</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% load static %}{% static 'js/principal/niveles_grado.js' %}"></script>
+{% endblock %}

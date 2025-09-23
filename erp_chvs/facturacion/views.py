@@ -5,7 +5,7 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from fuzzywuzzy import fuzz, process
 # Se importan los modelos desde la aplicación 'principal'
-from principal.models import  TipoGenero, TipoDocumento
+from principal.models import  TipoGenero, TipoDocumento, NivelGradoEscolar
 # Se importa el modelo de sedes desde la aplicación 'planeacion'
 from planeacion.models import SedesEducativas
 
@@ -79,6 +79,7 @@ def facturacion_index(request):
 
 @login_required
 def generar_listados_view(request):
+    # Inicializar todas las variables fuera del bloque try
     dataframe_html = None
     verified_message = None
     invalid_sedes = []
@@ -139,8 +140,22 @@ def generar_listados_view(request):
             mapeo_generos = {g.genero: g.codigo_genero for g in generos}
             df['GENERO'] = df['GENERO'].map(mapeo_generos)
 
+            # Transformación de GRADO_COD para crear columna nivel_grados
+            niveles_grado = NivelGradoEscolar.objects.all()
+            mapeo_niveles = {n.grados_sedes: n.nivel_escolar_uapa for n in niveles_grado}
+            
+            # Convertir GRADO_COD a entero primero, luego a string para el mapeo
+            # Esto maneja el caso donde pandas convierte números a float (6.0 -> 6)
+            df['GRADO_COD_clean'] = df['GRADO_COD'].fillna(0).astype(int).astype(str)
+            df['nivel_grados'] = df['GRADO_COD_clean'].map(mapeo_niveles)
+            
+            # Log para verificar el mapeo
+            logger.info(f"Mapeo de niveles creado: {mapeo_niveles}")
+            logger.info(f"Valores únicos de GRADO_COD_clean: {df['GRADO_COD_clean'].unique()}")
+            logger.info(f"Valores únicos de nivel_grados: {df['nivel_grados'].dropna().unique()}")
+
             # Combinar GRADO_COD y GRUPO
-            df['grado_grupos'] = df['GRADO_COD'].astype(str) + '-' + df['GRUPO'].astype(str)
+            df['grado_grupos'] = df['GRADO_COD_clean'] + '-' + df['GRUPO'].astype(str)
 
             # Lógica para JORNADA y nuevas columnas (si ETC es YUMBO)
             if 'YUMBO' in df['ETC'].unique():
@@ -242,15 +257,49 @@ def generar_listados_view(request):
                 
                 # Crear agrupación por sedes de BD para mostrar estadísticas
                 agrupacion_sedes = []
-                # Agrupar por sede de BD (no de Excel) y contar registros
-                for sede_excel, sede_bd in mapeo_sedes.items():
-                    count = len(df[df['SEDE'] == sede_excel])
-                    agrupacion_sedes.append({
-                        'sede_bd': sede_bd,
-                        'sede_excel': sede_excel,
-                        'cantidad': count
-                    })
-                
+
+                # Obtener TODAS las sedes de la base de datos
+                todas_sedes_bd = list(SedesEducativas.objects.values_list('nombre_sede_educativa', flat=True))
+
+                # Definir los niveles escolares esperados
+                niveles_escolares = ['prescolar', 'primaria_1_2', 'primaria_3_4_5', 'secundaria', 'media_ciclo_complementario']
+
+                # Para cada sede de BD, verificar si tiene coincidencias
+                for sede_bd in todas_sedes_bd:
+                    # Buscar si esta sede BD tiene mapeos desde Excel
+                    sedes_excel_mapeadas = [sede_excel for sede_excel, sede_bd_mapeada in mapeo_sedes.items() if sede_bd_mapeada == sede_bd]
+
+                    if sedes_excel_mapeadas:
+                        # Si hay mapeos, contar registros totales y por nivel
+                        total_count = 0
+                        sede_excel_str = ', '.join(sedes_excel_mapeadas)
+                        
+                        # Crear DataFrame filtrado para esta sede
+                        df_sede = df[df['SEDE'].isin(sedes_excel_mapeadas)]
+                        total_count = len(df_sede)
+                        
+                        # Contar por cada nivel escolar
+                        estadisticas_nivel = {}
+                        for nivel in niveles_escolares:
+                            count_nivel = len(df_sede[df_sede['nivel_grados'] == nivel])
+                            estadisticas_nivel[nivel] = count_nivel
+
+                        agrupacion_sedes.append({
+                            'sede_bd': sede_bd,
+                            'sede_excel': sede_excel_str,
+                            'cantidad': total_count,
+                            **estadisticas_nivel  # Desempaquetar las estadísticas por nivel
+                        })
+                    else:
+                        # Si no hay mapeos, mostrar con 0 registros
+                        estadisticas_nivel = {nivel: 0 for nivel in niveles_escolares}
+                        agrupacion_sedes.append({
+                            'sede_bd': sede_bd,
+                            'sede_excel': 'Sin coincidencias',
+                            'cantidad': 0,
+                            **estadisticas_nivel
+                        })
+
                 # Ordenar por cantidad descendente
                 agrupacion_sedes.sort(key=lambda x: x['cantidad'], reverse=True)
                 

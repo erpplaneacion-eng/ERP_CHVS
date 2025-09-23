@@ -10,7 +10,8 @@ urlpatterns = [
     path('modalidades-consumo/', views.lista_modalidades_consumo, name='lista_modalidades_consumo'),
     path('instituciones/', views.lista_instituciones, name='lista_instituciones'),
     path('sedes/', views.lista_sedes, name='lista_sedes'),
-    
+    path('niveles-grado/', views.lista_niveles_grado, name='lista_niveles_grado'),
+
     # APIs para departamentos y municipios
     path('api/departamentos/', views.api_departamentos, name='api_departamentos'),
     path('api/municipios/', views.api_municipios, name='api_municipios'),
@@ -36,4 +37,8 @@ urlpatterns = [
     # APIs para sedes educativas
     path('api/sedes/', views.api_sedes, name='api_sedes'),
     path('api/sedes/<str:cod_interprise>/', views.api_sede_detail, name='api_sede_detail'),
+
+    # APIs para niveles grado escolar
+    path('api/niveles-grado/', views.api_niveles_grado, name='api_niveles_grado'),
+    path('api/niveles-grado/<str:id_grado_escolar>/', views.api_nivel_grado_detail, name='api_nivel_grado_detail'),
 ]

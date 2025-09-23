@@ -149,6 +149,26 @@
                 </a>
             </div>
         </div>
+
+        <!-- Card Nivel Grado Escolar -->
+        <div class="config-card">
+            <div class="card-header">
+                <i class="fas fa-graduation-cap"></i>
+                <h3>Nivel Grado Escolar</h3>
+            </div>
+            <div class="card-body">
+                <p>Gestiona los niveles y grados escolares</p>
+                <div class="card-stats">
+                    <span class="stat-number" id="total-niveles-grado">--</span>
+                    <span class="stat-label">Niveles registrados</span>
+                </div>
+            </div>
+            <div class="card-actions">
+                <a href="{% url 'principal:lista_niveles_grado' %}" class="btn btn-primary">
+                    <i class="fas fa-list"></i> Administrar
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 

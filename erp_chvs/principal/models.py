@@ -81,3 +81,19 @@ class ModalidadesDeConsumo(models.Model):
 
     def __str__(self):
         return self.modalidad
+
+
+# Modelo para la tabla: nivel_grado_escolar
+class NivelGradoEscolar(models.Model):
+    id_grado_escolar = models.CharField(max_length=50, primary_key=True, verbose_name="ID Grado Escolar")
+    grados_sedes = models.CharField(max_length=200, verbose_name="Grados Sedes")
+    nivel_escolar_uapa = models.CharField(max_length=100, verbose_name="Nivel Escolar UAPA")
+
+    class Meta:
+        db_table = 'nivel_grado_escolar'
+        verbose_name = 'Nivel Grado Escolar'
+        verbose_name_plural = 'Niveles Grado Escolar'
+        ordering = ['id_grado_escolar']
+
+    def __str__(self):
+        return f"{self.id_grado_escolar} - {self.nivel_escolar_uapa}"

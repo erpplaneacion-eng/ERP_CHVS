@@ -144,7 +144,12 @@
                             <th class="text-center">#</th>
                             <th>Sede (Base de Datos)</th>
                             <th>Sede (Excel)</th>
-                            <th class="text-center">Cantidad de Registros</th>
+                            <th class="text-center">Total</th>
+                            <th class="text-center">Preescolar</th>
+                            <th class="text-center">Primaria 1-2</th>
+                            <th class="text-center">Primaria 3-4-5</th>
+                            <th class="text-center">Secundaria</th>
+                            <th class="text-center">Media Ciclo Complementario</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -155,6 +160,21 @@
                             <td class="text-muted">{{ item.sede_excel }}</td>
                             <td class="text-center">
                                 <span class="badge bg-primary fs-6">{{ item.cantidad }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-info">{{ item.prescolar|default:0 }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-success">{{ item.primaria_1_2|default:0 }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-warning">{{ item.primaria_3_4_5|default:0 }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-danger">{{ item.secundaria|default:0 }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-secondary">{{ item.media_ciclo_complementario|default:0 }}</span>
                             </td>
                         </tr>
                         {% endfor %}

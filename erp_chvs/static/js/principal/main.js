@@ -329,6 +329,7 @@ function loadPrincipalStats() {
     loadStatFromAPI('/principal/api/modalidades-consumo/', 'total-modalidades', 'modalidades');
     loadStatFromAPI('/principal/api/instituciones/', 'total-instituciones', 'instituciones');
     loadStatFromAPI('/principal/api/sedes/', 'total-sedes', 'sedes');
+    loadStatFromAPI('/principal/api/niveles-grado/', 'total-niveles-grado', 'niveles_grado');
 }
 
 /**

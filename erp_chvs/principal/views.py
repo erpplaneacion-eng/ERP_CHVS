@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import IntegrityError
 import json
-from .models import PrincipalDepartamento, PrincipalMunicipio, TipoDocumento, TipoGenero, ModalidadesDeConsumo
+from .models import PrincipalDepartamento, PrincipalMunicipio, TipoDocumento, TipoGenero, ModalidadesDeConsumo, NivelGradoEscolar
 from planeacion.models import InstitucionesEducativas, SedesEducativas
 
 def home(request):
@@ -617,6 +617,115 @@ def api_sede_detail(request, cod_interprise):
     elif request.method == 'DELETE':
         try:
             sede.delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
+
+
+# =================== NIVELES GRADO ESCOLAR ===================
+
+@login_required
+def lista_niveles_grado(request):
+    """Vista para mostrar el listado de niveles grado escolar."""
+    total_niveles_grado = NivelGradoEscolar.objects.count()
+    return render(request, 'principal/niveles_grado.html', {
+        'total_niveles_grado': total_niveles_grado
+    })
+
+
+@csrf_exempt
+def api_niveles_grado(request):
+    """API para gestionar niveles grado escolar (GET, POST)."""
+
+    if request.method == 'GET':
+        niveles_grado = NivelGradoEscolar.objects.all().order_by('id_grado_escolar')
+
+        # Implementar paginación si se especifica
+        page = request.GET.get('page')
+        if page:
+            paginator = Paginator(niveles_grado, 10)  # 10 items por página
+            niveles_grado = paginator.get_page(page)
+
+            data = {
+                'results': [
+                    {
+                        'id_grado_escolar': nivel.id_grado_escolar,
+                        'grados_sedes': nivel.grados_sedes,
+                        'nivel_escolar_uapa': nivel.nivel_escolar_uapa,
+                    }
+                    for nivel in niveles_grado
+                ],
+                'count': paginator.count,
+                'num_pages': paginator.num_pages,
+                'current_page': niveles_grado.number,
+                'has_next': niveles_grado.has_next(),
+                'has_previous': niveles_grado.has_previous()
+            }
+        else:
+            # Sin paginación, devolver todos los resultados
+            data = [
+                {
+                    'id_grado_escolar': nivel.id_grado_escolar,
+                    'grados_sedes': nivel.grados_sedes,
+                    'nivel_escolar_uapa': nivel.nivel_escolar_uapa,
+                }
+                for nivel in niveles_grado
+            ]
+
+        return JsonResponse(data, safe=False)
+
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            nivel_grado = NivelGradoEscolar(
+                id_grado_escolar=data['id_grado_escolar'],
+                grados_sedes=data['grados_sedes'],
+                nivel_escolar_uapa=data['nivel_escolar_uapa']
+            )
+            nivel_grado.save()
+            return JsonResponse({
+                'success': True,
+                'id_grado_escolar': nivel_grado.id_grado_escolar,
+                'grados_sedes': nivel_grado.grados_sedes,
+                'nivel_escolar_uapa': nivel_grado.nivel_escolar_uapa,
+            })
+        except IntegrityError:
+            return JsonResponse({'success': False, 'error': 'El ID de grado escolar ya existe'})
+        except KeyError as e:
+            return JsonResponse({'success': False, 'error': f'Campo requerido faltante: {str(e)}'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Error al crear: {str(e)}'})
+
+
+@csrf_exempt
+def api_nivel_grado_detail(request, id_grado_escolar):
+    """API para gestionar un nivel grado escolar específico (GET, PUT, DELETE)."""
+
+    try:
+        nivel_grado = get_object_or_404(NivelGradoEscolar, pk=id_grado_escolar)
+    except:
+        return JsonResponse({'success': False, 'error': 'Nivel grado no encontrado'})
+
+    if request.method == 'GET':
+        return JsonResponse({
+            'id_grado_escolar': nivel_grado.id_grado_escolar,
+            'grados_sedes': nivel_grado.grados_sedes,
+            'nivel_escolar_uapa': nivel_grado.nivel_escolar_uapa,
+        })
+
+    elif request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            nivel_grado.grados_sedes = data['grados_sedes']
+            nivel_grado.nivel_escolar_uapa = data['nivel_escolar_uapa']
+            nivel_grado.save()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Error al actualizar: {str(e)}'})
+
+    elif request.method == 'DELETE':
+        try:
+            nivel_grado.delete()
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
