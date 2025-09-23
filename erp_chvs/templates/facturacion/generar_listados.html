@@ -54,14 +54,112 @@
         </div>
     </div>
 
+    {% if verified_message %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4>Resultado de la Validación</h4>
+        </div>
+        <div class="card-body">
+            {% if invalid_sedes %}
+                <div class="alert alert-warning">
+                    <strong>Advertencia:</strong> {{ verified_message }}
+                </div>
+                {% if invalid_sedes %}
+                <div class="alert alert-info">
+                    <strong>Sedes inválidas encontradas:</strong>
+                    <ul class="mb-0 mt-2">
+                        {% for sede in invalid_sedes %}
+                        <li>{{ sede }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            {% else %}
+                <div class="alert alert-success">
+                    <strong>Verificación exitosa:</strong> {{ verified_message }}
+                </div>
+            {% endif %}
+            
+            {% if coincidencias_parciales %}
+            <div class="alert alert-info mt-3">
+                <strong>Coincidencias Parciales Aceptadas:</strong>
+                <p class="mb-2">Las siguientes sedes fueron aceptadas con coincidencia parcial (≥90%):</p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Sede en Excel</th>
+                                <th>Sede en Base de Datos</th>
+                                <th>% Similitud</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for coincidencia in coincidencias_parciales %}
+                            <tr>
+                                <td>{{ coincidencia.excel }}</td>
+                                <td>{{ coincidencia.bd }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-info">{{ coincidencia.porcentaje }}%</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     {% if dataframe_html %}
     <div class="card mt-4">
         <div class="card-header">
             <h4>Resultado del Procesamiento (Primeras 5 Filas)</h4>
         </div>
         <div class="card-body">
-            <div class="table-responsive">
+            <div class="table-responsive" style="overflow-x: auto; max-height: 500px;">
                 {{ dataframe_html|safe }}
+            </div>
+            <div class="mt-2">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i> 
+                    Desplázate horizontalmente para ver todas las columnas. Se muestran las primeras 5 filas del resultado.
+                </small>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if agrupacion_sedes %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4>Estadísticas por Sede (Base de Datos)</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-center">#</th>
+                            <th>Sede (Base de Datos)</th>
+                            <th>Sede (Excel)</th>
+                            <th class="text-center">Cantidad de Registros</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in agrupacion_sedes %}
+                        <tr>
+                            <td class="text-center">{{ forloop.counter }}</td>
+                            <td><strong>{{ item.sede_bd }}</strong></td>
+                            <td class="text-muted">{{ item.sede_excel }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-primary fs-6">{{ item.cantidad }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
