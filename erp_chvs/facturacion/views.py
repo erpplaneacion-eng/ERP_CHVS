@@ -258,8 +258,15 @@ def generar_listados_view(request):
                 # Crear agrupación por sedes de BD para mostrar estadísticas
                 agrupacion_sedes = []
 
-                # Obtener TODAS las sedes de la base de datos
-                todas_sedes_bd = list(SedesEducativas.objects.values_list('nombre_sede_educativa', flat=True))
+                # Obtener solo sedes de municipios que coinciden con ETC del Excel
+                unique_etc = df['ETC'].unique()
+                logger.info(f"ETC únicos encontrados en el Excel: {unique_etc}")
+                
+                todas_sedes_bd = list(SedesEducativas.objects.filter(
+                    codigo_ie__id_municipios__nombre_municipio__in=unique_etc
+                ).values_list('nombre_sede_educativa', flat=True))
+                
+                logger.info(f"Sedes filtradas por ETC: {len(todas_sedes_bd)} sedes encontradas")
 
                 # Definir los niveles escolares esperados
                 niveles_escolares = ['prescolar', 'primaria_1_2', 'primaria_3_4_5', 'secundaria', 'media_ciclo_complementario']
