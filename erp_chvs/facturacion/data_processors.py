@@ -63,11 +63,11 @@ class DataTransformer:
         """
         try:
             # --- PASO 1: FILTRADO INICIAL ---
-            df = df[df['LOTE'] == 3]
-            
+            df = df[df['LOTE'] == 3].copy()  # .copy() evita SettingWithCopyWarning
+
             if len(df) == 0:
                 raise DatosInvalidosException("No se encontraron filas con LOTE == 3 en el archivo")
-            
+
             # --- PASO 2: AGREGAR COLUMNAS FIJAS ---
             df['AÑO'] = ProcesamientoConfig.AÑO_FIJO
             df['ETC'] = ProcesamientoConfig.ETC_CALI

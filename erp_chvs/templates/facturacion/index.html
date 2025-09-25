@@ -7,25 +7,15 @@
 <div id="facturacion-dashboard-background"> 
 
     <div class="module-dashboard">
-        <!-- Tarjeta para crear listados, focalizaciones, matriz  -->
-        <a href="{% url 'facturacion:generar_listados' %}" class="card">
+        <!-- Tarjeta principal - Vista consolidada -->
+        <a href="{% url 'facturacion:procesar_listados' %}" class="card" style="border: 3px solid #28a745;">
             <div class="card-icon">
-                <i class="fas fa-file-invoice"></i>
+                <i class="fas fa-tasks"></i>
             </div>
             <div class="card-content">
-                <h3>Generar Listados</h3>
-                <p>Crea y emite listados de las entidades.</p>
-            </div>
-        </a>
-
-        <!-- Tarjeta para procesar y guardar -->
-        <a href="{% url 'facturacion:procesar_y_guardar' %}" class="card">
-            <div class="card-icon">
-                <i class="fas fa-database"></i>
-            </div>
-            <div class="card-content">
-                <h3>Procesar y Guardar</h3>
-                <p>Procesa archivos Excel y los guarda en la base de datos automáticamente.</p>
+                <h3>📊 Procesar Listados PAE</h3>
+                <p><strong>Vista Única:</strong> Visualización y Almacenamiento en una sola interfaz.</p>
+                <small class="text-success"><strong>✨ VISTA CONSOLIDADA</strong></small>
             </div>
         </a>
 

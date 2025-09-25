@@ -230,6 +230,7 @@ class ProcesamientoService:
             return {
                 'success': True,
                 'dataframe_html': dataframe_html,
+                'dataframe': df,  # Agregar DataFrame para persistencia
                 'verified_message': mensaje_verificacion,
                 'invalid_sedes': resultado_validacion['sedes_invalidas'],
                 'coincidencias_parciales': resultado_validacion['coincidencias_parciales'],
@@ -353,10 +354,7 @@ class ProcesamientoService:
             # 2. Si el procesamiento fue exitoso y se requiere guardar
             if resultado_procesamiento['success'] and guardar_en_bd:
 
-                # Convertir HTML de vuelta a DataFrame para guardar
-                # Nota: En una implementación real, sería mejor pasar el DataFrame directamente
-                # desde los métodos de procesamiento. Por ahora, mantenemos compatibilidad.
-
+                # Usar DataFrame directamente desde el resultado de procesamiento
                 # Log de inicio de persistencia
                 FacturacionLogger.log_procesamiento_inicio(
                     archivo.name, "persistencia_bd", focalizacion
@@ -364,12 +362,8 @@ class ProcesamientoService:
 
                 # Verificar si hay datos para guardar
                 if resultado_procesamiento['total_registros'] > 0:
-                    # Para esta implementación, necesitamos reconstruir el DataFrame
-                    # En una implementación más robusta, el DataFrame se pasaría directamente
-
-                    # Placeholder para el DataFrame reconstruido
-                    # En el caso real, obtendríamos el df_filtrado de los métodos de procesamiento
-                    df_para_guardar = self._reconstruir_dataframe_desde_resultado(resultado_procesamiento)
+                    # Obtener DataFrame directamente del resultado
+                    df_para_guardar = resultado_procesamiento.get('dataframe')
 
                     if df_para_guardar is not None and not df_para_guardar.empty:
                         # Guardar en la base de datos
@@ -390,7 +384,12 @@ class ProcesamientoService:
                             # Advertir sobre error en persistencia pero mantener éxito del procesamiento
                             resultado_procesamiento['advertencia_bd'] = resultado_persistencia.get('error', 'Error desconocido en persistencia')
                     else:
-                        resultado_procesamiento['advertencia_bd'] = 'No se pudo reconstruir el DataFrame para persistencia'
+                        # DataFrame no disponible para persistencia
+                        resultado_procesamiento['advertencia_bd'] = 'No se pudo obtener el DataFrame para persistencia. El procesamiento fue exitoso pero no se guardaron datos en la base de datos.'
+                        FacturacionLogger.log_procesamiento_error(
+                            "procesar_y_guardar_excel", 
+                            "DataFrame no disponible para persistencia"
+                        )
                 else:
                     resultado_procesamiento['advertencia_bd'] = 'No hay registros para guardar en la base de datos'
 

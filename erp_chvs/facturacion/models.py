@@ -43,7 +43,7 @@ class ListadosFocalizacion(models.Model):
     )
 
     doc = models.CharField(
-        max_length=20,
+        max_length=50,
         verbose_name="Número de Documento"
     )
 
@@ -157,12 +157,12 @@ class ListadosFocalizacion(models.Model):
             models.Index(fields=['doc']),
             models.Index(fields=['fecha_creacion']),
         ]
-        constraints = [
-            models.UniqueConstraint(
-                fields=['doc', 'ano', 'focalizacion'],
-                name='unique_doc_ano_focalizacion'
-            )
-        ]
+        # constraints = [
+        #     models.UniqueConstraint(
+        #         fields=['doc', 'ano', 'focalizacion'],
+        #         name='unique_doc_ano_focalizacion'
+        #     )
+        # ]
 
     def __str__(self):
         """Representación string del modelo."""
