@@ -3,12 +3,37 @@
 
 {% block title %}Generar Listados - Facturación{% endblock %}
 
+{% block extra_css %}
+<style>
+    .file-validation-feedback {
+        display: block;
+        width: 100%;
+        margin-top: 0.25rem;
+        font-size: 0.875em;
+    }
+    .column-requirements {
+        font-size: 0.875em;
+        color: #6c757d;
+        margin-top: 0.5rem;
+    }
+    .processing-indicator {
+        display: none;
+    }
+    .table-responsive {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <h2>Generar Listados a partir de Excel</h2>
     <p>
         Sube un archivo de Excel para procesarlo. El sistema aplicará las reglas de limpieza y transformación definidas.
     </p>
+
+    <!-- Las focalizaciones se pasan desde la vista -->
 
     <div class="card">
         <div class="card-header">
@@ -26,6 +51,9 @@
                     <label for="focalizacion" class="form-label">Focalización:</label>
                     <select name="focalizacion" id="focalizacion" class="form-control" required>
                         <option value="">Seleccione una focalización</option>
+                        {% for focalizacion in focalizaciones %}
+                        <option value="{{ focalizacion }}">{{ focalizacion }}</option>
+                        {% empty %}
                         <option value="F1">F1</option>
                         <option value="F2">F2</option>
                         <option value="F3">F3</option>
@@ -46,6 +74,7 @@
                         <option value="F18">F18</option>
                         <option value="F19">F19</option>
                         <option value="F20">F20</option>
+                        {% endfor %}
                     </select>
                 </div>
 
@@ -81,6 +110,9 @@
                     <label for="focalizacion_nuevo" class="form-label">Focalización:</label>
                     <select name="focalizacion" id="focalizacion_nuevo" class="form-control" required>
                         <option value="">Seleccione una focalización</option>
+                        {% for focalizacion in focalizaciones %}
+                        <option value="{{ focalizacion }}">{{ focalizacion }}</option>
+                        {% empty %}
                         <option value="F1">F1</option>
                         <option value="F2">F2</option>
                         <option value="F3">F3</option>
@@ -101,6 +133,7 @@
                         <option value="F18">F18</option>
                         <option value="F19">F19</option>
                         <option value="F20">F20</option>
+                        {% endfor %}
                     </select>
                 </div>
 
@@ -121,7 +154,6 @@
                 <div class="alert alert-warning">
                     <strong>Advertencia:</strong> {{ verified_message }}
                 </div>
-                {% if invalid_sedes %}
                 <div class="alert alert-info">
                     <strong>Sedes inválidas encontradas:</strong>
                     <ul class="mb-0 mt-2">
@@ -130,7 +162,6 @@
                         {% endfor %}
                     </ul>
                 </div>
-                {% endif %}
             {% else %}
                 <div class="alert alert-success">
                     <strong>Verificación exitosa:</strong> {{ verified_message }}
@@ -291,7 +322,6 @@
                 <div class="alert alert-warning">
                     <strong>Advertencia:</strong> {{ verified_message_nuevo }}
                 </div>
-                {% if invalid_sedes_nuevo %}
                 <div class="alert alert-info">
                     <strong>Sedes inválidas encontradas:</strong>
                     <ul class="mb-0 mt-2">
@@ -300,7 +330,6 @@
                         {% endfor %}
                     </ul>
                 </div>
-                {% endif %}
             {% else %}
                 <div class="alert alert-success">
                     <strong>Verificación exitosa:</strong> {{ verified_message_nuevo }}
@@ -388,5 +417,131 @@
         </div>
     </div>
     {% endif %}
+
+    {% if agrupacion_sedes_nuevo %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4>Estadísticas por Sede (Base de Datos) - Nuevo Formato</h4>
+            <small class="text-muted">
+                <i class="fas fa-info-circle"></i> 
+                Mostrando sedes de CALI procesadas con el nuevo formato.
+            </small>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-center">#</th>
+                            <th>Sede (Base de Datos)</th>
+                            <th>Sede (Excel)</th>
+                            <th class="text-center">Total</th>
+                            <th class="text-center">Preescolar</th>
+                            <th class="text-center">Primaria 1-2</th>
+                            <th class="text-center">Primaria 3-4-5</th>
+                            <th class="text-center">Secundaria</th>
+                            <th class="text-center">Media Ciclo Complementario</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in agrupacion_sedes_nuevo %}
+                        <tr>
+                            <td class="text-center">{{ forloop.counter }}</td>
+                            <td>
+                                <strong>{{ item.sede_bd }}</strong>
+                            </td>
+                            <td class="text-muted">{{ item.sede_excel }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-primary">{{ item.cantidad }}</span>
+                            </td>
+                            <td class="text-center">
+                                {% if item.prescolar > 0 %}
+                                    <span class="badge bg-info">{{ item.prescolar }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if item.primaria_1_2 > 0 %}
+                                    <span class="badge bg-success">{{ item.primaria_1_2 }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if item.primaria_3_4_5 > 0 %}
+                                    <span class="badge bg-warning text-dark">{{ item.primaria_3_4_5 }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if item.secundaria > 0 %}
+                                    <span class="badge bg-danger">{{ item.secundaria }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if item.media_ciclo_complementario > 0 %}
+                                    <span class="badge bg-dark">{{ item.media_ciclo_complementario }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/facturacion/facturacion.js' %}"></script>
+<script>
+    // Inicialización adicional específica para esta página
+    document.addEventListener('DOMContentLoaded', function() {
+        // Configurar validación de archivos
+        const fileInputs = document.querySelectorAll('input[type="file"][name="archivo_excel"]');
+        fileInputs.forEach(input => {
+            input.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    // Mostrar información del archivo
+                    const fileInfo = document.createElement('small');
+                    fileInfo.className = 'form-text text-muted';
+                    fileInfo.textContent = `Archivo seleccionado: ${file.name} (${FacturacionUtils.formatFileSize(file.size)})`;
+                    
+                    // Remover información anterior
+                    const existingInfo = e.target.parentNode.querySelector('.file-info');
+                    if (existingInfo) {
+                        existingInfo.remove();
+                    }
+                    
+                    fileInfo.className += ' file-info';
+                    e.target.parentNode.appendChild(fileInfo);
+                }
+            });
+        });
+        
+        // Mostrar mensajes de error si existen
+        {% if error|default:"" %}
+        FacturacionUtils.showToast('{{ error }}', 'danger');
+        {% endif %}
+        
+        // Mostrar mensajes de éxito si existen
+        {% if verified_message|default:"" %}
+        FacturacionUtils.showToast('{{ verified_message }}', 'success');
+        {% endif %}
+        
+        {% if verified_message_nuevo|default:"" %}
+        FacturacionUtils.showToast('{{ verified_message_nuevo }}', 'success');
+        {% endif %}
+    });
+</script>
 {% endblock %}

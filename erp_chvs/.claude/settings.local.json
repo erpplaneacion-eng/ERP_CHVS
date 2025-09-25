@@ -5,7 +5,8 @@
       "Bash(python3 manage.py collectstatic:*)",
       "Bash(sqlite3:*)",
       "Bash(find:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(python manage.py:*)"
     ],
     "deny": [],
     "ask": []
