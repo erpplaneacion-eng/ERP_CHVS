@@ -162,16 +162,16 @@
     {% if filtros_aplicados.etc and total_sedes_faltantes > 0 %}
     <div class="missing-sedes-card">
         <div class="card-header-missing">
-            <h3><i class="fas fa-exclamation-triangle"></i> Sedes Educativas Sin Registros</h3>
-            <p>Para ETC: <strong>{{ filtros_aplicados.etc }}</strong> | Total sedes faltantes: <strong>{{ total_sedes_faltantes }}</strong></p>
+            <h3><i class="fas fa-exclamation-triangle"></i> Sedes Sin Registros</h3>
+            <p>Para ETC: <strong>{{ filtros_aplicados.etc }}</strong> | Sedes en catálogo sin registros: <strong>{{ total_sedes_faltantes }}</strong></p>
         </div>
         <div class="missing-sedes-content">
             <div class="missing-sedes-list">
                 {% for sede in sedes_faltantes %}
                 <div class="missing-sede-item">
                     <span class="sede-name">{{ sede }}</span>
-                    <button class="btn btn-sm btn-success" onclick="agregarRegistroDesdeSede('{{ sede }}', '{{ filtros_aplicados.etc }}')" title="Agregar registro">
-                        <i class="fas fa-plus"></i> Agregar Registro
+                    <button class="btn btn-sm btn-success" onclick="transferirGradosDesdeSede('{{ sede }}', '{{ filtros_aplicados.etc }}', {{ grados_disponibles|safe }})" title="Transferir grados">
+                        <i class="fas fa-exchange-alt"></i> Transferir Grados
                     </button>
                 </div>
                 {% endfor %}
@@ -182,7 +182,7 @@
     <div class="complete-sedes-card">
         <div class="card-header-complete">
             <h3><i class="fas fa-check-circle"></i> Sedes Completas</h3>
-            <p>Todas las sedes educativas del ETC <strong>{{ filtros_aplicados.etc }}</strong> tienen registros en el sistema.</p>
+            <p>Todas las sedes del ETC <strong>{{ filtros_aplicados.etc }}</strong> tienen registros en el sistema.</p>
         </div>
     </div>
     {% endif %}
@@ -333,6 +333,56 @@
                 <button type="button" class="btn btn-secondary" onclick="closeDetailModal()">Cerrar</button>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Modal para transferencia de grados -->
+<div class="modal-overlay" id="transferModal" style="display: none;">
+    <div class="modal-content modal-transfer">
+            <div class="modal-header">
+                <h3>Transferir Grados a Sede</h3>
+                <span class="modal-close" onclick="closeTransferModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="transfer-container">
+                    <div class="transfer-info">
+                        <h4 id="transferTitle">Transferir grados a: [Sede]</h4>
+                        <p>Selecciona la sede de origen y los grados que deseas transferir.</p>
+                    </div>
+
+                    <!-- Selector de sede origen -->
+                    <div class="sede-origin-selector">
+                        <label for="sedeOrigen">Sede de Origen:</label>
+                        <select id="sedeOrigen" onchange="cambiarSedeOrigen()">
+                            <option value="">Selecciona una sede...</option>
+                        </select>
+                    </div>
+
+                    <div class="transfer-columns">
+                        <!-- Columna Izquierda: Grados Disponibles -->
+                        <div class="transfer-column">
+                            <h5><i class="fas fa-list"></i> Grados Disponibles</h5>
+                            <div id="gradosDisponibles" class="grados-list">
+                                <!-- Se llena dinámicamente -->
+                            </div>
+                        </div>
+
+                        <!-- Columna Derecha: Grados Seleccionados -->
+                        <div class="transfer-column">
+                            <h5><i class="fas fa-check"></i> Grados a Transferir</h5>
+                            <div id="gradosSeleccionados" class="grados-list">
+                                <p class="empty-message">Ningún grado seleccionado</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeTransferModal()">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="confirmarTransferencia()" id="transferBtn" disabled>
+                    <i class="fas fa-exchange-alt"></i> Transferir Grados
+                </button>
+            </div>
     </div>
 </div>
 

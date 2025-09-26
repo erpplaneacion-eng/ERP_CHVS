@@ -21,11 +21,89 @@ from .services import ProcesamientoService, ValidacionService, EstadisticasServi
 from .config import ProcesamientoConfig, FOCALIZACIONES_DISPONIBLES
 from .logging_config import FacturacionLogger
 from planeacion.models import SedesEducativas
+from .persistence_service import PersistenceService
 
 # Inicializar servicios
 procesamiento_service = ProcesamientoService()
 validacion_service = ValidacionService()
 estadisticas_service = EstadisticasService()
+
+def _mapear_grado_a_nivel_manual(grado):
+    """
+    Mapea manualmente grados que no están en la tabla NivelGradoEscolar
+    a sus niveles escolares correspondientes.
+
+    Args:
+        grado: String del grado (ej: "-1", "-2", "0")
+
+    Returns:
+        str: Nombre del nivel escolar o None si no se puede mapear
+    """
+    try:
+        grado_num = float(grado)  # Convertir a número para comparación
+
+        # Reglas de mapeo conocidas
+        if grado_num < 0:
+            return "Preescolar"  # Grados negativos como -1, -2 son Preescolar
+        elif grado_num == 0:
+            return "Preescolar"  # Grado 0 también es Preescolar
+        elif 1 <= grado_num <= 5:
+            return "Primaria"
+        elif 6 <= grado_num <= 9:
+            return "Secundaria"
+        elif 10 <= grado_num <= 11:
+            return "Media"
+        else:
+            return None  # No se puede mapear
+
+    except (ValueError, TypeError):
+        # Si no se puede convertir a número, no se puede mapear
+        return None
+
+def _extraer_grado_base(grado_grupos):
+    """
+    Extrae el grado base de un valor grado_grupos considerando diferentes formatos.
+
+    Args:
+        grado_grupos: String con el valor del grado (ej: "3-A", "-1", "2-201", "-1--101", "5")
+
+    Returns:
+        str: Grado base extraído o None si no es válido
+
+    Ejemplos:
+        "3-A" → "3"
+        "-1" → "-1"
+        "2-201" → "2"
+        "-1--101" → "-1"  (grado negativo con grupo especial)
+        "-2--201" → "-2"  (grado negativo con grupo especial)
+        "5" → "5"
+        "" → None
+        None → None
+    """
+    if not grado_grupos or grado_grupos == '':
+        return None
+
+    grado_str = str(grado_grupos).strip()
+
+    # Caso especial: grados negativos con grupos (ej: "-1--101", "-2--201")
+    if grado_str.startswith('-') and '--' in grado_str:
+        # Extraer solo la parte del grado (antes del "--")
+        grado_base = grado_str.split('--')[0]
+        return grado_base
+
+    # Caso especial: si comienza con '-', devolver el valor completo (ej: "-1", "-2")
+    if grado_str.startswith('-'):
+        return grado_str
+
+    # Caso normal: dividir por '-' y tomar la primera parte
+    if '-' in grado_str:
+        parte_grado = grado_str.split('-')[0]
+        # Validar que la parte del grado no esté vacía
+        if parte_grado:
+            return parte_grado
+
+    # Si no tiene '-', devolver el valor completo
+    return grado_str
 
 @login_required
 def facturacion_index(request):
@@ -201,7 +279,7 @@ def procesar_listados_view(request):
                     df_procesado = pd.read_json(StringIO(df_json), orient='records')
 
                     # Guardar directamente en BD usando el DataFrame procesado
-                    from .persistence_service import PersistenceService
+                    
                     resultado_persistencia = PersistenceService.guardar_listados_focalizacion(df_procesado)
 
                     # Crear resultado compatible con el contexto
@@ -416,6 +494,7 @@ def lista_listados(request):
     # Query base
     listados = ListadosFocalizacion.objects.all().order_by('-fecha_creacion')
 
+
     # Aplicar filtros
     if etc_filter:
         listados = listados.filter(etc__icontains=etc_filter)
@@ -432,19 +511,111 @@ def lista_listados(request):
     etc_values = ListadosFocalizacion.objects.values_list('etc', flat=True).distinct().order_by('etc')
     sede_values = ListadosFocalizacion.objects.values_list('sede', flat=True).distinct().order_by('sede')
 
-    # Obtener sedes faltantes (solo si hay filtro ETC aplicado)
+
+    # Obtener sedes faltantes y grados disponibles (solo si hay filtro ETC aplicado)
     sedes_faltantes = []
+    grados_disponibles = []
     if etc_filter:
-        # Todas las sedes del ETC seleccionado
-        todas_sedes_etc = SedesEducativas.objects.filter(
-            codigo_ie__id_municipios__nombre_municipio__icontains=etc_filter
-        ).select_related('codigo_ie').values_list('nombre_sede_educativa', flat=True).distinct()
+        # Optimización: Obtener sedes válidas del catálogo primero (más eficiente)
+        sedes_catalogo_etc = set(
+            SedesEducativas.objects.filter(
+                codigo_ie__id_municipios__nombre_municipio__icontains=etc_filter
+            ).values_list('nombre_sede_educativa', flat=True).distinct()
+        )
 
-        # Sedes que ya tienen registros en listados_focalizacion
-        sedes_con_registros = listados.values_list('sede', flat=True).distinct()
+        # Sedes que tienen registros en listados_focalizacion para este ETC
+        sedes_con_registros_etc = set(
+            ListadosFocalizacion.objects.filter(
+                etc__icontains=etc_filter
+            ).values_list('sede', flat=True).distinct()
+        )
 
-        # Sedes faltantes = todas las sedes del ETC - sedes que ya tienen registros
-        sedes_faltantes = [sede for sede in todas_sedes_etc if sede not in sedes_con_registros]
+        # Sedes faltantes = sedes del catálogo oficial que NO tienen registros
+        # (sedes que deberían tener registros pero aún no han sido procesadas)
+        sedes_faltantes = list(sedes_catalogo_etc - sedes_con_registros_etc)
+
+        if sedes_con_registros_etc:
+            from principal.models import NivelGradoEscolar
+
+            # Obtener sedes disponibles con sus grados
+            sedes_disponibles = []
+            for sede in sedes_con_registros_etc:
+                # Obtener grados únicos de esta sede
+                registros_sede = ListadosFocalizacion.objects.filter(
+                    etc__icontains=etc_filter,
+                    sede=sede
+                ).values('grado_grupos').distinct()
+
+                grados_sede = set()
+                for registro in registros_sede:
+                    if registro['grado_grupos']:
+                        grado_base = _extraer_grado_base(str(registro['grado_grupos']))
+                        if grado_base:  # Solo agregar si no es vacío
+                            grados_sede.add(grado_base)
+
+
+                # Mapear grados a niveles escolares
+                grados_mapeados = {}
+                grados_sin_nivel = []  # Grados que no están en la tabla NivelGradoEscolar
+
+                for grado in grados_sede:
+                    try:
+                        nivel = NivelGradoEscolar.objects.filter(grados_sedes=grado).first()
+                        if nivel:
+                            nivel_nombre = nivel.nivel_escolar_uapa
+                            if nivel_nombre not in grados_mapeados:
+                                grados_mapeados[nivel_nombre] = []
+                            grados_mapeados[nivel_nombre].append({
+                                'grado': grado,
+                                'descripcion': f"{nivel.grados_sedes} - {nivel.nivel_escolar_uapa}"
+                            })
+                        else:
+                            # Grado no encontrado en tabla - intentar mapeo manual por reglas conocidas
+                            nivel_manual = _mapear_grado_a_nivel_manual(grado)
+                            if nivel_manual:
+                                if nivel_manual not in grados_mapeados:
+                                    grados_mapeados[nivel_manual] = []
+                                grados_mapeados[nivel_manual].append({
+                                    'grado': grado,
+                                    'descripcion': f"Grado {grado} - {nivel_manual} (mapeo manual)"
+                                })
+                            else:
+                                # Último recurso: grados especiales
+                                grados_sin_nivel.append({
+                                    'grado': grado,
+                                    'descripcion': f"Grado {grado} (sin nivel asignado)"
+                                })
+                    except Exception as e:
+                        # En caso de error, agregar a lista especial
+                        grados_sin_nivel.append({
+                            'grado': grado,
+                            'descripcion': f"Grado {grado} (error en mapeo: {str(e)})"
+                        })
+
+                # Convertir a lista ordenada por nivel
+                grados_ordenados = []
+
+                # Agregar grados con nivel asignado
+                for nivel, grados in sorted(grados_mapeados.items()):
+                    grados_ordenados.append({
+                        'nivel': nivel,
+                        'grados': sorted(grados, key=lambda x: x['grado'])
+                    })
+
+                # Agregar grados que no pudieron mapearse en una categoría especial (solo como último recurso)
+                if grados_sin_nivel:
+                    grados_ordenados.append({
+                        'nivel': 'Grados Especiales',
+                        'grados': sorted(grados_sin_nivel, key=lambda x: x['grado'])
+                    })
+
+                sedes_disponibles.append({
+                    'sede': sede,
+                    'grados': grados_ordenados,
+                    'total_grados': len(grados_sede)
+                })
+
+            grados_disponibles = sedes_disponibles
 
     context = {
         'listados': page_obj,
@@ -457,6 +628,7 @@ def lista_listados(request):
         },
         'sedes_faltantes': sedes_faltantes,
         'total_sedes_faltantes': len(sedes_faltantes),
+        'grados_disponibles': grados_disponibles,
     }
 
     return render(request, 'facturacion/lista_listados.html', context)
@@ -576,6 +748,79 @@ def api_listado_detail(request, id_listado):
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
 
+@login_required
+@csrf_exempt
+def api_transferir_grados(request):
+    """API para transferir grados de una sede a otra"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            sede_destino = data.get('sede_destino')
+            sede_origen = data.get('sede_origen')
+            grados_seleccionados = data.get('grados_seleccionados', [])
+            etc = data.get('etc')
+
+            if not sede_destino or not sede_origen or not grados_seleccionados or not etc:
+                return JsonResponse({'success': False, 'error': 'Parámetros incompletos'})
+
+            # Obtener registros fuente (de la sede origen específica con esos grados)
+            registros_fuente = ListadosFocalizacion.objects.filter(
+                etc__icontains=etc,
+                sede=sede_origen
+            )
+
+            # Filtrar por grados seleccionados
+            registros_a_copiar = []
+            for registro in registros_fuente:
+                if registro.grado_grupos:
+                    grado_base = _extraer_grado_base(str(registro.grado_grupos))
+                    if grado_base and grado_base in grados_seleccionados:
+                        registros_a_copiar.append(registro)
+
+            # Crear copias con la sede destino
+            registros_creados = 0
+            for registro in registros_a_copiar:
+                try:
+                    # Generar nuevo ID único para el registro copiado
+                    id_nuevo = PersistenceService.generar_id_listado_unico(registro)
+
+                    # Crear copia con sede destino
+                    ListadosFocalizacion.objects.create(
+                        id_listados=id_nuevo,
+                        ano=registro.ano,
+                        etc=registro.etc,
+                        institucion=registro.institucion,
+                        sede=sede_destino,  # ← Cambiar sede
+                        tipodoc=registro.tipodoc,
+                        doc=registro.doc,
+                        apellido1=registro.apellido1,
+                        apellido2=registro.apellido2,
+                        nombre1=registro.nombre1,
+                        nombre2=registro.nombre2,
+                        fecha_nacimiento=registro.fecha_nacimiento,
+                        edad=registro.edad,
+                        etnia=registro.etnia,
+                        genero=registro.genero,
+                        grado_grupos=registro.grado_grupos,
+                        complemento_alimentario_preparado_am=registro.complemento_alimentario_preparado_am,
+                        complemento_alimentario_preparado_pm=registro.complemento_alimentario_preparado_pm,
+                        almuerzo_jornada_unica=registro.almuerzo_jornada_unica,
+                        refuerzo_complemento_am_pm=registro.refuerzo_complemento_am_pm,
+                        focalizacion=registro.focalizacion
+                    )
+                    registros_creados += 1
+                except Exception as e:
+                    continue  # Continuar con el siguiente registro
+
+            return JsonResponse({
+                'success': True,
+                'registros_creados': registros_creados,
+                'mensaje': f'Se transfirieron {registros_creados} registros a la sede {sede_destino}'
+            })
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Error en transferencia: {str(e)}'})
+
 # Vista procesar_y_guardar_view eliminada - consolidada en procesar_listados_view
 
 @login_required
@@ -590,7 +835,7 @@ def obtener_estadisticas_bd(request):
         JsonResponse: Estadísticas de la base de datos
     """
     try:
-        from .persistence_service import PersistenceService
+        
 
         estadisticas = PersistenceService.obtener_estadisticas_bd()
 

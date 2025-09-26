@@ -14,6 +14,7 @@ urlpatterns = [
     # APIs para gestión de listados focalización
     path('api/listados/', views.api_listados, name='api_listados'),
     path('api/listados/<str:id_listado>/', views.api_listado_detail, name='api_listado_detail'),
+    path('api/transferir-grados/', views.api_transferir_grados, name='api_transferir_grados'),
 
     # Servicios AJAX
     path('validar-archivo/', views.validar_archivo_ajax, name='validar_archivo_ajax'),

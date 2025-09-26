@@ -3,6 +3,13 @@
  * Maneja la validación de archivos y la interacción del usuario.
  */
 
+// Variables globales para transferencia de grados
+let sedeDestinoActual = '';
+let sedeOrigenActual = '';
+let etcActual = '';
+let gradosSeleccionados = [];
+let gradosDisponiblesData = [];
+
 class FacturacionManager {
     constructor() {
         this.init();
@@ -422,6 +429,394 @@ function agregarRegistroDesdeSede(nombreSede, etc) {
 
     // Cambiar título del modal
     document.getElementById('modalTitle').textContent = `Agregar Registro - ${nombreSede}`;
+}
+
+// Función para transferir grados desde sede
+function transferirGradosDesdeSede(nombreSede, etc, sedesDisponibles) {
+    sedeDestinoActual = nombreSede;
+    etcActual = etc;
+    sedeOrigenActual = '';
+    gradosSeleccionados = [];
+    gradosDisponiblesData = sedesDisponibles || [];
+
+    // Actualizar título
+    document.getElementById('transferTitle').textContent = `Transferir grados a: ${nombreSede}`;
+
+    // Cargar sedes disponibles en el selector
+    cargarSedesOrigen(sedesDisponibles);
+
+    // Limpiar grados disponibles inicialmente
+    document.getElementById('gradosDisponibles').innerHTML = '<p class="empty-message">Selecciona una sede de origen para ver sus grados</p>';
+    document.getElementById('gradosSeleccionados').innerHTML = '<p class="empty-message">Ningún grado seleccionado</p>';
+
+    // Deshabilitar botón de transferir
+    document.getElementById('transferBtn').disabled = true;
+
+    // Abrir modal
+    document.getElementById('transferModal').style.display = 'flex';
+}
+
+// Función para cargar grados disponibles
+function cargarGradosDisponibles(gradosDisponibles) {
+
+    const container = document.getElementById('gradosDisponibles');
+    container.innerHTML = '';
+
+    if (gradosDisponibles && gradosDisponibles.length > 0) {
+        gradosDisponibles.forEach(nivelData => {
+            const nivelDiv = document.createElement('div');
+            nivelDiv.className = 'nivel-group';
+            nivelDiv.innerHTML = `<h6 style="margin: 10px 0 5px 0; color: #495057;">${nivelData.nivel}</h6>`;
+
+            nivelData.grados.forEach(grado => {
+                const gradoDiv = document.createElement('div');
+                gradoDiv.className = 'grado-item';
+                gradoDiv.onclick = () => toggleGradoSeleccion(grado.grado);
+
+                gradoDiv.innerHTML = `
+                    <input type="checkbox" class="grado-checkbox" id="grado_${grado.grado}" value="${grado.grado}">
+                    <div class="grado-info">
+                        <div class="grado-nivel">Grado ${grado.grado}</div>
+                        <div class="grado-detalle">${grado.descripcion}</div>
+                    </div>
+                `;
+
+                nivelDiv.appendChild(gradoDiv);
+            });
+
+            container.appendChild(nivelDiv);
+        });
+    } else {
+        container.innerHTML = '<p class="empty-message">No hay grados disponibles para transferir</p>';
+    }
+
+    actualizarGradosSeleccionados();
+}
+
+// Función para alternar selección de grado
+function toggleGradoSeleccion(grado) {
+    const checkbox = document.getElementById(`grado_${grado}`);
+    const item = checkbox.closest('.grado-item');
+
+    if (checkbox.checked) {
+        checkbox.checked = false;
+        item.classList.remove('selected');
+        gradosSeleccionados = gradosSeleccionados.filter(g => g !== grado);
+    } else {
+        checkbox.checked = true;
+        item.classList.add('selected');
+        gradosSeleccionados.push(grado);
+    }
+
+    actualizarGradosSeleccionados();
+}
+
+// Función para actualizar lista de grados seleccionados
+function actualizarGradosSeleccionados() {
+    const container = document.getElementById('gradosSeleccionados');
+
+    if (gradosSeleccionados.length === 0) {
+        container.innerHTML = '<p class="empty-message">Ningún grado seleccionado</p>';
+    } else {
+        container.innerHTML = '';
+        gradosSeleccionados.forEach(grado => {
+            const gradoDiv = document.createElement('div');
+            gradoDiv.className = 'grado-item selected';
+            gradoDiv.innerHTML = `
+                <div class="grado-info">
+                    <div class="grado-nivel">Grado ${grado}</div>
+                    <div class="grado-detalle">Listo para transferir</div>
+                </div>
+                <button class="transfer-btn" onclick="removerGrado('${grado}')">×</button>
+            `;
+            container.appendChild(gradoDiv);
+        });
+    }
+
+    // Habilitar/deshabilitar botón de transferir
+    document.getElementById('transferBtn').disabled = gradosSeleccionados.length === 0;
+}
+
+// Función para remover grado de la selección
+function removerGrado(grado) {
+    gradosSeleccionados = gradosSeleccionados.filter(g => g !== grado);
+    const checkbox = document.getElementById(`grado_${grado}`);
+    if (checkbox) {
+        checkbox.checked = false;
+        checkbox.closest('.grado-item').classList.remove('selected');
+    }
+    actualizarGradosSeleccionados();
+}
+
+// Función para confirmar transferencia
+function confirmarTransferencia() {
+    if (gradosSeleccionados.length === 0) {
+        alert('Selecciona al menos un grado para transferir');
+        return;
+    }
+
+    if (confirm(`¿Confirmas transferir ${gradosSeleccionados.length} grado(s) a la sede "${sedeDestinoActual}"?\n\nGrados: ${gradosSeleccionados.join(', ')}`)) {
+        // Deshabilitar botón mientras procesa
+        document.getElementById('transferBtn').disabled = true;
+        document.getElementById('transferBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+
+        // Enviar petición
+        fetch('/facturacion/api/transferir-grados/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                sede_destino: sedeDestinoActual,
+                grados_seleccionados: gradosSeleccionados,
+                etc: etcActual
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`✅ ${data.mensaje}`);
+                closeTransferModal();
+                location.reload(); // Recargar para ver los cambios
+            } else {
+                alert('❌ Error: ' + data.error);
+                // Rehabilitar botón
+                document.getElementById('transferBtn').disabled = false;
+                document.getElementById('transferBtn').innerHTML = '<i class="fas fa-exchange-alt"></i> Transferir Grados';
+            }
+        })
+        .catch(error => {
+            alert('❌ Error de conexión: ' + error);
+            // Rehabilitar botón
+            document.getElementById('transferBtn').disabled = false;
+            document.getElementById('transferBtn').innerHTML = '<i class="fas fa-exchange-alt"></i> Transferir Grados';
+        });
+    }
+}
+
+// Función para cerrar modal de transferencia
+function closeTransferModal() {
+    document.getElementById('transferModal').style.display = 'none';
+    sedeDestinoActual = '';
+    etcActual = '';
+    gradosSeleccionados = [];
+}
+
+// ===== FUNCIONES PARA TRANSFERENCIA DE GRADOS =====
+
+// Función para transferir grados desde sede
+function transferirGradosDesdeSede(nombreSede, etc, sedesDisponibles) {
+    sedeDestinoActual = nombreSede;
+    etcActual = etc;
+    sedeOrigenActual = '';
+    gradosSeleccionados = [];
+    gradosDisponiblesData = sedesDisponibles || [];
+
+    // Actualizar título
+    document.getElementById('transferTitle').textContent = `Transferir grados a: ${nombreSede}`;
+
+    // Cargar sedes disponibles en el selector
+    cargarSedesOrigen(sedesDisponibles);
+
+    // Limpiar grados disponibles inicialmente
+    document.getElementById('gradosDisponibles').innerHTML = '<p class="empty-message">Selecciona una sede de origen para ver sus grados</p>';
+    document.getElementById('gradosSeleccionados').innerHTML = '<p class="empty-message">Ningún grado seleccionado</p>';
+
+    // Deshabilitar botón de transferir
+    document.getElementById('transferBtn').disabled = true;
+
+    // Abrir modal
+    document.getElementById('transferModal').style.display = 'flex';
+}
+
+// Función para cargar sedes disponibles en el selector
+function cargarSedesOrigen(sedesDisponibles) {
+    const select = document.getElementById('sedeOrigen');
+    select.innerHTML = '<option value="">Selecciona una sede...</option>';
+
+    if (sedesDisponibles && sedesDisponibles.length > 0) {
+        sedesDisponibles.forEach(sedeData => {
+            const option = document.createElement('option');
+            option.value = sedeData.sede;
+            option.textContent = `${sedeData.sede} (${sedeData.total_grados} grados)`;
+            select.appendChild(option);
+        });
+    }
+}
+
+// Función para cambiar sede de origen
+function cambiarSedeOrigen() {
+    const select = document.getElementById('sedeOrigen');
+    sedeOrigenActual = select.value;
+    gradosSeleccionados = [];
+
+    if (sedeOrigenActual) {
+        // Buscar los grados de la sede seleccionada
+        const sedeSeleccionada = gradosDisponiblesData.find(s => s.sede === sedeOrigenActual);
+        if (sedeSeleccionada) {
+            cargarGradosDisponibles(sedeSeleccionada.grados);
+        }
+    } else {
+        // Limpiar grados si no hay sede seleccionada
+        document.getElementById('gradosDisponibles').innerHTML = '<p class="empty-message">Selecciona una sede de origen para ver sus grados</p>';
+        document.getElementById('gradosSeleccionados').innerHTML = '<p class="empty-message">Ningún grado seleccionado</p>';
+        document.getElementById('transferBtn').disabled = true;
+    }
+}
+
+// Función para cargar grados disponibles
+function cargarGradosDisponibles(gradosDisponibles) {
+    const container = document.getElementById('gradosDisponibles');
+    container.innerHTML = '';
+
+    if (gradosDisponibles && gradosDisponibles.length > 0) {
+        gradosDisponibles.forEach(nivelData => {
+            const nivelDiv = document.createElement('div');
+            nivelDiv.className = 'nivel-group';
+            nivelDiv.innerHTML = `<h6 style="margin: 10px 0 5px 0; color: #495057;">${nivelData.nivel}</h6>`;
+
+            nivelData.grados.forEach(grado => {
+                const gradoDiv = document.createElement('div');
+                gradoDiv.className = 'grado-item';
+                gradoDiv.onclick = () => toggleGradoSeleccion(grado.grado);
+
+                gradoDiv.innerHTML = `
+                    <input type="checkbox" class="grado-checkbox" id="grado_${grado.grado}" value="${grado.grado}">
+                    <div class="grado-info">
+                        <div class="grado-nivel">Grado ${grado.grado}</div>
+                        <div class="grado-detalle">${grado.descripcion}</div>
+                    </div>
+                `;
+
+                nivelDiv.appendChild(gradoDiv);
+            });
+
+            container.appendChild(nivelDiv);
+        });
+    } else {
+        container.innerHTML = '<p class="empty-message">Esta sede no tiene grados disponibles</p>';
+    }
+
+    actualizarGradosSeleccionados();
+}
+
+// Función para alternar selección de grado
+function toggleGradoSeleccion(grado) {
+    const checkbox = document.getElementById(`grado_${grado}`);
+    const item = checkbox.closest('.grado-item');
+
+    if (checkbox.checked) {
+        checkbox.checked = false;
+        item.classList.remove('selected');
+        gradosSeleccionados = gradosSeleccionados.filter(g => g !== grado);
+    } else {
+        checkbox.checked = true;
+        item.classList.add('selected');
+        gradosSeleccionados.push(grado);
+    }
+
+    actualizarGradosSeleccionados();
+}
+
+// Función para actualizar lista de grados seleccionados
+function actualizarGradosSeleccionados() {
+    const container = document.getElementById('gradosSeleccionados');
+
+    if (gradosSeleccionados.length === 0) {
+        container.innerHTML = '<p class="empty-message">Ningún grado seleccionado</p>';
+    } else {
+        container.innerHTML = '';
+        gradosSeleccionados.forEach(grado => {
+            const gradoDiv = document.createElement('div');
+            gradoDiv.className = 'grado-item selected';
+            gradoDiv.innerHTML = `
+                <div class="grado-info">
+                    <div class="grado-nivel">Grado ${grado}</div>
+                    <div class="grado-detalle">Listo para transferir</div>
+                </div>
+                <button class="transfer-btn" onclick="removerGrado('${grado}')">×</button>
+            `;
+            container.appendChild(gradoDiv);
+        });
+    }
+
+    // Habilitar/deshabilitar botón de transferir
+    document.getElementById('transferBtn').disabled = gradosSeleccionados.length === 0;
+}
+
+// Función para remover grado de la selección
+function removerGrado(grado) {
+    gradosSeleccionados = gradosSeleccionados.filter(g => g !== grado);
+    const checkbox = document.getElementById(`grado_${grado}`);
+    if (checkbox) {
+        checkbox.checked = false;
+        checkbox.closest('.grado-item').classList.remove('selected');
+    }
+    actualizarGradosSeleccionados();
+}
+
+// Función para confirmar transferencia
+function confirmarTransferencia() {
+    if (!sedeOrigenActual) {
+        alert('Selecciona una sede de origen');
+        return;
+    }
+
+    if (gradosSeleccionados.length === 0) {
+        alert('Selecciona al menos un grado para transferir');
+        return;
+    }
+
+    if (confirm(`¿Confirmas transferir ${gradosSeleccionados.length} grado(s) desde "${sedeOrigenActual}" a "${sedeDestinoActual}"?\n\nGrados: ${gradosSeleccionados.join(', ')}`)) {
+        // Deshabilitar botón mientras procesa
+        document.getElementById('transferBtn').disabled = true;
+        document.getElementById('transferBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+
+        // Enviar petición
+        fetch('/facturacion/api/transferir-grados/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                sede_destino: sedeDestinoActual,
+                sede_origen: sedeOrigenActual,
+                grados_seleccionados: gradosSeleccionados,
+                etc: etcActual
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`✅ ${data.mensaje}`);
+                closeTransferModal();
+                location.reload(); // Recargar para ver los cambios
+            } else {
+                alert('❌ Error: ' + data.error);
+                // Rehabilitar botón
+                document.getElementById('transferBtn').disabled = false;
+                document.getElementById('transferBtn').innerHTML = '<i class="fas fa-exchange-alt"></i> Transferir Grados';
+            }
+        })
+        .catch(error => {
+            alert('❌ Error de conexión: ' + error);
+            // Rehabilitar botón
+            document.getElementById('transferBtn').disabled = false;
+            document.getElementById('transferBtn').innerHTML = '<i class="fas fa-exchange-alt"></i> Transferir Grados';
+        });
+    }
+}
+
+// Función para cerrar modal de transferencia
+function closeTransferModal() {
+    document.getElementById('transferModal').style.display = 'none';
+    sedeDestinoActual = '';
+    sedeOrigenActual = '';
+    etcActual = '';
+    gradosSeleccionados = [];
+    gradosDisponiblesData = [];
 }
 
 // Funcionalidad de búsqueda

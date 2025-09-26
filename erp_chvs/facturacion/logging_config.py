@@ -14,17 +14,17 @@ class FacturacionLogger:
     @staticmethod
     def log_procesamiento_inicio(archivo_nombre: str, tipo_procesamiento: str, focalizacion: str = None):
         """Log del inicio de procesamiento de archivo."""
-        logger.info(f"🚀 Iniciando procesamiento: {archivo_nombre} - Tipo: {tipo_procesamiento} - Focalización: {focalizacion}")
-    
+        logger.info(f"Inicio procesamiento: {archivo_nombre} - Tipo: {tipo_procesamiento} - Focalización: {focalizacion}")
+
     @staticmethod
     def log_procesamiento_exito(archivo_nombre: str, total_registros: int, registros_validos: int):
         """Log de procesamiento exitoso."""
-        logger.info(f"✅ Procesamiento exitoso: {archivo_nombre} - Total: {total_registros} - Válidos: {registros_validos}")
-    
+        logger.info(f"Procesamiento exitoso: {archivo_nombre} - Total: {total_registros} - Válidos: {registros_validos}")
+
     @staticmethod
     def log_procesamiento_error(archivo_nombre: str, error: str):
         """Log de error en procesamiento."""
-        logger.error(f"❌ Error en procesamiento: {archivo_nombre} - Error: {error}")
+        logger.error(f"Error en procesamiento: {archivo_nombre} - Error: {error}")
     
     @staticmethod
     def log_validacion_sedes(sedes_validas: int, sedes_invalidas: int, coincidencias_parciales: int = 0, coincidencias_genericas: int = 0):
@@ -71,14 +71,14 @@ def configurar_logging():
     # Crear handler para archivo de log
     file_handler = logging.FileHandler('facturacion.log')
     file_handler.setLevel(logging.INFO)
-    
+
     # Crear formatter
     formatter = logging.Formatter(ProcesamientoConfig.LOG_FORMAT)
     file_handler.setFormatter(formatter)
-    
+
     # Configurar logger
     logger.setLevel(getattr(logging, ProcesamientoConfig.LOG_LEVEL))
     logger.addHandler(file_handler)
-    
+
     # Evitar duplicación de logs
     logger.propagate = False

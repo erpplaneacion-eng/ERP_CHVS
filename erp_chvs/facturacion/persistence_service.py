@@ -107,9 +107,66 @@ class PersistenceService:
             }
 
     @staticmethod
+    def generar_id_listado_unico(registro) -> str:
+        """
+        Genera un ID único para un nuevo listado basado en un registro existente.
+        Diseñado para crear copias de registros con IDs únicos.
+
+        Args:
+            registro: Instancia del modelo ListadosFocalizacion o diccionario con datos
+
+        Returns:
+            str: ID único generado con formato {año}{focalización}_{uuid}
+
+        Raises:
+            ValueError: Si faltan campos requeridos (ano, focalizacion)
+        """
+        try:
+            # Extraer campos requeridos con validación
+            if isinstance(registro, dict):
+                ano = registro.get('ano')
+                focalizacion = registro.get('focalizacion')
+            else:
+                # Es un model instance
+                ano = getattr(registro, 'ano', None)
+                focalizacion = getattr(registro, 'focalizacion', None)
+
+            if not ano or not focalizacion:
+                raise ValueError("Campos requeridos faltantes: 'ano' y 'focalizacion' son obligatorios")
+
+            # Convertir a string y limpiar
+            ano_str = str(ano).strip()
+            focalizacion_str = str(focalizacion).strip()
+
+            # Generar UUID único (12 caracteres para mantener longitud razonable)
+            unique_suffix = str(uuid.uuid4())[:12]
+
+            # Construir ID con formato consistente
+            id_generado = f"{ano_str}{focalizacion_str}_{unique_suffix}"
+
+            # Validar longitud máxima según modelo (50 caracteres)
+            if len(id_generado) > 50:
+                # Truncar el UUID si es necesario, manteniendo prefijo
+                max_uuid_len = 50 - len(f"{ano_str}{focalizacion_str}_")
+                if max_uuid_len > 0:
+                    unique_suffix = unique_suffix[:max_uuid_len]
+                    id_generado = f"{ano_str}{focalizacion_str}_{unique_suffix}"
+                else:
+                    # Fallback: usar solo UUID si prefijo es muy largo
+                    id_generado = unique_suffix[:50]
+
+            return id_generado
+
+        except AttributeError as e:
+            raise ValueError(f"Error accediendo a atributos del registro: {str(e)}")
+        except Exception as e:
+            raise ValueError(f"Error generando ID único: {str(e)}")
+
+    @staticmethod
     def _generar_id_listado(row: pd.Series) -> str:
         """
         Genera un ID único para el listado usando UUID para garantizar unicidad.
+        Método interno para procesamiento de DataFrames.
 
         Args:
             row: Fila del DataFrame con los datos
