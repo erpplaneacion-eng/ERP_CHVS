@@ -161,10 +161,15 @@ class ProcesamientoService:
             
             # 7. Filtrar DataFrame por sedes válidas
             df_filtrado = self.fuzzy_matcher.filtrar_dataframe_por_sedes_validas(
-                df_procesado, 
+                df_procesado,
                 resultado_validacion['sedes_validas']
             )
-            
+
+            # 7.1 Aplicar mapeo de sedes: reemplazar nombres del Excel con nombres oficiales de BD
+            if resultado_validacion['mapeo_sedes']:
+                df_filtrado = df_filtrado.copy()
+                df_filtrado['SEDE'] = df_filtrado['SEDE'].map(resultado_validacion['mapeo_sedes']).fillna(df_filtrado['SEDE'])
+
             # 8. Generar estadísticas
             estadisticas = self.data_transformer.generar_estadisticas_por_sede(
                 df_filtrado, 

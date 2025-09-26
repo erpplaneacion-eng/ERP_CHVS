@@ -272,6 +272,200 @@ document.addEventListener('DOMContentLoaded', function() {
     window.facturacionManager = new FacturacionManager();
 });
 
+// ===== FUNCIONES PARA GESTIÓN DE LISTADOS FOCALIZACIÓN =====
+
+// Funciones para gestión de listados focalización
+function viewListado(idListado) {
+    fetch(`/facturacion/api/listados/${idListado}/`)
+        .then(response => response.json())
+        .then(data => {
+            let content = `
+                <div class="detail-grid">
+                    <div class="detail-row"><strong>ID Listado:</strong> ${data.id_listados}</div>
+                    <div class="detail-row"><strong>Año:</strong> ${data.ano}</div>
+                    <div class="detail-row"><strong>ETC:</strong> ${data.etc}</div>
+                    <div class="detail-row"><strong>Institución:</strong> ${data.institucion}</div>
+                    <div class="detail-row"><strong>Sede:</strong> ${data.sede}</div>
+                    <div class="detail-row"><strong>Documento:</strong> ${data.tipodoc} ${data.doc}</div>
+                    <div class="detail-row"><strong>Nombre Completo:</strong> ${data.nombre1} ${data.nombre2} ${data.apellido1} ${data.apellido2}</div>
+                    <div class="detail-row"><strong>Fecha Nacimiento:</strong> ${data.fecha_nacimiento}</div>
+                    <div class="detail-row"><strong>Edad:</strong> ${data.edad}</div>
+                    <div class="detail-row"><strong>Género:</strong> ${data.genero}</div>
+                    <div class="detail-row"><strong>Etnia:</strong> ${data.etnia || 'No especificada'}</div>
+                    <div class="detail-row"><strong>Grado:</strong> ${data.grado_grupos}</div>
+                    <div class="detail-row"><strong>Focalización:</strong> ${data.focalizacion}</div>
+                    <div class="detail-row"><strong>Complementos Alimentarios:</strong></div>
+                    <div class="detail-row">
+                        <ul>
+                            <li>AM: ${data.complemento_alimentario_preparado_am || 'No'}</li>
+                            <li>PM: ${data.complemento_alimentario_preparado_pm || 'No'}</li>
+                            <li>Almuerzo JU: ${data.almuerzo_jornada_unica || 'No'}</li>
+                            <li>Refuerzo: ${data.refuerzo_complemento_am_pm || 'No'}</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+            document.getElementById('detailContent').innerHTML = content;
+            document.getElementById('detailModal').style.display = 'flex';
+        })
+        .catch(error => {
+            alert('Error al cargar los detalles: ' + error);
+        });
+}
+
+function editListado(idListado) {
+    fetch(`/facturacion/api/listados/${idListado}/`)
+        .then(response => response.json())
+        .then(data => {
+            // Llenar el formulario con los datos
+            Object.keys(data).forEach(key => {
+                const element = document.getElementById(key);
+                if (element) {
+                    element.value = data[key] || '';
+                }
+            });
+            document.getElementById('listadoModal').style.display = 'flex';
+        })
+        .catch(error => {
+            alert('Error al cargar los datos para editar: ' + error);
+        });
+}
+
+function saveListado() {
+    const formData = new FormData(document.getElementById('listadoForm'));
+    const idListado = document.getElementById('id_listados').value;
+    const data = {};
+
+    for (let [key, value] of formData.entries()) {
+        data[key] = value;
+    }
+
+    // Determinar si es creación (POST) o actualización (PUT)
+    // Si el ID contiene "MANUAL_", es un nuevo registro
+    const isNewRecord = idListado.startsWith('MANUAL_');
+    const method = isNewRecord ? 'POST' : 'PUT';
+    const url = isNewRecord ? '/facturacion/api/listados/' : `/facturacion/api/listados/${idListado}/`;
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const message = isNewRecord ? 'Registro creado exitosamente' : 'Registro actualizado exitosamente';
+            alert(message);
+            closeModal();
+            location.reload();
+        } else {
+            alert('Error al guardar: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error al guardar: ' + error);
+    });
+}
+
+function deleteListado(idListado) {
+    if (confirm('¿Está seguro de que desea eliminar este registro?')) {
+        fetch(`/facturacion/api/listados/${idListado}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Registro eliminado exitosamente');
+                location.reload();
+            } else {
+                alert('Error al eliminar: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error al eliminar: ' + error);
+        });
+    }
+}
+
+function closeModal() {
+    document.getElementById('listadoModal').style.display = 'none';
+    document.getElementById('listadoForm').reset();
+}
+
+function closeDetailModal() {
+    document.getElementById('detailModal').style.display = 'none';
+}
+
+// Función para agregar registro desde sede faltante
+function agregarRegistroDesdeSede(nombreSede, etc) {
+    // Limpiar el formulario
+    document.getElementById('listadoForm').reset();
+
+    // Pre-llenar campos básicos
+    document.getElementById('etc').value = etc;
+    document.getElementById('sede').value = nombreSede;
+
+    // Generar ID único para el nuevo registro
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substr(2, 5);
+    const idListado = `MANUAL_${timestamp}_${randomId}`.substring(0, 50);
+    document.getElementById('id_listados').value = idListado;
+
+    // Abrir modal
+    document.getElementById('listadoModal').style.display = 'flex';
+
+    // Cambiar título del modal
+    document.getElementById('modalTitle').textContent = `Agregar Registro - ${nombreSede}`;
+}
+
+// Funcionalidad de búsqueda
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const clearSearchBtn = document.getElementById('clearSearch');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#listadosTable tbody tr');
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const isVisible = text.includes(searchTerm);
+                row.style.display = isVisible ? '' : 'none';
+                if (isVisible) visibleCount++;
+            });
+
+            document.getElementById('searchResultsCount').textContent =
+                searchTerm ? `Mostrando ${visibleCount} de ${rows.length} registros` : 'Mostrando todos los registros';
+
+            // Mostrar/ocultar botón de limpiar
+            if (clearSearchBtn) {
+                if (searchTerm) {
+                    clearSearchBtn.classList.add('show');
+                } else {
+                    clearSearchBtn.classList.remove('show');
+                }
+            }
+        });
+    }
+
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', function() {
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+            }
+        });
+    }
+});
+
 // Funciones de utilidad globales
 window.FacturacionUtils = {
     formatFileSize: function(bytes) {
@@ -281,20 +475,20 @@ window.FacturacionUtils = {
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     },
-    
+
     validateExcelFile: function(file) {
         const validTypes = [
             'application/vnd.ms-excel',
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         ];
         const validExtensions = ['.xls', '.xlsx'];
-        
+
         const isValidType = validTypes.includes(file.type);
         const isValidExtension = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
-        
+
         return isValidType || isValidExtension;
     },
-    
+
     showToast: function(message, type = 'info') {
         // Implementación simple de toast notification
         const toast = document.createElement('div');
@@ -306,15 +500,15 @@ window.FacturacionUtils = {
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
         `;
-        
+
         document.body.appendChild(toast);
-        
+
         // Mostrar toast
         if (typeof bootstrap !== 'undefined') {
             const bsToast = new bootstrap.Toast(toast);
             bsToast.show();
         }
-        
+
         // Remover del DOM después de 5 segundos
         setTimeout(() => {
             if (toast.parentNode) {

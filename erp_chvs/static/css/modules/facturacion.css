@@ -293,6 +293,422 @@
 }
 
 /* ===================================== */
+/* GESTIÓN DE LISTADOS FOCALIZACIÓN      */
+/* ===================================== */
+
+.sedes-container {
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+.header-left h2 {
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.header-left p {
+    color: #7f8c8d;
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.filters-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.filters-form .filter-row {
+    display: flex;
+    gap: 15px;
+    align-items: end;
+    margin-bottom: 15px;
+}
+
+.filters-form .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.filters-form .filter-group label {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 14px;
+}
+
+.filters-form .filter-group select {
+    padding: 8px 12px;
+    border: 2px solid #e1e8ed;
+    border-radius: 6px;
+    background-color: white;
+    font-size: 14px;
+    color: #2c3e50;
+    min-width: 200px;
+}
+
+.filters-form .filter-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.table-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    background: #34495e;
+    color: white;
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.data-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.data-table tr:hover {
+    background: #f8f9fa;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.btn-warning {
+    background: #f39c12;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #e67e22;
+}
+
+.btn-danger {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+}
+
+.btn-info {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #138496;
+}
+
+.btn-sm {
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+.pagination-container {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.pagination {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.page-link {
+    padding: 8px 12px;
+    background: #3498db;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background 0.3s;
+}
+
+.page-link:hover {
+    background: #2980b9;
+}
+
+.page-info {
+    padding: 8px 12px;
+    background: #ecf0f1;
+    border-radius: 4px;
+    color: #2c3e50;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.badge-info {
+    background-color: #cce5ff;
+    color: #004085;
+    border: 1px solid #b3d7ff;
+}
+
+.badge-m {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+.badge-f {
+    background-color: #fce4ec;
+    color: #ad1457;
+    border: 1px solid #f8bbd9;
+}
+
+/* Estilos para búsqueda */
+.search-container {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+    margin-bottom: 25px;
+    border: 1px solid rgba(52, 152, 219, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 0 20px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.search-box:focus-within {
+    border-color: #3498db;
+    box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.15), 0 4px 12px rgba(52, 152, 219, 0.1);
+    transform: translateY(-1px);
+}
+
+.search-box i.fa-search {
+    color: #3498db;
+    font-size: 18px;
+    margin-right: 12px;
+    transition: all 0.3s ease;
+}
+
+.search-box input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 15px 0;
+    font-size: 15px;
+    color: #2c3e50;
+    outline: none;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+.search-box input::placeholder {
+    color: #95a5a6;
+    font-style: italic;
+    font-weight: 400;
+}
+
+.btn-clear-search {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    border: none;
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.8);
+    box-shadow: 0 2px 6px rgba(231, 76, 60, 0.3);
+}
+
+.btn-clear-search.show {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+}
+
+.search-results-info {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #6c757d;
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(52, 152, 219, 0.05);
+    border-radius: 8px;
+    border-left: 3px solid #3498db;
+}
+
+/* ===================================== */
+/* SEDES FALTANTES                       */
+/* ===================================== */
+
+.missing-sedes-card {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border: 2px solid #ffc107;
+    border-radius: 12px;
+    margin-top: 30px;
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+    overflow: hidden;
+}
+
+.card-header-missing {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    color: #212529;
+    padding: 20px;
+    border-bottom: 1px solid #ffc107;
+}
+
+.card-header-missing h3 {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.card-header-missing p {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.missing-sedes-content {
+    padding: 20px;
+}
+
+.missing-sedes-list {
+    display: grid;
+    gap: 12px;
+}
+
+.missing-sede-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 15px;
+    transition: all 0.3s ease;
+}
+
+.missing-sede-item:hover {
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+}
+
+.sede-name {
+    font-weight: 600;
+    color: #2c3e50;
+    flex: 1;
+}
+
+/* Tarjeta cuando todas las sedes están completas */
+.complete-sedes-card {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    border: 2px solid #28a745;
+    border-radius: 12px;
+    margin-top: 30px;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    overflow: hidden;
+}
+
+.card-header-complete {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+.card-header-complete h3 {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.card-header-complete p {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+/* ===================================== */
 /* PROCESAMIENTO DE LISTADOS PAE         */
 /* ===================================== */
 

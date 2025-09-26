@@ -1,0 +1,339 @@
+{% extends 'base.html' %}
+
+{% block title %}Listados de Focalización - ERP CHVS{% endblock %}
+
+{% block content %}
+<div class="sedes-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-child"></i> Gestión de Listados Niño a Niño</h2>
+            <p>Total de registros: <strong>{{ total_listados }}</strong></p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'facturacion:facturacion_index' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver al Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filters-container">
+        <form method="GET" class="filters-form">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="etc">Filtrar por ETC:</label>
+                    <select name="etc" id="etc">
+                        <option value="">Todos los ETC</option>
+                        {% for etc_val in etc_values %}
+                        <option value="{{ etc_val }}" {% if filtros_aplicados.etc == etc_val %}selected{% endif %}>{{ etc_val }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="sede">Filtrar por Sede Educativa:</label>
+                    <select name="sede" id="sede">
+                        <option value="">Todas las Sedes</option>
+                        {% for sede_val in sede_values %}
+                        <option value="{{ sede_val }}" {% if filtros_aplicados.sede == sede_val %}selected{% endif %}>{{ sede_val }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter"></i> Aplicar Filtros
+                    </button>
+                    <a href="{% url 'facturacion:lista_listados' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Barra de búsqueda -->
+    <div class="search-container">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Buscar por nombre, documento, institución..." autocomplete="off">
+            <button id="clearSearch" class="btn-clear-search" title="Limpiar búsqueda">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="search-results-info">
+            <span id="searchResultsCount">Mostrando todos los registros</span>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table" id="listadosTable">
+            <thead>
+                <tr>
+                    <th>ID Listado</th>
+                    <th>Año</th>
+                    <th>ETC</th>
+                    <th>Institución</th>
+                    <th>Sede</th>
+                    <th>Documento</th>
+                    <th>Nombre Completo</th>
+                    <th>Edad</th>
+                    <th>Género</th>
+                    <th>Grado</th>
+                    <th>Focalización</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for listado in listados %}
+                <tr data-id="{{ listado.id_listados }}">
+                    <td>{{ listado.id_listados }}</td>
+                    <td>{{ listado.ano }}</td>
+                    <td>{{ listado.etc }}</td>
+                    <td>{{ listado.institucion }}</td>
+                    <td>{{ listado.sede }}</td>
+                    <td>{{ listado.doc }}</td>
+                    <td>{{ listado.get_nombre_completo }}</td>
+                    <td>{{ listado.edad }}</td>
+                    <td>
+                        <span class="badge badge-{{ listado.genero|lower }}">
+                            {{ listado.genero }}
+                        </span>
+                    </td>
+                    <td>{{ listado.grado_grupos }}</td>
+                    <td>
+                        <span class="badge badge-info">
+                            {{ listado.focalizacion }}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-info" onclick="viewListado('{{ listado.id_listados }}')" title="Ver detalles">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-warning" onclick="editListado('{{ listado.id_listados }}')" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteListado('{{ listado.id_listados }}')" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="12" class="text-center">No hay registros de listados focalización</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación -->
+    {% if listados.has_other_pages %}
+    <div class="pagination-container">
+        <nav aria-label="Paginación de listados">
+            <ul class="pagination">
+                {% if listados.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if filtros_aplicados.etc %}&etc={{ filtros_aplicados.etc }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}">Primera</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ listados.previous_page_number }}{% if filtros_aplicados.etc %}&etc={{ filtros_aplicados.etc }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}">Anterior</a>
+                    </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        Página {{ listados.number }} de {{ listados.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if listados.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ listados.next_page_number }}{% if filtros_aplicados.etc %}&etc={{ filtros_aplicados.etc }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}">Siguiente</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ listados.paginator.num_pages }}{% if filtros_aplicados.etc %}&etc={{ filtros_aplicados.etc }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}">Última</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+
+    <!-- Tarjeta de sedes faltantes -->
+    {% if filtros_aplicados.etc and total_sedes_faltantes > 0 %}
+    <div class="missing-sedes-card">
+        <div class="card-header-missing">
+            <h3><i class="fas fa-exclamation-triangle"></i> Sedes Educativas Sin Registros</h3>
+            <p>Para ETC: <strong>{{ filtros_aplicados.etc }}</strong> | Total sedes faltantes: <strong>{{ total_sedes_faltantes }}</strong></p>
+        </div>
+        <div class="missing-sedes-content">
+            <div class="missing-sedes-list">
+                {% for sede in sedes_faltantes %}
+                <div class="missing-sede-item">
+                    <span class="sede-name">{{ sede }}</span>
+                    <button class="btn btn-sm btn-success" onclick="agregarRegistroDesdeSede('{{ sede }}', '{{ filtros_aplicados.etc }}')" title="Agregar registro">
+                        <i class="fas fa-plus"></i> Agregar Registro
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% elif filtros_aplicados.etc and total_sedes_faltantes == 0 %}
+    <div class="complete-sedes-card">
+        <div class="card-header-complete">
+            <h3><i class="fas fa-check-circle"></i> Sedes Completas</h3>
+            <p>Todas las sedes educativas del ETC <strong>{{ filtros_aplicados.etc }}</strong> tienen registros en el sistema.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal para editar/crear listado -->
+<div class="modal-overlay" id="listadoModal" style="display: none;">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Registro de Focalización</h3>
+                <span class="modal-close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="listadoForm">
+                    <input type="hidden" id="id_listados" name="id_listados">
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="ano">Año</label>
+                            <input type="number" id="ano" name="ano" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="focalizacion">Focalización</label>
+                            <input type="text" id="focalizacion" name="focalizacion" readonly>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="etc">ETC</label>
+                            <input type="text" id="etc" name="etc" maxlength="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="institucion">Institución</label>
+                            <input type="text" id="institucion" name="institucion" maxlength="200">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sede">Sede Educativa</label>
+                        <input type="text" id="sede" name="sede" maxlength="200">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="tipodoc">Tipo Documento</label>
+                            <input type="text" id="tipodoc" name="tipodoc" maxlength="10">
+                        </div>
+                        <div class="form-group">
+                            <label for="doc">Número Documento</label>
+                            <input type="text" id="doc" name="doc" maxlength="50" readonly>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="apellido1">Primer Apellido</label>
+                            <input type="text" id="apellido1" name="apellido1" maxlength="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="apellido2">Segundo Apellido</label>
+                            <input type="text" id="apellido2" name="apellido2" maxlength="100">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nombre1">Primer Nombre</label>
+                            <input type="text" id="nombre1" name="nombre1" maxlength="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="nombre2">Segundo Nombre</label>
+                            <input type="text" id="nombre2" name="nombre2" maxlength="100">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fecha_nacimiento">Fecha Nacimiento</label>
+                            <input type="text" id="fecha_nacimiento" name="fecha_nacimiento" maxlength="20">
+                        </div>
+                        <div class="form-group">
+                            <label for="edad">Edad</label>
+                            <input type="number" id="edad" name="edad">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="genero">Género</label>
+                            <input type="text" id="genero" name="genero" maxlength="10">
+                        </div>
+                        <div class="form-group">
+                            <label for="etnia">Etnia</label>
+                            <input type="text" id="etnia" name="etnia" maxlength="50">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="grado_grupos">Grado y Grupos</label>
+                        <input type="text" id="grado_grupos" name="grado_grupos" maxlength="20">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="complemento_alimentario_preparado_am">Complemento AM</label>
+                            <input type="text" id="complemento_alimentario_preparado_am" name="complemento_alimentario_preparado_am" maxlength="10">
+                        </div>
+                        <div class="form-group">
+                            <label for="complemento_alimentario_preparado_pm">Complemento PM</label>
+                            <input type="text" id="complemento_alimentario_preparado_pm" name="complemento_alimentario_preparado_pm" maxlength="10">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="almuerzo_jornada_unica">Almuerzo Jornada Única</label>
+                            <input type="text" id="almuerzo_jornada_unica" name="almuerzo_jornada_unica" maxlength="10">
+                        </div>
+                        <div class="form-group">
+                            <label for="refuerzo_complemento_am_pm">Refuerzo AM/PM</label>
+                            <input type="text" id="refuerzo_complemento_am_pm" name="refuerzo_complemento_am_pm" maxlength="10">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveListado()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para ver detalles -->
+<div class="modal-overlay" id="detailModal" style="display: none;">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Detalles del Registro</h3>
+                <span class="modal-close" onclick="closeDetailModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="detailContent">
+                <!-- Contenido dinámico -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeDetailModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

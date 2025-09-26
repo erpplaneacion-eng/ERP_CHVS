@@ -3,19 +3,24 @@ Vista única consolidada para el módulo de facturación.
 Permite visualizar y guardar datos en una sola interfaz.
 """
 
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.paginator import Paginator
+from django.db import IntegrityError
 import base64
 import pandas as pd
 from io import StringIO
+import json
 
+from .models import ListadosFocalizacion
 from .services import ProcesamientoService, ValidacionService, EstadisticasService
 from .config import ProcesamientoConfig, FOCALIZACIONES_DISPONIBLES
 from .logging_config import FacturacionLogger
+from planeacion.models import SedesEducativas
 
 # Inicializar servicios
 procesamiento_service = ProcesamientoService()
@@ -195,18 +200,9 @@ def procesar_listados_view(request):
                     # Reconstruir DataFrame desde JSON (usando StringIO para evitar deprecación)
                     df_procesado = pd.read_json(StringIO(df_json), orient='records')
 
-                    # Debug: Verificar DataFrame reconstruido
-                    print(f"DEBUG: DataFrame reconstruido - Shape: {df_procesado.shape}")
-                    print(f"DEBUG: Columnas: {list(df_procesado.columns)}")
-                    print(f"DEBUG: Primeras 3 filas:\n{df_procesado.head(3)}")
-
                     # Guardar directamente en BD usando el DataFrame procesado
                     from .persistence_service import PersistenceService
-                    print(f"DEBUG: Llamando a PersistenceService.guardar_listados_focalizacion")
                     resultado_persistencia = PersistenceService.guardar_listados_focalizacion(df_procesado)
-
-                    # Debug: Resultado de la persistencia
-                    print(f"DEBUG: Resultado persistencia: {resultado_persistencia}")
 
                     # Crear resultado compatible con el contexto
                     resultado = {
@@ -406,6 +402,179 @@ def encontrar_coincidencia_difusa(sede_excel, sedes_bd, umbral=90):
     Mantiene la interfaz original para no romper el código existente.
     """
     return procesamiento_service.fuzzy_matcher.encontrar_coincidencia_difusa(sede_excel, sedes_bd, umbral)
+
+# ===== VISTA PARA LISTADO DE LISTADOS FOCALIZACIÓN =====
+
+@login_required
+def lista_listados(request):
+    """Vista para listar y gestionar listados de focalización con filtros"""
+
+    # Obtener parámetros de filtro
+    etc_filter = request.GET.get('etc', '').strip()
+    sede_filter = request.GET.get('sede', '').strip()
+
+    # Query base
+    listados = ListadosFocalizacion.objects.all().order_by('-fecha_creacion')
+
+    # Aplicar filtros
+    if etc_filter:
+        listados = listados.filter(etc__icontains=etc_filter)
+
+    if sede_filter:
+        listados = listados.filter(sede__icontains=sede_filter)
+
+    # Paginación
+    paginator = Paginator(listados, 15)  # 20 registros por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Obtener valores únicos para filtros
+    etc_values = ListadosFocalizacion.objects.values_list('etc', flat=True).distinct().order_by('etc')
+    sede_values = ListadosFocalizacion.objects.values_list('sede', flat=True).distinct().order_by('sede')
+
+    # Obtener sedes faltantes (solo si hay filtro ETC aplicado)
+    sedes_faltantes = []
+    if etc_filter:
+        # Todas las sedes del ETC seleccionado
+        todas_sedes_etc = SedesEducativas.objects.filter(
+            codigo_ie__id_municipios__nombre_municipio__icontains=etc_filter
+        ).select_related('codigo_ie').values_list('nombre_sede_educativa', flat=True).distinct()
+
+        # Sedes que ya tienen registros en listados_focalizacion
+        sedes_con_registros = listados.values_list('sede', flat=True).distinct()
+
+        # Sedes faltantes = todas las sedes del ETC - sedes que ya tienen registros
+        sedes_faltantes = [sede for sede in todas_sedes_etc if sede not in sedes_con_registros]
+
+    context = {
+        'listados': page_obj,
+        'total_listados': listados.count(),
+        'etc_values': etc_values,
+        'sede_values': sede_values,
+        'filtros_aplicados': {
+            'etc': etc_filter,
+            'sede': sede_filter,
+        },
+        'sedes_faltantes': sedes_faltantes,
+        'total_sedes_faltantes': len(sedes_faltantes),
+    }
+
+    return render(request, 'facturacion/lista_listados.html', context)
+
+# ===== APIs PARA GESTIÓN DE LISTADOS FOCALIZACIÓN =====
+
+@login_required
+@csrf_exempt
+def api_listados(request):
+    """API para manejar listados de focalización via AJAX"""
+    if request.method == 'GET':
+        listados = ListadosFocalizacion.objects.all().order_by('-fecha_creacion').values(
+            'id_listados', 'ano', 'etc', 'institucion', 'sede', 'tipodoc', 'doc',
+            'nombre1', 'apellido1', 'fecha_nacimiento', 'edad', 'genero',
+            'grado_grupos', 'focalizacion', 'fecha_creacion'
+        )
+        return JsonResponse({'listados': list(listados)})
+
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+
+            # Crear nuevo registro
+            listado = ListadosFocalizacion.objects.create(
+                id_listados=data['id_listados'],
+                ano=data.get('ano', 2025),
+                etc=data.get('etc', ''),
+                institucion=data.get('institucion', ''),
+                sede=data.get('sede', ''),
+                tipodoc=data.get('tipodoc', ''),
+                doc=data.get('doc', ''),
+                apellido1=data.get('apellido1'),
+                apellido2=data.get('apellido2'),
+                nombre1=data.get('nombre1', ''),
+                nombre2=data.get('nombre2'),
+                fecha_nacimiento=data.get('fecha_nacimiento'),
+                edad=data.get('edad', 0),
+                etnia=data.get('etnia'),
+                genero=data.get('genero', ''),
+                grado_grupos=data.get('grado_grupos', ''),
+                complemento_alimentario_preparado_am=data.get('complemento_alimentario_preparado_am'),
+                complemento_alimentario_preparado_pm=data.get('complemento_alimentario_preparado_pm'),
+                almuerzo_jornada_unica=data.get('almuerzo_jornada_unica'),
+                refuerzo_complemento_am_pm=data.get('refuerzo_complemento_am_pm'),
+                focalizacion=data.get('focalizacion', '')
+            )
+
+            return JsonResponse({
+                'success': True,
+                'id_listado': listado.id_listados,
+                'message': 'Registro creado exitosamente'
+            })
+
+        except IntegrityError as e:
+            return JsonResponse({'success': False, 'error': f'ID ya existe: {str(e)}'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Error al crear registro: {str(e)}'})
+
+@login_required
+@csrf_exempt
+def api_listado_detail(request, id_listado):
+    """API para manejar un listado específico"""
+    listado = get_object_or_404(ListadosFocalizacion, id_listados=id_listado)
+
+    if request.method == 'GET':
+        return JsonResponse({
+            'id_listados': listado.id_listados,
+            'ano': listado.ano,
+            'etc': listado.etc,
+            'institucion': listado.institucion,
+            'sede': listado.sede,
+            'tipodoc': listado.tipodoc,
+            'doc': listado.doc,
+            'apellido1': listado.apellido1,
+            'apellido2': listado.apellido2,
+            'nombre1': listado.nombre1,
+            'nombre2': listado.nombre2,
+            'fecha_nacimiento': listado.fecha_nacimiento,
+            'edad': listado.edad,
+            'etnia': listado.etnia,
+            'genero': listado.genero,
+            'grado_grupos': listado.grado_grupos,
+            'complemento_alimentario_preparado_am': listado.complemento_alimentario_preparado_am,
+            'complemento_alimentario_preparado_pm': listado.complemento_alimentario_preparado_pm,
+            'almuerzo_jornada_unica': listado.almuerzo_jornada_unica,
+            'refuerzo_complemento_am_pm': listado.refuerzo_complemento_am_pm,
+            'focalizacion': listado.focalizacion,
+        })
+
+    elif request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+
+            # Actualizar campos permitidos
+            campos_actualizables = [
+                'etc', 'institucion', 'sede', 'tipodoc', 'apellido1', 'apellido2',
+                'nombre1', 'nombre2', 'fecha_nacimiento', 'edad', 'etnia', 'genero',
+                'grado_grupos', 'complemento_alimentario_preparado_am',
+                'complemento_alimentario_preparado_pm', 'almuerzo_jornada_unica',
+                'refuerzo_complemento_am_pm'
+            ]
+
+            for campo in campos_actualizables:
+                if campo in data:
+                    setattr(listado, campo, data[campo])
+
+            listado.save()
+            return JsonResponse({'success': True})
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Error al actualizar: {str(e)}'})
+
+    elif request.method == 'DELETE':
+        try:
+            listado.delete()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
 
 # Vista procesar_y_guardar_view eliminada - consolidada en procesar_listados_view
 
