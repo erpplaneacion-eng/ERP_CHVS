@@ -96,17 +96,13 @@
 {% endblock %}
 
 {% block scripts %}
-{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', async function(e) {
         if (e.target.classList.contains('btn-generar-asistencia') ||
             e.target.closest('.btn-generar-asistencia')) {
 
-    document.querySelectorAll('.btn-generar-asistencia').forEach(button => {
-        button.addEventListener('click', async function(e) {
             e.preventDefault();
-            const originalText = this.innerHTML;
 
             const button = e.target.classList.contains('btn-generar-asistencia')
                 ? e.target
@@ -120,14 +116,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
 
-                const sedeCod = this.dataset.sedeCod;
                 const mesElement = document.getElementById(`mes-${sedeCod}`);
                 const anoElement = document.getElementById(`ano-${sedeCod}`);
 
                 if (!mesElement || !anoElement) {
                     alert(`Error: No se encontraron los selectores para la sede ${sedeCod}`);
                     return;
-                    throw new Error(`No se encontraron los selectores para la sede ${sedeCod}`);
                 }
 
                 const mes = mesElement.value;
@@ -136,14 +130,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!mes || !ano) {
                     alert('Error: Faltan parámetros (mes o año)');
                     return;
-                    throw new Error('Faltan parámetros (mes o año)');
                 }
 
                 const originalText = button.innerHTML;
                 button.disabled = true;
                 button.innerHTML = `
-                this.disabled = true;
-                this.innerHTML = `
                     <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                     Generando...
                 `;
@@ -155,10 +146,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 });
-                const url = `{% url 'facturacion:generar_pdf_asistencia' 'SEDE_COD' 'MES' 'ANO' %}`
-                                .replace('SEDE_COD', sedeCod).replace('MES', mes).replace('ANO', ano);
-
-                const response = await fetch(url);
 
                 if (!response.ok) {
                     const errorText = await response.text();
@@ -166,11 +153,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 const contentType = response.headers.get('content-type');
-                const blob = await response.blob();
-                const downloadUrl = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = downloadUrl;
 
                 if (contentType && contentType.includes('application/zip')) {
                     const blob = await response.blob();
@@ -185,24 +167,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (matches != null && matches[1]) {
                             filename = matches[1].replace(/['"]/g, '');
                         }
-                const contentDisposition = response.headers.get('content-disposition');
-                let filename = 'reportes.zip';
-                if (contentDisposition) {
-                    const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-                    if (filenameMatch && filenameMatch.length > 1) {
-                        filename = filenameMatch[1];
                     }
-                }
-                a.download = filename;
 
                     const a = document.createElement('a');
                     a.style.display = 'none';
                     a.href = downloadUrl;
                     a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(downloadUrl);
-                a.remove();
 
                     document.body.appendChild(a);
                     a.click();
@@ -221,7 +191,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
             } catch (error) {
-                console.error('Error al generar el reporte:', error);
                 if (window.showNotification) {
                     window.showNotification(`Error: ${error.message}`, 'error');
                 } else {
@@ -232,11 +201,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (typeof originalText !== 'undefined') {
                     button.innerHTML = originalText;
                 }
-                this.disabled = false;
-                this.innerHTML = originalText;
             }
         }
-        });
     });
 });
 </script>
