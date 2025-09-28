@@ -7,7 +7,6 @@ from typing import Dict, List, Any
 from principal.models import TipoDocumento, TipoGenero, NivelGradoEscolar
 from .config import ProcesamientoConfig
 from .exceptions import DatosInvalidosException, ProcesamientoException
-from .logging_config import FacturacionLogger
 
 class DataTransformer:
     """Clase para transformación y procesamiento de datos."""
@@ -40,13 +39,9 @@ class DataTransformer:
                 df['GENERO'] = df['GENERO'].map(mapeo_generos)
                 transformaciones_aplicadas.append("GENERO")
             
-            FacturacionLogger.log_transformacion_datos(transformaciones_aplicadas)
             return df
             
         except Exception as e:
-            FacturacionLogger.log_procesamiento_error(
-                "aplicar_mapeos_datos", str(e)
-            )
             raise ProcesamientoException(f"Error al aplicar mapeos de datos: {str(e)}")
     
     @staticmethod
@@ -110,16 +105,9 @@ class DataTransformer:
             # --- PASO 5: TRANSFORMACIÓN DE GRADO PARA ESTADÍSTICAS ---
             df = DataTransformer._procesar_grados_escolares(df)
             
-            FacturacionLogger.log_procesamiento_inicio(
-                "formato_nuevo", "procesamiento_completado"
-            )
-            
             return df
             
         except Exception as e:
-            FacturacionLogger.log_procesamiento_error(
-                "procesar_formato_nuevo", str(e)
-            )
             raise ProcesamientoException(f"Error al procesar formato nuevo: {str(e)}")
     
     @staticmethod
@@ -163,16 +151,9 @@ class DataTransformer:
             # --- PASO 6: AÑADIR FOCALIZACIÓN ---
             df['focalizacion'] = focalizacion
             
-            FacturacionLogger.log_procesamiento_inicio(
-                "formato_original", "procesamiento_completado"
-            )
-            
             return df
             
         except Exception as e:
-            FacturacionLogger.log_procesamiento_error(
-                "procesar_formato_original", str(e)
-            )
             raise ProcesamientoException(f"Error al procesar formato original: {str(e)}")
     
     @staticmethod
@@ -198,16 +179,15 @@ class DataTransformer:
             
             # Combinar GRADO y GRUPO para consistencia
             if 'GRUPO' in df.columns:
-                df['grado_grupos'] = df[f'{columna_grado}_clean'] + '-' + df['GRUPO'].astype(str)
-            
-            FacturacionLogger.log_mapeo_datos("grados_escolares", len(df))
+                # Convertir GRUPO a entero para eliminar decimales (ej. 202.0 -> 202)
+                # y luego a string para la concatenación.
+                grupo_str = df['GRUPO'].fillna(0).astype(int).astype(str)
+                
+                df['grado_grupos'] = df[f'{columna_grado}_clean'] + '-' + grupo_str
             
             return df
             
         except Exception as e:
-            FacturacionLogger.log_procesamiento_error(
-                "procesar_grados_escolares", str(e)
-            )
             raise ProcesamientoException(f"Error al procesar grados escolares: {str(e)}")
     
     @staticmethod
@@ -255,14 +235,9 @@ class DataTransformer:
                     ['COMPLEMENTO ALIMENTARIO PREPARADO AM', 'COMPLEMENTO ALIMENTARIO PREPARADO PM']
                 ] = 'x'
             
-            FacturacionLogger.log_mapeo_datos("logica_jornadas", len(df))
-            
             return df
             
         except Exception as e:
-            FacturacionLogger.log_procesamiento_error(
-                "aplicar_logica_jornadas", str(e)
-            )
             raise ProcesamientoException(f"Error al aplicar lógica de jornadas: {str(e)}")
     
     @staticmethod
@@ -314,11 +289,25 @@ class DataTransformer:
                         count_nivel = len(df_sede[df_sede['nivel_grados'] == nivel])
                         estadisticas_nivel[nivel] = count_nivel
                     
+                    # Contar por cada complemento alimentario
+                    estadisticas_complementos = {}
+                    columnas_complementos = {
+                        'COMPLEMENTO ALIMENTARIO PREPARADO AM': 'cap_am',
+                        'COMPLEMENTO ALIMENTARIO PREPARADO PM': 'cap_pm',
+                        'ALMUERZO JORNADA UNICA': 'almuerzo_ju',
+                        'REFUERZO COMPLEMENTO AM/PM': 'refuerzo'
+                    }
+                    for col_nombre, col_key in columnas_complementos.items():
+                        if col_nombre in df_sede.columns:
+                            count_comp = (df_sede[col_nombre] == 'x').sum()
+                            estadisticas_complementos[col_key] = int(count_comp)
+
                     agrupacion_sedes.append({
                         'sede_bd': sede_bd,
                         'sede_excel': sede_excel_str,
                         'cantidad': total_count,
-                        **estadisticas_nivel
+                        **estadisticas_nivel,
+                        **estadisticas_complementos
                     })
                 else:
                     # Si no hay mapeos, mostrar con 0 registros
@@ -327,23 +316,19 @@ class DataTransformer:
                         'sede_bd': sede_bd,
                         'sede_excel': 'Sin coincidencias',
                         'cantidad': 0,
-                        **estadisticas_nivel
+                        **estadisticas_nivel,
+                        'cap_am': 0,
+                        'cap_pm': 0,
+                        'almuerzo_ju': 0,
+                        'refuerzo': 0
                     })
             
             # Ordenar por cantidad descendente
             agrupacion_sedes.sort(key=lambda x: x['cantidad'], reverse=True)
             
-            FacturacionLogger.log_estadisticas_generadas({
-                'total_sedes': len(agrupacion_sedes),
-                'sedes_con_datos': len([s for s in agrupacion_sedes if s['cantidad'] > 0])
-            })
-            
             return agrupacion_sedes
             
         except Exception as e:
-            FacturacionLogger.log_procesamiento_error(
-                "generar_estadisticas_por_sede", str(e)
-            )
             raise ProcesamientoException(f"Error al generar estadísticas por sede: {str(e)}")
     
     @staticmethod
@@ -373,7 +358,4 @@ class DataTransformer:
             return html
             
         except Exception as e:
-            FacturacionLogger.log_procesamiento_error(
-                "preparar_dataframe_html", str(e)
-            )
             return f"<div class='alert alert-danger'>Error al preparar datos: {str(e)}</div>"

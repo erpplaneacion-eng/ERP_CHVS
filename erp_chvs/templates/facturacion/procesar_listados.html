@@ -209,7 +209,7 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-striped table-bordered">
+                <table class="table table-striped table-bordered tabla-estadisticas-sedes">
                     <thead class="table-dark">
                         <tr>
                             <th>#</th>
@@ -221,6 +221,7 @@
                             <th>Primaria 3-4-5</th>
                             <th>Secundaria</th>
                             <th>Media / Ciclo Comp.</th>
+                            <th>Complementos (AM/PM/Alm/Ref)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -239,6 +240,14 @@
                             <td class="text-center">{{ item.primaria_3_4_5|default:0 }}</td>
                             <td class="text-center">{{ item.secundaria|default:0 }}</td>
                             <td class="text-center">{{ item.media_ciclo_complementario|default:0 }}</td>
+                            <td>
+                                <div class="d-flex justify-content-center align-items-center gap-1">
+                                    <span class="badge bg-success" title="CAP AM">{{ item.cap_am|default:0 }}</span>
+                                    <span class="badge bg-info" title="CAP PM">{{ item.cap_pm|default:0 }}</span>
+                                    <span class="badge bg-warning text-dark" title="Almuerzo JU">{{ item.almuerzo_ju|default:0 }}</span>
+                                    <span class="badge bg-purple" title="Refuerzo" style="background-color: #6f42c1;">{{ item.refuerzo|default:0 }}</span>
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

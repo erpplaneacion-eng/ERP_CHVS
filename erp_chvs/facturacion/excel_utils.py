@@ -7,7 +7,6 @@ from django.core.files.uploadedfile import UploadedFile
 from typing import List, Tuple
 from .config import ProcesamientoConfig
 from .exceptions import ArchivoInvalidoException, ColumnasFaltantesException
-from .logging_config import FacturacionLogger
 
 class ExcelProcessor:
     """Procesador de archivos Excel con validaciones y utilidades."""
@@ -26,34 +25,19 @@ class ExcelProcessor:
         try:
             # Validar tipo MIME
             if archivo.content_type not in ProcesamientoConfig.MIME_TYPES_VALIDOS:
-                FacturacionLogger.log_validacion_archivo(
-                    archivo.name, False, archivo.content_type
-                )
                 return False
             
             # Validar extensión
             if not any(archivo.name.lower().endswith(ext) for ext in ProcesamientoConfig.EXTENSIONES_PERMITIDAS):
-                FacturacionLogger.log_validacion_archivo(
-                    archivo.name, False, "Extensión inválida"
-                )
                 return False
             
             # Validar tamaño
             if archivo.size > ProcesamientoConfig.TAMANO_MAXIMO_ARCHIVO:
-                FacturacionLogger.log_validacion_archivo(
-                    archivo.name, False, f"Tamaño excesivo: {archivo.size} bytes"
-                )
                 return False
             
-            FacturacionLogger.log_validacion_archivo(
-                archivo.name, True, archivo.content_type
-            )
             return True
             
         except Exception as e:
-            FacturacionLogger.log_validacion_archivo(
-                archivo.name, False, f"Error de validación: {str(e)}"
-            )
             return False
     
     @staticmethod
@@ -73,21 +57,14 @@ class ExcelProcessor:
         try:
             # Leer el archivo Excel
             df = pd.read_excel(archivo)
-            
+
             # Validar que no esté vacío
             if df.empty:
                 raise ArchivoInvalidoException("El archivo Excel está vacío")
-            
-            FacturacionLogger.log_procesamiento_inicio(
-                archivo.name, "lectura_excel"
-            )
-            
+
             return df
-            
+
         except Exception as e:
-            FacturacionLogger.log_procesamiento_error(
-                archivo.name, f"Error al leer Excel: {str(e)}"
-            )
             raise ArchivoInvalidoException(f"Error al leer el archivo Excel: {str(e)}")
     
     @staticmethod
@@ -104,15 +81,6 @@ class ExcelProcessor:
         """
         columnas_faltantes = [col for col in columnas_requeridas if col not in df.columns]
         
-        if columnas_faltantes:
-            FacturacionLogger.log_procesamiento_error(
-                "verificacion_columnas", 
-                f"Columnas faltantes: {columnas_faltantes}"
-            )
-        else:
-            FacturacionLogger.log_procesamiento_inicio(
-                "verificacion_columnas", "validacion_exitosa"
-            )
         
         return columnas_faltantes
     
@@ -147,14 +115,6 @@ class ExcelProcessor:
         
         es_valido = len(errores) == 0
         
-        if es_valido:
-            FacturacionLogger.log_procesamiento_inicio(
-                "validacion_nuevo_formato", "estructura_valida"
-            )
-        else:
-            FacturacionLogger.log_procesamiento_error(
-                "validacion_nuevo_formato", f"Errores: {errores}"
-            )
         
         return es_valido, errores
     
@@ -190,14 +150,6 @@ class ExcelProcessor:
         
         es_valido = len(errores) == 0
         
-        if es_valido:
-            FacturacionLogger.log_procesamiento_inicio(
-                "validacion_original_formato", "estructura_valida"
-            )
-        else:
-            FacturacionLogger.log_procesamiento_error(
-                "validacion_original_formato", f"Errores: {errores}"
-            )
         
         return es_valido, errores
     
@@ -220,5 +172,4 @@ class ExcelProcessor:
             'tipos_datos': df.dtypes.to_dict()
         }
         
-        FacturacionLogger.log_estadisticas_generadas(info)
         return info

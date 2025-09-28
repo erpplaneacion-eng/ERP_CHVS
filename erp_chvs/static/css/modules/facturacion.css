@@ -1045,6 +1045,21 @@
     background-color: #f8f9fa;
 }
 
+/* Estilos para la tabla de estadísticas por sede */
+.tabla-estadisticas-sedes {
+    font-size: 13px; /* Reduce el tamaño de la fuente para toda la tabla */
+}
+
+.tabla-estadisticas-sedes th {
+    font-size: 14px; /* Tamaño de fuente para las cabeceras */
+    text-align: center;
+    vertical-align: middle;
+}
+
+.tabla-estadisticas-sedes td {
+    vertical-align: middle; /* Centra verticalmente el contenido de las celdas */
+}
+
 /* Estilos específicos para la tabla de previsualización */
 .tabla-datos-preview {
     font-size: 9px; /* Letra más pequeña para toda la tabla */

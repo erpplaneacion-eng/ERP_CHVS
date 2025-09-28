@@ -12,7 +12,6 @@ from django.utils import timezone
 from .models import ListadosFocalizacion
 from .config import ProcesamientoConfig
 from .exceptions import ProcesamientoException
-from .logging_config import FacturacionLogger
 
 
 class PersistenceService:
@@ -34,11 +33,6 @@ class PersistenceService:
             Dict[str, Any]: Resultado de la operación
         """
         try:
-            # Log inicial solo con información esencial
-            FacturacionLogger.log_procesamiento_inicio(
-                "guardar_listados",
-                f"Procesando {len(df)} registros del DataFrame"
-            )
 
             # Preparar datos para inserción
             registros_para_insertar = []
@@ -55,11 +49,6 @@ class PersistenceService:
                     registros_para_insertar.append(registro)
 
                 except Exception as e:
-                    # Solo log errores críticos, no cada fila individual
-                    if len(registros_error) < 5:  # Limitar logs de error
-                        FacturacionLogger.log_procesamiento_error(
-                            f"fila_{index}", f"Error al procesar registro: {str(e)}"
-                        )
                     registros_error.append({
                         'fila': index,
                         'error': str(e),
@@ -82,20 +71,10 @@ class PersistenceService:
                 'mensaje': f"Se guardaron {registros_guardados} de {len(df)} registros procesados."
             }
 
-            # Log solo si hay problemas, éxito silencioso
-            if registros_guardados < len(df):
-                FacturacionLogger.log_procesamiento_inicio(
-                    "guardar_listados_parcial",
-                    f"Guardado parcial: {registros_guardados}/{len(df)} registros"
-                )
-            # Éxito completo no se loguea para evitar saturación
 
             return resultado
 
         except Exception as e:
-            FacturacionLogger.log_procesamiento_error(
-                "guardar_listados_focalizacion", str(e)
-            )
             return {
                 'success': False,
                 'error': str(e),
@@ -208,7 +187,7 @@ class PersistenceService:
             ListadosFocalizacion: Objeto del modelo
         """
         # Calcular edad si no está disponible
-        edad = PersistenceService._calcular_edad(row.get('fecha_nacimiento'), row.get('edad'))
+        edad = PersistenceService._calcular_edad(row.get('fecha_nacimiento'), row.get('EDAD'))
 
         # Truncar campos que excedan la longitud máxima (según modelo)
         doc = PersistenceService._truncate_field(str(row.get('DOC', row.get('doc', ''))), 20)
@@ -286,12 +265,6 @@ class PersistenceService:
         if not value:
             return value
         if len(value) > max_length:
-            # Solo log en casos excepcionales (muy largos), no logs rutinarios
-            if len(value) > max_length * 2:  # Solo si es mucho más largo
-                FacturacionLogger.log_procesamiento_inicio(
-                    "truncate_field",
-                    f"Campo truncado de {len(value)} a {max_length} caracteres"
-                )
             return value[:max_length]
         return value
 
@@ -307,7 +280,7 @@ class PersistenceService:
         Returns:
             int: Edad calculada
         """
-        if edad_existente and not pd.isna(edad_existente):
+        if edad_existente is not None and not pd.isna(edad_existente):
             try:
                 return int(edad_existente)
             except (ValueError, TypeError):
@@ -353,11 +326,6 @@ class PersistenceService:
         registros_guardados = 0
 
         try:
-            # Solo log inicial, sin logs por cada lote
-            FacturacionLogger.log_procesamiento_inicio(
-                "insertar_en_batch",
-                f"Iniciando inserción de {len(registros)} registros"
-            )
 
             # Dividir en lotes
             for i in range(0, len(registros), batch_size):
@@ -376,10 +344,6 @@ class PersistenceService:
 
                 except Exception as lote_error:
                     # Si falla el lote completo, intentar guardar uno por uno
-                    FacturacionLogger.log_procesamiento_error(
-                        f"lote_{numero_lote}",
-                        f"Error en lote {numero_lote}: {str(lote_error)}. Intentando inserción individual."
-                    )
 
                     registros_lote = 0
                     for registro in lote:
@@ -393,32 +357,11 @@ class PersistenceService:
                             # Solo log errores críticos, no cada registro individual
                             continue
 
-                    if registros_lote > 0:
-                        FacturacionLogger.log_procesamiento_inicio(
-                            f"lote_{numero_lote}_recuperado",
-                            f"Lote {numero_lote} recuperado: {registros_lote} registros"
-                        )
 
-            # Log final solo si hay errores significativos
-            if registros_guardados < len(registros):
-                FacturacionLogger.log_procesamiento_inicio(
-                    "insertar_en_batch_parcial",
-                    f"Inserción parcial: {registros_guardados}/{len(registros)} registros guardados"
-                )
-            else:
-                FacturacionLogger.log_procesamiento_exito(
-                    "insertar_en_batch",
-                    len(registros),
-                    registros_guardados
-                )
 
             return registros_guardados
 
         except Exception as e:
-            FacturacionLogger.log_procesamiento_error(
-                "insertar_en_batch_general",
-                f"Error general en inserción por lotes: {str(e)}"
-            )
             # Fallback final: intentar guardar todos uno por uno
             registros_guardados = 0
             for registro in registros:
@@ -427,10 +370,6 @@ class PersistenceService:
                         registro.save()
                         registros_guardados += 1
                 except Exception as registro_error:
-                    FacturacionLogger.log_procesamiento_error(
-                        f"registro_fallback_{registro.id_listados}",
-                        f"Error en fallback: {str(registro_error)}"
-                    )
                     continue
 
             return registros_guardados
@@ -464,9 +403,6 @@ class PersistenceService:
             }
 
         except Exception as e:
-            FacturacionLogger.log_procesamiento_error(
-                "verificar_duplicados", str(e)
-            )
             return {
                 'duplicados_encontrados': [],
                 'total_duplicados': 0,
@@ -554,9 +490,6 @@ class PersistenceService:
             }
 
         except Exception as e:
-            FacturacionLogger.log_procesamiento_error(
-                "obtener_estadisticas_bd", str(e)
-            )
             return {
                 'error': str(e),
                 'total_registros': 0

@@ -19,7 +19,6 @@ from .exceptions import (
     ProcesamientoException,
     ValidacionException
 )
-from .logging_config import FacturacionLogger
 
 class ProcesamientoService:
     """Servicio principal para procesamiento de archivos Excel."""
@@ -48,13 +47,6 @@ class ProcesamientoService:
             Dict[str, Any]: Resultado del procesamiento
         """
         try:
-            # Log de inicio
-            FacturacionLogger.log_procesamiento_inicio(
-                archivo.name, 
-                ProcesamientoConfig.TIPO_PROCESAMIENTO_NUEVO, 
-                focalizacion
-            )
-            
             # 1. Validar archivo
             if not self.excel_processor.validar_archivo_excel(archivo):
                 raise ArchivoInvalidoException(MensajesConfig.ARCHIVO_INVALIDO)
@@ -89,6 +81,11 @@ class ProcesamientoService:
                 [ProcesamientoConfig.ETC_CALI]
             )
             
+            # 7.1. Aplicar mapeo de sedes para estandarizar los nombres antes de guardar.
+            if resultado_validacion['mapeo_sedes']:
+                df_filtrado = df_filtrado.copy()
+                df_filtrado['SEDE'] = df_filtrado['SEDE'].map(resultado_validacion['mapeo_sedes']).fillna(df_filtrado['SEDE'])
+            
             # 8. Preparar resultado
             resultado = self._preparar_resultado_exitoso(
                 df_filtrado,
@@ -96,20 +93,10 @@ class ProcesamientoService:
                 estadisticas,
                 ProcesamientoConfig.TIPO_PROCESAMIENTO_NUEVO
             )
-            
-            # Log de éxito
-            FacturacionLogger.log_procesamiento_exito(
-                archivo.name,
-                len(df),
-                len(df_filtrado)
-            )
-            
+
             return resultado
             
         except Exception as e:
-            # Log de error
-            FacturacionLogger.log_procesamiento_error(archivo.name, str(e))
-            
             return self._preparar_resultado_error(str(e))
     
     def procesar_excel_original(
@@ -128,13 +115,6 @@ class ProcesamientoService:
             Dict[str, Any]: Resultado del procesamiento
         """
         try:
-            # Log de inicio
-            FacturacionLogger.log_procesamiento_inicio(
-                archivo.name, 
-                ProcesamientoConfig.TIPO_PROCESAMIENTO_ORIGINAL, 
-                focalizacion
-            )
-            
             # 1. Validar archivo
             if not self.excel_processor.validar_archivo_excel(archivo):
                 raise ArchivoInvalidoException(MensajesConfig.ARCHIVO_INVALIDO)
@@ -165,18 +145,20 @@ class ProcesamientoService:
                 resultado_validacion['sedes_validas']
             )
 
-            # 7.1 Aplicar mapeo de sedes: reemplazar nombres del Excel con nombres oficiales de BD
-            if resultado_validacion['mapeo_sedes']:
-                df_filtrado = df_filtrado.copy()
-                df_filtrado['SEDE'] = df_filtrado['SEDE'].map(resultado_validacion['mapeo_sedes']).fillna(df_filtrado['SEDE'])
-
             # 8. Generar estadísticas
+            # ¡IMPORTANTE! Generar estadísticas ANTES de mapear los nombres de las sedes.
+            # La función de estadísticas necesita los nombres originales del Excel para agrupar.
             estadisticas = self.data_transformer.generar_estadisticas_por_sede(
                 df_filtrado, 
                 resultado_validacion['mapeo_sedes'],
                 municipios
             )
             
+            # 8.1. Ahora sí, aplicar mapeo de sedes para que los datos guardados sean consistentes.
+            if resultado_validacion['mapeo_sedes']:
+                df_filtrado = df_filtrado.copy()
+                df_filtrado['SEDE'] = df_filtrado['SEDE'].map(resultado_validacion['mapeo_sedes']).fillna(df_filtrado['SEDE'])
+
             # 9. Preparar resultado
             resultado = self._preparar_resultado_exitoso(
                 df_filtrado,
@@ -184,20 +166,10 @@ class ProcesamientoService:
                 estadisticas,
                 ProcesamientoConfig.TIPO_PROCESAMIENTO_ORIGINAL
             )
-            
-            # Log de éxito
-            FacturacionLogger.log_procesamiento_exito(
-                archivo.name,
-                len(df),
-                len(df_filtrado)
-            )
-            
+
             return resultado
             
         except Exception as e:
-            # Log de error
-            FacturacionLogger.log_procesamiento_error(archivo.name, str(e))
-            
             return self._preparar_resultado_error(str(e))
     
     def _preparar_resultado_exitoso(
@@ -246,9 +218,6 @@ class ProcesamientoService:
             }
             
         except Exception as e:
-            FacturacionLogger.log_procesamiento_error(
-                "preparar_resultado_exitoso", str(e)
-            )
             return self._preparar_resultado_error(str(e))
     
     def _preparar_resultado_error(self, error: str) -> Dict[str, Any]:
@@ -325,9 +294,6 @@ class ProcesamientoService:
                 return f"Las siguientes sedes no se pudieron cargar: {', '.join(sedes_invalidas)}. Se procesaron {total_registros} registros con sedes válidas."
                 
         except Exception as e:
-            FacturacionLogger.log_procesamiento_error(
-                "generar_mensaje_verificacion", str(e)
-            )
             return f"Archivo procesado con {total_registros} registros."
 
     def procesar_y_guardar_excel(
@@ -360,11 +326,6 @@ class ProcesamientoService:
             if resultado_procesamiento['success'] and guardar_en_bd:
 
                 # Usar DataFrame directamente desde el resultado de procesamiento
-                # Log de inicio de persistencia
-                FacturacionLogger.log_procesamiento_inicio(
-                    archivo.name, "persistencia_bd", focalizacion
-                )
-
                 # Verificar si hay datos para guardar
                 if resultado_procesamiento['total_registros'] > 0:
                     # Obtener DataFrame directamente del resultado
@@ -391,19 +352,12 @@ class ProcesamientoService:
                     else:
                         # DataFrame no disponible para persistencia
                         resultado_procesamiento['advertencia_bd'] = 'No se pudo obtener el DataFrame para persistencia. El procesamiento fue exitoso pero no se guardaron datos en la base de datos.'
-                        FacturacionLogger.log_procesamiento_error(
-                            "procesar_y_guardar_excel", 
-                            "DataFrame no disponible para persistencia"
-                        )
                 else:
                     resultado_procesamiento['advertencia_bd'] = 'No hay registros para guardar en la base de datos'
 
             return resultado_procesamiento
 
         except Exception as e:
-            FacturacionLogger.log_procesamiento_error(
-                f"{archivo.name}_con_persistencia", str(e)
-            )
             return {
                 'success': False,
                 'error': f"Error en procesamiento con persistencia: {str(e)}",
@@ -431,10 +385,6 @@ class ProcesamientoService:
         # el DataFrame desde el HTML o mejor aún, retornarlo directamente
         # desde los métodos de procesamiento
 
-        FacturacionLogger.log_procesamiento_error(
-            "reconstruir_dataframe",
-            "Funcionalidad pendiente de implementación completa"
-        )
         return None
 
 class ValidacionService:
@@ -463,9 +413,6 @@ class ValidacionService:
             return self.data_validator.validar_completo(df, tipo_formato)
             
         except Exception as e:
-            FacturacionLogger.log_procesamiento_error(
-                "validar_archivo_completo", str(e)
-            )
             return {
                 'es_valido': False,
                 'errores': [f"Error durante validación: {str(e)}"],
@@ -525,9 +472,6 @@ class EstadisticasService:
             }
             
         except Exception as e:
-            FacturacionLogger.log_procesamiento_error(
-                "generar_estadisticas_completas", str(e)
-            )
             return {
                 'sedes': [],
                 'generales': {},
