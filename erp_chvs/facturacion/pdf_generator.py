@@ -102,7 +102,7 @@ class AsistenciaPDFGenerator:
         x_mes = margen + 500
         c.drawString(x_mes, y_actual, "MES DE ATENCIÓN:")
         c.drawString(x_mes + 50, y_actual, self.datos_encabezado.get('mes', 'N/A'))
-        c.line(x_mes + 50, y_actual - 2, width - margen - 200, y_actual - 2)
+        c.line(x_mes + 50, y_actual - 2, width - margen - 220, y_actual - 2) # Acortamos la línea
         x_ano = x_mes + 120
         c.drawString(x_ano, y_actual, "AÑO:")
         c.drawString(x_ano + 15, y_actual, str(self.datos_encabezado.get('ano', 'N/A')))
