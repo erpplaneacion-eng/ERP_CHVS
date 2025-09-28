@@ -20,6 +20,7 @@ import os
 from django.conf import settings
 
 from .models import ListadosFocalizacion
+from principal.models import PrincipalDepartamento, PrincipalMunicipio
 from .services import ProcesamientoService, ValidacionService, EstadisticasService
 from .config import ProcesamientoConfig, FOCALIZACIONES_DISPONIBLES, MESES_ATENCION
 from .logging_config import FacturacionLogger
@@ -899,16 +900,6 @@ def generar_pdf_asistencia(request, sede_cod_interprise, mes, focalizacion):
             'codigo_ie__id_municipios'
         ), cod_interprise=sede_cod_interprise)
 
-        # Obtener departamento usando la relación correcta según README.md
-        municipio_obj = sede_obj.codigo_ie.id_municipios
-        departamento_codigo = municipio_obj.codigo_departamento
-
-        try:
-            from principal.models import PrincipalDepartamento
-            departamento_obj = PrincipalDepartamento.objects.get(codigo_departamento=departamento_codigo)
-        except PrincipalDepartamento.DoesNotExist:
-            departamento_obj = None
-
         # Buscar programa
         programa_obj = Programa.objects.filter(
             municipio=sede_obj.codigo_ie.id_municipios,
@@ -924,9 +915,31 @@ def generar_pdf_asistencia(request, sede_cod_interprise, mes, focalizacion):
         if not estudiantes_sede.exists():
             return HttpResponse(f"No se encontraron estudiantes para la sede {sede_obj.nombre_sede_educativa} con la focalización '{focalizacion}'.", status=404)
 
+        # --- INICIO DE LÓGICA SOLICITADA ---
+        # Obtener datos geográficos a partir del primer estudiante encontrado
+        primer_estudiante = estudiantes_sede.first()
+        nombre_municipio_etc = primer_estudiante.etc
+
+        departamento_obj = None
+        dane_departamento = 'N/A'
+        dane_municipio = 'N/A'
+
+        try:
+            # Buscar el municipio en la tabla principal usando el nombre del ETC
+            municipio_principal_obj = PrincipalMunicipio.objects.get(nombre_municipio__iexact=nombre_municipio_etc)
+            dane_municipio = municipio_principal_obj.codigo_municipio
+            
+            # A partir del municipio, encontrar el departamento
+            departamento_obj = PrincipalDepartamento.objects.get(codigo_departamento=municipio_principal_obj.codigo_departamento)
+            dane_departamento = departamento_obj.codigo_departamento
+
+        except (PrincipalMunicipio.DoesNotExist, PrincipalDepartamento.DoesNotExist):
+            # Si no se encuentra, los valores se quedan como 'N/A'
+            pass
+        # --- FIN DE LÓGICA SOLICITADA ---
+
         # --- INICIO DE CAMBIOS SOLICITADOS ---
         # 1. La institución ahora proviene directamente del campo 'sede' de los datos de focalización.
-        primer_estudiante = estudiantes_sede.first()
         nombre_sede_focalizacion = primer_estudiante.sede
 
         # 2. El DANE se busca en SedesEducativas usando el nombre de la sede de los datos de focalización.
@@ -944,8 +957,10 @@ def generar_pdf_asistencia(request, sede_cod_interprise, mes, focalizacion):
              
         # Mapeo de complementos a códigos
         mapeo_codigos = {
-            "CAP AM": "CAJMPS", "CAP PM": "CAJTPS",
-            "Almuerzo JU": "ALMUERZO", "Refuerzo": "RCPS"
+            "CAP AM": "CAJMPS",
+            "CAP PM": "CAJTPS",
+            "Almuerzo JU": "ALMUERZO",
+            "Refuerzo": "RCPS"
         }
 
         # Identificar los códigos de complemento únicos
@@ -977,27 +992,30 @@ def generar_pdf_asistencia(request, sede_cod_interprise, mes, focalizacion):
                     ruta_logo_final = programa_obj.imagen.path
 
                 datos_encabezado = {
-                    'departamento': departamento_obj.nombre_departamento if departamento_obj else 'N/A',
-                    'institucion': nombre_sede_focalizacion,
-                    'municipio': sede_obj.codigo_ie.id_municipios.nombre_municipio,
-                    'dane_ie': dane_ie,
-                    'operador': programa_obj.programa if programa_obj else 'N/A',
-                    'contrato': programa_obj.contrato if programa_obj else 'N/A',
-                    'mes': mes.upper(),
-                    'ano': ano,
-                    'codigo_complemento': codigo,
+                    'departamento': str(departamento_obj.nombre_departamento) if departamento_obj else 'N/A',
+                    'institucion': str(nombre_sede_focalizacion),
+                    'municipio': str(nombre_municipio_etc),
+                    'dane_ie': str(dane_ie),
+                    'operador': str(programa_obj.programa) if programa_obj else 'N/A',
+                    'contrato': str(programa_obj.contrato) if programa_obj else 'N/A',
+                    'mes': str(mes).upper(),
+                    'ano': str(ano),
+                    'dane_departamento': str(dane_departamento),
+                    'dane_municipio': str(dane_municipio),
+                    'codigo_complemento': str(codigo),
                     'ruta_logo': ruta_logo_final
                 }
 
                 pdf_buffer = BytesIO()
                 crear_formato_asistencia(pdf_buffer, datos_encabezado, estudiantes_filtrados)
                 
-                nombre_archivo_pdf = f"Asistencia_{sede_obj.nombre_sede_educativa.replace(' ', '_')}_{codigo}_{mes}_{ano}.pdf"
+                nombre_archivo_pdf = f"Asistencia_{sede_obj.nombre_sede_educativa.replace(' ', '_')}_{codigo}_{mes}_{str(ano)}.pdf"
                 zip_file.writestr(nombre_archivo_pdf, pdf_buffer.getvalue())
 
         zip_buffer.seek(0)
         response = HttpResponse(zip_buffer, content_type='application/zip')
-        response['Content-Disposition'] = f'attachment; filename="Asistencias_{sede_obj.nombre_sede_educativa.replace(" ", "_")}_{focalizacion}_{mes}.zip"'
+        nombre_archivo_zip = f"Asistencias_{sede_obj.nombre_sede_educativa.replace(' ', '_').replace('/', '_')}_{str(focalizacion)}_{str(mes)}.zip"
+        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo_zip}"'
         return response
 
     except Exception as e:

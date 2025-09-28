@@ -64,23 +64,38 @@ class AsistenciaPDFGenerator:
         c.setFont("Helvetica", 5)
         y_actual = y_texto_titulo - 10
 
+        # --- Primera Fila ---
         c.drawString(margen + 2, y_actual, "DEPARTAMENTO:")
         c.drawString(margen + 70, y_actual, self.datos_encabezado.get('departamento', 'N/A'))
-        c.line(margen + 70, y_actual - 2, margen + 180, y_actual - 2)
+        c.line(margen + 70, y_actual - 2, margen + 170, y_actual - 2) # Línea acortada
+
+        # Nuevo campo CODIGO DANE para Departamento
+        c.drawString(margen + 180, y_actual, "CODIGO DANE:")
+        c.drawString(margen + 225, y_actual, self.datos_encabezado.get('dane_departamento', 'N/A'))
+        c.line(margen + 225, y_actual - 2, margen + 265, y_actual - 2) # Línea corta
+
         x_der = margen + 500
         c.drawString(x_der, y_actual, "NOMBRE DE INSTITUCIÓN O CENTRO EDUCATIVO:")
         c.drawString(x_der + 150, y_actual, self.datos_encabezado.get('institucion', 'N/A'))
         c.line(x_der + 150, y_actual - 2, width - margen - 10, y_actual - 2)
         y_actual -= 10
 
+        # --- Segunda Fila ---
         c.drawString(margen + 2, y_actual, "MUNICIPIO:")
         c.drawString(margen + 70, y_actual, self.datos_encabezado.get('municipio', 'N/A'))
-        c.line(margen + 70, y_actual - 2, margen + 180, y_actual - 2)
+        c.line(margen + 70, y_actual - 2, margen + 170, y_actual - 2) # Línea acortada
+
+        # Nuevo campo CODIGO DANE para Municipio
+        c.drawString(margen + 180, y_actual, "CODIGO DANE:")
+        c.drawString(margen + 225, y_actual, self.datos_encabezado.get('dane_municipio', 'N/A'))
+        c.line(margen + 225, y_actual - 2, margen + 265, y_actual - 2) # Línea corta
+
         c.drawString(x_der, y_actual, "CÓDIGO DANE DE INSTITUCIÓN O CENTRO EDUCATIVO:")
         c.drawString(x_der + 150, y_actual, self.datos_encabezado.get('dane_ie', 'N/A'))
         c.line(x_der + 150, y_actual - 2, width - margen - 10, y_actual - 2)
         y_actual -= 10
 
+        # --- Filas restantes (sin cambios) ---
         c.drawString(margen + 2, y_actual, "OPERADOR:")
         c.drawString(margen + 70, y_actual, self.datos_encabezado.get('operador', 'N/A'))
         c.line(margen + 70, y_actual - 2, margen + 180, y_actual - 2)
