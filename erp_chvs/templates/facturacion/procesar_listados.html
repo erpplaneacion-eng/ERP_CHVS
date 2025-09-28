@@ -213,12 +213,14 @@
                     <thead class="table-dark">
                         <tr>
                             <th>#</th>
-                            <th>Sede</th>
+                            <th>Sede Oficial (BD)</th>
+                            <th>Sede en Archivo</th>
                             <th>Total</th>
                             <th>Preescolar</th>
                             <th>Primaria 1-2</th>
                             <th>Primaria 3-4-5</th>
                             <th>Secundaria</th>
+                            <th>Media / Ciclo Comp.</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -226,6 +228,9 @@
                         <tr>
                             <td>{{ forloop.counter }}</td>
                             <td><strong>{{ item.sede_bd }}</strong></td>
+                            <td>
+                                <small class="text-muted">{{ item.sede_excel }}</small>
+                            </td>
                             <td class="text-center">
                                 <span class="badge bg-primary">{{ item.cantidad }}</span>
                             </td>
@@ -233,6 +238,7 @@
                             <td class="text-center">{{ item.primaria_1_2|default:0 }}</td>
                             <td class="text-center">{{ item.primaria_3_4_5|default:0 }}</td>
                             <td class="text-center">{{ item.secundaria|default:0 }}</td>
+                            <td class="text-center">{{ item.media_ciclo_complementario|default:0 }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

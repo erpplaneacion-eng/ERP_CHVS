@@ -365,7 +365,7 @@ class DataTransformer:
             # Mostrar solo las primeras filas
             df_mostrar = df.head(max_filas)
             html = df_mostrar.to_html(
-                classes='table table-striped table-bordered', 
+                classes='table table-striped table-bordered tabla-datos-preview', 
                 index=False, 
                 na_rep=''
             )

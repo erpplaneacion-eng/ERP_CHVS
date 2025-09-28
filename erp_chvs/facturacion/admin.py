@@ -112,7 +112,7 @@ class ListadosFocalizacionAdmin(admin.ModelAdmin):
     )
 
     # Acciones personalizadas
-    actions = ['export_to_excel', 'mark_all_complementos']
+    actions = ['mark_all_complementos']
 
     def get_nombre_completo_display(self, obj):
         """Retorna el nombre completo para mostrar en la lista."""
@@ -140,12 +140,6 @@ class ListadosFocalizacionAdmin(admin.ModelAdmin):
 
         return format_html('<br>'.join(html))
     get_complementos_display.short_description = 'Complementos'
-
-    def export_to_excel(self, request, queryset):
-        """Acción personalizada para exportar a Excel."""
-        # Aquí puedes implementar la lógica de exportación
-        self.message_user(request, f"Se exportaron {queryset.count()} registros.")
-    export_to_excel.short_description = "Exportar seleccionados a Excel"
 
     def mark_all_complementos(self, request, queryset):
         """Acción para marcar todos los complementos alimentarios."""

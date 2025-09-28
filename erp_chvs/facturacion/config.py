@@ -1,3 +1,4 @@
+
 """
 Configuración para el módulo de facturación.
 Contiene constantes y configuraciones centralizadas.
@@ -20,11 +21,17 @@ class ProcesamientoConfig:
     COLUMNAS_NUEVO_FORMATO = [
         'LOTE', 'NOMBRE INSTITUCION', 'NOMBRE SEDE', 'ZONA', 'TIPO_DOCUMENTO', 
         'NRO_DOCUMENTO', 'APELLIDO1', 'APELLIDO2', 'NOMBRE1', 'NOMBRE2', 
-        'FECHA_NACIMIENTO', 'GENERO', 'TIPO_JORNADA', 'GRADO', 'GRUPO'
+        'FECHA_NACIMIENTO', 'GENERO', 'TIPO_JORNADA', 'GRADO', 'GRUPO', 'EDAD'
     ]
     
     # Columnas requeridas para formato original
-    COLUMNAS_ORIGINAL_FORMATO = ['ESTADO', 'SECTOR', 'MODELO', 'SEDE']
+    COLUMNAS_ORIGINAL_FORMATO = [    "ANO",    "ETC",    "ESTADO",    "SECTOR",
+    "INSTITUCION",    "DANE", "SECTOR",
+    "SEDE",    "ZONA_SEDE",    "JORNADA",    "GRADO_COD",    "GRUPO",    "MODELO",
+    "DOC",    "TIPODOC",    "APELLIDO1",    "APELLIDO2",    "NOMBRE1",    "NOMBRE2",
+    "GENERO",    "FECHA_NACIMIENTO"
+    ]
+
     
     # Filtros para formato original
     ESTADO_MATRICULADO = 'MATRICULADO'

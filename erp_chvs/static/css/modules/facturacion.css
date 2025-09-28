@@ -1045,6 +1045,18 @@
     background-color: #f8f9fa;
 }
 
+/* Estilos específicos para la tabla de previsualización */
+.tabla-datos-preview {
+    font-size: 9px; /* Letra más pequeña para toda la tabla */
+}
+
+.tabla-datos-preview th {
+    text-align: center !important; /* Centrar cabeceras */
+    vertical-align: middle;
+    font-size: 11px; /* Tamaño de fuente para cabeceras */
+}
+
+
 /* Responsive para procesamiento de listados */
 @media (max-width: 768px) {
     .etapa-card {
