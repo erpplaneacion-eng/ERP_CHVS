@@ -13,11 +13,8 @@ from django.core.paginator import Paginator
 from django.db import IntegrityError
 import base64
 import pandas as pd
-from io import StringIO, BytesIO
+from io import StringIO
 import json
-import zipfile
-import os
-from django.conf import settings
 
 from .models import ListadosFocalizacion
 from principal.models import PrincipalDepartamento, PrincipalMunicipio
@@ -27,6 +24,7 @@ from .logging_config import FacturacionLogger
 from planeacion.models import SedesEducativas, Programa
 from .persistence_service import PersistenceService
 from .pdf_generator import crear_formato_asistencia
+from .pdf_service import PDFAsistenciaService
 
 # Inicializar servicios
 procesamiento_service = ProcesamientoService()
@@ -890,212 +888,8 @@ def reportes_asistencia_view(request):
 @login_required
 def generar_pdf_asistencia(request, sede_cod_interprise, mes, focalizacion):
     """
-    Genera los PDFs de asistencia para una sede, mes y focalización específicos.
-    Crea un archivo ZIP con un PDF por cada tipo de complemento.
+    Vista para generar PDFs de asistencia.
+    Delega la lógica principal al PDFAsistenciaService.
     """
-    try:
-        # Este objeto se usa principalmente para obtener el nombre de la sede para el filtro inicial.
-        # Buscar sede
-        sede_obj = get_object_or_404(SedesEducativas.objects.select_related(
-            'codigo_ie__id_municipios'
-        ), cod_interprise=sede_cod_interprise)
+    return PDFAsistenciaService.generar_pdf_asistencia(sede_cod_interprise, mes, focalizacion)
 
-        # Buscar programa
-        programa_obj = Programa.objects.filter(
-            municipio=sede_obj.codigo_ie.id_municipios,
-            estado='activo'  # Asegurar que solo se tome el contrato activo
-        ).first()
-
-        # Buscar estudiantes
-        estudiantes_sede = ListadosFocalizacion.objects.filter(
-            sede=sede_obj.nombre_sede_educativa,
-            focalizacion=focalizacion
-        ).order_by('apellido1', 'apellido2', 'nombre1')
-
-        if not estudiantes_sede.exists():
-            return HttpResponse(f"No se encontraron estudiantes para la sede {sede_obj.nombre_sede_educativa} con la focalización '{focalizacion}'.", status=404)
-
-        # --- INICIO DE LÓGICA SOLICITADA ---
-        # Obtener datos geográficos a partir del primer estudiante encontrado
-        primer_estudiante = estudiantes_sede.first()
-        nombre_municipio_etc = primer_estudiante.etc
-
-        departamento_obj = None
-        dane_departamento = 'N/A'
-        dane_municipio = 'N/A'
-
-        try:
-            # Buscar el municipio en la tabla principal usando el nombre del ETC
-            municipio_principal_obj = PrincipalMunicipio.objects.get(nombre_municipio__iexact=nombre_municipio_etc)
-            dane_municipio = municipio_principal_obj.codigo_municipio
-            
-            # A partir del municipio, encontrar el departamento
-            departamento_obj = PrincipalDepartamento.objects.get(codigo_departamento=municipio_principal_obj.codigo_departamento)
-            dane_departamento = departamento_obj.codigo_departamento
-
-        except (PrincipalMunicipio.DoesNotExist, PrincipalDepartamento.DoesNotExist):
-            # Si no se encuentra, los valores se quedan como 'N/A'
-            pass
-        # --- FIN DE LÓGICA SOLICITADA ---
-
-        # --- INICIO DE CAMBIOS SOLICITADOS ---
-        # 1. La institución ahora proviene directamente del campo 'sede' de los datos de focalización.
-        nombre_sede_focalizacion = primer_estudiante.sede
-
-        # 2. El DANE se busca en SedesEducativas usando el nombre de la sede de los datos de focalización.
-        try:
-            sede_info_dane = SedesEducativas.objects.get(nombre_sede_educativa=nombre_sede_focalizacion)
-            dane_ie = sede_info_dane.cod_dane
-        except SedesEducativas.DoesNotExist:
-            dane_ie = 'DANE no encontrado'
-        # --- FIN DE CAMBIOS SOLICITADOS ---
-
-        # Obtener el año del primer estudiante (asumimos que todos tienen el mismo año para una focalización)
-        ano = primer_estudiante.ano
-        if not ano:
-            return HttpResponse(f"No se pudo determinar el año para la focalización '{focalizacion}'.", status=404)
-             
-        # Mapeo de complementos a códigos
-        mapeo_codigos = {
-            "CAP AM": "CAJMPS",
-            "CAP PM": "CAJTPS",
-            "Almuerzo JU": "ALMUERZO",
-            "Refuerzo": "RCPS"
-        }
-
-        # Identificar los códigos de complemento únicos
-        codigos_presentes = set()
-        for est in estudiantes_sede:
-            for comp_amigable in est.complementos_activos:
-                if comp_amigable in mapeo_codigos:
-                    codigos_presentes.add(mapeo_codigos[comp_amigable])
-
-        if not codigos_presentes:
-            return HttpResponse("No hay estudiantes con complementos asignados en esta sede.", status=404)
-
-        zip_buffer = BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'a', zipfile.ZIP_DEFLATED, False) as zip_file:
-            for codigo in codigos_presentes:
-                # Encontrar el nombre amigable correspondiente al código
-                nombre_amigable_actual = next((key for key, value in mapeo_codigos.items() if value == codigo), None)
-                if not nombre_amigable_actual:
-                    continue
-
-                # Filtrar estudiantes para este complemento específico
-                estudiantes_filtrados = [
-                    est for est in estudiantes_sede if nombre_amigable_actual in est.complementos_activos
-                ]
-
-                # Obtener la ruta del logo desde el programa
-                ruta_logo_final = None
-                if programa_obj and programa_obj.imagen:
-                    ruta_logo_final = programa_obj.imagen.path
-
-                datos_encabezado = {
-                    'departamento': str(departamento_obj.nombre_departamento) if departamento_obj else 'N/A',
-                    'institucion': str(nombre_sede_focalizacion),
-                    'municipio': str(nombre_municipio_etc),
-                    'dane_ie': str(dane_ie),
-                    'operador': str(programa_obj.programa) if programa_obj else 'N/A',
-                    'contrato': str(programa_obj.contrato) if programa_obj else 'N/A',
-                    'mes': str(mes).upper(),
-                    'ano': str(ano),
-                    'dane_departamento': str(dane_departamento),
-                    'dane_municipio': str(dane_municipio),
-                    'codigo_complemento': str(codigo),
-                    'ruta_logo': ruta_logo_final
-                }
-
-                pdf_buffer = BytesIO()
-                crear_formato_asistencia(pdf_buffer, datos_encabezado, estudiantes_filtrados)
-                
-                nombre_archivo_pdf = f"Asistencia_{sede_obj.nombre_sede_educativa.replace(' ', '_')}_{codigo}_{mes}_{str(ano)}.pdf"
-                zip_file.writestr(nombre_archivo_pdf, pdf_buffer.getvalue())
-
-        zip_buffer.seek(0)
-        response = HttpResponse(zip_buffer, content_type='application/zip')
-        nombre_archivo_zip = f"Asistencias_{sede_obj.nombre_sede_educativa.replace(' ', '_').replace('/', '_')}_{str(focalizacion)}_{str(mes)}.zip"
-        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo_zip}"'
-        return response
-
-    except Exception as e:
-        FacturacionLogger.log_procesamiento_error(f"generar_pdf_asistencia_{sede_cod_interprise}", str(e))
-        return HttpResponse(f"Error al generar el PDF: {e}", status=500)
-
-@login_required
-def debug_sede_estudiantes(request, sede_cod_interprise):
-    """Vista de debugging para verificar datos de una sede"""
-    try:
-        sede_obj = get_object_or_404(SedesEducativas.objects.select_related(
-            'codigo_ie__id_municipios'
-        ), cod_interprise=sede_cod_interprise)
-
-        # Contar estudiantes por año
-        estudiantes_por_ano = {}
-        for ano in [2023, 2024, 2025]:
-            count = ListadosFocalizacion.objects.filter(
-                sede=sede_obj.nombre_sede_educativa,
-                ano=ano
-            ).count()
-            estudiantes_por_ano[ano] = count
-
-        # Obtener todos los nombres de sede únicos en la BD
-        sedes_en_bd = ListadosFocalizacion.objects.values_list('sede', flat=True).distinct()[:20]
-
-        response_data = {
-            'sede_cod': sede_cod_interprise,
-            'sede_nombre': sede_obj.nombre_sede_educativa,
-            'estudiantes_por_ano': estudiantes_por_ano,
-            'total_sedes_en_bd': ListadosFocalizacion.objects.values('sede').distinct().count(),
-            'muestra_sedes_bd': list(sedes_en_bd)
-        }
-
-        return JsonResponse(response_data)
-
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-
-@login_required
-def verificar_sedes_con_estudiantes(request):
-    """Vista para encontrar sedes que SÍ tienen estudiantes"""
-    try:
-        # Obtener sedes educativas de CALI con estudiantes
-        sedes_cali = SedesEducativas.objects.filter(
-            codigo_ie__id_municipios__nombre_municipio__icontains='CALI'
-        ).select_related('codigo_ie')[:50]
-
-        resultados = []
-        for sede in sedes_cali:
-            # Contar estudiantes por año
-            estudiantes_2025 = ListadosFocalizacion.objects.filter(
-                sede=sede.nombre_sede_educativa,
-                ano=2025
-            ).count()
-
-            estudiantes_2024 = ListadosFocalizacion.objects.filter(
-                sede=sede.nombre_sede_educativa,
-                ano=2024
-            ).count()
-
-            if estudiantes_2025 > 0 or estudiantes_2024 > 0:
-                resultados.append({
-                    'codigo': sede.cod_interprise,
-                    'nombre': sede.nombre_sede_educativa,
-                    'institucion': sede.codigo_ie.nombre_institucion,
-                    'estudiantes_2025': estudiantes_2025,
-                    'estudiantes_2024': estudiantes_2024,
-                    'url_test': f'/facturacion/generar-asistencia/{sede.cod_interprise}/enero/2025/'
-                })
-
-        # Ordenar por número de estudiantes
-        resultados.sort(key=lambda x: x['estudiantes_2025'], reverse=True)
-
-        return JsonResponse({
-            'success': True,
-            'total_sedes_verificadas': len(sedes_cali),
-            'sedes_con_estudiantes': len(resultados),
-            'resultados': resultados[:20]  # Solo primeras 20
-        })
-
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
