@@ -126,8 +126,8 @@ class AsistenciaPDFGenerator:
         
         headers = [
             "N°", "TIPO\nDE\nDOCUMENTO", "NÚMERO\nDE\nDOCUMENTO\nDE IDENTIDAD",
-            "PRIMER NOMBRE\n...", "SEGUNDO NOMBRE\n...", "PRIMER APELLIDO\n...", "SEGUNDO APELLIDO\n...",
-            "FECHA\nDE\nNACIMIENTO", "PERTENENCIA\nÉTNICA",
+            "PRIMER NOMBRE\nDEL\n TITULAR DE DERECHO", "SEGUNDO NOMBRE\nDEL\n TITULAR DE DERECHO", "PRIMER APELLIDO\nDEL\n TITULAR DE DERECHO", "SEGUNDO APELLIDO\nDEL\n TITULAR DE DERECHO",
+            "FECHA\nDE\nNACIMIENTO\n(AAAAMMDD)", "PERTENENCIA\nÉTNICA",
             "1. Sexo", "2. Grado\nEducativo", "3. Tipo de\nComplemento"
         ]
 
@@ -136,10 +136,20 @@ class AsistenciaPDFGenerator:
         c.setFillColor(colors.black)
         for i, (ancho, header) in enumerate(zip(self.anchos_cols, headers)):
             c.rect(x, y_tabla_header, ancho, alto_tabla_header)
-            lines = header.split('\n')
-            y_text_start = y_tabla_header + alto_tabla_header/2 + (len(lines)*4)/2
-            for j, line in enumerate(lines):
-                c.drawCentredString(x + ancho/2, y_text_start - j*6, line)
+            
+            # Si el índice corresponde a las últimas 4 columnas, rotar el texto
+            if i >= 8:
+                c.saveState()
+                c.translate(x + ancho / 2, y_tabla_header + alto_tabla_header / 2)
+                c.rotate(90)
+                c.drawCentredString(0, 0, header.replace('\n', ' '))
+                c.restoreState()
+            else:
+                # Lógica original para las demás columnas
+                lines = header.split('\n')
+                y_text_start = y_tabla_header + alto_tabla_header/2 + (len(lines)*4)/2
+                for j, line in enumerate(lines):
+                    c.drawCentredString(x + ancho/2, y_text_start - j*6, line)
             x += ancho
 
         # --- Cabecera de la Columna 13 (Fechas) ---
