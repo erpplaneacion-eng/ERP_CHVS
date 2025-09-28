@@ -79,6 +79,12 @@ FOCALIZACIONES_DISPONIBLES = [
     'F11', 'F12', 'F13', 'F14', 'F15', 'F16', 'F17', 'F18', 'F19', 'F20'
 ]
 
+# Meses de atención para los reportes
+MESES_ATENCION = [
+    'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
+]
+
 # Configuración de mensajes
 class MensajesConfig:
     # Mensajes de éxito

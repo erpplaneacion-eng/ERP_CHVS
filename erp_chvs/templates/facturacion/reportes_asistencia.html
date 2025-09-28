@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reportes de Asistencia{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0"><i class="fas fa-file-pdf me-2"></i> Generación de Reportes de Asistencia</h4>
+            <a href="{% url 'facturacion:facturacion_index' %}" class="btn btn-light btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
+            </a>
+        </div>
+        <div class="card-body">
+            <!-- Formulario de Filtros -->
+            <form method="get" class="row g-3 align-items-end bg-light p-3 rounded border">
+                <div class="col-md-4">
+                    <label for="etc" class="form-label"><strong>1. Filtrar por Municipio (ETC):</strong></label>
+                    <select name="etc" id="etc" class="form-select form-select-lg">
+                        <option value="">-- Seleccione un municipio --</option>
+                        {% for etc_val in etc_values %}
+                        <option value="{{ etc_val }}" {% if filtros_aplicados.etc == etc_val %}selected{% endif %}>{{ etc_val }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-lg w-100"><i class="fas fa-filter me-1"></i> Filtrar</button>
+                </div>
+                <div class="col-md-6">
+                    <p class="form-text mb-0">Selecciona un municipio para ver la lista de sedes educativas y poder generar los reportes.</p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if filtros_aplicados.etc %}
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">Sedes Educativas en: <strong>{{ filtros_aplicados.etc }}</strong></h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">Sede Educativa</th>
+                                <th scope="col" style="width: 15%;">Mes de Atención</th>
+                                <th scope="col" style="width: 15%;">Año</th>
+                                <th scope="col" style="width: 20%;" class="text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sede in sedes %}
+                            <tr id="sede-row-{{ sede.cod_interprise }}">
+                                <td>
+                                    <strong>{{ sede.nombre_sede_educativa }}</strong><br>
+                                    <small class="text-muted">IE: {{ sede.codigo_ie.nombre_institucion }}</small>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm" id="mes-{{ sede.cod_interprise }}">
+                                        {% for mes in meses_atencion %}
+                                            <option value="{{ mes }}">{{ mes|title }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm" id="ano-{{ sede.cod_interprise }}">
+                                        {% for ano in anos_disponibles %}
+                                            <option value="{{ ano }}" {% if ano == 2025 %}selected{% endif %}>{{ ano }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td class="text-center">
+                                    <button 
+                                        type="button" 
+                                        class="btn btn-success btn-generar-asistencia"
+                                        data-sede-cod="{{ sede.cod_interprise }}"
+                                        title="Generar formato de asistencia para esta sede">
+                                        <i class="fas fa-download me-1"></i> Generar Reporte
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center">No se encontraron sedes para este municipio.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('click', async function(e) {
+        if (e.target.classList.contains('btn-generar-asistencia') ||
+            e.target.closest('.btn-generar-asistencia')) {
+
+    document.querySelectorAll('.btn-generar-asistencia').forEach(button => {
+        button.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const originalText = this.innerHTML;
+
+            const button = e.target.classList.contains('btn-generar-asistencia')
+                ? e.target
+                : e.target.closest('.btn-generar-asistencia');
+
+            try {
+                const sedeCod = button.dataset.sedeCod || button.getAttribute('data-sede-cod');
+
+                if (!sedeCod) {
+                    alert('Error: No se pudo obtener el código de la sede.');
+                    return;
+                }
+
+                const sedeCod = this.dataset.sedeCod;
+                const mesElement = document.getElementById(`mes-${sedeCod}`);
+                const anoElement = document.getElementById(`ano-${sedeCod}`);
+
+                if (!mesElement || !anoElement) {
+                    alert(`Error: No se encontraron los selectores para la sede ${sedeCod}`);
+                    return;
+                    throw new Error(`No se encontraron los selectores para la sede ${sedeCod}`);
+                }
+
+                const mes = mesElement.value;
+                const ano = anoElement.value;
+
+                if (!mes || !ano) {
+                    alert('Error: Faltan parámetros (mes o año)');
+                    return;
+                    throw new Error('Faltan parámetros (mes o año)');
+                }
+
+                const originalText = button.innerHTML;
+                button.disabled = true;
+                button.innerHTML = `
+                this.disabled = true;
+                this.innerHTML = `
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Generando...
+                `;
+
+                const url = `/facturacion/generar-asistencia/${sedeCod}/${mes}/${ano}/`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                const url = `{% url 'facturacion:generar_pdf_asistencia' 'SEDE_COD' 'MES' 'ANO' %}`
+                                .replace('SEDE_COD', sedeCod).replace('MES', mes).replace('ANO', ano);
+
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Error del servidor: ${response.status} - ${errorText}`);
+                }
+
+                const contentType = response.headers.get('content-type');
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = downloadUrl;
+
+                if (contentType && contentType.includes('application/zip')) {
+                    const blob = await response.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+
+                    const contentDisposition = response.headers.get('content-disposition');
+                    let filename = 'reportes_asistencia.zip';
+
+                    if (contentDisposition && contentDisposition.indexOf('attachment') !== -1) {
+                        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                        const matches = filenameRegex.exec(contentDisposition);
+                        if (matches != null && matches[1]) {
+                            filename = matches[1].replace(/['"]/g, '');
+                        }
+                const contentDisposition = response.headers.get('content-disposition');
+                let filename = 'reportes.zip';
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                    if (filenameMatch && filenameMatch.length > 1) {
+                        filename = filenameMatch[1];
+                    }
+                }
+                a.download = filename;
+
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = downloadUrl;
+                    a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(downloadUrl);
+                a.remove();
+
+                    document.body.appendChild(a);
+                    a.click();
+
+                    window.URL.revokeObjectURL(downloadUrl);
+                    document.body.removeChild(a);
+
+                    if (window.showNotification) {
+                        window.showNotification('¡Reporte generado exitosamente!', 'success');
+                    } else {
+                        alert('¡Reporte generado exitosamente!');
+                    }
+
+                } else {
+                    throw new Error('La respuesta del servidor no es un archivo ZIP válido');
+                }
+
+            } catch (error) {
+                console.error('Error al generar el reporte:', error);
+                if (window.showNotification) {
+                    window.showNotification(`Error: ${error.message}`, 'error');
+                } else {
+                    alert(`Error: ${error.message}`);
+                }
+            } finally {
+                button.disabled = false;
+                if (typeof originalText !== 'undefined') {
+                    button.innerHTML = originalText;
+                }
+                this.disabled = false;
+                this.innerHTML = originalText;
+            }
+        }
+        });
+    });
+});
+</script>
+{% endblock %}
