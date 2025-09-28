@@ -893,6 +893,7 @@ def generar_pdf_asistencia(request, sede_cod_interprise, mes, focalizacion):
     Crea un archivo ZIP con un PDF por cada tipo de complemento.
     """
     try:
+        # Este objeto se usa principalmente para obtener el nombre de la sede para el filtro inicial.
         # Buscar sede
         sede_obj = get_object_or_404(SedesEducativas.objects.select_related(
             'codigo_ie__id_municipios'
@@ -910,7 +911,8 @@ def generar_pdf_asistencia(request, sede_cod_interprise, mes, focalizacion):
 
         # Buscar programa
         programa_obj = Programa.objects.filter(
-            municipio=sede_obj.codigo_ie.id_municipios
+            municipio=sede_obj.codigo_ie.id_municipios,
+            estado='activo'  # Asegurar que solo se tome el contrato activo
         ).first()
 
         # Buscar estudiantes
@@ -922,8 +924,21 @@ def generar_pdf_asistencia(request, sede_cod_interprise, mes, focalizacion):
         if not estudiantes_sede.exists():
             return HttpResponse(f"No se encontraron estudiantes para la sede {sede_obj.nombre_sede_educativa} con la focalización '{focalizacion}'.", status=404)
 
+        # --- INICIO DE CAMBIOS SOLICITADOS ---
+        # 1. La institución ahora proviene directamente del campo 'sede' de los datos de focalización.
+        primer_estudiante = estudiantes_sede.first()
+        nombre_sede_focalizacion = primer_estudiante.sede
+
+        # 2. El DANE se busca en SedesEducativas usando el nombre de la sede de los datos de focalización.
+        try:
+            sede_info_dane = SedesEducativas.objects.get(nombre_sede_educativa=nombre_sede_focalizacion)
+            dane_ie = sede_info_dane.cod_dane
+        except SedesEducativas.DoesNotExist:
+            dane_ie = 'DANE no encontrado'
+        # --- FIN DE CAMBIOS SOLICITADOS ---
+
         # Obtener el año del primer estudiante (asumimos que todos tienen el mismo año para una focalización)
-        ano = estudiantes_sede.first().ano if estudiantes_sede.exists() else None
+        ano = primer_estudiante.ano
         if not ano:
             return HttpResponse(f"No se pudo determinar el año para la focalización '{focalizacion}'.", status=404)
              
@@ -956,17 +971,22 @@ def generar_pdf_asistencia(request, sede_cod_interprise, mes, focalizacion):
                     est for est in estudiantes_sede if nombre_amigable_actual in est.complementos_activos
                 ]
 
+                # Obtener la ruta del logo desde el programa
+                ruta_logo_final = None
+                if programa_obj and programa_obj.imagen:
+                    ruta_logo_final = programa_obj.imagen.path
+
                 datos_encabezado = {
                     'departamento': departamento_obj.nombre_departamento if departamento_obj else 'N/A',
-                    'institucion': sede_obj.codigo_ie.nombre_institucion,
+                    'institucion': nombre_sede_focalizacion,
                     'municipio': sede_obj.codigo_ie.id_municipios.nombre_municipio,
-                    'dane_ie': sede_obj.codigo_ie.codigo_ie,
+                    'dane_ie': dane_ie,
                     'operador': programa_obj.programa if programa_obj else 'N/A',
                     'contrato': programa_obj.contrato if programa_obj else 'N/A',
                     'mes': mes.upper(),
                     'ano': ano,
                     'codigo_complemento': codigo,
-                    'ruta_logo': os.path.join(settings.BASE_DIR, 'static', 'img', 'logo_chvs.png')
+                    'ruta_logo': ruta_logo_final
                 }
 
                 pdf_buffer = BytesIO()
