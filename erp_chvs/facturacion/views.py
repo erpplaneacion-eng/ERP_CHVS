@@ -864,8 +864,11 @@ def reportes_asistencia_view(request):
     """
     context = {
         'meses_atencion': MESES_ATENCION,
-        'anos_disponibles': range(2024, 2031)
     }
+    
+    # Obtener focalizaciones únicas de la base de datos
+    focalizaciones_disponibles = ListadosFocalizacion.objects.values_list('focalizacion', flat=True).distinct().order_by('focalizacion')
+    context['focalizaciones_disponibles'] = focalizaciones_disponibles
     
     # Obtener todos los municipios que tienen sedes
     municipios_con_sedes = SedesEducativas.objects.select_related('codigo_ie__id_municipios') \
@@ -884,9 +887,9 @@ def reportes_asistencia_view(request):
     return render(request, 'facturacion/reportes_asistencia.html', context)
 
 @login_required
-def generar_pdf_asistencia(request, sede_cod_interprise, mes, ano):
+def generar_pdf_asistencia(request, sede_cod_interprise, mes, focalizacion):
     """
-    Genera los PDFs de asistencia para una sede, mes y año específicos.
+    Genera los PDFs de asistencia para una sede, mes y focalización específicos.
     Crea un archivo ZIP con un PDF por cada tipo de complemento.
     """
     try:
@@ -913,12 +916,17 @@ def generar_pdf_asistencia(request, sede_cod_interprise, mes, ano):
         # Buscar estudiantes
         estudiantes_sede = ListadosFocalizacion.objects.filter(
             sede=sede_obj.nombre_sede_educativa,
-            ano=ano
+            focalizacion=focalizacion
         ).order_by('apellido1', 'apellido2', 'nombre1')
 
         if not estudiantes_sede.exists():
-            return HttpResponse(f"No se encontraron estudiantes para la sede {sede_obj.nombre_sede_educativa} en el año {ano}.", status=404)
+            return HttpResponse(f"No se encontraron estudiantes para la sede {sede_obj.nombre_sede_educativa} con la focalización '{focalizacion}'.", status=404)
 
+        # Obtener el año del primer estudiante (asumimos que todos tienen el mismo año para una focalización)
+        ano = estudiantes_sede.first().ano if estudiantes_sede.exists() else None
+        if not ano:
+            return HttpResponse(f"No se pudo determinar el año para la focalización '{focalizacion}'.", status=404)
+             
         # Mapeo de complementos a códigos
         mapeo_codigos = {
             "CAP AM": "CAJMPS", "CAP PM": "CAJTPS",
@@ -969,7 +977,7 @@ def generar_pdf_asistencia(request, sede_cod_interprise, mes, ano):
 
         zip_buffer.seek(0)
         response = HttpResponse(zip_buffer, content_type='application/zip')
-        response['Content-Disposition'] = f'attachment; filename="Asistencias_{sede_obj.nombre_sede_educativa.replace(" ", "_")}_{mes}_{ano}.zip"'
+        response['Content-Disposition'] = f'attachment; filename="Asistencias_{sede_obj.nombre_sede_educativa.replace(" ", "_")}_{focalizacion}_{mes}.zip"'
         return response
 
     except Exception as e:

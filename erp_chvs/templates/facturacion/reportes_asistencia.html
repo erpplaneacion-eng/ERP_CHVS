@@ -46,7 +46,7 @@
                             <tr>
                                 <th scope="col">Sede Educativa</th>
                                 <th scope="col" style="width: 15%;">Mes de Atención</th>
-                                <th scope="col" style="width: 15%;">Año</th>
+                                <th scope="col" style="width: 15%;">Focalización</th>
                                 <th scope="col" style="width: 20%;" class="text-center">Acción</th>
                             </tr>
                         </thead>
@@ -65,9 +65,9 @@
                                     </select>
                                 </td>
                                 <td>
-                                    <select class="form-select form-select-sm" id="ano-{{ sede.cod_interprise }}">
-                                        {% for ano in anos_disponibles %}
-                                            <option value="{{ ano }}" {% if ano == 2025 %}selected{% endif %}>{{ ano }}</option>
+                                    <select class="form-select form-select-sm" id="focalizacion-{{ sede.cod_interprise }}">
+                                        {% for focalizacion in focalizaciones_disponibles %}
+                                            <option value="{{ focalizacion }}">{{ focalizacion }}</option>
                                         {% endfor %}
                                     </select>
                                 </td>
@@ -108,6 +108,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 ? e.target
                 : e.target.closest('.btn-generar-asistencia');
 
+            // Declarar la variable aquí para que sea accesible en el bloque 'finally'
+            let originalText = button.innerHTML;
+
             try {
                 const sedeCod = button.dataset.sedeCod || button.getAttribute('data-sede-cod');
 
@@ -117,29 +120,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 const mesElement = document.getElementById(`mes-${sedeCod}`);
-                const anoElement = document.getElementById(`ano-${sedeCod}`);
+                const focalizacionElement = document.getElementById(`focalizacion-${sedeCod}`);
 
-                if (!mesElement || !anoElement) {
+                if (!mesElement || !focalizacionElement) {
                     alert(`Error: No se encontraron los selectores para la sede ${sedeCod}`);
                     return;
                 }
 
                 const mes = mesElement.value;
-                const ano = anoElement.value;
+                const focalizacion = focalizacionElement.value;
 
-                if (!mes || !ano) {
-                    alert('Error: Faltan parámetros (mes o año)');
+                if (!mes || !focalizacion) {
+                    alert('Error: Faltan parámetros (mes o focalización)');
                     return;
                 }
 
-                const originalText = button.innerHTML;
                 button.disabled = true;
                 button.innerHTML = `
                     <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                     Generando...
                 `;
 
-                const url = `/facturacion/generar-asistencia/${sedeCod}/${mes}/${ano}/`;
+                const url = `/facturacion/generar-asistencia/${sedeCod}/${mes}/${focalizacion}/`;
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: {
@@ -198,9 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } finally {
                 button.disabled = false;
-                if (typeof originalText !== 'undefined') {
-                    button.innerHTML = originalText;
-                }
+                button.innerHTML = originalText;
             }
         }
     });
