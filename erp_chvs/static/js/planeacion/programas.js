@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 modalForm.action = `/planeacion/programas/editar/${data.id}/`;
 
                 modalForm.querySelector('[name="programa"]').value = data.programa;
+                modalForm.querySelector('[name="municipio"]').value = data.municipio;
                 modalForm.querySelector('[name="fecha_inicial"]').value = data.fechaInicial;
                 modalForm.querySelector('[name="fecha_final"]').value = data.fechaFinal;
                 modalForm.querySelector('[name="estado"]').value = data.estado;
@@ -88,6 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Validar campos requeridos
             const requiredFields = [
                 {name: 'programa', label: 'Nombre del Programa'},
+                {name: 'municipio', label: 'Municipio'},
                 {name: 'fecha_inicial', label: 'Fecha Inicial'},
                 {name: 'fecha_final', label: 'Fecha Final'},
                 {name: 'contrato', label: 'Número de Contrato'}

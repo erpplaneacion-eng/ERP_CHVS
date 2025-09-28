@@ -6,6 +6,7 @@ Permite visualizar y guardar datos en una sola interfaz.
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -14,14 +15,19 @@ from django.db import IntegrityError
 import base64
 import pandas as pd
 from io import StringIO
+from io import StringIO, BytesIO
 import json
+import zipfile
 
 from .models import ListadosFocalizacion
 from .services import ProcesamientoService, ValidacionService, EstadisticasService
 from .config import ProcesamientoConfig, FOCALIZACIONES_DISPONIBLES
+from .config import ProcesamientoConfig, FOCALIZACIONES_DISPONIBLES, MESES_ATENCION
 from .logging_config import FacturacionLogger
 from planeacion.models import SedesEducativas
+from planeacion.models import SedesEducativas, Programa
 from .persistence_service import PersistenceService
+from .pdf_generator import crear_formato_asistencia
 
 # Inicializar servicios
 procesamiento_service = ProcesamientoService()
@@ -852,3 +858,77 @@ def obtener_estadisticas_bd(request):
             'success': False,
             'error': f'Error al obtener estadísticas de BD: {str(e)}'
         })
+
+@login_required
+def generar_pdf_asistencia(request, sede_cod_interprise, mes, ano):
+    """
+    Genera los PDFs de asistencia para una sede, mes y año específicos.
+    Crea un archivo ZIP con un PDF por cada tipo de complemento.
+    """
+    try:
+        # 1. Obtener la sede y sus datos relacionados
+        sede_obj = get_object_or_404(SedesEducativas.objects.select_related(
+            'codigo_ie__id_municipios__id_departamento'
+        ), cod_interprise=sede_cod_interprise)
+
+        # 2. Obtener el programa (operador y contrato)
+        programa_obj = Programa.objects.filter(
+            municipio=sede_obj.codigo_ie.id_municipios
+        ).first()
+
+        # 3. Obtener todos los estudiantes de esa sede para el año
+        estudiantes_sede = ListadosFocalizacion.objects.filter(
+            sede=sede_obj.nombre_sede_educativa,
+            ano=ano
+        ).order_by('apellido1', 'apellido2', 'nombre1')
+
+        if not estudiantes_sede.exists():
+            return HttpResponse(f"No se encontraron estudiantes para la sede {sede_obj.nombre_sede_educativa} en el año {ano}.", status=404)
+
+        # 4. Identificar los códigos de complemento únicos
+        codigos_complemento_unicos = set()
+        for est in estudiantes_sede:
+            codigos_complemento_unicos.update(est.complementos_codigos)
+
+        if not codigos_complemento_unicos:
+            return HttpResponse("No hay estudiantes con complementos asignados en esta sede.", status=404)
+
+        # 5. Preparar para generar múltiples PDFs en un ZIP
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'a', zipfile.ZIP_DEFLATED, False) as zip_file:
+            for codigo in codigos_complemento_unicos:
+                # Filtrar estudiantes para este complemento específico
+                estudiantes_filtrados = [
+                    est for est in estudiantes_sede if codigo in est.complementos_codigos
+                ]
+
+                # Preparar datos del encabezado
+                datos_encabezado = {
+                    'departamento': sede_obj.codigo_ie.id_municipios.id_departamento.nombre_departamento,
+                    'institucion': sede_obj.codigo_ie.nombre_institucion,
+                    'municipio': sede_obj.codigo_ie.id_municipios.nombre_municipio,
+                    'dane_ie': sede_obj.codigo_ie.codigo_ie,
+                    'operador': programa_obj.programa if programa_obj else 'N/A',
+                    'contrato': programa_obj.contrato if programa_obj else 'N/A',
+                    'mes': mes.upper(),
+                    'ano': ano,
+                    'codigo_complemento': codigo,
+                }
+
+                # Generar el PDF en memoria
+                pdf_buffer = BytesIO()
+                crear_formato_asistencia(pdf_buffer, datos_encabezado, estudiantes_filtrados)
+                
+                # Añadir el PDF al archivo ZIP
+                nombre_archivo_pdf = f"Asistencia_{sede_obj.nombre_sede_educativa}_{codigo}_{mes}_{ano}.pdf"
+                zip_file.writestr(nombre_archivo_pdf, pdf_buffer.getvalue())
+
+        # 6. Devolver el archivo ZIP al usuario
+        zip_buffer.seek(0)
+        response = HttpResponse(zip_buffer, content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="Asistencias_{sede_obj.nombre_sede_educativa}_{mes}_{ano}.zip"'
+        return response
+
+    except Exception as e:
+        FacturacionLogger.log_procesamiento_error(f"generar_pdf_asistencia_{sede_cod_interprise}", str(e))
+        return HttpResponse(f"Error al generar el PDF: {e}", status=500)

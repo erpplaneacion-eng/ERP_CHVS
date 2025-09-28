@@ -110,6 +110,14 @@ class Programa(models.Model):
         default='SIN_CONTRATO',  # Valor por defecto para registros existentes
         verbose_name="Contrato"
     )
+
+    # Campo para el municipio - FK a PrincipalMunicipio
+    municipio = models.ForeignKey(
+        PrincipalMunicipio,
+        on_delete=models.PROTECT,  # Protege de eliminación accidental
+        verbose_name="Municipio",
+        db_column="id_municipio"  # Nombre específico en BD
+    )
     
     def __str__(self):
         return self.programa

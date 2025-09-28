@@ -2,6 +2,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from .models import Programa
+from principal.models import PrincipalMunicipio
 import re
 from datetime import date
 
@@ -9,7 +10,7 @@ from datetime import date
 class ProgramaForm(forms.ModelForm):
     class Meta:
         model = Programa
-        fields = ['programa', 'fecha_inicial', 'fecha_final', 'estado', 'contrato', 'imagen']
+        fields = ['programa', 'municipio', 'fecha_inicial', 'fecha_final', 'estado', 'contrato', 'imagen']
         
         widgets = {
             'fecha_inicial': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
@@ -18,6 +19,10 @@ class ProgramaForm(forms.ModelForm):
                 'placeholder': 'Ej: Programa de Alimentación Escolar 2025',
                 'class': 'form-control',
                 'maxlength': '200'
+            }),
+            'municipio': forms.Select(attrs={
+                'class': 'form-control',
+                'placeholder': 'Seleccione un municipio'
             }),
             'estado': forms.Select(attrs={'class': 'form-control'}),
             'contrato': forms.TextInput(attrs={
@@ -67,6 +72,12 @@ class ProgramaForm(forms.ModelForm):
             raise ValidationError("La fecha final no puede ser posterior al año 2030.")
         
         return fecha_final
+
+    def clean_municipio(self):
+        municipio = self.cleaned_data.get('municipio')
+        if not municipio:
+            raise ValidationError("El municipio es obligatorio.")
+        return municipio
 
     def clean_contrato(self):
         contrato = self.cleaned_data.get('contrato')

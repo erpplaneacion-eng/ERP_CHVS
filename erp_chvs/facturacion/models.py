@@ -200,3 +200,24 @@ class ListadosFocalizacion(models.Model):
         if self.refuerzo_complemento_am_pm:
             complementos.append("Refuerzo")
         return complementos
+
+    @property
+    def complementos_codigos(self):
+        """
+        Retorna una lista de los códigos de complemento para el PDF,
+        basado en los complementos activos.
+        """
+        codigos = []
+        # Mapeo de nombre amigable a código de PDF
+        mapeo_codigos = {
+            "CAP AM": "CAJMPS",
+            "CAP PM": "CAJTPS",
+            "Almuerzo JU": "ALMUERZO",
+            "Refuerzo": "RCPS"
+        }
+        
+        for complemento_amigable in self.complementos_activos:
+            if complemento_amigable in mapeo_codigos:
+                codigos.append(mapeo_codigos[complemento_amigable])
+        
+        return codigos

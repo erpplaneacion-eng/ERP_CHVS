@@ -24,6 +24,7 @@
                 
                 <div class="card-content">
                     <h3>{{ programa.programa }}</h3>
+                    <p><strong>Municipio:</strong> {{ programa.municipio.nombre_municipio|default:"Sin municipio" }}</p>
                     <p><strong>Periodo:</strong> {{ programa.fecha_inicial|date:"d/m/Y" }} - {{ programa.fecha_final|date:"d/m/Y" }}</p>
                     <p><strong>Contrato:</strong> {{ programa.contrato }}</p>
                     <p>
@@ -40,6 +41,7 @@
                             style="margin-top: 10px; display: inline-block;"
                             data-id="{{ programa.pk }}"
                             data-programa="{{ programa.programa }}"
+                            data-municipio="{{ programa.municipio.pk|default:'' }}"
                             data-fecha-inicial="{{ programa.fecha_inicial|date:'Y-m-d' }}"
                             data-fecha-final="{{ programa.fecha_final|date:'Y-m-d' }}"
                             data-estado="{{ programa.estado }}"

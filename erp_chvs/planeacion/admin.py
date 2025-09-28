@@ -40,6 +40,20 @@ class SedesEducativasAdmin(admin.ModelAdmin):
 
 @admin.register(Programa)
 class ProgramaAdmin(admin.ModelAdmin):
-    list_display = ('programa', 'fecha_inicial', 'fecha_final', 'estado')
-    list_filter = ('estado',)
-    search_fields = ('programa',)
+    list_display = ('programa', 'fecha_inicial', 'fecha_final', 'estado', 'municipio', 'contrato')
+    list_filter = ('estado', 'municipio')
+    search_fields = ('programa', 'contrato', 'municipio__nombre_municipio')
+    list_per_page = 25
+    ordering = ('programa',)
+
+    fieldsets = (
+        ('Información Básica', {
+            'fields': ('programa', 'municipio', 'contrato')
+        }),
+        ('Fechas', {
+            'fields': ('fecha_inicial', 'fecha_final')
+        }),
+        ('Estado y Multimedia', {
+            'fields': ('estado', 'imagen')
+        }),
+    )
