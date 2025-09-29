@@ -236,7 +236,14 @@ class AsistenciaPDFGenerator:
 
         # Raciones mensuales
         y_resumen -= 15
-        raciones_mensuales = raciones_diarias * 22 # Asumiendo 22 días
+        
+        # --- INICIO DE MEJORA: Usar días hábiles dinámicos ---
+        mes_actual = self.datos_encabezado.get('mes', '').upper()
+        dias_habiles_del_mes = DIAS_HABILES_POR_MES.get(mes_actual, [])
+        num_dias_habiles = len(dias_habiles_del_mes) if dias_habiles_del_mes else 22 # Fallback a 22 si no hay días definidos
+        raciones_mensuales = raciones_diarias * num_dias_habiles
+        # --- FIN DE MEJORA ---
+
         texto1_mensual = f"RACIONES MENSUALES PROGRAMADAS {codigo_complemento}:"
         c.drawString(self.margen + 3, y_resumen, texto1_mensual)
         c.drawString(self.margen + 120, y_resumen, str(raciones_mensuales)) # Valor dinámico

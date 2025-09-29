@@ -462,74 +462,69 @@ def lista_listados(request):
         sedes_faltantes = list(sedes_catalogo_etc - sedes_con_registros_etc)
 
         if sedes_con_registros_etc:
+            # --- INICIO DE OPTIMIZACIÓN (EVITAR N+1) ---
             from principal.models import NivelGradoEscolar
+            from collections import defaultdict
 
-            # Obtener sedes disponibles con sus grados
+            # 1. Obtener todos los grados únicos para las sedes filtradas en una sola consulta
+            registros_grados = ListadosFocalizacion.objects.filter(
+                etc__icontains=etc_filter,
+                sede__in=sedes_con_registros_etc
+            ).values('sede', 'grado_grupos').distinct()
+
+            # 2. Agrupar grados por sede y extraer grados base
+            grados_por_sede = defaultdict(set)
+            todos_los_grados_base = set()
+            for registro in registros_grados:
+                if registro['grado_grupos']:
+                    grado_base = _extraer_grado_base(str(registro['grado_grupos']))
+                    if grado_base:
+                        grados_por_sede[registro['sede']].add(grado_base)
+                        todos_los_grados_base.add(grado_base)
+
+            # 3. Obtener todos los mapeos de nivel-grado en una sola consulta
+            mapeo_niveles = {
+                nivel.grados_sedes: nivel.nivel_escolar_uapa
+                for nivel in NivelGradoEscolar.objects.filter(grados_sedes__in=todos_los_grados_base)
+            }
+
+            # 4. Procesar los datos en memoria
             sedes_disponibles = []
-            for sede in sedes_con_registros_etc:
-                # Obtener grados únicos de esta sede
-                registros_sede = ListadosFocalizacion.objects.filter(
-                    etc__icontains=etc_filter,
-                    sede=sede
-                ).values('grado_grupos').distinct()
-
-                grados_sede = set()
-                for registro in registros_sede:
-                    if registro['grado_grupos']:
-                        grado_base = _extraer_grado_base(str(registro['grado_grupos']))
-                        if grado_base:  # Solo agregar si no es vacío
-                            grados_sede.add(grado_base)
-
-
-                # Mapear grados a niveles escolares
+            for sede, grados_sede in grados_por_sede.items():
                 grados_mapeados = {}
-                grados_sin_nivel = []  # Grados que no están en la tabla NivelGradoEscolar
+                grados_sin_nivel = []
 
                 for grado in grados_sede:
-                    try:
-                        nivel = NivelGradoEscolar.objects.filter(grados_sedes=grado).first()
-                        if nivel:
-                            nivel_nombre = nivel.nivel_escolar_uapa
-                            if nivel_nombre not in grados_mapeados:
-                                grados_mapeados[nivel_nombre] = []
-                            grados_mapeados[nivel_nombre].append({
+                    nivel_nombre = mapeo_niveles.get(grado)
+                    if nivel_nombre:
+                        if nivel_nombre not in grados_mapeados:
+                            grados_mapeados[nivel_nombre] = []
+                        grados_mapeados[nivel_nombre].append({
+                            'grado': grado,
+                            'descripcion': f"{grado} - {nivel_nombre}"
+                        })
+                    else:
+                        nivel_manual = _mapear_grado_a_nivel_manual(grado)
+                        if nivel_manual:
+                            if nivel_manual not in grados_mapeados:
+                                grados_mapeados[nivel_manual] = []
+                            grados_mapeados[nivel_manual].append({
                                 'grado': grado,
-                                'descripcion': f"{nivel.grados_sedes} - {nivel.nivel_escolar_uapa}"
+                                'descripcion': f"Grado {grado} - {nivel_manual} (mapeo manual)"
                             })
                         else:
-                            # Grado no encontrado en tabla - intentar mapeo manual por reglas conocidas
-                            nivel_manual = _mapear_grado_a_nivel_manual(grado)
-                            if nivel_manual:
-                                if nivel_manual not in grados_mapeados:
-                                    grados_mapeados[nivel_manual] = []
-                                grados_mapeados[nivel_manual].append({
-                                    'grado': grado,
-                                    'descripcion': f"Grado {grado} - {nivel_manual} (mapeo manual)"
-                                })
-                            else:
-                                # Último recurso: grados especiales
-                                grados_sin_nivel.append({
-                                    'grado': grado,
-                                    'descripcion': f"Grado {grado} (sin nivel asignado)"
-                                })
-                    except Exception as e:
-                        # En caso de error, agregar a lista especial
-                        grados_sin_nivel.append({
-                            'grado': grado,
-                            'descripcion': f"Grado {grado} (error en mapeo: {str(e)})"
-                        })
+                            grados_sin_nivel.append({
+                                'grado': grado,
+                                'descripcion': f"Grado {grado} (sin nivel asignado)"
+                            })
 
-                # Convertir a lista ordenada por nivel
                 grados_ordenados = []
-
-                # Agregar grados con nivel asignado
                 for nivel, grados in sorted(grados_mapeados.items()):
                     grados_ordenados.append({
                         'nivel': nivel,
                         'grados': sorted(grados, key=lambda x: x['grado'])
                     })
 
-                # Agregar grados que no pudieron mapearse en una categoría especial (solo como último recurso)
                 if grados_sin_nivel:
                     grados_ordenados.append({
                         'nivel': 'Grados Especiales',
@@ -543,6 +538,7 @@ def lista_listados(request):
                 })
 
             grados_disponibles = sedes_disponibles
+            # --- FIN DE OPTIMIZACIÓN ---
 
     context = {
         'listados': page_obj,
