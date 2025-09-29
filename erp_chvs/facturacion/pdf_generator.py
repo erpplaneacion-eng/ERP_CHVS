@@ -5,6 +5,22 @@ from reportlab.lib.units import cm
 from datetime import datetime
 import os
 
+# Estructura de datos para los días hábiles de cada mes.
+# Aquí puedes agregar o modificar los días para cada mes del año.
+DIAS_HABILES_POR_MES = {
+    "ENERO": [],
+    "FEBRERO": [],
+    "MARZO": [],
+    "ABRIL": [],
+    "MAYO": [],
+    "JUNIO": [],
+    "JULIO": [],
+    "AGOSTO": [],
+    "SEPTIEMBRE": [],
+    "OCTUBRE": [1, 2, 3, 6, 7, 8, 9, 10, 14, 15, 16, 17, 20, 21, 22, 23, 24, 27, 28, 29, 30, 31],
+    "NOVIEMBRE": [4, 5, 6, 7, 10, 11, 12, 13, 14, 18, 19, 20, 21, 24, 25, 26, 27, 28],
+    "DICIEMBRE": []
+}
 
 class AsistenciaPDFGenerator:
     def __init__(self, buffer, datos_encabezado):
@@ -21,7 +37,10 @@ class AsistenciaPDFGenerator:
 
     def _calcular_anchos_columnas(self):
         ancho_total_tabla = self.width - 2 * self.margen
-        proporciones = [3, 5, 9, 11, 11, 12, 12, 8, 3, 3, 3, 3]
+        # Aquí puedes ajustar el ancho relativo de cada columna.
+        # Por ejemplo, hemos reducido la primera columna (N°) y aumentado la novena (Etnia).
+        proporciones = [3, 5, 9, 11, 11, 12, 12, 6, 2, 2, 4, 4]
+
         ancho_col13 = 300
         ancho_disponible_12_cols = ancho_total_tabla - ancho_col13
         suma_proporciones = sum(proporciones)
@@ -121,8 +140,6 @@ class AsistenciaPDFGenerator:
 
     def _dibujar_cabecera_tabla(self):
         c = self.c
-        y_tabla_header = self.y_actual - 60
-        alto_tabla_header = 60
         y_tabla_header = self.y_actual - 50 # Reducimos la altura total
         alto_tabla_header = 50 # La nueva altura es 50
         
@@ -170,14 +187,23 @@ class AsistenciaPDFGenerator:
         y_casillas = y_tabla_header + alto_tabla_header - alto_titulo - alto_casillas
         ancho_total_dias_col = 25
         ancho_disponible_dias = ancho_col13 - ancho_total_dias_col
-        casilla_ancho = ancho_disponible_dias / 22
+        
 
-        for i in range(22):
+        # Lógica para rellenar las casillas dinámicamente
+        mes_actual = self.datos_encabezado.get('mes', '').upper()
+        dias_habiles = DIAS_HABILES_POR_MES.get(mes_actual, [])
+        num_dias = len(dias_habiles) if dias_habiles else 22 # Usar 22 como default si no hay días definidos
+        casilla_ancho = (ancho_disponible_dias / num_dias) if num_dias > 0 else 0
+
+        for i in range(num_dias):
             x_casilla = x_col13 + i * casilla_ancho
             c.rect(x_casilla, y_casillas, casilla_ancho, alto_casillas)
-            c.drawCentredString(x_casilla + casilla_ancho/2, y_casillas + alto_casillas/2, f"{i+1:02d}")
+            # Si hay un día hábil para esta casilla, lo dibuja
+            if i < len(dias_habiles):
+                c.drawCentredString(x_casilla + casilla_ancho/2, y_casillas + alto_casillas/2, f"{dias_habiles[i]:02d}")
+            # Si no, la casilla queda vacía
 
-        x_total = x_col13 + 22 * casilla_ancho
+        x_total = x_col13 + num_dias * casilla_ancho
         c.rect(x_total, y_casillas, ancho_total_dias_col, alto_casillas)
         c.drawCentredString(x_total + ancho_total_dias_col/2, y_casillas + alto_casillas/2 + 3, "Total días")
         c.drawCentredString(x_total + ancho_total_dias_col/2, y_casillas + alto_casillas/2 - 3, "de consumo")
@@ -245,10 +271,15 @@ class AsistenciaPDFGenerator:
         c.line(self.margen, y_actual, self.width - self.margen, y_actual)
 
         y_actual -= 5
-        c.drawString(self.margen + 5, y_actual, "Observaciones:")
+        c.drawString(self.margen + 3, y_actual, "Observaciones:")
+        # Dejar un espacio para observaciones de aprox. 1 renglon
+        y_actual -= self.alto_fila
+        c.line(self.margen, y_actual, self.width - self.margen, y_actual)
         
         # --- Leyenda y Nota ---
-        y_leyenda = self.margen + 5
+        # La leyenda se dibuja inmediatamente debajo de la línea de observaciones
+        alto_explicaciones = 25
+        y_leyenda = y_actual - alto_explicaciones
         alto_explicaciones = 25
         ancho_total_explicaciones = self.width - 2 * self.margen
         ancho_celda1 = ancho_total_explicaciones * 0.15
@@ -268,15 +299,14 @@ class AsistenciaPDFGenerator:
         self._dibujar_texto_en_celda(texto_celda3, x_celda3, y_leyenda, ancho_celda3, alto_explicaciones)
 
         # --- Nota Final ---
-        y_nota = y_leyenda - 30 # Posición debajo de la leyenda
+        y_texto_nota = y_leyenda - 5 # Posición justo debajo de la leyenda
         texto_nota = """NOTA: El operador/responsable de prestar el servicio en los establecimientos educativos debe tener en cuenta:
-- El archivo de este documento impreso y debidamente diligenciado debe realizarse conforme a los Lineamientos Técnico Administrativos del Programa PAE y estar disponibles para consulta de los veedores y/o supervisores del mismo.
-- En procura del cuidado del medio ambiente hacer uso racional de los recursos.
-- La firma del presente documento da fe la veracidad del contenido del mismo para el seguimiento, monitoreo y control del programa.
-- El presente formato no debe tener tachones, ni enmendaduras para garantizar la validez del mismo."""
+                    - El archivo de este documento impreso y debidamente diligenciado debe realizarse conforme a los Lineamientos Técnico Administrativos del Programa PAE y estar disponibles para consulta de los veedores y/o supervisores del mismo.
+                    - En procura del cuidado del medio ambiente hacer uso racional de los recursos.
+                    - La firma del presente documento da fe la veracidad del contenido del mismo para el seguimiento, monitoreo y control del programa.
+                    - El presente formato no debe tener tachones, ni enmendaduras para garantizar la validez del mismo."""
         
         lineas_nota = texto_nota.split('\n')
-        y_texto_nota = y_actual - 45 # Posición fija para la nota
         c.setFont("Helvetica", 4)
         
         # Dibujar cada línea de la nota
@@ -342,8 +372,17 @@ class AsistenciaPDFGenerator:
             y_fila = self.y_inicio_filas - (fila_en_pagina * self.alto_fila)
 
             fecha_nac_str = ""
-            if isinstance(estudiante.fecha_nacimiento, datetime):
-                fecha_nac_str = estudiante.fecha_nacimiento.strftime('%d/%m/%Y')
+            fecha_nac = estudiante.fecha_nacimiento
+            if fecha_nac:
+                if isinstance(fecha_nac, datetime):
+                    fecha_nac_str = fecha_nac.strftime('%Y-%m-%d')
+                elif isinstance(fecha_nac, str):
+                    try:
+                        # Intentar convertir la cadena a fecha y luego formatear
+                        fecha_obj = datetime.fromisoformat(fecha_nac.replace('.', ''))
+                        fecha_nac_str = fecha_obj.strftime('%Y-%m-%d')
+                    except ValueError:
+                        fecha_nac_str = fecha_nac.split('T')[0] # Fallback: tomar solo la parte de la fecha
             
             datos_fila = [
                 str(i + 1),
@@ -370,10 +409,17 @@ class AsistenciaPDFGenerator:
             x_col13 = x
             ancho_total_dias = 25
             ancho_col13_fijo = 300
-            casilla_ancho = (ancho_col13_fijo - ancho_total_dias) / 22
-            for k in range(22):
+
+            # Replicar la misma lógica dinámica para las filas de estudiantes
+            mes_actual = self.datos_encabezado.get('mes', '').upper()
+            dias_habiles = DIAS_HABILES_POR_MES.get(mes_actual, [])
+            num_dias = len(dias_habiles) if dias_habiles else 22
+            casilla_ancho = (ancho_col13_fijo - ancho_total_dias) / num_dias if num_dias > 0 else 0
+
+            for k in range(num_dias):
                 c.rect(x_col13 + k * casilla_ancho, y_fila, casilla_ancho, self.alto_fila)
-            c.rect(x_col13 + 22 * casilla_ancho, y_fila, ancho_total_dias, self.alto_fila)
+            
+            c.rect(x_col13 + num_dias * casilla_ancho, y_fila, ancho_total_dias, self.alto_fila)
 
         c.save()
 
