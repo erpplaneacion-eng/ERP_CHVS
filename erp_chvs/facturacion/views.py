@@ -22,6 +22,7 @@ from .services import ProcesamientoService, ValidacionService, EstadisticasServi
 from .config import ProcesamientoConfig, FOCALIZACIONES_DISPONIBLES, MESES_ATENCION
 from .logging_config import FacturacionLogger
 from planeacion.models import SedesEducativas, Programa
+from .utils import _mapear_grado_a_nivel_manual, _extraer_grado_base
 from .persistence_service import PersistenceService
 from .pdf_generator import crear_formato_asistencia
 from .pdf_service import PDFAsistenciaService
@@ -30,83 +31,6 @@ from .pdf_service import PDFAsistenciaService
 procesamiento_service = ProcesamientoService()
 validacion_service = ValidacionService()
 estadisticas_service = EstadisticasService()
-
-def _mapear_grado_a_nivel_manual(grado):
-    """
-    Mapea manualmente grados que no están en la tabla NivelGradoEscolar
-    a sus niveles escolares correspondientes.
-
-    Args:
-        grado: String del grado (ej: "-1", "-2", "0")
-
-    Returns:
-        str: Nombre del nivel escolar o None si no se puede mapear
-    """
-    try:
-        grado_num = float(grado)  # Convertir a número para comparación
-
-        # Reglas de mapeo conocidas
-        if grado_num < 0:
-            return "Preescolar"  # Grados negativos como -1, -2 son Preescolar
-        elif grado_num == 0:
-            return "Preescolar"  # Grado 0 también es Preescolar
-        elif 1 <= grado_num <= 5:
-            return "Primaria"
-        elif 6 <= grado_num <= 9:
-            return "Secundaria"
-        elif 10 <= grado_num <= 11:
-            return "Media"
-        else:
-            return None  # No se puede mapear
-
-    except (ValueError, TypeError):
-        # Si no se puede convertir a número, no se puede mapear
-        return None
-
-def _extraer_grado_base(grado_grupos):
-    """
-    Extrae el grado base de un valor grado_grupos considerando diferentes formatos.
-
-    Args:
-        grado_grupos: String con el valor del grado (ej: "3-A", "-1", "2-201", "-1--101", "5")
-
-    Returns:
-        str: Grado base extraído o None si no es válido
-
-    Ejemplos:
-        "3-A" → "3"
-        "-1" → "-1"
-        "2-201" → "2"
-        "-1--101" → "-1"  (grado negativo con grupo especial)
-        "-2--201" → "-2"  (grado negativo con grupo especial)
-        "5" → "5"
-        "" → None
-        None → None
-    """
-    if not grado_grupos or grado_grupos == '':
-        return None
-
-    grado_str = str(grado_grupos).strip()
-
-    # Caso especial: grados negativos con grupos (ej: "-1--101", "-2--201")
-    if grado_str.startswith('-') and '--' in grado_str:
-        # Extraer solo la parte del grado (antes del "--")
-        grado_base = grado_str.split('--')[0]
-        return grado_base
-
-    # Caso especial: si comienza con '-', devolver el valor completo (ej: "-1", "-2")
-    if grado_str.startswith('-'):
-        return grado_str
-
-    # Caso normal: dividir por '-' y tomar la primera parte
-    if '-' in grado_str:
-        parte_grado = grado_str.split('-')[0]
-        # Validar que la parte del grado no esté vacía
-        if parte_grado:
-            return parte_grado
-
-    # Si no tiene '-', devolver el valor completo
-    return grado_str
 
 @login_required
 def facturacion_index(request):
@@ -892,4 +816,3 @@ def generar_pdf_asistencia(request, sede_cod_interprise, mes, focalizacion):
     Delega la lógica principal al PDFAsistenciaService.
     """
     return PDFAsistenciaService.generar_pdf_asistencia(sede_cod_interprise, mes, focalizacion)
-

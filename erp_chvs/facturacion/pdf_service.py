@@ -9,6 +9,7 @@ from .models import ListadosFocalizacion
 from principal.models import PrincipalDepartamento, PrincipalMunicipio
 from planeacion.models import SedesEducativas, Programa
 from .pdf_generator import crear_formato_asistencia
+from .utils import _extraer_grado_base # Importar la función de ayuda
 
 class PDFAsistenciaService:
     @staticmethod
@@ -27,10 +28,24 @@ class PDFAsistenciaService:
                 focalizacion=focalizacion
             ).order_by('apellido1', 'apellido2', 'nombre1')
 
-            if not estudiantes_sede.exists():
+            # --- INICIO DE CAMBIO SOLICITADO ---
+            # Ordenar la lista de estudiantes por grado educativo de forma ascendente
+            def clave_ordenamiento_grado(estudiante):
+                grado_base_str = _extraer_grado_base(estudiante.grado_grupos)
+                try:
+                    # Convertir a entero para un ordenamiento numérico correcto
+                    return int(grado_base_str)
+                except (ValueError, TypeError):
+                    # Si no se puede convertir, se le da un valor alto para que vaya al final
+                    return float('inf')
+
+            estudiantes_sede = sorted(list(estudiantes_sede), key=clave_ordenamiento_grado)
+            # --- FIN DE CAMBIO SOLICITADO ---
+
+            if not estudiantes_sede:
                 return HttpResponse(f"No se encontraron estudiantes para la sede {sede_obj.nombre_sede_educativa} con la focalización '{focalizacion}'.", status=404)
 
-            primer_estudiante = estudiantes_sede.first()
+            primer_estudiante = estudiantes_sede[0]
             nombre_municipio_etc = primer_estudiante.etc
 
             departamento_obj = None

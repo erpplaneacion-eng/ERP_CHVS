@@ -123,6 +123,8 @@ class AsistenciaPDFGenerator:
         c = self.c
         y_tabla_header = self.y_actual - 60
         alto_tabla_header = 60
+        y_tabla_header = self.y_actual - 50 # Reducimos la altura total
+        alto_tabla_header = 50 # La nueva altura es 50
         
         headers = [
             "N°", "TIPO\nDE\nDOCUMENTO", "NÚMERO\nDE\nDOCUMENTO\nDE IDENTIDAD",
