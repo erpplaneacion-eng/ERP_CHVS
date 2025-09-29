@@ -224,17 +224,31 @@ class AsistenciaPDFGenerator:
         c.setFont("Helvetica", 4)
         codigo_complemento = self.datos_encabezado.get('codigo_complemento', 'N/A')
         
+        # --- Fila 1: Raciones Diarias ---
         raciones_diarias = total_estudiantes
         texto1_diario = f"RACIONES DIARIAS PROGRAMADAS {codigo_complemento}:"
         c.drawString(self.margen + 3, y_resumen, texto1_diario)
-        c.drawString(self.margen + 120, y_resumen, str(raciones_diarias)) # Valor dinámico
-        c.line(self.margen + 120, y_resumen - 2, self.margen + 220, y_resumen - 2)
+        
+        # --- INICIO DE CAMBIO: Centrar valor y acortar línea ---
+        x_centro_valor_prog = self.margen + 125
+        ancho_linea_valor_prog = 30
+        c.drawCentredString(x_centro_valor_prog, y_resumen, str(raciones_diarias)) # Valor dinámico centrado
+        c.line(x_centro_valor_prog - ancho_linea_valor_prog/2, y_resumen - 2, x_centro_valor_prog + ancho_linea_valor_prog/2, y_resumen - 2)
+        # --- FIN DE CAMBIO ---
 
         texto2_diario = f"RACIONES DIARIAS ENTREGADAS {codigo_complemento}:"
-        c.drawString(self.margen + 230, y_resumen, texto2_diario)
-        c.line(self.margen + 330, y_resumen - 2, self.margen + 430, y_resumen - 2) # Línea vacía
+        c.drawString(self.margen + 160, y_resumen, texto2_diario)
+        c.line(self.margen + 260, y_resumen - 2, self.margen + 310, y_resumen - 2) # Línea vacía
 
-        # Raciones mensuales
+        # Nuevos campos para la fila diaria
+        c.drawString(self.margen + 320, y_resumen, "PREPARADA EN SITIO:")
+        c.line(self.margen + 380, y_resumen - 2, self.margen + 430, y_resumen - 2)
+        c.drawString(self.margen + 440, y_resumen, "INDUSTRIALIZADA:")
+        c.line(self.margen + 490, y_resumen - 2, self.margen + 540, y_resumen - 2)
+        c.drawString(self.margen + 550, y_resumen, "CATERING:")
+        c.line(self.margen + 585, y_resumen - 2, self.margen + 635, y_resumen - 2)
+
+        # --- Fila 2: Raciones Mensuales ---
         y_resumen -= 15
         
         # --- INICIO DE MEJORA: Usar días hábiles dinámicos ---
@@ -246,12 +260,23 @@ class AsistenciaPDFGenerator:
 
         texto1_mensual = f"RACIONES MENSUALES PROGRAMADAS {codigo_complemento}:"
         c.drawString(self.margen + 3, y_resumen, texto1_mensual)
-        c.drawString(self.margen + 120, y_resumen, str(raciones_mensuales)) # Valor dinámico
-        c.line(self.margen + 120, y_resumen - 2, self.margen + 220, y_resumen - 2)
+
+        # --- INICIO DE CAMBIO: Centrar valor y acortar línea ---
+        c.drawCentredString(x_centro_valor_prog, y_resumen, str(raciones_mensuales)) # Valor dinámico centrado
+        c.line(x_centro_valor_prog - ancho_linea_valor_prog/2, y_resumen - 2, x_centro_valor_prog + ancho_linea_valor_prog/2, y_resumen - 2)
+        # --- FIN DE CAMBIO ---
 
         texto2_mensual = f"RACIONES MENSUALES ENTREGADAS {codigo_complemento}:"
-        c.drawString(self.margen + 230, y_resumen, texto2_mensual)
-        c.line(self.margen + 330, y_resumen - 2, self.margen + 430, y_resumen - 2) # Línea vacía
+        c.drawString(self.margen + 160, y_resumen, texto2_mensual)
+        c.line(self.margen + 260, y_resumen - 2, self.margen + 310, y_resumen - 2) # Línea vacía
+
+        # Nuevos campos para la fila mensual
+        c.drawString(self.margen + 320, y_resumen, "PREPARADA EN SITIO:")
+        c.line(self.margen + 380, y_resumen - 2, self.margen + 430, y_resumen - 2)
+        c.drawString(self.margen + 440, y_resumen, "INDUSTRIALIZADA:")
+        c.line(self.margen + 490, y_resumen - 2, self.margen + 540, y_resumen - 2)
+        c.drawString(self.margen + 550, y_resumen, "CATERING:")
+        c.line(self.margen + 585, y_resumen - 2, self.margen + 635, y_resumen - 2)
 
         # --- Firmas, Observaciones y Leyenda ---
         y_actual = y_resumen - 10
