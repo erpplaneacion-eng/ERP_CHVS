@@ -38,15 +38,25 @@ class AsistenciaPDFGenerator:
     def _calcular_anchos_columnas(self):
         ancho_total_tabla = self.width - 2 * self.margen
         # Aquí puedes ajustar el ancho relativo de cada columna.
-        # Por ejemplo, hemos reducido la primera columna (N°) y aumentado la novena (Etnia).
-        proporciones = [3, 5, 9, 11, 11, 12, 12, 6, 2, 2, 4, 4]
+        # --- INICIO DE CAMBIO: Ajuste de proporciones de columnas ---
+        # Se reduce el ancho de las columnas 6 (Primer Apellido) y 7 (Segundo Apellido)
+        # y se aumenta el ancho de la columna 13 (fechas).
+        proporciones = [3, 3, 9, 11, 11, 11, 11, 6, 2, 2, 4, 4]
 
-        ancho_col13 = 300
+        ancho_col13 = 340 # Aumentado de 300 a 340 para dar más espacio a las casillas
+        # --- FIN DE CAMBIO ---
+
         ancho_disponible_12_cols = ancho_total_tabla - ancho_col13
         suma_proporciones = sum(proporciones)
         anchos = [int(prop * ancho_disponible_12_cols / suma_proporciones) for prop in proporciones]
+        
+        # --- INICIO DE CAMBIO: Ajustar para eliminar el espacio a la derecha ---
+        # Sumar la diferencia por redondeo a la última de las 12 columnas para que todo encaje perfectamente.
         anchos[-1] += ancho_disponible_12_cols - sum(anchos)
-        return anchos
+        # --- FIN DE CAMBIO ---
+
+        anchos.append(ancho_col13) # Añadir el ancho de la columna 13 a la lista
+        return anchos # Ahora la lista tiene 13 elementos
 
     def _dibujar_encabezado_pagina(self):
         c = self.c
@@ -151,13 +161,21 @@ class AsistenciaPDFGenerator:
         ]
 
         x = self.margen
+        
+        # --- INICIO DE CAMBIO: Añadir color de fondo a los encabezados ---
+        c.setFillColor(colors.whitesmoke) # Un gris claro y suave
+        # Dibujar el fondo para las 13 columnas
+        c.rect(x, y_tabla_header, self.width - 2 * self.margen, alto_tabla_header, fill=1)
+        # --- FIN DE CAMBIO ---
+
+        # Restaurar color para el texto y los bordes
         c.setFont("Helvetica", 4)
         c.setFillColor(colors.black)
         for i, (ancho, header) in enumerate(zip(self.anchos_cols, headers)):
             c.rect(x, y_tabla_header, ancho, alto_tabla_header)
             
-            # Si el índice corresponde a las últimas 4 columnas, rotar el texto
-            if i >= 8:
+            # Si el índice es 1 (Tipo de Documento) o corresponde a las últimas 4 columnas, rotar el texto
+            if i == 1 or i >= 8:
                 c.saveState()
                 c.translate(x + ancho / 2, y_tabla_header + alto_tabla_header / 2)
                 c.rotate(90)
@@ -173,7 +191,7 @@ class AsistenciaPDFGenerator:
 
         # --- Cabecera de la Columna 13 (Fechas) ---
         x_col13 = x
-        ancho_col13 = 300
+        ancho_col13 = self._calcular_anchos_columnas()[12] # Usar el ancho calculado
 
         # 1. Título superior
         alto_titulo = 15
@@ -440,7 +458,7 @@ class AsistenciaPDFGenerator:
             
             x_col13 = x
             ancho_total_dias = 25
-            ancho_col13_fijo = 300
+            ancho_col13_fijo = self._calcular_anchos_columnas()[12] # Usar el ancho calculado
 
             # Replicar la misma lógica dinámica para las filas de estudiantes
             mes_actual = self.datos_encabezado.get('mes', '').upper()
