@@ -12,22 +12,6 @@
     <h2>📊 Procesamiento de Listados PAE</h2>
     <p class="lead">Sistema de procesamiento por etapas: carga, visualización y almacenamiento</p>
 
-    <!-- Indicador de Progreso -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="d-flex align-items-center">
-                <div class="etapa-numero bg-{% if etapa_actual >= 1 %}success{% else %}secondary{% endif %}">1</div>
-                <span class="fw-bold">Cargue y Visualización</span>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="d-flex align-items-center">
-                <div class="etapa-numero bg-{% if etapa_actual >= 2 %}primary{% else %}secondary{% endif %}">2</div>
-                <span class="fw-bold">Almacenamiento en BD</span>
-            </div>
-        </div>
-    </div>
-
     <!-- ETAPA 1: CARGUE Y VISUALIZACIÓN -->
     <div class="etapa-card {% if etapa_actual == 1 %}etapa-activa{% elif etapa_actual >= 2 %}etapa-completada{% endif %} etapa-1">
         <h3>
