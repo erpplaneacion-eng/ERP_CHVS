@@ -385,6 +385,29 @@ def obtener_estadisticas_sedes(request):
             'error': f'Error al obtener estadísticas: {str(e)}'
         })
 
+@login_required
+@require_http_methods(["GET"])
+def api_focalizaciones_existentes(request):
+    """
+    API para obtener las focalizaciones que ya existen en la BD
+    para un conjunto de municipios (ETCs).
+    """
+    try:
+        # Los municipios se pasan como parámetros GET, separados por comas
+        etc_param = request.GET.get('etc', '')
+        if not etc_param:
+            return JsonResponse({'focalizaciones': []})
+
+        etc_list = [etc.strip() for etc in etc_param.split(',')]
+
+        focalizaciones = ListadosFocalizacion.objects.filter(
+            etc__in=etc_list
+        ).values_list('focalizacion', flat=True).distinct()
+
+        return JsonResponse({'focalizaciones': list(focalizaciones)})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 # Funciones de utilidad para compatibilidad con el código existente
 def validar_archivo_excel(archivo):
     """

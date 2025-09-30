@@ -367,6 +367,63 @@
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
+
+        // --- LÓGICA PARA BLOQUEAR FOCALIZACIONES EXISTENTES ---
+        const tipoProcesamientoRadios = document.querySelectorAll('input[name="tipo_procesamiento"]');
+        const focalizacionSelect = document.getElementById('focalizacion');
+
+        async function actualizarFocalizacionesDisponibles() {
+            const tipoSeleccionado = document.querySelector('input[name="tipo_procesamiento"]:checked').value;
+            
+            // Resetear todas las opciones primero
+            Array.from(focalizacionSelect.options).forEach(opt => {
+                opt.disabled = false;
+                opt.textContent = opt.value; // Restaurar texto original
+            });
+
+            if (tipoSeleccionado === 'original') { // Buga y Yumbo
+                focalizacionSelect.disabled = true; // Bloquear mientras carga
+                const label = document.querySelector('label[for="focalizacion"]');
+                const originalText = label.innerHTML;
+                label.innerHTML += ' <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+                try {
+                    // Municipios para el formato original
+                    const municipios = 'GUADALAJARA DE BUGA,YUMBO';
+                    const response = await fetch(`{% url 'facturacion:api_focalizaciones_existentes' %}?etc=${municipios}`);
+                    
+                    if (!response.ok) {
+                        throw new Error('Error al consultar el servidor.');
+                    }
+
+                    const data = await response.json();
+                    const focalizacionesExistentes = data.focalizaciones || [];
+
+                    if (focalizacionesExistentes.length > 0) {
+                        Array.from(focalizacionSelect.options).forEach(opt => {
+                            if (focalizacionesExistentes.includes(opt.value)) {
+                                opt.disabled = true;
+                                opt.textContent = `${opt.value} (Ya existe)`;
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error("Error al actualizar focalizaciones:", error);
+                    // Opcional: mostrar un mensaje de error al usuario
+                } finally {
+                    focalizacionSelect.disabled = false; // Desbloquear al finalizar
+                    label.innerHTML = originalText; // Restaurar texto del label
+                }
+            }
+        }
+
+        tipoProcesamientoRadios.forEach(radio => {
+            radio.addEventListener('change', actualizarFocalizacionesDisponibles);
+        });
+
+        // Ejecutar al cargar la página por si el radio ya está seleccionado
+        actualizarFocalizacionesDisponibles();
+
     });
 </script>
 {% endblock %}

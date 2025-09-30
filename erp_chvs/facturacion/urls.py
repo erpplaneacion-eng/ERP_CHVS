@@ -23,5 +23,6 @@ urlpatterns = [
     # Servicios AJAX
     path('validar-archivo/', views.validar_archivo_ajax, name='validar_archivo_ajax'),
     path('estadisticas-sedes/', views.obtener_estadisticas_sedes, name='estadisticas_sedes'),
+    path('api/focalizaciones-existentes/', views.api_focalizaciones_existentes, name='api_focalizaciones_existentes'),
     path('estadisticas-bd/', views.obtener_estadisticas_bd, name='estadisticas_bd'),
 ]
