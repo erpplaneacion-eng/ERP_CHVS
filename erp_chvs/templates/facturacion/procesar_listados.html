@@ -67,20 +67,15 @@
 
             <!-- Tipo de Procesamiento -->
             <div class="form-group mb-4">
-                <label class="form-label">
+                <label class="form-label d-block">
                     <i class="fas fa-cogs"></i> Tipo de Procesamiento:
                 </label>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="tipo_procesamiento" id="original" value="original" checked>
-                    <label class="form-check-label" for="original">
-                        <strong>Formato Original</strong> (ESTADO, SECTOR, MODELO, SEDE)
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="tipo_procesamiento" id="nuevo" value="nuevo">
-                    <label class="form-check-label" for="nuevo">
-                        <strong>Nuevo Formato</strong> (LOTE == 3)
-                    </label>
+                <div class="btn-group" role="group" aria-label="Tipo de procesamiento">
+                    <input type="radio" class="btn-check" name="tipo_procesamiento" id="original" value="original" autocomplete="off" checked>
+                    <label class="btn btn-outline-primary" for="original">Procesar archivos de Buga y Yumbo</label>
+
+                    <input type="radio" class="btn-check" name="tipo_procesamiento" id="nuevo" value="nuevo" autocomplete="off">
+                    <label class="btn btn-outline-primary" for="nuevo">Procesar archivos de Cali</label>
                 </div>
             </div>
 

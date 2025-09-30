@@ -67,16 +67,14 @@
     <div class="table-container">
         <table class="data-table" id="listadosTable">
             <thead>
-                <tr>
-                    <th>ID Listado</th>
+                <tr>                   
                     <th>Año</th>
                     <th>ETC</th>
                     <th>Institución</th>
                     <th>Sede</th>
                     <th>Documento</th>
                     <th>Nombre Completo</th>
-                    <th>Edad</th>
-                    <th>Género</th>
+                    
                     <th>Grado</th>
                     <th>Focalización</th>
                     <th>Acciones</th>
@@ -85,19 +83,14 @@
             <tbody>
                 {% for listado in listados %}
                 <tr data-id="{{ listado.id_listados }}">
-                    <td>{{ listado.id_listados }}</td>
+                    
                     <td>{{ listado.ano }}</td>
                     <td>{{ listado.etc }}</td>
                     <td>{{ listado.institucion }}</td>
                     <td>{{ listado.sede }}</td>
                     <td>{{ listado.doc }}</td>
                     <td>{{ listado.get_nombre_completo }}</td>
-                    <td>{{ listado.edad }}</td>
-                    <td>
-                        <span class="badge badge-{{ listado.genero|lower }}">
-                            {{ listado.genero }}
-                        </span>
-                    </td>
+                   
                     <td>{{ listado.grado_grupos }}</td>
                     <td>
                         <span class="badge badge-info">
