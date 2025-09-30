@@ -17,7 +17,7 @@ from typing import Dict, List, Any
 
 from .models import PDFValidation, ValidationError, OCRConfiguration
 from django.db import models
-from .ocr_service import procesar_pdf_ocr_view, OCRProcessor
+from .services import OCROrchestrator
 from .exceptions import OCRProcessingException
 
 
@@ -89,8 +89,9 @@ def procesar_pdf_ocr(request):
         logger.info("🔧 Iniciando procesamiento OCR...")
         print("🔧 Iniciando procesamiento OCR...")
 
-        # Procesar PDF con OCR
-        resultado = procesar_pdf_ocr_view(archivo_pdf, request.user)
+        # Procesar PDF con OCR usando la nueva arquitectura
+        orchestrator = OCROrchestrator()
+        resultado = orchestrator.process_pdf(archivo_pdf, request.user)
 
         logger.info(f"✅ Resultado del procesamiento: success={resultado.get('success')}")
         print(f"✅ Resultado del procesamiento: success={resultado.get('success')}")
@@ -496,8 +497,10 @@ def descargar_reporte_errores(request, validacion_id):
 
 
 # Funciones auxiliares para compatibilidad
-def validar_pdf_ocr(archivo_pdf: UploadedFile) -> Dict[str, Any]:
+def validar_pdf_ocr(archivo_pdf: UploadedFile, usuario=None) -> Dict[str, Any]:
     """
     Función de compatibilidad para validar PDF con OCR.
+    Utiliza la nueva arquitectura de servicios.
     """
-    return procesar_pdf_ocr_view(archivo_pdf)
+    orchestrator = OCROrchestrator()
+    return orchestrator.process_pdf(archivo_pdf, usuario)

@@ -29,42 +29,42 @@ class FacturacionLogger:
     @staticmethod
     def log_validacion_sedes(sedes_validas: int, sedes_invalidas: int, coincidencias_parciales: int = 0, coincidencias_genericas: int = 0):
         """Log de validación de sedes."""
-        logger.info(f"🏫 Validación sedes - Válidas: {sedes_validas}, Inválidas: {sedes_invalidas}, Parciales: {coincidencias_parciales}, Genéricas: {coincidencias_genericas}")
+        logger.info(f"Validacion sedes - Validas: {sedes_validas}, Invalidas: {sedes_invalidas}, Parciales: {coincidencias_parciales}, Genericas: {coincidencias_genericas}")
     
     @staticmethod
     def log_validacion_archivo(archivo_nombre: str, es_valido: bool, tipo_mime: str = None):
         """Log de validación de archivo."""
         if es_valido:
-            logger.info(f"📄 Archivo válido: {archivo_nombre} - Tipo: {tipo_mime}")
+            logger.info(f"Archivo valido: {archivo_nombre} - Tipo: {tipo_mime}")
         else:
-            logger.warning(f"⚠️ Archivo inválido: {archivo_nombre} - Tipo: {tipo_mime}")
+            logger.warning(f"Archivo invalido: {archivo_nombre} - Tipo: {tipo_mime}")
     
     @staticmethod
     def log_transformacion_datos(transformaciones_aplicadas: list):
         """Log de transformaciones de datos aplicadas."""
         if transformaciones_aplicadas:
-            logger.info(f"🔄 Transformaciones aplicadas: {', '.join(transformaciones_aplicadas)}")
+            logger.info(f"Transformaciones aplicadas: {', '.join(transformaciones_aplicadas)}")
     
     @staticmethod
     def log_estadisticas_generadas(estadisticas: dict):
         """Log de estadísticas generadas."""
         if estadisticas:
-            logger.info(f"📊 Estadísticas generadas: {estadisticas}")
+            logger.info(f"Estadisticas generadas: {estadisticas}")
     
     @staticmethod
     def log_coincidencia_difusa(sede_excel: str, sede_bd: str, porcentaje: float, tipo: str = "completo"):
         """Log de coincidencia difusa encontrada."""
-        logger.debug(f"🔍 Coincidencia {tipo}: '{sede_excel}' -> '{sede_bd}' ({porcentaje}%)")
+        logger.debug(f"Coincidencia {tipo}: '{sede_excel}' -> '{sede_bd}' ({porcentaje}%)")
     
     @staticmethod
     def log_filtrado_datos(filtro_aplicado: str, registros_antes: int, registros_despues: int):
         """Log de filtrado de datos."""
-        logger.info(f"🔽 Filtrado '{filtro_aplicado}': {registros_antes} -> {registros_despues} registros")
+        logger.info(f"Filtrado '{filtro_aplicado}': {registros_antes} -> {registros_despues} registros")
     
     @staticmethod
     def log_mapeo_datos(tipo_mapeo: str, mapeos_aplicados: int):
         """Log de mapeo de datos."""
-        logger.info(f"🗺️ Mapeo {tipo_mapeo}: {mapeos_aplicados} registros procesados")
+        logger.info(f"Mapeo {tipo_mapeo}: {mapeos_aplicados} registros procesados")
 
 def configurar_logging():
     """Configura el logging para el módulo de facturación."""

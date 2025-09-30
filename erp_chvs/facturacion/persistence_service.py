@@ -154,18 +154,15 @@ class PersistenceService:
         Returns:
             str: ID único generado
         """
-        # Estrategia: usar timestamp + índice para unicidad en el lote
+        # Estrategia: usar UUID para garantizar unicidad global
         focalizacion = str(row.get('focalizacion', ''))
         ano = str(row.get('ANO', row.get('ano', '')))
-        timestamp_ms = int(datetime.now().timestamp() * 1000)
-
-        # Sufijo único basado en timestamp e índice
-        unique_suffix = f"{timestamp_ms}_{index}"
 
         # Prefijo con año y focalización para identificación
         prefix = f"{ano}{focalizacion}"
-
-        # ID final: año + focalización + sufijo único
+        
+        # Usar una porción de un UUID para el sufijo único
+        unique_suffix = str(uuid.uuid4()).replace('-', '')[:16]
         id_final = f"{prefix}_{unique_suffix}"
 
         # Truncar si es muy largo (máximo 50 caracteres según modelo)
