@@ -7,7 +7,8 @@
       "Bash(find:*)",
       "Bash(python3:*)",
       "Bash(python manage.py:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Read(//mnt/c/Users/User/OneDrive/Desktop/CHVS/ERP_CHVS/**)"
     ],
     "deny": [],
     "ask": []

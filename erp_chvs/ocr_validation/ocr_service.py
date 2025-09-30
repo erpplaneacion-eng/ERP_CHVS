@@ -11,9 +11,16 @@ import re
 import json
 import tempfile
 import shutil
+import logging
 from typing import Dict, List, Any, Tuple, Optional
 from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
+from django.utils import timezone
+import platform
+
+
+# Configurar logger
+logger = logging.getLogger(__name__)
 
 # Importar Tesseract OCR
 try:
@@ -22,7 +29,15 @@ try:
     TESSERACT_AVAILABLE = True
 except ImportError:
     TESSERACT_AVAILABLE = False
-    print("Advertencia: Tesseract no está instalado. Instale pytesseract y PIL para usar OCR.")
+    logger.warning("Tesseract no está instalado. Instale pytesseract y PIL para usar OCR.")
+
+# Importar pdf2image
+try:
+    from pdf2image import convert_from_path, convert_from_bytes
+    PDF2IMAGE_AVAILABLE = True
+except ImportError:
+    PDF2IMAGE_AVAILABLE = False
+    logger.warning("pdf2image no está instalado. Instale pdf2image para convertir PDFs a imágenes.")
 
 from .models import PDFValidation, ValidationError, OCRConfiguration, FieldValidationRule
 from .exceptions import OCRProcessingException, ValidationException
@@ -37,6 +52,10 @@ class OCRProcessor:
         """Inicializa el procesador OCR."""
         self.config = self._get_or_create_config()
         self.validation_rules = self._load_validation_rules()
+
+        # Configuración automática de rutas para Windows
+        if platform.system() == 'Windows':
+            self._configurar_tesseract_windows()
 
         if not TESSERACT_AVAILABLE:
             raise OCRProcessingException(
@@ -55,36 +74,48 @@ class OCRProcessor:
         rules = FieldValidationRule.objects.filter(activo=True)
         return {rule.nombre_campo: rule for rule in rules}
 
-    def procesar_pdf_ocr(self, archivo_pdf: UploadedFile) -> Dict[str, Any]:
+    def procesar_pdf_ocr(self, archivo_pdf: UploadedFile, usuario=None) -> Dict[str, Any]:
         """
         Procesa un PDF con OCR y validación completa.
 
         Args:
             archivo_pdf: Archivo PDF subido por el usuario
+            usuario: Usuario que inició el procesamiento
 
         Returns:
             Dict[str, Any]: Resultado completo del procesamiento
         """
         inicio_tiempo = datetime.now()
+        logger.info(f"Iniciando procesamiento OCR de {archivo_pdf.name} por usuario: {usuario}")
 
         try:
             # Crear registro de validación
-            validacion = self._crear_registro_validacion(archivo_pdf)
+            logger.debug("Creando registro de validación...")
+            validacion = self._crear_registro_validacion(archivo_pdf, usuario)
+            logger.info(f"Registro de validación creado con ID: {validacion.id}")
 
             # Extraer información básica del PDF
+            logger.debug("Extrayendo información del PDF...")
             info_pdf = self._extraer_info_pdf(archivo_pdf)
+            logger.debug(f"Información extraída: {info_pdf}")
 
             # Procesar páginas con OCR
+            logger.debug("Procesando páginas con OCR...")
             resultados_ocr = self._procesar_paginas_ocr(archivo_pdf)
+            logger.info(f"Páginas procesadas: {len(resultados_ocr)}")
 
             # Validar campos manuales
+            logger.debug("Validando campos manuales...")
             errores_validacion = self._validar_campos_manuales(resultados_ocr, info_pdf)
+            logger.info(f"Errores encontrados: {len(errores_validacion)}")
 
             # Actualizar registro con resultados
             tiempo_total = (datetime.now() - inicio_tiempo).total_seconds()
+            logger.debug(f"Actualizando registro con {len(errores_validacion)} errores...")
             self._actualizar_registro_validacion(
                 validacion, errores_validacion, tiempo_total, info_pdf
             )
+            logger.info(f"Procesamiento completado. Tiempo total: {tiempo_total:.2f}s")
 
             return {
                 'success': True,
@@ -103,21 +134,32 @@ class OCRProcessor:
                 'tiempo_procesamiento': tiempo_total
             }
 
-    def _crear_registro_validacion(self, archivo_pdf: UploadedFile) -> PDFValidation:
+    def _crear_registro_validacion(self, archivo_pdf: UploadedFile, usuario=None) -> PDFValidation:
         """Crea un registro inicial de validación."""
         # Extraer información básica del nombre del archivo
         nombre_archivo = archivo_pdf.name
         info_basica = self._parsear_nombre_archivo(nombre_archivo)
 
-        return PDFValidation.objects.create(
-            archivo_nombre=nombre_archivo,
-            archivo_path=archivo_pdf.temporary_file_path() if hasattr(archivo_pdf, 'temporary_file_path') else '',
-            sede_educativa=info_basica.get('sede', 'Sede Desconocida'),
-            mes_atencion=info_basica.get('mes', 'Mes Desconocido'),
-            ano=info_basica.get('ano', datetime.now().year),
-            tipo_complemento=info_basica.get('complemento', 'Tipo Desconocido'),
-            estado='procesando'
-        )
+        logger.debug(f"Creando registro para archivo: {nombre_archivo}")
+        logger.debug(f"Información básica: {info_basica}")
+        logger.debug(f"Usuario creador: {usuario}")
+
+        try:
+            validacion = PDFValidation.objects.create(
+                archivo_nombre=nombre_archivo,
+                archivo_path=archivo_pdf.temporary_file_path() if hasattr(archivo_pdf, 'temporary_file_path') else '',
+                sede_educativa=info_basica.get('sede', 'Sede Desconocida'),
+                mes_atencion=info_basica.get('mes', 'Mes Desconocido'),
+                ano=info_basica.get('ano', datetime.now().year),
+                tipo_complemento=info_basica.get('complemento', 'Tipo Desconocido'),
+                usuario_creador=usuario,
+                estado='procesando'
+            )
+            logger.info(f"Registro creado exitosamente con ID: {validacion.id}")
+            return validacion
+        except Exception as e:
+            logger.error(f"Error creando registro: {e}", exc_info=True)
+            raise
 
     def _parsear_nombre_archivo(self, nombre_archivo: str) -> Dict[str, str]:
         """Parsea información básica del nombre del archivo PDF."""
@@ -144,41 +186,65 @@ class OCRProcessor:
             'dimensiones_paginas': []
         }
 
+        tmp_file_path = None
         try:
             # Crear archivo temporal para procesamiento
             with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_file:
+                # Resetear puntero del archivo
+                archivo_pdf.seek(0)
                 tmp_file.write(archivo_pdf.read())
                 tmp_file_path = tmp_file.name
 
-            # Aquí iría la lógica para extraer información del PDF
-            # Por ahora retornamos información básica
-            info['num_paginas'] = 1  # Placeholder
-            info['dimensiones_paginas'] = [(612, 792)]  # A4 tamaño estándar
+            # Si pdf2image está disponible, obtener número de páginas real
+            if PDF2IMAGE_AVAILABLE:
+                try:
+                    # Convertir solo primera página para obtener info
+                    imagenes = convert_from_path(tmp_file_path, first_page=1, last_page=1)
+                    if imagenes:
+                        info['dimensiones_paginas'] = [(imagenes[0].width, imagenes[0].height)]
+
+                    # Obtener número total de páginas
+                    from PyPDF2 import PdfReader
+                    with open(tmp_file_path, 'rb') as f:
+                        pdf_reader = PdfReader(f)
+                        info['num_paginas'] = len(pdf_reader.pages)
+                except Exception as e:
+                    logger.warning(f"No se pudo obtener info completa del PDF: {e}")
+                    info['num_paginas'] = 1
+                    info['dimensiones_paginas'] = [(612, 792)]
+            else:
+                info['num_paginas'] = 1
+                info['dimensiones_paginas'] = [(612, 792)]
 
         except Exception as e:
-            print(f"Error extrayendo info del PDF: {e}")
+            logger.error(f"Error extrayendo info del PDF: {e}", exc_info=True)
+            info['num_paginas'] = 1
+            info['dimensiones_paginas'] = [(612, 792)]
         finally:
             # Limpiar archivo temporal
-            if 'tmp_file_path' in locals():
+            if tmp_file_path and os.path.exists(tmp_file_path):
                 try:
                     os.unlink(tmp_file_path)
-                except:
-                    pass
+                except Exception as e:
+                    logger.warning(f"No se pudo eliminar archivo temporal {tmp_file_path}: {e}")
 
         return info
 
     def _procesar_paginas_ocr(self, archivo_pdf: UploadedFile) -> List[Dict[str, Any]]:
         """Procesa cada página del PDF con OCR usando Tesseract."""
         resultados = []
+        tmp_pdf_path = None
+        imagenes_temporales = []
 
         try:
             # Crear archivo temporal para el PDF
             with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_pdf:
+                # Resetear puntero del archivo antes de leer
+                archivo_pdf.seek(0)
                 tmp_pdf.write(archivo_pdf.read())
                 tmp_pdf_path = tmp_pdf.name
 
-            # Aquí iría la lógica real de conversión PDF a imágenes
-            # Por ahora simulamos el procesamiento
+            # Convertir PDF a imágenes
             imagenes_temporales = self._convertir_pdf_a_imagenes(tmp_pdf_path)
 
             # Procesar cada imagen con OCR
@@ -186,21 +252,8 @@ class OCRProcessor:
                 resultado_ocr = self._procesar_imagen_ocr(imagen_path, i + 1)
                 resultados.append(resultado_ocr)
 
-                # Limpiar imagen temporal si no se requiere guardar
-                if not self.config.guardar_imagenes_temporales:
-                    try:
-                        os.unlink(imagen_path)
-                    except:
-                        pass
-
-            # Limpiar PDF temporal
-            try:
-                os.unlink(tmp_pdf_path)
-            except:
-                pass
-
         except Exception as e:
-            print(f"Error procesando páginas OCR: {e}")
+            logger.error(f"Error procesando páginas OCR: {e}", exc_info=True)
             # Retornar resultado de error
             resultados = [{
                 'pagina': 1,
@@ -208,6 +261,24 @@ class OCRProcessor:
                 'confianza': 0.0,
                 'error': str(e)
             }]
+        finally:
+            # Limpiar imágenes temporales siempre (a menos que se configure guardarlas)
+            if not self.config.guardar_imagenes_temporales:
+                for imagen_path in imagenes_temporales:
+                    try:
+                        if os.path.exists(imagen_path):
+                            os.unlink(imagen_path)
+                            logger.debug(f"Imagen temporal eliminada: {imagen_path}")
+                    except Exception as e:
+                        logger.warning(f"No se pudo eliminar imagen temporal {imagen_path}: {e}")
+
+            # Limpiar PDF temporal
+            if tmp_pdf_path and os.path.exists(tmp_pdf_path):
+                try:
+                    os.unlink(tmp_pdf_path)
+                    logger.debug(f"PDF temporal eliminado: {tmp_pdf_path}")
+                except Exception as e:
+                    logger.warning(f"No se pudo eliminar PDF temporal {tmp_pdf_path}: {e}")
 
         return resultados
 
@@ -215,13 +286,62 @@ class OCRProcessor:
         """Convierte páginas de PDF a imágenes usando pdf2image."""
         imagenes_temporales = []
 
+        if not PDF2IMAGE_AVAILABLE:
+            logger.error("pdf2image no está disponible. No se puede convertir PDF a imágenes.")
+            raise OCRProcessingException("pdf2image no está instalado. Instale: pip install pdf2image")
+
         try:
-            # Aquí iría la conversión real con pdf2image
-            # Por simplicidad, creamos imágenes temporales simuladas
-            imagenes_temporales = [pdf_path.replace('.pdf', '_page_1.png')]
+            # Convertir PDF a imágenes con pdf2image
+            logger.debug(f"Convirtiendo PDF a imágenes: {pdf_path}")
+
+            # Configuración para Windows (poppler)
+            poppler_path = None
+            if platform.system() == 'Windows':
+                # Buscar poppler en ubicaciones comunes
+                posibles_rutas = [
+                    r'C:\Program Files\poppler\Library\bin',
+                    r'C:\poppler\Library\bin',
+                    r'C:\Program Files (x86)\poppler\Library\bin',
+                ]
+                for ruta in posibles_rutas:
+                    if os.path.exists(ruta):
+                        poppler_path = ruta
+                        logger.info(f"Poppler encontrado en: {poppler_path}")
+                        break
+
+            # Convertir PDF a imágenes (DPI 300 para buena calidad OCR)
+            imagenes = convert_from_path(
+                pdf_path,
+                dpi=300,
+                poppler_path=poppler_path,
+                fmt='png'
+            )
+
+            logger.info(f"PDF convertido a {len(imagenes)} imágenes")
+
+            # Guardar cada imagen en archivo temporal
+            for i, imagen in enumerate(imagenes):
+                tmp_file = tempfile.NamedTemporaryFile(
+                    suffix=f'_page_{i+1}.png',
+                    delete=False
+                )
+                tmp_file.close()
+
+                # Guardar imagen
+                imagen.save(tmp_file.name, 'PNG')
+                imagenes_temporales.append(tmp_file.name)
+                logger.debug(f"Página {i+1} guardada en: {tmp_file.name}")
 
         except Exception as e:
-            print(f"Error convirtiendo PDF a imágenes: {e}")
+            logger.error(f"Error convirtiendo PDF a imágenes: {e}", exc_info=True)
+            # Limpiar imágenes creadas antes del error
+            for img_path in imagenes_temporales:
+                try:
+                    if os.path.exists(img_path):
+                        os.unlink(img_path)
+                except:
+                    pass
+            raise OCRProcessingException(f"Error convirtiendo PDF a imágenes: {str(e)}")
 
         return imagenes_temporales
 
@@ -500,9 +620,13 @@ class OCRProcessor:
         info_pdf: Dict
     ):
         """Actualiza el registro de validación con los resultados."""
+        logger.debug(f"Actualizando registro {validacion.id}...")
+
         # Contar errores por severidad
         errores_criticos = len([e for e in errores if e.get('severidad') == 'critico'])
         errores_advertencia = len([e for e in errores if e.get('severidad') == 'advertencia'])
+
+        logger.info(f"Estadísticas - Total: {len(errores)}, Críticos: {errores_criticos}, Advertencias: {errores_advertencia}")
 
         # Actualizar registro
         validacion.estado = 'completado'
@@ -517,18 +641,60 @@ class OCRProcessor:
         elif errores_advertencia > 0:
             validacion.observaciones = f"Documento con {errores_advertencia} advertencias menores."
 
-        validacion.save()
+        try:
+            validacion.save()
+            logger.debug(f"Registro {validacion.id} guardado correctamente")
+        except Exception as e:
+            logger.error(f"Error guardando registro: {e}", exc_info=True)
+            raise
 
         # Guardar errores individuales
-        for error_data in errores:
-            ValidationError.objects.create(
-                validacion=validacion,
-                tipo_error=error_data.get('tipo', 'desconocido'),
-                descripcion=error_data.get('descripcion', ''),
-                pagina=error_data.get('pagina', 1),
-                severidad=error_data.get('severidad', 'advertencia'),
-                columna_campo=error_data.get('campo', '')
-            )
+        logger.debug(f"Guardando {len(errores)} errores individuales...")
+        for i, error_data in enumerate(errores):
+            try:
+                ValidationError.objects.create(
+                    validacion=validacion,
+                    tipo_error=error_data.get('tipo', 'desconocido'),
+                    descripcion=error_data.get('descripcion', ''),
+                    pagina=error_data.get('pagina', 1),
+                    severidad=error_data.get('severidad', 'advertencia'),
+                    columna_campo=error_data.get('campo', '')
+                )
+                if i % 10 == 0:  # Log cada 10 errores
+                    logger.debug(f"Guardados {i+1}/{len(errores)} errores...")
+            except Exception as e:
+                logger.error(f"Error guardando error {i}: {e}", exc_info=True)
+
+        logger.info(f"Proceso de actualización completado para validación {validacion.id}")
+
+    def _configurar_tesseract_windows(self):
+        """Configura rutas específicas de Tesseract para Windows."""
+        rutas_posibles = [
+            r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+            r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
+            r'C:\Tesseract-OCR\tesseract.exe',
+            r'D:\Tesseract-OCR\tesseract.exe',
+            r'E:\Tesseract-OCR\tesseract.exe',
+            r'F:\Tesseract-OCR\tesseract.exe'
+        ]
+
+        for ruta in rutas_posibles:
+            if os.path.exists(ruta):
+                pytesseract.pytesseract.tesseract_cmd = ruta
+                logger.info(f"Tesseract configurado automáticamente: {ruta}")
+                return
+
+        # Si no encuentra Tesseract, mostrar instrucciones claras
+        logger.warning("Tesseract no encontrado en rutas estándar")
+        logger.info("Para solucionar esto:")
+        logger.info("1. Ejecute el script: python buscar_tesseract.py")
+        logger.info("2. O configure manualmente la ruta en este archivo")
+        logger.info("3. O agregue Tesseract al PATH del sistema")
+
+        # Usar la ruta encontrada por el script de búsqueda
+        ruta_tesseract = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+        pytesseract.pytesseract.tesseract_cmd = ruta_tesseract
+        logger.info(f"Usando ruta de Tesseract: {ruta_tesseract}")
 
 
 class OCRValidator:
@@ -802,7 +968,7 @@ class OCRImageProcessor:
             return celdas
 
         except Exception as e:
-            print(f"Error detectando celdas: {e}")
+            logger.error(f"Error detectando celdas: {e}", exc_info=True)
             return []
 
     def _detectar_lineas_horizontal(self, bordes):
@@ -821,20 +987,23 @@ class OCRImageProcessor:
         return []
 
 
-def procesar_pdf_ocr_view(archivo_pdf: UploadedFile) -> Dict[str, Any]:
+def procesar_pdf_ocr_view(archivo_pdf: UploadedFile, usuario=None) -> Dict[str, Any]:
     """
     Función de conveniencia para procesar PDF desde vistas.
 
     Args:
         archivo_pdf: Archivo PDF subido
+        usuario: Usuario que inició el procesamiento
 
     Returns:
         Dict[str, Any]: Resultado del procesamiento
     """
     try:
+        logger.info(f"procesar_pdf_ocr_view llamado para {archivo_pdf.name} por {usuario}")
         procesador = OCRProcessor()
-        return procesador.procesar_pdf_ocr(archivo_pdf)
+        return procesador.procesar_pdf_ocr(archivo_pdf, usuario)
     except Exception as e:
+        logger.error(f"Error en procesar_pdf_ocr_view: {e}", exc_info=True)
         return {
             'success': False,
             'error': f"Error procesando PDF: {str(e)}"

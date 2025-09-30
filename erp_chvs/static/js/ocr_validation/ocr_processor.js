@@ -92,7 +92,17 @@ class OCRProcessor {
     async handleFormSubmit(event) {
         event.preventDefault();
 
+        console.log('📤 Iniciando envío de formulario OCR...');
         const formData = new FormData(this.form);
+
+        // Verificar que hay un archivo
+        const archivo = formData.get('archivo_pdf');
+        if (!archivo) {
+            console.error('❌ No se encontró archivo en FormData');
+            this.showErrorSection('No se seleccionó ningún archivo');
+            return;
+        }
+        console.log('📄 Archivo a enviar:', archivo.name, 'Tamaño:', archivo.size);
 
         try {
             // Mostrar sección de procesamiento
@@ -100,6 +110,8 @@ class OCRProcessor {
 
             // Actualizar progreso
             this.updateProgress(10, 'Iniciando procesamiento...');
+
+            console.log('🌐 Enviando petición a: /ocr_validation/procesar/');
 
             // Enviar archivo para procesamiento
             const response = await fetch('/ocr_validation/procesar/', {
@@ -110,18 +122,35 @@ class OCRProcessor {
                 }
             });
 
+            console.log('📥 Respuesta recibida. Status:', response.status, response.statusText);
+
+            // Verificar si la respuesta es JSON
+            const contentType = response.headers.get('content-type');
+            console.log('📋 Content-Type:', contentType);
+
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('❌ Respuesta no es JSON:', text.substring(0, 500));
+                this.showErrorSection('Error: El servidor no devolvió una respuesta JSON válida');
+                return;
+            }
+
             const result = await response.json();
+            console.log('✅ Resultado parseado:', result);
 
             if (result.success) {
+                console.log('🎉 Procesamiento exitoso');
                 this.updateProgress(100, 'Procesamiento completado');
                 this.showResultsSection(result);
             } else {
+                console.error('❌ Error en procesamiento:', result.error);
                 this.showErrorSection(result.error);
             }
 
         } catch (error) {
-            console.error('Error:', error);
-            this.showErrorSection('Error interno del servidor');
+            console.error('💥 Error capturado:', error);
+            console.error('Stack trace:', error.stack);
+            this.showErrorSection('Error interno del servidor: ' + error.message);
         }
     }
 
@@ -340,5 +369,6 @@ function procesarOtroArchivo() {
 
 // Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
-    new OCRProcessor();
+    window.ocrProcessor = new OCRProcessor();
+    console.log('✅ OCRProcessor initialized and available as window.ocrProcessor');
 });

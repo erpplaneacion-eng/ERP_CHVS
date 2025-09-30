@@ -4,6 +4,7 @@ Modelos para la aplicación de validación OCR de PDFs diligenciados.
 
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import User
 
 class PDFValidation(models.Model):
     """
@@ -39,6 +40,15 @@ class PDFValidation(models.Model):
     tipo_complemento = models.CharField(
         max_length=20,
         verbose_name="Tipo de Complemento"
+    )
+
+    # Usuario que creó la validación
+    usuario_creador = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Usuario Creador"
     )
 
     # Estado del procesamiento

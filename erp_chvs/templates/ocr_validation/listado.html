@@ -86,7 +86,7 @@
                     <i class="fas fa-check-circle"></i>
                 </div>
                 <div class="stat-content">
-                    <h3>{{ validaciones.filter.estado == 'completado'|length }}</h3>
+                    <h3>{{ validaciones_completadas }}</h3>
                     <p>Completadas</p>
                 </div>
             </div>
@@ -95,7 +95,7 @@
                     <i class="fas fa-exclamation-triangle"></i>
                 </div>
                 <div class="stat-content">
-                    <h3>{{ validaciones.filter.total_errores__gt=0|length }}</h3>
+                    <h3>{{ validaciones_con_errores }}</h3>
                     <p>Con Errores</p>
                 </div>
             </div>
@@ -104,7 +104,7 @@
                     <i class="fas fa-times-circle"></i>
                 </div>
                 <div class="stat-content">
-                    <h3>{{ validaciones.filter.estado == 'error'|length }}</h3>
+                    <h3>{{ validaciones_con_error }}</h3>
                     <p>Con Error</p>
                 </div>
             </div>

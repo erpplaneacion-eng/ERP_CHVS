@@ -23,7 +23,11 @@
         <link rel="stylesheet" href="{% static 'css/modules/nutricion.css' %}">
     {% elif request.resolver_match.app_name == 'facturacion' %}
         <link rel="stylesheet" href="{% static 'css/modules/facturacion.css' %}">
+    {% elif request.resolver_match.app_name == 'ocr_validation' %}
+        <link rel="stylesheet" href="{% static 'css/modules/ocr_validation.css' %}">
     {% endif %}
+
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
 
@@ -127,9 +131,12 @@
         {% endif %}
     {% elif request.resolver_match.app_name == 'facturacion' %}
         <script src="{% static 'js/facturacion/facturacion.js' %}"></script>
+    {% elif request.resolver_match.app_name == 'ocr_validation' %}
+        <script src="{% static 'js/ocr_validation/ocr_processor.js' %}"></script>
     {% endif %}
-    
+
     <!-- Scripts adicionales por página -->
     {% block scripts %}{% endblock %}
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

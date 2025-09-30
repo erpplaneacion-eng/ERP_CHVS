@@ -3,10 +3,6 @@
 
 {% block title %}Validación OCR de PDFs - ERP CHVS{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/modules/ocr_validation.css' %}">
-{% endblock %}
-
 {% block content %}
 <div class="ocr-container">
     <div class="page-header">
@@ -234,8 +230,4 @@
     </div>
     {% endif %}
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script src="{% static 'js/ocr_validation/ocr_processor.js' %}"></script>
 {% endblock %}

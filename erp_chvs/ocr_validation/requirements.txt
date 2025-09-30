@@ -7,16 +7,24 @@ opencv-python>=4.7.0
 
 # Procesamiento de PDFs
 pdf2image>=1.16.0
+PyPDF2>=3.0.0
 
 # Utilidades adicionales
 numpy>=1.24.0
 pandas>=1.5.0
+openpyxl>=3.0.0  # Para exportar a Excel
 
 # Desarrollo y testing
 pytest>=7.0.0
 pytest-django>=4.5.0
 
 # Nota: También se requieren las siguientes dependencias del sistema:
+#
+# WINDOWS:
+# - Tesseract OCR: https://github.com/UB-Mannheim/tesseract/wiki
+# - Poppler: https://github.com/oschwartz10612/poppler-windows/releases
+#
+# LINUX:
 # sudo apt-get install tesseract-ocr
 # sudo apt-get install tesseract-ocr-spa
 # sudo apt-get install poppler-utils

@@ -9,12 +9,14 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.core.files.uploadedfile import UploadedFile
 from django.core.paginator import Paginator
+from django.core.exceptions import PermissionDenied
 import json
 import os
 from datetime import datetime
 from typing import Dict, List, Any
 
 from .models import PDFValidation, ValidationError, OCRConfiguration
+from django.db import models
 from .ocr_service import procesar_pdf_ocr_view, OCRProcessor
 from .exceptions import OCRProcessingException
 
@@ -39,17 +41,37 @@ def procesar_pdf_ocr(request):
     """
     Vista para procesar un PDF con OCR y validación.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
     try:
+        logger.info(f"🔄 Iniciando procesamiento OCR para usuario: {request.user}")
+        print(f"🔄 Iniciando procesamiento OCR para usuario: {request.user}")
+
+        # Verificar método
+        logger.info(f"📨 Método: {request.method}")
+        print(f"📨 Método: {request.method}")
+
+        # Verificar archivos recibidos
+        logger.info(f"📁 Archivos en request.FILES: {list(request.FILES.keys())}")
+        print(f"📁 Archivos en request.FILES: {list(request.FILES.keys())}")
+
         if 'archivo_pdf' not in request.FILES:
+            logger.error("❌ No se encontró archivo PDF en request.FILES")
+            print("❌ No se encontró archivo PDF en request.FILES")
             return JsonResponse({
                 'success': False,
                 'error': 'No se proporcionó archivo PDF'
             })
 
         archivo_pdf = request.FILES['archivo_pdf']
+        logger.info(f"📄 Archivo recibido: {archivo_pdf.name}, tamaño: {archivo_pdf.size}")
+        print(f"📄 Archivo recibido: {archivo_pdf.name}, tamaño: {archivo_pdf.size}")
 
         # Validar que sea un PDF
         if not archivo_pdf.name.lower().endswith('.pdf'):
+            logger.error(f"❌ Archivo no es PDF: {archivo_pdf.name}")
+            print(f"❌ Archivo no es PDF: {archivo_pdf.name}")
             return JsonResponse({
                 'success': False,
                 'error': 'El archivo debe ser un PDF válido'
@@ -57,20 +79,28 @@ def procesar_pdf_ocr(request):
 
         # Validar tamaño (máximo 10MB)
         if archivo_pdf.size > 10 * 1024 * 1024:
+            logger.error(f"❌ Archivo demasiado grande: {archivo_pdf.size}")
+            print(f"❌ Archivo demasiado grande: {archivo_pdf.size}")
             return JsonResponse({
                 'success': False,
                 'error': 'El archivo es demasiado grande (máximo 10MB)'
             })
 
+        logger.info("🔧 Iniciando procesamiento OCR...")
+        print("🔧 Iniciando procesamiento OCR...")
+
         # Procesar PDF con OCR
-        resultado = procesar_pdf_ocr_view(archivo_pdf)
+        resultado = procesar_pdf_ocr_view(archivo_pdf, request.user)
+
+        logger.info(f"✅ Resultado del procesamiento: success={resultado.get('success')}")
+        print(f"✅ Resultado del procesamiento: success={resultado.get('success')}")
 
         if resultado['success']:
             # Obtener datos de la validación creada
             validacion = PDFValidation.objects.get(id=resultado['validacion_id'])
             errores = ValidationError.objects.filter(validacion=validacion)
 
-            return JsonResponse({
+            response_data = {
                 'success': True,
                 'validacion_id': resultado['validacion_id'],
                 'mensaje': 'PDF procesado exitosamente',
@@ -79,17 +109,30 @@ def procesar_pdf_ocr(request):
                 'errores_advertencia': validacion.errores_advertencia,
                 'tiempo_procesamiento': resultado['tiempo_procesamiento'],
                 'redirect_url': f"/ocr_validation/resultados/{resultado['validacion_id']}/"
-            })
+            }
+
+            logger.info(f"✅ Respuesta exitosa: {response_data}")
+            print(f"✅ Respuesta exitosa: {response_data}")
+
+            return JsonResponse(response_data)
         else:
-            return JsonResponse({
+            error_response = {
                 'success': False,
                 'error': resultado['error']
-            })
+            }
+            logger.error(f"❌ Error en procesamiento: {error_response}")
+            print(f"❌ Error en procesamiento: {error_response}")
+            return JsonResponse(error_response)
 
     except Exception as e:
+        error_msg = f'Error interno del servidor: {str(e)}'
+        logger.exception(f"💥 Excepción capturada: {error_msg}")
+        print(f"💥 Excepción capturada: {error_msg}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({
             'success': False,
-            'error': f'Error interno del servidor: {str(e)}'
+            'error': error_msg
         })
 
 
@@ -103,8 +146,7 @@ def resultados_validacion(request, validacion_id):
 
         # Verificar permisos (usuario debe ser el creador o superusuario)
         if validacion.usuario_creador != request.user and not request.user.is_superuser:
-            from django.http import Http403
-            return Http403("No tienes permisos para ver esta validación")
+            raise PermissionDenied("No tienes permisos para ver esta validación")
 
         # Obtener errores agrupados por severidad
         errores = ValidationError.objects.filter(validacion=validacion)
@@ -173,8 +215,16 @@ def listado_validaciones(request):
         sedes_unicas = PDFValidation.objects.values_list('sede_educativa', flat=True).distinct().order_by('sede_educativa')
         meses_unicos = PDFValidation.objects.values_list('mes_atencion', flat=True).distinct().order_by('mes_atencion')
 
+        # Estadísticas básicas para la plantilla
+        validaciones_completadas = PDFValidation.objects.filter(estado='completado').count()
+        validaciones_con_errores = PDFValidation.objects.filter(total_errores__gt=0).count()
+        validaciones_con_error = PDFValidation.objects.filter(estado='error').count()
+
         context = {
             'validaciones': page_obj,
+            'validaciones_completadas': validaciones_completadas,
+            'validaciones_con_errores': validaciones_con_errores,
+            'validaciones_con_error': validaciones_con_error,
             'filtros_aplicados': {
                 'sede': sede_filter,
                 'mes': mes_filter,
@@ -401,27 +451,45 @@ def descargar_reporte_errores(request, validacion_id):
                 'Fecha Creación': error.fecha_creacion.strftime('%Y-%m-%d %H:%M:%S')
             })
 
-        # Crear Excel (simulado por ahora)
-        from io import BytesIO
-        import pandas as pd
+        # Verificar si pandas está disponible
+        try:
+            import pandas as pd
+            from io import BytesIO
 
-        df = pd.DataFrame(datos_errores)
+            df = pd.DataFrame(datos_errores)
 
-        # Crear buffer para Excel
-        excel_buffer = BytesIO()
-        df.to_excel(excel_buffer, index=False, engine='openpyxl')
-        excel_buffer.seek(0)
+            # Crear buffer para Excel
+            excel_buffer = BytesIO()
+            df.to_excel(excel_buffer, index=False, engine='openpyxl')
+            excel_buffer.seek(0)
 
-        # Crear respuesta HTTP
-        response = HttpResponse(
-            excel_buffer.read(),
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
+            # Crear respuesta HTTP
+            response = HttpResponse(
+                excel_buffer.read(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
 
-        filename = f"errores_validacion_{validacion.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            filename = f"errores_validacion_{validacion.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
-        return response
+            return response
+
+        except ImportError:
+            # Si pandas no está disponible, crear CSV simple
+            import csv
+            from io import StringIO
+
+            csv_buffer = StringIO()
+            if datos_errores:
+                writer = csv.DictWriter(csv_buffer, fieldnames=datos_errores[0].keys())
+                writer.writeheader()
+                writer.writerows(datos_errores)
+
+            response = HttpResponse(csv_buffer.getvalue(), content_type='text/csv')
+            filename = f"errores_validacion_{validacion.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+            return response
 
     except Exception as e:
         return HttpResponse(f'Error generando reporte: {str(e)}', status=500)
