@@ -1,0 +1,22 @@
+# Dependencias para la aplicación de Validación OCR
+
+# OCR y procesamiento de imágenes
+pytesseract>=0.3.10
+Pillow>=9.0.0
+opencv-python>=4.7.0
+
+# Procesamiento de PDFs
+pdf2image>=1.16.0
+
+# Utilidades adicionales
+numpy>=1.24.0
+pandas>=1.5.0
+
+# Desarrollo y testing
+pytest>=7.0.0
+pytest-django>=4.5.0
+
+# Nota: También se requieren las siguientes dependencias del sistema:
+# sudo apt-get install tesseract-ocr
+# sudo apt-get install tesseract-ocr-spa
+# sudo apt-get install poppler-utils

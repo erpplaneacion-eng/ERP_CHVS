@@ -32,7 +32,8 @@ urlpatterns = [
     path('principal/', include(('principal.urls', 'principal'), namespace='principal')),
     path('nutricion/', include(('nutricion.urls', 'nutricion'), namespace='nutricion')),
     path('planeacion/', include(('planeacion.urls', 'planeacion'), namespace='planeacion')),
-    path('facturacion/', include(('facturacion.urls', 'facturacion'), namespace='facturacion')),     
+    path('facturacion/', include(('facturacion.urls', 'facturacion'), namespace='facturacion')),
+    path('ocr_validation/', include(('ocr_validation.urls', 'ocr_validation'), namespace='ocr_validation')),
 ]
 
 if settings.DEBUG:

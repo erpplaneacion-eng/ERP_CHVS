@@ -1,0 +1,291 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Historial de Validaciones OCR - ERP CHVS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modules/ocr_validation.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ocr-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-history"></i> Historial de Validaciones OCR</h2>
+            <p>Registro completo de todas las validaciones realizadas</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'ocr_validation:ocr_index' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nueva Validación
+            </a>
+            <a href="{% url 'ocr_validation:estadisticas' %}" class="btn btn-info">
+                <i class="fas fa-chart-bar"></i> Estadísticas
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filters-section">
+        <div class="filters-card">
+            <form method="GET" class="filters-form">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="sede">Filtrar por Sede:</label>
+                        <select name="sede" id="sede" class="form-control">
+                            <option value="">Todas las Sedes</option>
+                            {% for sede in sedes_unicas %}
+                            <option value="{{ sede }}" {% if filtros_aplicados.sede == sede %}selected{% endif %}>{{ sede }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="mes">Filtrar por Mes:</label>
+                        <select name="mes" id="mes" class="form-control">
+                            <option value="">Todos los Meses</option>
+                            {% for mes in meses_unicos %}
+                            <option value="{{ mes }}" {% if filtros_aplicados.mes == mes %}selected{% endif %}>{{ mes }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="estado">Filtrar por Estado:</label>
+                        <select name="estado" id="estado" class="form-control">
+                            <option value="">Todos los Estados</option>
+                            {% for estado_value, estado_label in estados_disponibles %}
+                            <option value="{{ estado_value }}" {% if filtros_aplicados.estado == estado_value %}selected{% endif %}>{{ estado_label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter"></i> Aplicar Filtros
+                        </button>
+                        <a href="{% url 'ocr_validation:listado' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Limpiar
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Estadísticas Rápidas -->
+    <div class="quick-stats">
+        <div class="stats-card">
+            <div class="stat-item">
+                <div class="stat-icon">
+                    <i class="fas fa-file-pdf"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ page_obj.paginator.count }}</h3>
+                    <p>Total Validaciones</p>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon success">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ validaciones.filter.estado == 'completado'|length }}</h3>
+                    <p>Completadas</p>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ validaciones.filter.total_errores__gt=0|length }}</h3>
+                    <p>Con Errores</p>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon error">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ validaciones.filter.estado == 'error'|length }}</h3>
+                    <p>Con Error</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Validaciones -->
+    <div class="validations-table-section">
+        <div class="table-card">
+            <div class="table-header">
+                <h4><i class="fas fa-table"></i> Validaciones Realizadas</h4>
+            </div>
+            <div class="table-content">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Archivo</th>
+                                <th>Sede Educativa</th>
+                                <th>Período</th>
+                                <th>Estado</th>
+                                <th>Errores</th>
+                                <th>Fecha Procesamiento</th>
+                                <th>Tiempo</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for validacion in validaciones %}
+                            <tr>
+                                <td>
+                                    <div class="file-info">
+                                        <i class="fas fa-file-pdf"></i>
+                                        <div class="file-details">
+                                            <strong>{{ validacion.archivo_nombre }}</strong>
+                                            <br>
+                                            <small>{{ validacion.tipo_complemento }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ validacion.sede_educativa }}</td>
+                                <td>
+                                    <span class="badge badge-info">{{ validacion.mes_atencion }} {{ validacion.ano }}</span>
+                                </td>
+                                <td>
+                                    {% if validacion.estado == 'completado' %}
+                                        <span class="badge badge-success">Completado</span>
+                                    {% elif validacion.estado == 'procesando' %}
+                                        <span class="badge badge-warning">Procesando</span>
+                                    {% else %}
+                                        <span class="badge badge-danger">Error</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if validacion.total_errores > 0 %}
+                                        <div class="error-indicators">
+                                            {% if validacion.errores_criticos > 0 %}
+                                            <span class="badge badge-danger" title="{{ validacion.errores_criticos }} errores críticos">
+                                                {{ validacion.errores_criticos }} críticos
+                                            </span>
+                                            {% endif %}
+                                            {% if validacion.errores_advertencia > 0 %}
+                                            <span class="badge badge-warning" title="{{ validacion.errores_advertencia }} advertencias">
+                                                {{ validacion.errores_advertencia }} advertencias
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="badge badge-success">Sin errores</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ validacion.fecha_procesamiento|date:"d/m/Y H:i" }}</td>
+                                <td>
+                                    {% if validacion.tiempo_procesamiento %}
+                                    {{ validacion.tiempo_procesamiento|floatformat:1 }}s
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{% url 'ocr_validation:resultados' validacion.id %}"
+                                           class="btn btn-sm btn-primary" title="Ver detalles">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if validacion.estado == 'error' %}
+                                        <button class="btn btn-sm btn-warning" onclick="reintentarValidacion({{ validacion.id }})"
+                                                title="Reintentar procesamiento">
+                                            <i class="fas fa-redo"></i>
+                                        </button>
+                                        {% endif %}
+                                        <a href="{% url 'ocr_validation:descargar_reporte' validacion.id %}"
+                                           class="btn btn-sm btn-success" title="Descargar reporte">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center">
+                                    <i class="fas fa-inbox"></i>
+                                    No hay validaciones registradas
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Paginación -->
+    {% if validaciones.has_other_pages %}
+    <div class="pagination-section">
+        <nav aria-label="Paginación de validaciones">
+            <ul class="pagination">
+                {% if validaciones.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}{% if filtros_aplicados.mes %}&mes={{ filtros_aplicados.mes }}{% endif %}{% if filtros_aplicados.estado %}&estado={{ filtros_aplicados.estado }}{% endif %}">
+                            Primera
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ validaciones.previous_page_number }}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}{% if filtros_aplicados.mes %}&mes={{ filtros_aplicados.mes }}{% endif %}{% if filtros_aplicados.estado %}&estado={{ filtros_aplicados.estado }}{% endif %}">
+                            Anterior
+                        </a>
+                    </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        Página {{ validaciones.number }} de {{ validaciones.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if validaciones.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ validaciones.next_page_number }}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}{% if filtros_aplicados.mes %}&mes={{ filtros_aplicados.mes }}{% endif %}{% if filtros_aplicados.estado %}&estado={{ filtros_aplicados.estado }}{% endif %}">
+                            Siguiente
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ validaciones.paginator.num_pages }}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}{% if filtros_aplicados.mes %}&mes={{ filtros_aplicados.mes }}{% endif %}{% if filtros_aplicados.estado %}&estado={{ filtros_aplicados.estado }}{% endif %}">
+                            Última
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function reintentarValidacion(validacionId) {
+    if (confirm('¿Está seguro de que desea reintentar el procesamiento de esta validación?')) {
+        fetch(`/ocr_validation/reintentar/${validacionId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Procesamiento reintentado exitosamente');
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error interno del servidor');
+        });
+    }
+}
+</script>
+{% endblock %}

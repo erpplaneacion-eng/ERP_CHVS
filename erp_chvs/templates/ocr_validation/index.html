@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Validación OCR de PDFs - ERP CHVS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modules/ocr_validation.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ocr-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-file-pdf"></i> Validación OCR de PDFs</h2>
+            <p>Sistema automático de validación de documentos diligenciados manualmente</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'facturacion:facturacion_index' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver a Facturación
+            </a>
+            <a href="{% url 'ocr_validation:listado' %}" class="btn btn-info">
+                <i class="fas fa-list"></i> Ver Historial
+            </a>
+        </div>
+    </div>
+
+    <!-- Información del Sistema -->
+    <div class="system-info-card">
+        <div class="info-header">
+            <h3><i class="fas fa-info-circle"></i> Información del Sistema</h3>
+        </div>
+        <div class="info-content">
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="info-text">
+                        <h4>Tesseract OCR</h4>
+                        <p>Procesamiento automático de texto en imágenes</p>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <div class="info-text">
+                        <h4>Validación Inteligente</h4>
+                        <p>Detección automática de errores en campos manuales</p>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-table"></i>
+                    </div>
+                    <div class="info-text">
+                        <h4>Reportes Detallados</h4>
+                        <p>Tabla completa de errores por sede educativa</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Área de Carga de PDF -->
+    <div class="upload-section">
+        <div class="upload-card">
+            <div class="upload-header">
+                <h3><i class="fas fa-upload"></i> Cargar PDF para Validación</h3>
+                <p>Sube un PDF diligenciado manualmente para análisis automático</p>
+            </div>
+
+            <form id="pdfUploadForm" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label for="archivo_pdf" class="form-label">
+                        <i class="fas fa-file-pdf"></i> Seleccionar Archivo PDF:
+                    </label>
+                    <div class="file-input-wrapper">
+                        <input type="file" class="form-control" name="archivo_pdf" id="archivo_pdf"
+                               accept=".pdf" required>
+                        <div class="file-input-feedback"></div>
+                    </div>
+                    <small class="form-text text-muted">
+                        Solo archivos PDF. Tamaño máximo: 10MB
+                    </small>
+                </div>
+
+                <div class="upload-preview" id="uploadPreview" style="display: none;">
+                    <h5><i class="fas fa-eye"></i> Información del Archivo</h5>
+                    <div class="preview-content">
+                        <div class="preview-item">
+                            <strong>Nombre:</strong> <span id="preview-nombre"></span>
+                        </div>
+                        <div class="preview-item">
+                            <strong>Tamaño:</strong> <span id="preview-tamano"></span>
+                        </div>
+                        <div class="preview-item">
+                            <strong>Sede Detectada:</strong> <span id="preview-sede"></span>
+                        </div>
+                        <div class="preview-item">
+                            <strong>Mes:</strong> <span id="preview-mes"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="upload-actions">
+                    <button type="submit" class="btn btn-primary btn-lg" id="procesarBtn">
+                        <i class="fas fa-cogs"></i> Procesar con OCR
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="limpiarFormulario()">
+                        <i class="fas fa-trash"></i> Limpiar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Área de Procesamiento -->
+    <div class="processing-section" id="processingSection" style="display: none;">
+        <div class="processing-card">
+            <div class="processing-header">
+                <h4><i class="fas fa-spinner fa-spin"></i> Procesando PDF...</h4>
+                <div class="progress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated"
+                         role="progressbar" style="width: 0%" id="progressBar">
+                        0%
+                    </div>
+                </div>
+            </div>
+            <div class="processing-status" id="processingStatus">
+                <p>Iniciando procesamiento OCR...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Área de Resultados -->
+    <div class="results-section" id="resultsSection" style="display: none;">
+        <div class="results-card">
+            <div class="results-header">
+                <h4><i class="fas fa-check-circle"></i> Procesamiento Completado</h4>
+            </div>
+            <div class="results-content">
+                <div class="results-summary">
+                    <div class="summary-item">
+                        <div class="summary-icon success">
+                            <i class="fas fa-file-pdf"></i>
+                        </div>
+                        <div class="summary-text">
+                            <h5>Archivo Procesado</h5>
+                            <p id="summary-archivo"></p>
+                        </div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-icon" id="summary-icon-errores">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="summary-text">
+                            <h5>Errores Encontrados</h5>
+                            <p id="summary-errores"></p>
+                        </div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="summary-text">
+                            <h5>Tiempo de Procesamiento</h5>
+                            <p id="summary-tiempo"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="results-actions">
+                    <a href="#" class="btn btn-primary" id="verDetallesBtn">
+                        <i class="fas fa-eye"></i> Ver Detalles Completos
+                    </a>
+                    <button class="btn btn-success" onclick="procesarOtroArchivo()">
+                        <i class="fas fa-plus"></i> Procesar Otro Archivo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Área de Errores -->
+    <div class="errors-section" id="errorsSection" style="display: none;">
+        <div class="errors-card">
+            <div class="errors-header">
+                <h4><i class="fas fa-exclamation-triangle"></i> Errores Detectados</h4>
+            </div>
+            <div class="errors-content">
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-info-circle"></i> Campos que se Validan</h6>
+                    <p>El sistema valida automáticamente los siguientes campos que deben ser diligenciados manualmente:</p>
+                    <ul>
+                        <li><strong>Raciones Diarias/Mensuales Entregadas:</strong> Validación numérica y lógica</li>
+                        <li><strong>Firmas:</strong> Detección de presencia de firmas legibles</li>
+                        <li><strong>Casillas de Asistencia:</strong> Detección de posición correcta de "X"</li>
+                        <li><strong>Totales:</strong> Verificación de cálculos matemáticos</li>
+                    </ul>
+                </div>
+
+                <div class="errors-preview" id="errorsPreview">
+                    <!-- Se llena dinámicamente con errores encontrados -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuración OCR -->
+    {% if configuracion_ocr %}
+    <div class="config-section">
+        <div class="config-card">
+            <div class="config-header">
+                <h5><i class="fas fa-cog"></i> Configuración OCR Actual</h5>
+            </div>
+            <div class="config-content">
+                <div class="config-item">
+                    <span class="config-label">Confianza Mínima:</span>
+                    <span class="config-value">{{ configuracion_ocr.confianza_minima }}%</span>
+                </div>
+                <div class="config-item">
+                    <span class="config-label">Tesseract Config:</span>
+                    <span class="config-value">{{ configuracion_ocr.tesseract_config }}</span>
+                </div>
+                <div class="config-item">
+                    <span class="config-label">Detectar Firmas:</span>
+                    <span class="config-value">{% if configuracion_ocr.detectar_firmas %}Sí{% else %}No{% endif %}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/ocr_validation/ocr_processor.js' %}"></script>
+{% endblock %}

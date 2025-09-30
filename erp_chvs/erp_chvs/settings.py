@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'nutricion',
     'planeacion',
     'facturacion',
+    'ocr_validation',
 ]
 
 MIDDLEWARE = [
