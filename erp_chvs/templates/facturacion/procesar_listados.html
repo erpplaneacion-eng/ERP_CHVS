@@ -45,7 +45,7 @@
             {% endif %}
         </p>
 
-        <form method="post" enctype="multipart/form-data">
+        <form method="post" enctype="multipart/form-data" id="form-etapa-1" {% if etapa_actual >= 2 %}style="display: none;"{% endif %}>
             {% csrf_token %}
             <input type="hidden" name="etapa" value="1">
 
@@ -100,15 +100,16 @@
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-success btn-etapa">
-                <i class="fas fa-eye"></i> 
-                {% if etapa_actual >= 2 %}
-                    Procesar Nuevo Archivo
-                {% else %}
-                    Procesar y Visualizar Datos
-                {% endif %}
+            <button type="submit" class="btn btn-success btn-etapa" {% if etapa_actual >= 2 %}style="display: none;"{% endif %}>
+                <i class="fas fa-eye"></i> Procesar y Visualizar Datos
             </button>
         </form>
+
+        {% if etapa_actual >= 2 %}
+        <a href="{% url 'facturacion:procesar_listados' %}" class="btn btn-success btn-etapa">
+            <i class="fas fa-plus"></i> Procesar Nuevo Archivo
+        </a>
+        {% endif %}
     </div>
 
     <!-- RESULTADOS DE LA ETAPA 1 -->

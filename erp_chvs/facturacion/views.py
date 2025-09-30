@@ -222,18 +222,16 @@ def procesar_listados_view(request):
                         resultado['advertencia_bd'] = resultado_persistencia.get('error')
                 else:
                     # Fallback: reprocesar si no hay DataFrame (no debería pasar)
-                    FacturacionLogger.log_procesamiento_error(
-                        archivo_name, "DataFrame no encontrado en sesión, reprocesando..."
-                    )
+                    FacturacionLogger.log_procesamiento_error(archivo_name, "DataFrame no encontrado en sesión, reprocesando...")
 
-                    # Recrear archivo y reprocesar
-                    archivo_contenido_b64 = datos_etapa_1['archivo_contenido_b64']
-                    archivo_contenido = base64.b64decode(archivo_contenido_b64)
-                    archivo_recreado = SimpleUploadedFile(
-                        archivo_name,
-                        archivo_contenido,
-                        content_type=datos_etapa_1['archivo_content_type']
-                    )
+                    try:
+                        archivo_recreado = _recrear_archivo_desde_sesion(datos_etapa_1)
+                    except ValueError as e:
+                        contexto['error'] = str(e)
+                        # Limpiar sesión para evitar bucles de error
+                        if 'datos_etapa_1' in request.session:
+                            del request.session['datos_etapa_1']
+                        return render(request, 'facturacion/procesar_listados.html', contexto)
 
                     resultado = procesamiento_service.procesar_y_guardar_excel(
                         archivo_recreado,
@@ -267,6 +265,28 @@ def procesar_listados_view(request):
         FacturacionLogger.log_procesamiento_error("procesar_listados_view", str(e))
         contexto['error'] = f"Error al procesar la solicitud: {str(e)}"
         return render(request, 'facturacion/procesar_listados.html', contexto)
+
+def _recrear_archivo_desde_sesion(datos_sesion: dict) -> SimpleUploadedFile:
+    """
+    Reconstruye un archivo SimpleUploadedFile desde los datos guardados en la sesión.
+    
+    Args:
+        datos_sesion: Diccionario con los datos del archivo de la sesión.
+        
+    Returns:
+        SimpleUploadedFile: El archivo reconstruido.
+        
+    Raises:
+        ValueError: Si faltan datos clave en la sesión.
+    """
+    archivo_contenido_b64 = datos_sesion.get('archivo_contenido_b64')
+    archivo_name = datos_sesion.get('archivo_name')
+    archivo_content_type = datos_sesion.get('archivo_content_type')
+
+    if not all([archivo_contenido_b64, archivo_name, archivo_content_type]):
+        raise ValueError("No se pudo reconstruir el archivo desde la sesión. Faltan datos.")
+
+    return SimpleUploadedFile(archivo_name, base64.b64decode(archivo_contenido_b64), content_type=archivo_content_type)
 
 @login_required
 @require_http_methods(["POST"])

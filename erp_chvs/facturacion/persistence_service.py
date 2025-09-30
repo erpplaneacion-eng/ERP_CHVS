@@ -41,7 +41,7 @@ class PersistenceService:
             for index, row in df.iterrows():
                 try:
                     # Generar ID único para el listado
-                    id_listado = PersistenceService._generar_id_listado(row)
+                    id_listado = PersistenceService._generar_id_listado(row, index)
 
                     # Crear objeto ListadosFocalizacion
                     registro = PersistenceService._crear_registro_listado(row, id_listado)
@@ -142,30 +142,31 @@ class PersistenceService:
             raise ValueError(f"Error generando ID único: {str(e)}")
 
     @staticmethod
-    def _generar_id_listado(row: pd.Series) -> str:
+    def _generar_id_listado(row: pd.Series, index: int) -> str:
         """
-        Genera un ID único para el listado usando UUID para garantizar unicidad.
+        Genera un ID único para el listado.
         Método interno para procesamiento de DataFrames.
 
         Args:
             row: Fila del DataFrame con los datos
+            index: Índice de la fila en el DataFrame.
 
         Returns:
             str: ID único generado
         """
-        # Estrategia: usar UUID para garantizar unicidad completa
-        doc_clean = str(row.get('DOC', row.get('doc', ''))).replace(' ', '').replace('-', '')
+        # Estrategia: usar timestamp + índice para unicidad en el lote
         focalizacion = str(row.get('focalizacion', ''))
         ano = str(row.get('ANO', row.get('ano', '')))
+        timestamp_ms = int(datetime.now().timestamp() * 1000)
 
-        # Usar UUID4 + información del registro para garantizar unicidad
-        unique_id = str(uuid.uuid4())[:12]  # 12 caracteres únicos
+        # Sufijo único basado en timestamp e índice
+        unique_suffix = f"{timestamp_ms}_{index}"
 
         # Prefijo con año y focalización para identificación
         prefix = f"{ano}{focalizacion}"
 
-        # ID final: año + focalización + UUID único
-        id_final = f"{prefix}_{unique_id}"
+        # ID final: año + focalización + sufijo único
+        id_final = f"{prefix}_{unique_suffix}"
 
         # Truncar si es muy largo (máximo 50 caracteres según modelo)
         if len(id_final) > 50:
