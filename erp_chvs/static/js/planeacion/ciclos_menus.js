@@ -4,14 +4,6 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // ✅ DIAGNÓSTICO INICIAL PARA DEBUGGING
-    console.log('🔍 Diagnóstico inicial de ciclos_menus.js:');
-    console.log('- ERPUtils definido:', typeof ERPUtils !== 'undefined');
-    console.log('- showConfirm disponible:', typeof ERPUtils?.showConfirm === 'function');
-    console.log('- showAlert disponible:', typeof ERPUtils?.showAlert === 'function');
-    console.log('- showNotification disponible:', typeof ERPUtils?.showNotification === 'function');
-    console.log('- Config cargada:', typeof window.CICLOS_MENUS_CONFIG !== 'undefined');
-
     // Obtener elementos del DOM
     const btnBuscar = document.getElementById('btn-buscar');
     const btnInicializar = document.getElementById('btn-inicializar');
@@ -23,10 +15,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Configuración desde el template de Django
     const config = window.CICLOS_MENUS_CONFIG || {};
 
-    // ✅ VERIFICACIÓN ADICIONAL: Asegurar que ERPUtils esté completamente disponible
+    // Verificación y configuración de ERPUtils
     if (typeof ERPUtils === 'undefined') {
-        console.error('❌ ERPUtils no está definido después de cargar utils.js');
-        // Crear objeto básico como fallback
         window.ERPUtils = {
             showAlert: function(message, type) {
                 alert(message);
@@ -39,15 +29,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         };
     } else {
-        // Asegurar que todas las funciones críticas estén disponibles
         if (typeof ERPUtils.showConfirm !== 'function') {
-            console.warn('⚠️ ERPUtils.showConfirm no disponible, creando fallback');
             ERPUtils.showConfirm = function(title, text, icon) {
                 return Promise.resolve(confirm(`${title}\n\n${text}`));
             };
         }
         if (typeof ERPUtils.showNotification !== 'function') {
-            console.warn('⚠️ ERPUtils.showNotification no disponible, creando fallback');
             ERPUtils.showNotification = function(message, type) {
                 console.log(`NOTIFICATION [${type}]: ${message}`);
             };
@@ -91,13 +78,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // =================================================================
-    // FUNCIÓN: BUSCAR DATOS EXISTENTES
-    // =================================================================
-
-    /**
-     * Busca datos de planificación existentes sin modificarlos.
-     */
     async function buscarDatos(etc, focalizacion, ano) {
         mostrarCargando();
 
@@ -133,7 +113,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
             }
         } catch (error) {
-            console.error('Error al buscar datos:', error);
             mostrarAlertaSegura('Error de conexión al servidor', 'error');
             resultsContainer.innerHTML = `
                 <div class="no-data">
@@ -144,17 +123,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // =================================================================
-    // FUNCIÓN: INICIALIZAR CICLOS DE MENÚS
-    // =================================================================
-
-    /**
-     * Función asíncrona para inicializar o actualizar los ciclos de menús.
-     * @param {string} etc - El ETC seleccionado.
-     * @param {string} focalizacion - La focalización seleccionada.
-     * @param {string} ano - El año seleccionado.
-     * @param {boolean} forzar - Si se debe forzar la actualización sobre datos existentes.
-     */
     async function inicializarCiclos(etc, focalizacion, ano, forzar) {
         // Mostrar indicador de carga
         btnInicializar.disabled = true;
@@ -184,17 +152,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     renderizarTabla(data.datos);
 
                 } else if (data.requiere_confirmacion) {
-                    // ✅ VERIFICACIÓN DEFENSIVA ANTES DE USAR ERPUtils.showConfirm
-                    if (typeof ERPUtils === 'undefined') {
-                        console.error('ERPUtils no está definido. Usando fallback.');
-                        mostrarAlertaSegura('Error: ERPUtils no disponible. Usando confirm nativo.', 'error');
-                        await mostrarConfirmacionNativa(data, etc, focalizacion, ano);
-                        return;
-                    }
-    
-                    if (typeof ERPUtils.showConfirm !== 'function') {
-                        console.error('ERPUtils.showConfirm no es una función. Usando fallback.');
-                        mostrarAlertaSegura('Error: showConfirm no disponible. Usando confirm nativo.', 'error');
+                    if (typeof ERPUtils === 'undefined' || typeof ERPUtils.showConfirm !== 'function') {
                         await mostrarConfirmacionNativa(data, etc, focalizacion, ano);
                         return;
                     }
@@ -225,7 +183,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
         } catch (error) {
-            console.error('Error de red o al procesar la petición:', error);
             mostrarAlertaSegura('Error de red. Por favor, intente de nuevo.', 'error');
         } finally {
             // Reactivar botón
@@ -234,13 +191,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // =================================================================
-    // FUNCIÓN: RENDERIZAR TABLA
-    // =================================================================
-
-    /**
-     * Renderiza los resultados en tablas por sede con acordeón.
-     */
     function renderizarTabla(sedes) {
         if (!sedes || sedes.length === 0) {
             resultsContainer.innerHTML = `
@@ -349,13 +299,6 @@ document.addEventListener('DOMContentLoaded', function() {
         agregarListenersEdicion();
     }
 
-    // =================================================================
-    // FUNCIÓN: ACORDEÓN
-    // =================================================================
-
-    /**
-     * Agrega event listeners para el acordeón de sedes.
-     */
     function agregarListenersAcordeon() {
         const headers = document.querySelectorAll('.sede-header');
 
@@ -370,13 +313,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // =================================================================
-    // FUNCIÓN: EDICIÓN INLINE
-    // =================================================================
-
-    /**
-     * Agrega event listeners a las celdas editables.
-     */
     function agregarListenersEdicion() {
         const editableCells = document.querySelectorAll('.editable-cell');
 
@@ -389,9 +325,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    /**
-     * Convierte una celda en editable.
-     */
     function hacerEditable(cell) {
         if (cell.querySelector('input')) {
             return; // Ya está en modo edición
@@ -459,7 +392,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     cell.innerHTML = `<span class="value">${currentValue}</span><i class="fas fa-edit edit-icon"></i>`;
                 }
             } catch (error) {
-                console.error('Error:', error);
                 mostrarAlertaSegura('Error de conexión al servidor', 'error');
                 cell.innerHTML = `<span class="value">${currentValue}</span><i class="fas fa-edit edit-icon"></i>`;
             }
@@ -475,9 +407,6 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('blur', saveValue);
     }
 
-    /**
-     * Actualiza los totales de una tabla después de editar.
-     */
     function actualizarTotales(table) {
         const rows = table.querySelectorAll('tbody tr:not(.total-row)');
         let totalCapAm = 0;
@@ -526,13 +455,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // =================================================================
-    // FUNCIÓN: MOSTRAR CARGANDO
-    // =================================================================
-
-    /**
-     * Muestra un indicador de carga.
-     */
     function mostrarCargando() {
         resultsContainer.innerHTML = `
             <div class="loading-spinner">
@@ -542,15 +464,7 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
     }
 
-    // =================================================================
-    // FUNCIONES AUXILIARES DE FALLBACK
-    // =================================================================
 
-    /**
-     * Función auxiliar segura para mostrar alertas
-     * @param {string} message - Mensaje a mostrar
-     * @param {string} type - Tipo de alerta
-     */
     function mostrarAlertaSegura(message, type = 'info') {
         if (typeof ERPUtils !== 'undefined' && typeof ERPUtils.showAlert === 'function') {
             ERPUtils.showAlert(message, type);
@@ -559,11 +473,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    /**
-     * Función auxiliar segura para mostrar notificaciones
-     * @param {string} message - Mensaje a mostrar
-     * @param {string} type - Tipo de notificación
-     */
     function mostrarNotificacionSegura(message, type = 'info') {
         if (typeof ERPUtils !== 'undefined' && typeof ERPUtils.showNotification === 'function') {
             ERPUtils.showNotification(message, type);
@@ -572,29 +481,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    /**
-     * Función auxiliar segura para mostrar confirmaciones
-     * @param {string} title - Título del diálogo
-     * @param {string} text - Texto del diálogo
-     * @param {string} icon - Icono del diálogo
-     * @returns {Promise<boolean>} - Resultado de la confirmación
-     */
     function mostrarConfirmacionSegura(title, text, icon = 'warning') {
         if (typeof ERPUtils !== 'undefined' && typeof ERPUtils.showConfirm === 'function') {
             return ERPUtils.showConfirm(title, text, icon);
         } else {
-            // Usar modal HTML personalizado más llamativo
             return mostrarModalConfirmacionPersonalizado(title, text, icon);
         }
     }
 
-    /**
-     * Crea y muestra un modal de confirmación personalizado con HTML
-     * @param {string} title - Título del modal
-     * @param {string} message - Mensaje del modal
-     * @param {string} type - Tipo de confirmación (warning, error, info, success)
-     * @returns {Promise<boolean>} - Resultado de la confirmación
-     */
     function mostrarModalConfirmacionPersonalizado(title, message, type = 'warning') {
         return new Promise((resolve) => {
             // Crear modal si no existe
@@ -620,9 +514,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `;
                 document.body.appendChild(modal);
-
-                // Agregar estilos CSS
-                agregarEstilosModalPersonalizado();
 
                 // Event listeners
                 modal.querySelector('.custom-modal-close').addEventListener('click', () => {
@@ -666,11 +557,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    /**
-     * Obtiene la configuración visual según el tipo de modal
-     * @param {string} type - Tipo de modal
-     * @returns {Object} - Configuración de colores e íconos
-     */
     function getConfiguracionModal(type) {
         const configs = {
             warning: {
@@ -706,12 +592,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return configs[type] || configs.warning;
     }
 
-    /**
-     * Cierra el modal personalizado y resuelve la promesa
-     * @param {HTMLElement} modal - Elemento modal
-     * @param {boolean} result - Resultado de la confirmación
-     * @param {Function} resolve - Función resolve de la promesa
-     */
     function cerrarModalPersonalizado(modal, result, resolve) {
         modal.style.display = 'none';
         modal.querySelector('.custom-modal-content').style.animation = 'modalSlideOut 0.3s ease-in';
@@ -720,189 +600,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300);
     }
 
-    /**
-     * Agrega estilos CSS para el modal personalizado
-     */
-    function agregarEstilosModalPersonalizado() {
-        if (document.getElementById('custom-modal-styles')) return;
 
-        const style = document.createElement('style');
-        style.id = 'custom-modal-styles';
-        style.textContent = `
-            .custom-modal-overlay {
-                display: none;
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.7);
-                z-index: 10000;
-                align-items: center;
-                justify-content: center;
-                backdrop-filter: blur(2px);
-            }
-
-            .custom-modal-content {
-                background: white;
-                border-radius: 15px;
-                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-                max-width: 500px;
-                width: 90%;
-                max-height: 80vh;
-                overflow: hidden;
-                transform: scale(0.9);
-                opacity: 0;
-            }
-
-            .custom-modal-header {
-                padding: 20px 25px;
-                color: white;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                font-weight: 600;
-                font-size: 18px;
-            }
-
-            .custom-modal-close {
-                background: none;
-                border: none;
-                color: white;
-                font-size: 28px;
-                cursor: pointer;
-                padding: 0;
-                width: 35px;
-                height: 35px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 50%;
-                transition: background-color 0.3s;
-            }
-
-            .custom-modal-close:hover {
-                background-color: rgba(255, 255, 255, 0.2);
-            }
-
-            .custom-modal-body {
-                padding: 25px;
-                text-align: center;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 15px;
-            }
-
-            .custom-modal-icon {
-                opacity: 0.8;
-            }
-
-            .custom-modal-icon i {
-                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-            }
-
-            .custom-modal-message {
-                color: #2c3e50;
-                font-size: 16px;
-                line-height: 1.5;
-                margin: 0;
-                text-align: center;
-            }
-
-            .custom-modal-footer {
-                padding: 20px 25px;
-                display: flex;
-                gap: 15px;
-                justify-content: flex-end;
-                background-color: #f8f9fa;
-                border-top: 1px solid #e9ecef;
-            }
-
-            .custom-btn {
-                padding: 12px 25px;
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-                font-size: 14px;
-                font-weight: 600;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                transition: all 0.3s ease;
-                min-width: 100px;
-                justify-content: center;
-            }
-
-            .custom-btn-cancel {
-                background-color: #6c757d;
-                color: white;
-            }
-
-            .custom-btn-cancel:hover {
-                background-color: #5a6268;
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
-            }
-
-            .custom-btn-confirm {
-                color: white;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            }
-
-            .custom-btn-confirm:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-            }
-
-            @keyframes modalSlideIn {
-                from {
-                    transform: scale(0.8);
-                    opacity: 0;
-                }
-                to {
-                    transform: scale(1);
-                    opacity: 1;
-                }
-            }
-
-            @keyframes modalSlideOut {
-                from {
-                    transform: scale(1);
-                    opacity: 1;
-                }
-                to {
-                    transform: scale(0.8);
-                    opacity: 0;
-                }
-            }
-
-            /* Responsive */
-            @media (max-width: 768px) {
-                .custom-modal-content {
-                    width: 95%;
-                    margin: 20px;
-                }
-
-                .custom-modal-footer {
-                    flex-direction: column;
-                }
-
-                .custom-btn {
-                    width: 100%;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    /**
-     * Función auxiliar para mostrar confirmaciones cuando ERPUtils.showConfirm no está disponible.
-     * @param {Object} data - Datos de respuesta del servidor
-     * @param {string} etc - ETC para contexto
-     * @param {string} focalizacion - Focalización para contexto
-     * @param {string} ano - Año para contexto
-     */
     async function mostrarConfirmacionNativa(data, etc, focalizacion, ano) {
         const titulo = '⚠️ Confirmación Requerida';
         const mensaje = `
@@ -926,10 +624,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const userConfirmed = await mostrarModalConfirmacionPersonalizado(titulo, mensaje, 'warning');
 
         if (userConfirmed) {
-            console.log('✅ Usuario confirmó vía modal personalizado - procediendo con actualización forzada');
             inicializarCiclos(etc, focalizacion, ano, true);
         } else {
-            console.log('❌ Usuario canceló operación - manteniendo registros existentes');
             mostrarNotificacionSegura('Operación cancelada. Los registros existentes se mantienen intactos.', 'info');
             buscarDatos(etc, focalizacion, ano);
         }
