@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import InstitucionesEducativas, SedesEducativas, Programa
+from .models import InstitucionesEducativas, SedesEducativas, Programa, PlanificacionRaciones
 
 
 @admin.register(InstitucionesEducativas)
@@ -57,3 +57,28 @@ class ProgramaAdmin(admin.ModelAdmin):
             'fields': ('estado', 'imagen')
         }),
     )
+
+
+@admin.register(PlanificacionRaciones)
+class PlanificacionRacionesAdmin(admin.ModelAdmin):
+    list_display = ('sede_educativa', 'etc', 'focalizacion', 'nivel_escolar', 'ano', 'cap_am', 'cap_pm', 'almuerzo_ju', 'refuerzo', 'total_raciones')
+    list_filter = ('etc', 'focalizacion', 'ano', 'nivel_escolar')
+    search_fields = ('sede_educativa__nombre_sede_educativa', 'etc__nombre_municipio', 'focalizacion')
+    list_per_page = 25
+    ordering = ('etc__nombre_municipio', 'focalizacion', 'sede_educativa__nombre_sede_educativa')
+
+    fieldsets = (
+        ('Ubicación y Focalización', {
+            'fields': ('etc', 'focalizacion', 'sede_educativa', 'nivel_escolar', 'ano')
+        }),
+        ('Cantidades de Raciones', {
+            'fields': ('cap_am', 'cap_pm', 'almuerzo_ju', 'refuerzo')
+        }),
+    )
+
+    readonly_fields = ('fecha_creacion', 'fecha_actualizacion')
+
+    def total_raciones(self, obj):
+        """Muestra el total de raciones en el admin."""
+        return obj.total_raciones()
+    total_raciones.short_description = 'Total Raciones'

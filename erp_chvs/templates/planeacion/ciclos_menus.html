@@ -1,0 +1,319 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Planificar Ciclos de Menús{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filters-container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    .filter-group {
+        display: flex;
+        gap: 15px;
+        align-items: end;
+        flex-wrap: wrap;
+    }
+
+    .filter-field {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .filter-field label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .filter-field select,
+    .filter-field input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.3s;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.3s;
+    }
+
+    .btn-success:hover {
+        background-color: #218838;
+    }
+
+    .results-container {
+        margin-top: 20px;
+    }
+
+    .sede-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 15px;
+        overflow: hidden;
+    }
+
+    .sede-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 20px;
+        font-size: 18px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background 0.3s ease;
+    }
+
+    .sede-header:hover {
+        background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
+    }
+
+    .sede-header .sede-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .sede-header .sede-summary {
+        font-size: 14px;
+        font-weight: 400;
+        opacity: 0.9;
+        margin-left: 10px;
+    }
+
+    .sede-header .toggle-icon {
+        font-size: 16px;
+        transition: transform 0.3s ease;
+    }
+
+    .sede-header.collapsed .toggle-icon {
+        transform: rotate(-90deg);
+    }
+
+    .sede-body {
+        max-height: 1000px;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+    }
+
+    .sede-body.collapsed {
+        max-height: 0;
+    }
+
+    .sede-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .sede-table th,
+    .sede-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+
+    .sede-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #495057;
+        font-size: 13px;
+        text-transform: uppercase;
+    }
+
+    .sede-table td {
+        font-size: 14px;
+    }
+
+    .sede-table tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .editable-cell {
+        position: relative;
+        cursor: pointer;
+    }
+
+    .editable-cell input {
+        width: 60px;
+        padding: 4px 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        text-align: center;
+    }
+
+    .editable-cell .edit-icon {
+        display: inline-block;
+        margin-left: 5px;
+        color: #007bff;
+        font-size: 12px;
+        opacity: 0.7;
+    }
+
+    .editable-cell:hover .edit-icon {
+        opacity: 1;
+    }
+
+    .total-row {
+        background-color: #e9ecef !important;
+        font-weight: 600;
+    }
+
+    .alert {
+        padding: 12px 20px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+
+    .alert-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+    }
+
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .alert-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .loading-spinner {
+        text-align: center;
+        padding: 40px;
+        font-size: 16px;
+        color: #666;
+    }
+
+    .loading-spinner i {
+        font-size: 32px;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .no-data {
+        text-align: center;
+        padding: 40px;
+        color: #999;
+        font-size: 16px;
+    }
+
+    .grados-cell {
+        font-size: 12px;
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Planificar Ciclos de Menús</h1>
+    <p>Gestiona las cantidades de raciones por sede educativa, focalización y nivel escolar.</p>
+
+    <!-- Filtros -->
+    <div class="filters-container">
+        <div class="filter-group">
+            <div class="filter-field">
+                <label for="filter-etc">ETC (Municipio)</label>
+                <select id="filter-etc" required>
+                    <option value="">Seleccione...</option>
+                    {% for etc in etc_values %}
+                        <option value="{{ etc }}">{{ etc }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="filter-focalizacion">Focalización</label>
+                <select id="filter-focalizacion" required>
+                    <option value="">Seleccione...</option>
+                    {% for foc in focalizaciones %}
+                        <option value="{{ foc }}">{{ foc }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="filter-ano">Año</label>
+                <input type="number" id="filter-ano" value="2025" min="2020" max="2030" required>
+            </div>
+
+            <div class="filter-field">
+                <button id="btn-buscar" class="btn-primary">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+            </div>
+
+            <div class="filter-field">
+                <button id="btn-inicializar" class="btn-success">
+                    <i class="fas fa-sync-alt"></i> Inicializar desde Listados
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensajes -->
+    <div id="message-container"></div>
+
+    <!-- Resultados -->
+    <div id="results-container" class="results-container">
+        <div class="no-data">
+            <i class="fas fa-info-circle"></i>
+            <p>Seleccione ETC y Focalización para ver los datos de planificación.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/planeacion/ciclos_menus.js' %}"></script>
+<script>
+    // Configuración global
+    window.CICLOS_MENUS_CONFIG = {
+        urlInicializar: "{% url 'planeacion:inicializar_ciclos' %}",
+        urlActualizar: "{% url 'planeacion:actualizar_racion' %}",
+        urlObtener: "{% url 'planeacion:obtener_datos_ciclos' %}",
+        csrfToken: "{{ csrf_token }}"
+    };
+</script>
+{% endblock %}

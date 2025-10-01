@@ -74,7 +74,7 @@ class SedesEducativas(models.Model):
 class Programa(models.Model):
     # Django crea automáticamente un campo 'id' numérico y autoincremental como clave primaria.
     # No necesitas definir 'id_programa' a menos que quieras un comportamiento diferente.
-    
+
     # Campo para el nombre del programa (texto corto)
     programa = models.CharField(max_length=200, verbose_name="Nombre del Programa")
 
@@ -118,10 +118,103 @@ class Programa(models.Model):
         verbose_name="Municipio",
         db_column="id_municipio"  # Nombre específico en BD
     )
-    
+
     def __str__(self):
         return self.programa
 
     class Meta:
         verbose_name = "Programa"
         verbose_name_plural = "Programas"
+
+
+class PlanificacionRaciones(models.Model):
+    """
+    Modelo para almacenar la planificación de raciones por sede educativa,
+    focalización, nivel escolar y tipo de complemento alimentario.
+    """
+    # Relación con municipio (ETC)
+    etc = models.ForeignKey(
+        PrincipalMunicipio,
+        on_delete=models.PROTECT,
+        verbose_name="ETC (Municipio)",
+        db_column="id_municipio"
+    )
+
+    # Focalización (F1, F2, F3, etc.)
+    focalizacion = models.CharField(
+        max_length=10,
+        verbose_name="Focalización"
+    )
+
+    # Relación con sede educativa
+    sede_educativa = models.ForeignKey(
+        SedesEducativas,
+        on_delete=models.PROTECT,
+        verbose_name="Sede Educativa",
+        db_column="cod_interprise"
+    )
+
+    # Nivel escolar (relación con tabla nivel_grado_escolar)
+    from principal.models import NivelGradoEscolar
+    nivel_escolar = models.ForeignKey(
+        NivelGradoEscolar,
+        on_delete=models.PROTECT,
+        verbose_name="Nivel Escolar",
+        db_column="id_nivel_grado"
+    )
+
+    # Año de planificación
+    ano = models.IntegerField(
+        verbose_name="Año",
+        default=2025
+    )
+
+    # Cantidades editables por tipo de complemento alimentario
+    cap_am = models.IntegerField(
+        default=0,
+        verbose_name="CAP AM (Complemento Alimentario Preparado AM)"
+    )
+
+    cap_pm = models.IntegerField(
+        default=0,
+        verbose_name="CAP PM (Complemento Alimentario Preparado PM)"
+    )
+
+    almuerzo_ju = models.IntegerField(
+        default=0,
+        verbose_name="Almuerzo Jornada Única"
+    )
+
+    refuerzo = models.IntegerField(
+        default=0,
+        verbose_name="Refuerzo Complemento AM/PM"
+    )
+
+    # Campos de auditoría
+    fecha_creacion = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Fecha de Creación"
+    )
+
+    fecha_actualizacion = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Fecha de Actualización"
+    )
+
+    class Meta:
+        db_table = 'planificacion_raciones'
+        verbose_name = "Planificación de Raciones"
+        verbose_name_plural = "Planificaciones de Raciones"
+        ordering = ['etc__nombre_municipio', 'focalizacion', 'sede_educativa__nombre_sede_educativa']
+        unique_together = [['etc', 'focalizacion', 'sede_educativa', 'nivel_escolar', 'ano']]
+        indexes = [
+            models.Index(fields=['etc', 'focalizacion', 'ano']),
+            models.Index(fields=['sede_educativa']),
+        ]
+
+    def __str__(self):
+        return f"{self.sede_educativa.nombre_sede_educativa} - {self.focalizacion} - {self.nivel_escolar.nivel_escolar_uapa} ({self.ano})"
+
+    def total_raciones(self):
+        """Retorna el total de raciones planificadas para este registro."""
+        return self.cap_am + self.cap_pm + self.almuerzo_ju + self.refuerzo
