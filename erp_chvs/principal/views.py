@@ -630,18 +630,18 @@ def api_sede_detail(request, cod_interprise):
 @login_required
 def lista_niveles_grado(request):
     """Vista para mostrar el listado de niveles grado escolar."""
-    niveles_grado = NivelGradoEscolar.objects.all().order_by('id_grado_escolar')
-    paginator = Paginator(niveles_grado, 10)
-    page_number = request.GET.get('page')
+    niveles_grado_list = NivelGradoEscolar.objects.all().order_by('id_grado_escolar')
+    paginator = Paginator(niveles_grado_list, 10)  # 10 items por página
+    page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
 
     return render(request, 'principal/niveles_grado.html', {
         'niveles_grado': page_obj,
-        'total_niveles_grado': niveles_grado.count()
+        'total_niveles_grado': paginator.count
     })
 
+# NOTA: El JavaScript de niveles_grado.html ahora solo se usa para paginación AJAX, creación, edición y eliminación.
 
-@login_required
 @csrf_exempt
 def api_niveles_grado(request):
     """API para gestionar niveles grado escolar (GET, POST)."""
@@ -650,36 +650,25 @@ def api_niveles_grado(request):
         niveles_grado = NivelGradoEscolar.objects.all().order_by('id_grado_escolar')
 
         # Implementar paginación si se especifica
-        page = request.GET.get('page')
-        if page:
-            paginator = Paginator(niveles_grado, 10)  # 10 items por página
-            niveles_grado = paginator.get_page(page)
+        page = request.GET.get('page', 1)
+        paginator = Paginator(niveles_grado, 10)
+        page_obj = paginator.get_page(page)
 
-            data = {
-                'results': [
-                    {
-                        'id_grado_escolar': nivel.id_grado_escolar,
-                        'grados_sedes': nivel.grados_sedes,
-                        'nivel_escolar_uapa': nivel.nivel_escolar_uapa,
-                    }
-                    for nivel in niveles_grado
-                ],
-                'count': paginator.count,
-                'num_pages': paginator.num_pages,
-                'current_page': niveles_grado.number,
-                'has_next': niveles_grado.has_next(),
-                'has_previous': niveles_grado.has_previous()
-            }
-        else:
-            # Sin paginación, devolver todos los resultados
-            data = [
+        data = {
+            'results': [
                 {
                     'id_grado_escolar': nivel.id_grado_escolar,
                     'grados_sedes': nivel.grados_sedes,
                     'nivel_escolar_uapa': nivel.nivel_escolar_uapa,
                 }
-                for nivel in niveles_grado
-            ]
+                for nivel in page_obj
+            ],
+            'count': paginator.count,
+            'num_pages': paginator.num_pages,
+            'current_page': page_obj.number,
+            'has_next': page_obj.has_next(),
+            'has_previous': page_obj.has_previous()
+        }
 
         return JsonResponse(data, safe=False)
 
@@ -706,7 +695,6 @@ def api_niveles_grado(request):
             return JsonResponse({'success': False, 'error': f'Error al crear: {str(e)}'})
 
 
-@login_required
 @csrf_exempt
 def api_nivel_grado_detail(request, id_grado_escolar):
     """API para gestionar un nivel grado escolar específico (GET, PUT, DELETE)."""
