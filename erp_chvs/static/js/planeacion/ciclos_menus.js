@@ -4,6 +4,14 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    // ✅ DIAGNÓSTICO INICIAL PARA DEBUGGING
+    console.log('🔍 Diagnóstico inicial de ciclos_menus.js:');
+    console.log('- ERPUtils definido:', typeof ERPUtils !== 'undefined');
+    console.log('- showConfirm disponible:', typeof ERPUtils?.showConfirm === 'function');
+    console.log('- showAlert disponible:', typeof ERPUtils?.showAlert === 'function');
+    console.log('- showNotification disponible:', typeof ERPUtils?.showNotification === 'function');
+    console.log('- Config cargada:', typeof window.CICLOS_MENUS_CONFIG !== 'undefined');
+
     // Obtener elementos del DOM
     const btnBuscar = document.getElementById('btn-buscar');
     const btnInicializar = document.getElementById('btn-inicializar');
@@ -14,6 +22,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Configuración desde el template de Django
     const config = window.CICLOS_MENUS_CONFIG || {};
+
+    // ✅ VERIFICACIÓN ADICIONAL: Asegurar que ERPUtils esté completamente disponible
+    if (typeof ERPUtils === 'undefined') {
+        console.error('❌ ERPUtils no está definido después de cargar utils.js');
+        // Crear objeto básico como fallback
+        window.ERPUtils = {
+            showAlert: function(message, type) {
+                alert(message);
+            },
+            showNotification: function(message, type) {
+                console.log(`NOTIFICATION [${type}]: ${message}`);
+            },
+            showConfirm: function(title, text, icon) {
+                return Promise.resolve(confirm(`${title}\n\n${text}`));
+            }
+        };
+    } else {
+        // Asegurar que todas las funciones críticas estén disponibles
+        if (typeof ERPUtils.showConfirm !== 'function') {
+            console.warn('⚠️ ERPUtils.showConfirm no disponible, creando fallback');
+            ERPUtils.showConfirm = function(title, text, icon) {
+                return Promise.resolve(confirm(`${title}\n\n${text}`));
+            };
+        }
+        if (typeof ERPUtils.showNotification !== 'function') {
+            console.warn('⚠️ ERPUtils.showNotification no disponible, creando fallback');
+            ERPUtils.showNotification = function(message, type) {
+                console.log(`NOTIFICATION [${type}]: ${message}`);
+            };
+        }
+    }
 
     // =================================================================
     // EVENT LISTENERS
@@ -27,7 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const ano = anoInput.value;
 
             if (!etc || !focalizacion) {
-                ERPUtils.showAlert('Por favor, seleccione un ETC y una Focalización.', 'warning');
+                mostrarAlertaSegura('Por favor, seleccione un ETC y una Focalización.', 'warning');
                 return;
             }
 
@@ -43,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const ano = anoInput.value;
 
             if (!etc || !focalizacion) {
-                ERPUtils.showAlert('Por favor, seleccione un ETC y una Focalización.', 'warning');
+                mostrarAlertaSegura('Por favor, seleccione un ETC y una Focalización.', 'warning');
                 return;
             }
 
@@ -85,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     `;
                 }
             } else {
-                ERPUtils.showAlert(data.error || 'Error al obtener datos', 'error');
+                mostrarAlertaSegura(data.error || 'Error al obtener datos', 'error');
                 resultsContainer.innerHTML = `
                     <div class="no-data">
                         <i class="fas fa-exclamation-circle"></i>
@@ -95,7 +134,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (error) {
             console.error('Error al buscar datos:', error);
-            ERPUtils.showAlert('Error de conexión al servidor', 'error');
+            mostrarAlertaSegura('Error de conexión al servidor', 'error');
             resultsContainer.innerHTML = `
                 <div class="no-data">
                     <i class="fas fa-exclamation-circle"></i>
@@ -140,11 +179,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (response.ok) {
                 if (data.success) {
-                    ERPUtils.showNotification(data.message, 'success');
+                    mostrarNotificacionSegura(data.message, 'success');
                     // Renderizar la tabla con los datos recibidos
                     renderizarTabla(data.datos);
 
                 } else if (data.requiere_confirmacion) {
+                    // ✅ VERIFICACIÓN DEFENSIVA ANTES DE USAR ERPUtils.showConfirm
+                    if (typeof ERPUtils === 'undefined') {
+                        console.error('ERPUtils no está definido. Usando fallback.');
+                        mostrarAlertaSegura('Error: ERPUtils no disponible. Usando confirm nativo.', 'error');
+                        await mostrarConfirmacionNativa(data, etc, focalizacion, ano);
+                        return;
+                    }
+    
+                    if (typeof ERPUtils.showConfirm !== 'function') {
+                        console.error('ERPUtils.showConfirm no es una función. Usando fallback.');
+                        mostrarAlertaSegura('Error: showConfirm no disponible. Usando confirm nativo.', 'error');
+                        await mostrarConfirmacionNativa(data, etc, focalizacion, ano);
+                        return;
+                    }
+
                     // Pedir confirmación al usuario antes de sobrescribir
                     const userConfirmed = await ERPUtils.showConfirm(
                         'Confirmación Requerida',
@@ -157,22 +211,22 @@ document.addEventListener('DOMContentLoaded', function() {
                         inicializarCiclos(etc, focalizacion, ano, true);
                     } else {
                         // Si el usuario cancela, cargar los datos existentes sin modificar
-                        ERPUtils.showNotification('Operación cancelada. Los registros existentes se mantienen intactos.', 'info');
+                        mostrarNotificacionSegura('Operación cancelada. Los registros existentes se mantienen intactos.', 'info');
                         buscarDatos(etc, focalizacion, ano);
                     }
                 } else {
                     // Otros errores controlados por el backend
-                    ERPUtils.showAlert(data.error || 'Ocurrió un error inesperado.', 'error');
+                    mostrarAlertaSegura(data.error || 'Ocurrió un error inesperado.', 'error');
                 }
             } else {
                 // Errores de servidor (500, etc.)
                 const errorMsg = data.error || 'Error desconocido del servidor';
-                ERPUtils.showAlert(`Error del servidor: ${errorMsg}`, 'error');
+                mostrarAlertaSegura(`Error del servidor: ${errorMsg}`, 'error');
             }
 
         } catch (error) {
             console.error('Error de red o al procesar la petición:', error);
-            ERPUtils.showAlert('Error de red. Por favor, intente de nuevo.', 'error');
+            mostrarAlertaSegura('Error de red. Por favor, intente de nuevo.', 'error');
         } finally {
             // Reactivar botón
             btnInicializar.disabled = false;
@@ -372,7 +426,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             if (!newValue || newValue < 0) {
-                ERPUtils.showAlert('Valor inválido', 'error');
+                mostrarAlertaSegura('Valor inválido', 'error');
                 cell.innerHTML = `<span class="value">${currentValue}</span><i class="fas fa-edit edit-icon"></i>`;
                 return;
             }
@@ -396,17 +450,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (data.success) {
                     cell.innerHTML = `<span class="value">${newValue}</span><i class="fas fa-edit edit-icon"></i>`;
-                    ERPUtils.showNotification('Valor actualizado exitosamente', 'success');
+                    mostrarNotificacionSegura('Valor actualizado exitosamente', 'success');
 
                     // Actualizar totales
                     actualizarTotales(cell.closest('table'));
                 } else {
-                    ERPUtils.showAlert(data.error || 'Error al actualizar', 'error');
+                    mostrarAlertaSegura(data.error || 'Error al actualizar', 'error');
                     cell.innerHTML = `<span class="value">${currentValue}</span><i class="fas fa-edit edit-icon"></i>`;
                 }
             } catch (error) {
                 console.error('Error:', error);
-                ERPUtils.showAlert('Error de conexión al servidor', 'error');
+                mostrarAlertaSegura('Error de conexión al servidor', 'error');
                 cell.innerHTML = `<span class="value">${currentValue}</span><i class="fas fa-edit edit-icon"></i>`;
             }
         };
@@ -486,5 +540,76 @@ document.addEventListener('DOMContentLoaded', function() {
                 <p>Cargando datos...</p>
             </div>
         `;
+    }
+
+    // =================================================================
+    // FUNCIONES AUXILIARES DE FALLBACK
+    // =================================================================
+
+    /**
+     * Función auxiliar segura para mostrar alertas
+     * @param {string} message - Mensaje a mostrar
+     * @param {string} type - Tipo de alerta
+     */
+    function mostrarAlertaSegura(message, type = 'info') {
+        if (typeof ERPUtils !== 'undefined' && typeof ERPUtils.showAlert === 'function') {
+            ERPUtils.showAlert(message, type);
+        } else {
+            alert(message);
+        }
+    }
+
+    /**
+     * Función auxiliar segura para mostrar notificaciones
+     * @param {string} message - Mensaje a mostrar
+     * @param {string} type - Tipo de notificación
+     */
+    function mostrarNotificacionSegura(message, type = 'info') {
+        if (typeof ERPUtils !== 'undefined' && typeof ERPUtils.showNotification === 'function') {
+            ERPUtils.showNotification(message, type);
+        } else {
+            console.log(`NOTIFICATION [${type}]: ${message}`);
+        }
+    }
+
+    /**
+     * Función auxiliar segura para mostrar confirmaciones
+     * @param {string} title - Título del diálogo
+     * @param {string} text - Texto del diálogo
+     * @param {string} icon - Icono del diálogo
+     * @returns {Promise<boolean>} - Resultado de la confirmación
+     */
+    function mostrarConfirmacionSegura(title, text, icon = 'warning') {
+        if (typeof ERPUtils !== 'undefined' && typeof ERPUtils.showConfirm === 'function') {
+            return ERPUtils.showConfirm(title, text, icon);
+        } else {
+            // Fallback con confirm nativo
+            return Promise.resolve(confirm(`${title}\n\n${text}`));
+        }
+    }
+
+    /**
+     * Función auxiliar para mostrar confirmaciones cuando ERPUtils.showConfirm no está disponible.
+     * @param {Object} data - Datos de respuesta del servidor
+     * @param {string} etc - ETC para contexto
+     * @param {string} focalizacion - Focalización para contexto
+     * @param {string} ano - Año para contexto
+     */
+    async function mostrarConfirmacionNativa(data, etc, focalizacion, ano) {
+        const titulo = 'Confirmación Requerida';
+        const mensaje = `${data.warning}. Existen ${data.total_registros_existentes} registros que serán sobreescritos. ¿Desea continuar?`;
+
+        // Usar función segura de confirmación
+        const userConfirmed = await mostrarConfirmacionSegura(titulo, mensaje);
+
+        if (userConfirmed) {
+            console.log('Usuario confirmó vía fallback - procediendo con actualización forzada');
+            inicializarCiclos(etc, focalizacion, ano, true);
+        } else {
+            mostrarNotificacionSegura('Operación cancelada. Los registros existentes se mantienen intactos.', 'info');
+            buscarDatos(etc, focalizacion, ano);
+        }
+
+        return userConfirmed;
     }
 });
