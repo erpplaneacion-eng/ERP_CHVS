@@ -73,7 +73,7 @@ const ERPUtils = {
     validateRequiredFields: function(form, fieldNames) {
         let isValid = true;
         let errorMessage = '';
-        
+
         fieldNames.forEach(function(fieldName) {
             const field = form.querySelector(`[name="${fieldName}"]`);
             if (field && !field.value.trim()) {
@@ -84,14 +84,123 @@ const ERPUtils = {
                 field.style.borderColor = '';
             }
         });
-        
+
         if (!isValid) {
             this.showAlert('Por favor complete los siguientes campos:\n\n' + errorMessage, 'error');
         }
-        
+
         return isValid;
+    },
+
+    /**
+     * Muestra una notificación toast en la pantalla
+     * @param {string} message - El mensaje a mostrar
+     * @param {string} type - El tipo de notificación ('success', 'error', 'warning', 'info')
+     * @param {number} duration - Duración en milisegundos (default: 3000)
+     */
+    showNotification: function(message, type = 'info', duration = 3000) {
+        // Crear contenedor de notificaciones si no existe
+        let container = document.getElementById('notification-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'notification-container';
+            container.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            `;
+            document.body.appendChild(container);
+        }
+
+        // Crear elemento de notificación
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+
+        // Estilos según el tipo
+        const colors = {
+            success: { bg: '#10b981', icon: 'fa-check-circle' },
+            error: { bg: '#ef4444', icon: 'fa-times-circle' },
+            warning: { bg: '#f59e0b', icon: 'fa-exclamation-triangle' },
+            info: { bg: '#3b82f6', icon: 'fa-info-circle' }
+        };
+
+        const color = colors[type] || colors.info;
+
+        notification.style.cssText = `
+            background-color: ${color.bg};
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 300px;
+            max-width: 500px;
+            animation: slideIn 0.3s ease-out;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        `;
+
+        notification.innerHTML = `
+            <i class="fas ${color.icon}" style="font-size: 20px;"></i>
+            <span style="flex: 1;">${message}</span>
+            <button onclick="this.parentElement.remove()" style="
+                background: none;
+                border: none;
+                color: white;
+                cursor: pointer;
+                font-size: 20px;
+                padding: 0;
+                margin-left: 10px;
+            ">×</button>
+        `;
+
+        // Agregar animación de entrada
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+            }
+        `;
+        if (!document.getElementById('notification-styles')) {
+            style.id = 'notification-styles';
+            document.head.appendChild(style);
+        }
+
+        // Agregar al contenedor
+        container.appendChild(notification);
+
+        // Auto-remover después del tiempo especificado
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => notification.remove(), 300);
+        }, duration);
     }
 };
+
+// Hacer showNotification disponible globalmente
+window.showNotification = ERPUtils.showNotification.bind(ERPUtils);
 
 // Extender los prototipos nativos con métodos útiles (usar con precaución)
 if (!String.prototype.capitalize) {

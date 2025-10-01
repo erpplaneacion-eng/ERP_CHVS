@@ -630,12 +630,18 @@ def api_sede_detail(request, cod_interprise):
 @login_required
 def lista_niveles_grado(request):
     """Vista para mostrar el listado de niveles grado escolar."""
-    total_niveles_grado = NivelGradoEscolar.objects.count()
+    niveles_grado = NivelGradoEscolar.objects.all().order_by('id_grado_escolar')
+    paginator = Paginator(niveles_grado, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     return render(request, 'principal/niveles_grado.html', {
-        'total_niveles_grado': total_niveles_grado
+        'niveles_grado': page_obj,
+        'total_niveles_grado': niveles_grado.count()
     })
 
 
+@login_required
 @csrf_exempt
 def api_niveles_grado(request):
     """API para gestionar niveles grado escolar (GET, POST)."""
@@ -700,6 +706,7 @@ def api_niveles_grado(request):
             return JsonResponse({'success': False, 'error': f'Error al crear: {str(e)}'})
 
 
+@login_required
 @csrf_exempt
 def api_nivel_grado_detail(request, id_grado_escolar):
     """API para gestionar un nivel grado escolar específico (GET, PUT, DELETE)."""

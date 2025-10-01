@@ -118,6 +118,14 @@
             <script src="{% static 'js/principal/instituciones.js' %}"></script>
         {% elif 'sedes' in request.path or request.resolver_match.url_name == 'lista_sedes' %}
             <script src="{% static 'js/principal/sedes.js' %}"></script>
+        {% elif 'tipos-documento' in request.path or request.resolver_match.url_name == 'lista_tipos_documento' %}
+            <script src="{% static 'js/principal/tipos_documento.js' %}"></script>
+        {% elif 'tipos-genero' in request.path or request.resolver_match.url_name == 'lista_tipos_genero' %}
+            <script src="{% static 'js/principal/tipos_genero.js' %}"></script>
+        {% elif 'modalidades-consumo' in request.path or request.resolver_match.url_name == 'lista_modalidades_consumo' %}
+            <script src="{% static 'js/principal/modalidades_consumo.js' %}"></script>
+        {% elif 'niveles-grado' in request.path or request.resolver_match.url_name == 'lista_niveles_grado' %}
+            <script src="{% static 'js/principal/niveles_grado.js' %}"></script>
         {% endif %}
     {% elif request.resolver_match.app_name == 'nutricion' %}
         {% if 'alimentos' in request.path %}

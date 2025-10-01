@@ -8,7 +8,10 @@
       "Bash(python3:*)",
       "Bash(python manage.py:*)",
       "Bash(python:*)",
-      "Read(//mnt/c/Users/User/OneDrive/Desktop/CHVS/ERP_CHVS/**)"
+      "Read(//mnt/c/Users/User/OneDrive/Desktop/CHVS/ERP_CHVS/**)",
+      "Bash(curl:*)",
+      "Bash(PGPASSWORD='chvs2025' psql -U postgres -d erp_chvs -h localhost -c \"\\d nivel_grado_escolar\")",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

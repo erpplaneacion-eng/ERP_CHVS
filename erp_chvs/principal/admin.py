@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import PrincipalDepartamento, PrincipalMunicipio, TipoDocumento, TipoGenero, ModalidadesDeConsumo
+from .models import PrincipalDepartamento, PrincipalMunicipio, TipoDocumento, TipoGenero, ModalidadesDeConsumo, NivelGradoEscolar
 
 # Register your models here.
 @admin.register(PrincipalDepartamento)
@@ -29,3 +29,9 @@ class ModalidadesDeConsumoAdmin(admin.ModelAdmin):
     list_display = ('id_modalidades', 'modalidad', 'cod_modalidad')
     search_fields = ('modalidad', 'id_modalidades', 'cod_modalidad')
     list_filter = ('cod_modalidad',)
+
+@admin.register(NivelGradoEscolar)
+class NivelGradoEscolarAdmin(admin.ModelAdmin):
+    list_display = ('id_grado_escolar', 'grados_sedes', 'nivel_escolar_uapa')
+    search_fields = ('id_grado_escolar', 'grados_sedes', 'nivel_escolar_uapa')
+    list_filter = ('nivel_escolar_uapa',)

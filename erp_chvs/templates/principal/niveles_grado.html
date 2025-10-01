@@ -29,42 +29,72 @@
                     <th>Acciones</th>
                 </tr>
             </thead>
-            <tbody id="niveles-grado-tbody">
-                <!-- Los datos se cargarán vía JavaScript -->
+            <tbody>
+                {% for nivel in niveles_grado %}
+                <tr data-id="{{ nivel.id_grado_escolar }}">
+                    <td>{{ nivel.id_grado_escolar }}</td>
+                    <td>{{ nivel.grados_sedes }}</td>
+                    <td>{{ nivel.nivel_escolar_uapa }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="editNivelGrado('{{ nivel.id_grado_escolar }}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteNivelGrado('{{ nivel.id_grado_escolar }}', '{{ nivel.nivel_escolar_uapa }}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center">No hay niveles grado registrados</td>
+                </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>
 
     <!-- Paginación -->
-    <div class="pagination-container" id="pagination-container">
-        <!-- La paginación se generará vía JavaScript -->
+    {% if niveles_grado.has_other_pages %}
+    <div class="pagination-container">
+        <div class="pagination">
+            {% if niveles_grado.has_previous %}
+                <a href="?page=1" class="page-link">&laquo; Primera</a>
+                <a href="?page={{ niveles_grado.previous_page_number }}" class="page-link">Anterior</a>
+            {% endif %}
+
+            <span class="page-info">
+                Página {{ niveles_grado.number }} de {{ niveles_grado.paginator.num_pages }}
+            </span>
+
+            {% if niveles_grado.has_next %}
+                <a href="?page={{ niveles_grado.next_page_number }}" class="page-link">Siguiente</a>
+                <a href="?page={{ niveles_grado.paginator.num_pages }}" class="page-link">Última &raquo;</a>
+            {% endif %}
+        </div>
     </div>
+    {% endif %}
 </div>
 
 <!-- Modal para Crear/Editar Nivel Grado -->
-<div id="nivelGradoModal" class="modal-overlay" style="display: none;">
+<div id="nivelGradoModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
             <h3 id="modalTitle">Nuevo Nivel Grado Escolar</h3>
-            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <span class="close" onclick="closeModal()">&times;</span>
         </div>
         <div class="modal-body">
             <form id="nivelGradoForm">
-                {% csrf_token %}
                 <div class="form-group">
                     <label for="id_grado_escolar">ID Grado Escolar:</label>
-                    <input type="text" id="id_grado_escolar" name="id_grado_escolar" class="form-control" required maxlength="50">
-                    <small class="form-help">Identificador único para el grado escolar</small>
+                    <input type="text" id="id_grado_escolar" name="id_grado_escolar" required maxlength="50">
                 </div>
                 <div class="form-group">
                     <label for="grados_sedes">Grados Sedes:</label>
-                    <input type="text" id="grados_sedes" name="grados_sedes" class="form-control" required maxlength="200">
-                    <small class="form-help">Descripción de los grados en las sedes</small>
+                    <input type="text" id="grados_sedes" name="grados_sedes" required maxlength="200">
                 </div>
                 <div class="form-group">
                     <label for="nivel_escolar_uapa">Nivel Escolar UAPA:</label>
-                    <input type="text" id="nivel_escolar_uapa" name="nivel_escolar_uapa" class="form-control" required maxlength="100">
-                    <small class="form-help">Nivel escolar según UAPA</small>
+                    <input type="text" id="nivel_escolar_uapa" name="nivel_escolar_uapa" required maxlength="100">
                 </div>
             </form>
         </div>
@@ -76,11 +106,11 @@
 </div>
 
 <!-- Modal de Confirmación para Eliminar -->
-<div id="deleteModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content modal-sm">
+<div id="deleteModal" class="modal">
+    <div class="modal-content small">
         <div class="modal-header">
             <h3>Confirmar Eliminación</h3>
-            <span class="modal-close" onclick="closeDeleteModal()">&times;</span>
+            <span class="close" onclick="closeDeleteModal()">&times;</span>
         </div>
         <div class="modal-body">
             <p>¿Está seguro de que desea eliminar este nivel grado escolar?</p>
@@ -93,5 +123,4 @@
     </div>
 </div>
 
-<script src="{% load static %}{% static 'js/principal/niveles_grado.js' %}"></script>
 {% endblock %}
