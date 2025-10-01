@@ -15,6 +15,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Configuración desde el template de Django
     const config = window.CICLOS_MENUS_CONFIG || {};
 
+    // Verificación de dependencias críticas
+    if (typeof ERPUtils === 'undefined') {
+        console.error('❌ ERPUtils no está disponible');
+    }
+
     // Verificación y configuración de ERPUtils
     if (typeof ERPUtils === 'undefined') {
         window.ERPUtils = {
@@ -157,20 +162,28 @@ document.addEventListener('DOMContentLoaded', function() {
                         return;
                     }
 
-                    // Pedir confirmación al usuario antes de sobrescribir
-                    const userConfirmed = await ERPUtils.showConfirm(
-                        'Confirmación Requerida',
-                        `${data.warning}. Existen ${data.total_registros_existentes} registros que serán sobreescritos. ¿Desea continuar?`,
-                        'warning'
-                    );
+                    // Verificar que SweetAlert2 esté disponible
+                    if (typeof Swal === 'undefined') {
+                        await mostrarConfirmacionNativa(data, etc, focalizacion, ano);
+                        return;
+                    }
 
-                    if (userConfirmed) {
-                        // Si el usuario confirma, llamamos de nuevo forzando la actualización.
-                        inicializarCiclos(etc, focalizacion, ano, true);
+                    // Usar SweetAlert2 si está disponible, sino modal personalizado
+                    if (typeof Swal !== 'undefined') {
+                        const userConfirmed = await ERPUtils.showConfirm(
+                            'Confirmación Requerida',
+                            `${data.warning}. Existen ${data.total_registros_existentes} registros que serán sobreescritos. ¿Desea continuar?`,
+                            'warning'
+                        );
+
+                        if (userConfirmed) {
+                            inicializarCiclos(etc, focalizacion, ano, true);
+                        } else {
+                            mostrarNotificacionSegura('Operación cancelada. Los registros existentes se mantienen intactos.', 'info');
+                            buscarDatos(etc, focalizacion, ano);
+                        }
                     } else {
-                        // Si el usuario cancela, cargar los datos existentes sin modificar
-                        mostrarNotificacionSegura('Operación cancelada. Los registros existentes se mantienen intactos.', 'info');
-                        buscarDatos(etc, focalizacion, ano);
+                        await mostrarConfirmacionNativa(data, etc, focalizacion, ano);
                     }
                 } else {
                     // Otros errores controlados por el backend
@@ -514,6 +527,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `;
                 document.body.appendChild(modal);
+            }
+
+            // Configurar contenido según el tipo
+            const config = getConfiguracionModal(type);
+
+            try {
+                modal.querySelector('.custom-modal-title').textContent = title;
+                modal.querySelector('.custom-modal-message').innerHTML = message;
+                modal.querySelector('.custom-modal-icon').innerHTML = `<i class="${config.icon}"></i>`;
+                modal.querySelector('.custom-modal-header').style.backgroundColor = config.headerColor;
+                modal.querySelector('.custom-btn-confirm').style.backgroundColor = config.buttonColor;
+                modal.querySelector('.custom-btn-confirm').innerHTML = `<i class="${config.buttonIcon}"></i> ${config.buttonText}`;
+
+                // Mostrar modal
+                modal.style.display = 'flex';
+                modal.querySelector('.custom-modal-content').style.animation = 'modalSlideIn 0.3s ease-out';
 
                 // Event listeners
                 modal.querySelector('.custom-modal-close').addEventListener('click', () => {
@@ -534,26 +563,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         cerrarModalPersonalizado(modal, false, resolve);
                     }
                 });
+
+                // Auto-focus en el botón de confirmar después de un breve delay
+                setTimeout(() => {
+                    modal.querySelector('.custom-btn-confirm').focus();
+                }, 100);
+
+            } catch (error) {
+                console.error('Error al configurar modal personalizado:', error);
+                resolve(confirm(`${title}\n\n${message.replace(/<[^>]*>/g, '')}`));
             }
-
-            // Configurar contenido según el tipo
-            const config = getConfiguracionModal(type);
-
-            modal.querySelector('.custom-modal-title').textContent = title;
-            modal.querySelector('.custom-modal-message').innerHTML = message;
-            modal.querySelector('.custom-modal-icon').innerHTML = `<i class="${config.icon}"></i>`;
-            modal.querySelector('.custom-modal-header').style.backgroundColor = config.headerColor;
-            modal.querySelector('.custom-btn-confirm').style.backgroundColor = config.buttonColor;
-            modal.querySelector('.custom-btn-confirm').innerHTML = `<i class="${config.buttonIcon}"></i> ${config.buttonText}`;
-
-            // Mostrar modal
-            modal.style.display = 'flex';
-            modal.querySelector('.custom-modal-content').style.animation = 'modalSlideIn 0.3s ease-out';
-
-            // Auto-focus en el botón de confirmar después de un breve delay
-            setTimeout(() => {
-                modal.querySelector('.custom-btn-confirm').focus();
-            }, 100);
         });
     }
 
@@ -620,16 +639,52 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
 
-        // Usar modal personalizado más llamativo
-        const userConfirmed = await mostrarModalConfirmacionPersonalizado(titulo, mensaje, 'warning');
+        try {
+            const userConfirmed = await mostrarModalConfirmacionPersonalizado(titulo, mensaje, 'warning');
 
-        if (userConfirmed) {
-            inicializarCiclos(etc, focalizacion, ano, true);
-        } else {
-            mostrarNotificacionSegura('Operación cancelada. Los registros existentes se mantienen intactos.', 'info');
-            buscarDatos(etc, focalizacion, ano);
+            if (userConfirmed) {
+                inicializarCiclos(etc, focalizacion, ano, true);
+            } else {
+                mostrarNotificacionSegura('Operación cancelada. Los registros existentes se mantienen intactos.', 'info');
+                buscarDatos(etc, focalizacion, ano);
+            }
+
+            return userConfirmed;
+        } catch (error) {
+            console.error('Error al mostrar modal personalizado:', error);
+            const confirmacionNativa = confirm(`${titulo}\n\n${data.warning}. Existen ${data.total_registros_existentes} registros que serán sobreescritos. ¿Desea continuar?`);
+
+            if (confirmacionNativa) {
+                inicializarCiclos(etc, focalizacion, ano, true);
+            } else {
+                mostrarNotificacionSegura('Operación cancelada. Los registros existentes se mantienen intactos.', 'info');
+                buscarDatos(etc, focalizacion, ano);
+            }
+
+            return confirmacionNativa;
         }
-
-        return userConfirmed;
     }
+
+    // Función de prueba para verificar modal
+    window.probarModalPersonalizado = async function() {
+        const titulo = '🧪 Modal de Prueba';
+        const mensaje = `
+            <div style="text-align: center; padding: 10px;">
+                <strong style="color: #27ae60; font-size: 16px; display: block; margin-bottom: 15px;">
+                    ¡Modal funcionando correctamente!
+                </strong>
+                <div style="background-color: #d4edda; border: 2px solid #27ae60; border-radius: 10px; padding: 15px; margin: 15px 0;">
+                    <i class="fas fa-check-circle" style="color: #27ae60; font-size: 24px; margin-right: 10px;"></i>
+                    <span style="color: #155724; font-weight: 600;">
+                        El modal personalizado está funcionando correctamente
+                    </span>
+                </div>
+                <p style="color: #2c3e50; margin-top: 15px;">
+                    Si ves este mensaje, el modal está funcionando perfectamente.
+                </p>
+            </div>
+        `;
+
+        return await mostrarModalConfirmacionPersonalizado(titulo, mensaje, 'success');
+    };
 });

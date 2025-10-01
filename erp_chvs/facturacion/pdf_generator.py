@@ -408,68 +408,107 @@ class AsistenciaPDFGenerator:
 
         total_paginas = (total_estudiantes + self.max_filas_por_pagina - 1) // self.max_filas_por_pagina
         
-        for i, estudiante in enumerate(lista_estudiantes):
-            pagina_actual = (i // self.max_filas_por_pagina) + 1
-            fila_en_pagina = i % self.max_filas_por_pagina
-
-            if fila_en_pagina == 0:
-                if i > 0:
-                    c.showPage()
-                self._dibujar_encabezado_pagina()
-                self._dibujar_cabecera_tabla()
-                self._dibujar_pie_pagina(pagina_actual, total_paginas, total_estudiantes)
-
-            y_fila = self.y_inicio_filas - (fila_en_pagina * self.alto_fila)
-
-            fecha_nac_str = ""
-            fecha_nac = estudiante.fecha_nacimiento
-            if fecha_nac:
-                if isinstance(fecha_nac, datetime):
-                    fecha_nac_str = fecha_nac.strftime('%Y-%m-%d')
-                elif isinstance(fecha_nac, str):
-                    try:
-                        # Intentar convertir la cadena a fecha y luego formatear
-                        fecha_obj = datetime.fromisoformat(fecha_nac.replace('.', ''))
-                        fecha_nac_str = fecha_obj.strftime('%Y-%m-%d')
-                    except ValueError:
-                        fecha_nac_str = fecha_nac.split('T')[0] # Fallback: tomar solo la parte de la fecha
+        # Procesar página por página
+        for pagina in range(total_paginas):
+            if pagina > 0:
+                c.showPage()
             
-            datos_fila = [
-                str(i + 1),
-                estudiante.tipodoc or '',
-                estudiante.doc or '',
-                estudiante.nombre1 or '',
-                estudiante.nombre2 or '',
-                estudiante.apellido1 or '',
-                estudiante.apellido2 or '',
-                fecha_nac_str,
-                estudiante.etnia or '',
-                estudiante.genero or '',
-                estudiante.grado_grupos or '',
-                self.datos_encabezado.get('codigo_complemento', '')
-            ]
-
-            x = self.margen
-            c.setFont("Helvetica", 5)
-            for j, (ancho, dato) in enumerate(zip(self.anchos_cols, datos_fila)):
-                c.rect(x, y_fila, ancho, self.alto_fila)
-                c.drawString(x + 2, y_fila + 3, str(dato))
-                x += ancho
+            self._dibujar_encabezado_pagina()
+            self._dibujar_cabecera_tabla()
+            self._dibujar_pie_pagina(pagina + 1, total_paginas, total_estudiantes)
             
-            x_col13 = x
-            ancho_total_dias = 25
-            ancho_col13_fijo = self._calcular_anchos_columnas()[12] # Usar el ancho calculado
-
-            # Replicar la misma lógica dinámica para las filas de estudiantes
-            mes_actual = self.datos_encabezado.get('mes', '').upper()
-            dias_habiles = DIAS_HABILES_POR_MES.get(mes_actual, [])
-            num_dias = len(dias_habiles) if dias_habiles else 22
-            casilla_ancho = (ancho_col13_fijo - ancho_total_dias) / num_dias if num_dias > 0 else 0
-
-            for k in range(num_dias):
-                c.rect(x_col13 + k * casilla_ancho, y_fila, casilla_ancho, self.alto_fila)
+            # Dibujar siempre las 25 filas (completas o vacías)
+            inicio_estudiantes = pagina * self.max_filas_por_pagina
+            fin_estudiantes = min(inicio_estudiantes + self.max_filas_por_pagina, total_estudiantes)
             
-            c.rect(x_col13 + num_dias * casilla_ancho, y_fila, ancho_total_dias, self.alto_fila)
+            for fila_en_pagina in range(self.max_filas_por_pagina):
+                y_fila = self.y_inicio_filas - (fila_en_pagina * self.alto_fila)
+                estudiante_index = inicio_estudiantes + fila_en_pagina
+                
+                if estudiante_index < total_estudiantes:
+                    # Fila con estudiante real
+                    estudiante = lista_estudiantes[estudiante_index]
+                    
+                    fecha_nac_str = ""
+                    fecha_nac = estudiante.fecha_nacimiento
+                    if fecha_nac:
+                        if isinstance(fecha_nac, datetime):
+                            fecha_nac_str = fecha_nac.strftime('%Y-%m-%d')
+                        elif isinstance(fecha_nac, str):
+                            try:
+                                # Intentar convertir la cadena a fecha y luego formatear
+                                fecha_obj = datetime.fromisoformat(fecha_nac.replace('.', ''))
+                                fecha_nac_str = fecha_obj.strftime('%Y-%m-%d')
+                            except ValueError:
+                                fecha_nac_str = fecha_nac.split('T')[0] # Fallback: tomar solo la parte de la fecha
+                    
+                    datos_fila = [
+                        str(estudiante_index + 1),
+                        estudiante.tipodoc or '',
+                        estudiante.doc or '',
+                        estudiante.nombre1 or '',
+                        estudiante.nombre2 or '',
+                        estudiante.apellido1 or '',
+                        estudiante.apellido2 or '',
+                        fecha_nac_str,
+                        estudiante.etnia or '',
+                        estudiante.genero or '',
+                        estudiante.grado_grupos or '',
+                        self.datos_encabezado.get('codigo_complemento', '')
+                    ]
+
+                    # Dibujar fila normal con datos
+                    x = self.margen
+                    c.setFont("Helvetica", 5)
+                    for j, (ancho, dato) in enumerate(zip(self.anchos_cols, datos_fila)):
+                        c.rect(x, y_fila, ancho, self.alto_fila)
+                        c.drawString(x + 2, y_fila + 3, str(dato))
+                        x += ancho
+                    
+                    # Dibujar casillas de asistencia
+                    x_col13 = x
+                    ancho_total_dias = 25
+                    ancho_col13_fijo = self._calcular_anchos_columnas()[12]
+
+                    # Replicar la misma lógica dinámica para las filas de estudiantes
+                    mes_actual = self.datos_encabezado.get('mes', '').upper()
+                    dias_habiles = DIAS_HABILES_POR_MES.get(mes_actual, [])
+                    num_dias = len(dias_habiles) if dias_habiles else 22
+                    casilla_ancho = (ancho_col13_fijo - ancho_total_dias) / num_dias if num_dias > 0 else 0
+
+                    for k in range(num_dias):
+                        c.rect(x_col13 + k * casilla_ancho, y_fila, casilla_ancho, self.alto_fila)
+                    
+                    c.rect(x_col13 + num_dias * casilla_ancho, y_fila, ancho_total_dias, self.alto_fila)
+                
+                else:
+                    # Fila vacía - dibujar solo bordes y línea horizontal
+                    x = self.margen
+                    
+                    # Dibujar los bordes de las columnas vacías (primeras 12 columnas)
+                    for j, ancho in enumerate(self.anchos_cols[:-1]):  # Excluir la columna 13
+                        c.rect(x, y_fila, ancho, self.alto_fila)
+                        x += ancho
+                    
+                    # Dibujar columna de asistencia vacía (columna 13)
+                    ancho_col13_fijo = self.anchos_cols[-1]  # La última es la columna 13
+                    c.rect(x, y_fila, ancho_col13_fijo, self.alto_fila)
+                    
+                    # Calcular el ancho total real de la tabla
+                    ancho_total_tabla = sum(self.anchos_cols)
+                    
+                    # Dibujar línea horizontal para indicar que no se puede diligenciar
+                    # Respetando los márgenes: desde margen_izq + 5 hasta margen_izq + ancho_tabla - 5
+                    c.setStrokeColor(colors.gray)
+                    c.setLineWidth(1.5)
+                    y_centro_fila = y_fila + (self.alto_fila / 2)
+                    inicio_linea = self.margen + 5
+                    fin_linea = self.margen + ancho_total_tabla - 5
+                    c.line(inicio_linea, y_centro_fila, fin_linea, y_centro_fila)
+                    
+                    # Restaurar color y grosor de línea normales
+                    c.setStrokeColor(colors.black)
+                    c.setLineWidth(1)
 
         c.save()
 
