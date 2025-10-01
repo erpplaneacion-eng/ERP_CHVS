@@ -1,175 +1,105 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Configuración - ERP CHVS{% endblock %}
+{% block title %}Dashboard de Configuración Principal{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modules/principal.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="configuration-container">
-    <div class="configuration-header">
-        <h2><i class="fas fa-cogs"></i> Configuración del Sistema</h2>
-        <p>Administra los datos base del sistema: departamentos, municipios, tipos de documento, géneros y modalidades de consumo</p>
-    </div>
+<div class="container mt-4">
+    <h2><i class="fas fa-cogs"></i> Configuración Principal del Sistema</h2>
+    <p class="lead">Gestión de datos maestros y catálogos base del ERP.</p>
 
-    <div class="configuration-grid">
-        <!-- Card Departamentos -->
-        <div class="config-card">
-            <div class="card-header">
-                <i class="fas fa-map"></i>
+    <div class="module-dashboard">
+        <!-- Tarjeta para Departamentos y Municipios -->
+        <a href="{% url 'principal:lista_departamentos' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-globe-americas"></i>
+            </div>
+            <div class="card-content">
                 <h3>Departamentos</h3>
+                <p>Gestiona los departamentos del país.</p>
             </div>
-            <div class="card-body">
-                <p>Gestiona los departamentos del país</p>
-                <div class="card-stats">
-                    <span class="stat-number" id="total-departamentos">--</span>
-                    <span class="stat-label">Departamentos registrados</span>
-                </div>
-            </div>
-            <div class="card-actions">
-                <a href="{% url 'principal:lista_departamentos' %}" class="btn btn-primary">
-                    <i class="fas fa-list"></i> Administrar
-                </a>
-            </div>
-        </div>
+        </a>
 
-        <!-- Card Municipios -->
-        <div class="config-card">
-            <div class="card-header">
-                <i class="fas fa-city"></i>
+        <!-- Tarjeta para Municipios -->
+        <a href="{% url 'principal:lista_municipios' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-map-marked-alt"></i>
+            </div>
+            <div class="card-content">
                 <h3>Municipios</h3>
+                <p>Administra los municipios por departamento.</p>
             </div>
-            <div class="card-body">
-                <p>Gestiona los municipios por departamento</p>
-                <div class="card-stats">
-                    <span class="stat-number" id="total-municipios">--</span>
-                    <span class="stat-label">Municipios registrados</span>
-                </div>
-            </div>
-            <div class="card-actions">
-                <a href="{% url 'principal:lista_municipios' %}" class="btn btn-primary">
-                    <i class="fas fa-list"></i> Administrar
-                </a>
-            </div>
-        </div>
+        </a>
 
-        <!-- Card Tipos de Documento -->
-        <div class="config-card">
-            <div class="card-header">
-                <i class="fas fa-id-card"></i>
-                <h3>Tipos de Documento</h3>
-            </div>
-            <div class="card-body">
-                <p>Gestiona los tipos de documento de identidad</p>
-                <div class="card-stats">
-                    <span class="stat-number" id="total-tipos-documento">--</span>
-                    <span class="stat-label">Tipos registrados</span>
-                </div>
-            </div>
-            <div class="card-actions">
-                <a href="{% url 'principal:lista_tipos_documento' %}" class="btn btn-primary">
-                    <i class="fas fa-list"></i> Administrar
-                </a>
-            </div>
-        </div>
-
-        <!-- Card Tipos de Género -->
-        <div class="config-card">
-            <div class="card-header">
-                <i class="fas fa-venus-mars"></i>
-                <h3>Tipos de Género</h3>
-            </div>
-            <div class="card-body">
-                <p>Gestiona los tipos de género</p>
-                <div class="card-stats">
-                    <span class="stat-number" id="total-tipos-genero">--</span>
-                    <span class="stat-label">Tipos registrados</span>
-                </div>
-            </div>
-            <div class="card-actions">
-                <a href="{% url 'principal:lista_tipos_genero' %}" class="btn btn-primary">
-                    <i class="fas fa-list"></i> Administrar
-                </a>
-            </div>
-        </div>
-
-        <!-- Card Modalidades de Consumo -->
-        <div class="config-card">
-            <div class="card-header">
-                <i class="fas fa-utensils"></i>
-                <h3>Modalidades de Consumo</h3>
-            </div>
-            <div class="card-body">
-                <p>Gestiona las modalidades de consumo</p>
-                <div class="card-stats">
-                    <span class="stat-number" id="total-modalidades">--</span>
-                    <span class="stat-label">Modalidades registradas</span>
-                </div>
-            </div>
-            <div class="card-actions">
-                <a href="{% url 'principal:lista_modalidades_consumo' %}" class="btn btn-primary">
-                    <i class="fas fa-list"></i> Administrar
-                </a>
-            </div>
-        </div>
-
-        <!-- Card Instituciones Educativas -->
-        <div class="config-card">
-            <div class="card-header">
-                <i class="fas fa-university"></i>
-                <h3>Instituciones Educativas</h3>
-            </div>
-            <div class="card-body">
-                <p>Gestiona las instituciones educativas registradas</p>
-                <div class="card-stats">
-                    <span class="stat-number" id="total-instituciones">--</span>
-                    <span class="stat-label">Instituciones registradas</span>
-                </div>
-            </div>
-            <div class="card-actions">
-                <a href="{% url 'principal:lista_instituciones' %}" class="btn btn-primary">
-                    <i class="fas fa-list"></i> Administrar
-                </a>
-            </div>
-        </div>
-
-        <!-- Card Sedes Educativas -->
-        <div class="config-card">
-            <div class="card-header">
+        <!-- Tarjeta para Instituciones -->
+        <a href="{% url 'principal:lista_instituciones' %}" class="card">
+            <div class="card-icon">
                 <i class="fas fa-school"></i>
-                <h3>Sedes Educativas</h3>
             </div>
-            <div class="card-body">
-                <p>Gestiona las sedes de las instituciones educativas</p>
-                <div class="card-stats">
-                    <span class="stat-number" id="total-sedes">--</span>
-                    <span class="stat-label">Sedes registradas</span>
-                </div>
+            <div class="card-content">
+                <h3>Instituciones Educativas</h3>
+                <p>Gestiona el catálogo de instituciones.</p>
             </div>
-            <div class="card-actions">
-                <a href="{% url 'principal:lista_sedes' %}" class="btn btn-primary">
-                    <i class="fas fa-list"></i> Administrar
-                </a>
-            </div>
-        </div>
+        </a>
 
-        <!-- Card Nivel Grado Escolar -->
-        <div class="config-card">
-            <div class="card-header">
+        <!-- Tarjeta para Sedes -->
+        <a href="{% url 'principal:lista_sedes' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-building"></i>
+            </div>
+            <div class="card-content">
+                <h3>Sedes Educativas</h3>
+                <p>Administra las sedes de cada institución.</p>
+            </div>
+        </a>
+
+        <!-- Tarjeta para Tipos de Documento -->
+        <a href="{% url 'principal:lista_tipos_documento' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-id-card"></i>
+            </div>
+            <div class="card-content">
+                <h3>Tipos de Documento</h3>
+                <p>Catálogo de tipos de identificación.</p>
+            </div>
+        </a>
+
+        <!-- Tarjeta para Tipos de Género -->
+        <a href="{% url 'principal:lista_tipos_genero' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-venus-mars"></i>
+            </div>
+            <div class="card-content">
+                <h3>Tipos de Género</h3>
+                <p>Catálogo de géneros para identificación.</p>
+            </div>
+        </a>
+
+        <!-- Tarjeta para Niveles de Grado -->
+        <a href="{% url 'principal:lista_niveles_grado' %}" class="card">
+            <div class="card-icon">
                 <i class="fas fa-graduation-cap"></i>
-                <h3>Nivel Grado Escolar</h3>
             </div>
-            <div class="card-body">
-                <p>Gestiona los niveles y grados escolares</p>
-                <div class="card-stats">
-                    <span class="stat-number" id="total-niveles-grado">--</span>
-                    <span class="stat-label">Niveles registrados</span>
-                </div>
+            <div class="card-content">
+                <h3>Niveles de Grado Escolar</h3>
+                <p>Configura la correspondencia entre grados y niveles.</p>
             </div>
-            <div class="card-actions">
-                <a href="{% url 'principal:lista_niveles_grado' %}" class="btn btn-primary">
-                    <i class="fas fa-list"></i> Administrar
-                </a>
+        </a>
+
+        <!-- Tarjeta para Modalidades de Consumo -->
+        <a href="{% url 'principal:lista_modalidades_consumo' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-utensils"></i>
             </div>
-        </div>
+            <div class="card-content">
+                <h3>Modalidades de Consumo</h3>
+                <p>Gestiona los tipos de raciones o complementos.</p>
+            </div>
+        </a>
     </div>
 </div>
-
 {% endblock %}
