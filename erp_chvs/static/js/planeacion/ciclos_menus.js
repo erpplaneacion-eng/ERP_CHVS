@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
     /**
      * Maneja la inicialización desde listados
      */
-    async function handleInicializar() {
+    async function handleInicializar(forzarActualizacion = false) {
         const etc = filterEtc.value.trim();
         const focalizacion = filterFocalizacion.value.trim();
         const ano = filterAno.value.trim();
@@ -78,8 +78,11 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (!confirm(`¿Está seguro de inicializar/actualizar la planificación para ${etc} - ${focalizacion}?\n\nEsto calculará las cantidades automáticamente desde los listados de focalización.`)) {
-            return;
+        // Primer intento sin forzar
+        if (!forzarActualizacion) {
+            if (!confirm(`¿Desea inicializar la planificación para ${etc} - ${focalizacion}?\n\nSe calcularán las cantidades automáticamente desde los listados de focalización.`)) {
+                return;
+            }
         }
 
         showLoading();
@@ -95,11 +98,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify({
                     etc: etc,
                     focalizacion: focalizacion,
-                    ano: parseInt(ano)
+                    ano: parseInt(ano),
+                    forzar_actualizacion: forzarActualizacion
                 })
             });
 
             const data = await response.json();
+
+            // Caso especial: Requiere confirmación para sobrescribir
+            if (data.requiere_confirmacion) {
+                const confirmar = confirm(
+                    `⚠️ ADVERTENCIA ⚠️\n\n` +
+                    `Ya existen ${data.total_registros_existentes} registros planificados para:\n` +
+                    `• ETC: ${etc}\n` +
+                    `• Focalización: ${focalizacion}\n` +
+                    `• Año: ${ano}\n\n` +
+                    `Si continúa, se SOBRESCRIBIRÁN todas las ediciones manuales que haya realizado.\n\n` +
+                    `Las cantidades se recalcularán automáticamente desde los listados de focalización.\n\n` +
+                    `¿Está SEGURO de que desea recalcular y sobrescribir los datos existentes?`
+                );
+
+                if (confirmar) {
+                    // Reintentar con forzar_actualizacion = true
+                    handleInicializar(true);
+                } else {
+                    // Usuario canceló: Cargar los datos existentes sin modificar
+                    showMessage('Operación cancelada. Los registros existentes se mantienen intactos.', 'info');
+
+                    // Cargar los datos existentes para mostrarlos
+                    cargarDatosExistentes(etc, focalizacion, ano);
+                }
+                return;
+            }
 
             if (data.success) {
                 showMessage(`${data.message}`, 'success');
@@ -112,6 +142,34 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error:', error);
             showMessage('Error de conexión al servidor', 'error');
             resultsContainer.innerHTML = '<div class="no-data"><i class="fas fa-exclamation-circle"></i><p>Error de conexión</p></div>';
+        }
+    }
+
+    /**
+     * Carga los datos existentes sin modificarlos
+     */
+    async function cargarDatosExistentes(etc, focalizacion, ano) {
+        showLoading();
+
+        try {
+            const url = `${config.urlObtener}?etc=${encodeURIComponent(etc)}&focalizacion=${encodeURIComponent(focalizacion)}&ano=${ano}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.datos.length > 0) {
+                renderResults(data.datos);
+            } else {
+                resultsContainer.innerHTML = '<div class="no-data"><i class="fas fa-info-circle"></i><p>No hay datos disponibles</p></div>';
+            }
+        } catch (error) {
+            console.error('Error al cargar datos:', error);
+            resultsContainer.innerHTML = '<div class="no-data"><i class="fas fa-exclamation-circle"></i><p>Error al cargar datos</p></div>';
         }
     }
 

@@ -167,6 +167,29 @@ def inicializar_ciclos_menus(request):
             if listado.refuerzo_complemento_am_pm:
                 sedes_dict[sede_nombre][nivel_key]['refuerzo'] += 1
 
+        # Verificar si ya existen registros para esta combinación
+        registros_existentes = PlanificacionRaciones.objects.filter(
+            etc=municipio_obj,
+            focalizacion=focalizacion,
+            ano=ano
+        ).exists()
+
+        # Determinar modo de operación según parámetro
+        modo_forzar = data.get('forzar_actualizacion', False)
+
+        # Si existen registros y NO se forzó la actualización, retornar advertencia
+        if registros_existentes and not modo_forzar:
+            return JsonResponse({
+                'success': False,
+                'warning': 'Ya existen registros para esta combinación',
+                'requiere_confirmacion': True,
+                'total_registros_existentes': PlanificacionRaciones.objects.filter(
+                    etc=municipio_obj,
+                    focalizacion=focalizacion,
+                    ano=ano
+                ).count()
+            }, status=200)
+
         # Crear/actualizar registros en PlanificacionRaciones
         registros_creados = 0
         registros_actualizados = 0
@@ -185,20 +208,36 @@ def inicializar_ciclos_menus(request):
                     if not nivel_obj:
                         continue
 
-                    # Crear o actualizar registro
-                    planificacion, created = PlanificacionRaciones.objects.update_or_create(
-                        etc=municipio_obj,
-                        focalizacion=focalizacion,
-                        sede_educativa=sede_obj,
-                        nivel_escolar=nivel_obj,
-                        ano=ano,
-                        defaults={
-                            'cap_am': datos['cap_am'],
-                            'cap_pm': datos['cap_pm'],
-                            'almuerzo_ju': datos['almuerzo_ju'],
-                            'refuerzo': datos['refuerzo'],
-                        }
-                    )
+                    if modo_forzar:
+                        # Modo FORZADO: Actualizar registros existentes (sobrescribir ediciones)
+                        planificacion, created = PlanificacionRaciones.objects.update_or_create(
+                            etc=municipio_obj,
+                            focalizacion=focalizacion,
+                            sede_educativa=sede_obj,
+                            nivel_escolar=nivel_obj,
+                            ano=ano,
+                            defaults={
+                                'cap_am': datos['cap_am'],
+                                'cap_pm': datos['cap_pm'],
+                                'almuerzo_ju': datos['almuerzo_ju'],
+                                'refuerzo': datos['refuerzo'],
+                            }
+                        )
+                    else:
+                        # Modo SEGURO: Solo crear registros nuevos (preservar ediciones)
+                        planificacion, created = PlanificacionRaciones.objects.get_or_create(
+                            etc=municipio_obj,
+                            focalizacion=focalizacion,
+                            sede_educativa=sede_obj,
+                            nivel_escolar=nivel_obj,
+                            ano=ano,
+                            defaults={
+                                'cap_am': datos['cap_am'],
+                                'cap_pm': datos['cap_pm'],
+                                'almuerzo_ju': datos['almuerzo_ju'],
+                                'refuerzo': datos['refuerzo'],
+                            }
+                        )
 
                     if created:
                         registros_creados += 1
