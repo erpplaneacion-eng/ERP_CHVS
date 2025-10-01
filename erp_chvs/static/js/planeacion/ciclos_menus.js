@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             html += `
                 <div class="sede-card">
-                    <div class="sede-header" data-sede-index="${index}">
+                    <div class="sede-header collapsed" data-sede-index="${index}">
                         <div class="sede-info">
                             <div>
                                 <i class="fas fa-school"></i> ${sedeData.sede}
@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </div>
-                    <div class="sede-body">
+                    <div class="sede-body collapsed">
                         <table class="sede-table">
                         <thead>
                             <tr>
