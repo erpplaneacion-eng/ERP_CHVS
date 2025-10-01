@@ -30,7 +30,7 @@ class AsistenciaPDFGenerator:
         self.width, self.height = landscape(A4)
         self.margen = 10
         self.y_actual = self.height - self.margen
-        self.alto_fila = 10
+        self.alto_fila = 11
         self.max_filas_por_pagina = 25
         self.y_inicio_filas = 0
         self.anchos_cols = self._calcular_anchos_columnas()

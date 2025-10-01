@@ -503,10 +503,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function mostrarModalConfirmacionPersonalizado(title, message, type = 'warning') {
+        console.log('🔍 DEBUG: Iniciando creación de modal personalizado');
+
         return new Promise((resolve) => {
             // Crear modal si no existe
             let modal = document.getElementById('custom-confirm-modal');
             if (!modal) {
+                console.log('🔍 DEBUG: Modal no existe, creando nuevo modal...');
                 modal = document.createElement('div');
                 modal.id = 'custom-confirm-modal';
                 modal.className = 'custom-modal-overlay';
@@ -527,12 +530,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `;
                 document.body.appendChild(modal);
+                console.log('🔍 DEBUG: Modal creado y agregado al DOM');
+            } else {
+                console.log('🔍 DEBUG: Modal ya existe, reutilizando');
+                // Limpiar event listeners anteriores para evitar duplicados
+                const newModal = modal.cloneNode(true);
+                modal.parentNode.replaceChild(newModal, modal);
+                modal = newModal;
+                modal.id = 'custom-confirm-modal';
+                console.log('🔍 DEBUG: Modal limpiado y reutilizado');
             }
 
             // Configurar contenido según el tipo
             const config = getConfiguracionModal(type);
+            console.log('🔍 DEBUG: Configuración del modal:', config);
 
             try {
+                // Configurar contenido
                 modal.querySelector('.custom-modal-title').textContent = title;
                 modal.querySelector('.custom-modal-message').innerHTML = message;
                 modal.querySelector('.custom-modal-icon').innerHTML = `<i class="${config.icon}"></i>`;
@@ -540,37 +554,75 @@ document.addEventListener('DOMContentLoaded', function() {
                 modal.querySelector('.custom-btn-confirm').style.backgroundColor = config.buttonColor;
                 modal.querySelector('.custom-btn-confirm').innerHTML = `<i class="${config.buttonIcon}"></i> ${config.buttonText}`;
 
-                // Mostrar modal
-                modal.style.display = 'flex';
-                modal.querySelector('.custom-modal-content').style.animation = 'modalSlideIn 0.3s ease-out';
+                console.log('🔍 DEBUG: Contenido del modal configurado');
 
-                // Event listeners
-                modal.querySelector('.custom-modal-close').addEventListener('click', () => {
-                    cerrarModalPersonalizado(modal, false, resolve);
+                // Función para manejar la resolución
+                const handleResolve = (result) => {
+                    console.log('🔍 DEBUG: Resolviendo modal con resultado:', result);
+                    modal.style.display = 'none';
+                    modal.querySelector('.custom-modal-content').style.animation = 'modalSlideOut 0.3s ease-in';
+                    setTimeout(() => {
+                        resolve(result);
+                    }, 300);
+                };
+
+                // Event listeners con debugging
+                const closeBtn = modal.querySelector('.custom-modal-close');
+                const cancelBtn = modal.querySelector('.custom-btn-cancel');
+                const confirmBtn = modal.querySelector('.custom-btn-confirm');
+
+                console.log('🔍 DEBUG: Elementos del modal encontrados:', {
+                    closeBtn: !!closeBtn,
+                    cancelBtn: !!cancelBtn,
+                    confirmBtn: !!confirmBtn
                 });
 
-                modal.querySelector('.custom-btn-cancel').addEventListener('click', () => {
-                    cerrarModalPersonalizado(modal, false, resolve);
+                closeBtn.addEventListener('click', (e) => {
+                    console.log('🔍 DEBUG: Usuario hizo clic en cerrar modal');
+                    e.stopPropagation();
+                    handleResolve(false);
                 });
 
-                modal.querySelector('.custom-btn-confirm').addEventListener('click', () => {
-                    cerrarModalPersonalizado(modal, true, resolve);
+                cancelBtn.addEventListener('click', (e) => {
+                    console.log('🔍 DEBUG: Usuario hizo clic en Cancelar');
+                    e.stopPropagation();
+                    handleResolve(false);
+                });
+
+                confirmBtn.addEventListener('click', (e) => {
+                    console.log('🔍 DEBUG: Usuario hizo clic en Continuar');
+                    e.stopPropagation();
+                    handleResolve(true);
                 });
 
                 // Cerrar al hacer clic fuera del modal
                 modal.addEventListener('click', (e) => {
                     if (e.target === modal) {
-                        cerrarModalPersonalizado(modal, false, resolve);
+                        console.log('🔍 DEBUG: Usuario hizo clic fuera del modal');
+                        handleResolve(false);
                     }
                 });
 
+                // Mostrar modal SIN animación inicial para evitar conflictos
+                modal.style.display = 'flex';
+                modal.querySelector('.custom-modal-content').style.transform = 'scale(1)';
+                modal.querySelector('.custom-modal-content').style.opacity = '1';
+
+                console.log('🔍 DEBUG: Modal mostrado en pantalla');
+
                 // Auto-focus en el botón de confirmar después de un breve delay
                 setTimeout(() => {
-                    modal.querySelector('.custom-btn-confirm').focus();
+                    const confirmBtn = modal.querySelector('.custom-btn-confirm');
+                    if (confirmBtn) {
+                        confirmBtn.focus();
+                        console.log('🔍 DEBUG: Focus aplicado al botón Continuar');
+                    } else {
+                        console.error('🔍 DEBUG: No se pudo encontrar el botón de confirmar');
+                    }
                 }, 100);
 
             } catch (error) {
-                console.error('Error al configurar modal personalizado:', error);
+                console.error('❌ DEBUG: Error al configurar modal:', error);
                 resolve(confirm(`${title}\n\n${message.replace(/<[^>]*>/g, '')}`));
             }
         });
@@ -664,27 +716,4 @@ document.addEventListener('DOMContentLoaded', function() {
             return confirmacionNativa;
         }
     }
-
-    // Función de prueba para verificar modal
-    window.probarModalPersonalizado = async function() {
-        const titulo = '🧪 Modal de Prueba';
-        const mensaje = `
-            <div style="text-align: center; padding: 10px;">
-                <strong style="color: #27ae60; font-size: 16px; display: block; margin-bottom: 15px;">
-                    ¡Modal funcionando correctamente!
-                </strong>
-                <div style="background-color: #d4edda; border: 2px solid #27ae60; border-radius: 10px; padding: 15px; margin: 15px 0;">
-                    <i class="fas fa-check-circle" style="color: #27ae60; font-size: 24px; margin-right: 10px;"></i>
-                    <span style="color: #155724; font-weight: 600;">
-                        El modal personalizado está funcionando correctamente
-                    </span>
-                </div>
-                <p style="color: #2c3e50; margin-top: 15px;">
-                    Si ves este mensaje, el modal está funcionando perfectamente.
-                </p>
-            </div>
-        `;
-
-        return await mostrarModalConfirmacionPersonalizado(titulo, mensaje, 'success');
-    };
 });
