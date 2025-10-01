@@ -4,53 +4,59 @@
 {% block title %}Reportes de Asistencia{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-            <h4 class="mb-0"><i class="fas fa-file-pdf me-2"></i> Generación de Reportes de Asistencia</h4>
-            <a href="{% url 'facturacion:facturacion_index' %}" class="btn btn-light btn-sm">
-                <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
+<div class="sedes-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-file-pdf"></i> Generación de Reportes de Asistencia</h2>
+            <p>Generar reportes PDF de asistencia por sede educativa</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'facturacion:facturacion_index' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver al Dashboard
             </a>
         </div>
-        <div class="card-body">
-            <!-- Formulario de Filtros -->
-            <form method="get" class="row g-3 align-items-end bg-light p-3 rounded border">
-                <div class="col-md-4">
-                    <label for="etc" class="form-label"><strong>1. Filtrar por Municipio (ETC):</strong></label>
-                    <select name="etc" id="etc" class="form-select form-select-lg">
+    </div>
+
+    <!-- Filtros -->
+    <div class="filters-container">
+        <form method="get" class="filters-form">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="etc"><strong>Filtrar por Municipio (ETC):</strong></label>
+                    <select name="etc" id="etc" class="form-select">
                         <option value="">-- Seleccione un municipio --</option>
                         {% for etc_val in etc_values %}
                         <option value="{{ etc_val }}" {% if filtros_aplicados.etc == etc_val %}selected{% endif %}>{{ etc_val }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary btn-lg w-100"><i class="fas fa-filter me-1"></i> Filtrar</button>
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter"></i> Filtrar
+                    </button>
                 </div>
-                <div class="col-md-6">
-                    <p class="form-text mb-0">Selecciona un municipio para ver la lista de sedes educativas y poder generar los reportes.</p>
-                </div>
-            </form>
-        </div>
+            </div>
+            <div class="filter-info">
+                <p>Selecciona un municipio para ver la lista de sedes educativas y poder generar los reportes.</p>
+            </div>
+        </form>
     </div>
 
     {% if filtros_aplicados.etc %}
-        <div class="card shadow-sm">
-            <div class="card-header">
-                <h5 class="mb-0">Sedes Educativas en: <strong>{{ filtros_aplicados.etc }}</strong></h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th scope="col">Sede Educativa</th>
-                                <th scope="col" style="width: 15%;">Mes de Atención</th>
-                                <th scope="col" style="width: 15%;">Focalización</th>
-                                <th scope="col" style="width: 20%;" class="text-center">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+    <div class="table-container">
+        <div class="section-header">
+            <h3>Sedes Educativas en: <strong>{{ filtros_aplicados.etc }}</strong></h3>
+        </div>
+        <table class="data-table" id="sedesTable">
+            <thead>
+                <tr>
+                    <th>Sede Educativa</th>
+                    <th>Mes de Atención</th>
+                    <th>Focalización</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody>
                             {% for sede in sedes %}
                             <tr id="sede-row-{{ sede.cod_interprise }}">
                                 <td>
@@ -89,8 +95,6 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
-        </div>
     {% endif %}
 </div>
 {% endblock %}

@@ -8,9 +8,18 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>📊 Procesamiento de Listados PAE</h2>
-    <p class="lead">Sistema de procesamiento por etapas: carga, visualización y almacenamiento</p>
+<div class="sedes-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-tasks"></i> Procesamiento de Listados PAE</h2>
+            <p>Sistema de procesamiento por etapas: carga, visualización y almacenamiento</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'facturacion:facturacion_index' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver al Dashboard
+            </a>
+        </div>
+    </div>
 
     <!-- ETAPA 1: CARGUE Y VISUALIZACIÓN -->
     <div class="etapa-card {% if etapa_actual == 1 %}etapa-activa{% elif etapa_actual >= 2 %}etapa-completada{% endif %} etapa-1">
