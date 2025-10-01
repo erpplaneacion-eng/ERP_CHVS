@@ -1,40 +1,66 @@
 /**
  * ciclos_menus.js
- * Gestión de planificación de ciclos de menús
+ * Lógica para la página de Planificación de Ciclos de Menús.
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Elementos del DOM
+    // Obtener elementos del DOM
     const btnBuscar = document.getElementById('btn-buscar');
     const btnInicializar = document.getElementById('btn-inicializar');
-    const filterEtc = document.getElementById('filter-etc');
-    const filterFocalizacion = document.getElementById('filter-focalizacion');
-    const filterAno = document.getElementById('filter-ano');
+    const etcSelect = document.getElementById('filter-etc');
+    const focalizacionSelect = document.getElementById('filter-focalizacion');
+    const anoInput = document.getElementById('filter-ano');
     const resultsContainer = document.getElementById('results-container');
-    const messageContainer = document.getElementById('message-container');
 
-    // Configuración de URLs desde el template
-    const config = window.CICLOS_MENUS_CONFIG;
+    // Configuración desde el template de Django
+    const config = window.CICLOS_MENUS_CONFIG || {};
 
-    // Event Listeners
-    btnBuscar.addEventListener('click', handleBuscar);
-    btnInicializar.addEventListener('click', handleInicializar);
+    // =================================================================
+    // EVENT LISTENERS
+    // =================================================================
+
+    // Evento para el botón de Buscar
+    if (btnBuscar) {
+        btnBuscar.addEventListener('click', function() {
+            const etc = etcSelect.value;
+            const focalizacion = focalizacionSelect.value;
+            const ano = anoInput.value;
+
+            if (!etc || !focalizacion) {
+                ERPUtils.showAlert('Por favor, seleccione un ETC y una Focalización.', 'warning');
+                return;
+            }
+
+            buscarDatos(etc, focalizacion, ano);
+        });
+    }
+
+    // Evento para el botón de Inicializar
+    if (btnInicializar) {
+        btnInicializar.addEventListener('click', function() {
+            const etc = etcSelect.value;
+            const focalizacion = focalizacionSelect.value;
+            const ano = anoInput.value;
+
+            if (!etc || !focalizacion) {
+                ERPUtils.showAlert('Por favor, seleccione un ETC y una Focalización.', 'warning');
+                return;
+            }
+
+            // Inicia el proceso. El primer llamado nunca se fuerza.
+            inicializarCiclos(etc, focalizacion, ano, false);
+        });
+    }
+
+    // =================================================================
+    // FUNCIÓN: BUSCAR DATOS EXISTENTES
+    // =================================================================
 
     /**
-     * Maneja la búsqueda de datos existentes
+     * Busca datos de planificación existentes sin modificarlos.
      */
-    async function handleBuscar() {
-        const etc = filterEtc.value.trim();
-        const focalizacion = filterFocalizacion.value.trim();
-        const ano = filterAno.value.trim();
-
-        if (!etc || !focalizacion) {
-            showMessage('Por favor seleccione ETC y Focalización', 'error');
-            return;
-        }
-
-        showLoading();
-        clearMessage();
+    async function buscarDatos(etc, focalizacion, ano) {
+        mostrarCargando();
 
         try {
             const url = `${config.urlObtener}?etc=${encodeURIComponent(etc)}&focalizacion=${encodeURIComponent(focalizacion)}&ano=${ano}`;
@@ -48,45 +74,52 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (data.success) {
-                if (data.datos.length === 0) {
-                    showMessage('No se encontraron datos de planificación. Use "Inicializar desde Listados" para crear los registros.', 'info');
-                    resultsContainer.innerHTML = '<div class="no-data"><i class="fas fa-info-circle"></i><p>No hay datos disponibles. Inicialice desde los listados de focalización.</p></div>';
+                if (data.datos && data.datos.length > 0) {
+                    renderizarTabla(data.datos);
                 } else {
-                    renderResults(data.datos);
+                    resultsContainer.innerHTML = `
+                        <div class="no-data">
+                            <i class="fas fa-info-circle"></i>
+                            <p>No se encontraron datos de planificación. Use "Inicializar desde Listados" para crear los registros.</p>
+                        </div>
+                    `;
                 }
             } else {
-                showMessage(data.error || 'Error al obtener datos', 'error');
-                resultsContainer.innerHTML = '<div class="no-data"><i class="fas fa-exclamation-circle"></i><p>Error al cargar datos</p></div>';
+                ERPUtils.showAlert(data.error || 'Error al obtener datos', 'error');
+                resultsContainer.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>Error al cargar datos</p>
+                    </div>
+                `;
             }
         } catch (error) {
-            console.error('Error:', error);
-            showMessage('Error de conexión al servidor', 'error');
-            resultsContainer.innerHTML = '<div class="no-data"><i class="fas fa-exclamation-circle"></i><p>Error de conexión</p></div>';
+            console.error('Error al buscar datos:', error);
+            ERPUtils.showAlert('Error de conexión al servidor', 'error');
+            resultsContainer.innerHTML = `
+                <div class="no-data">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>Error de conexión</p>
+                </div>
+            `;
         }
     }
 
+    // =================================================================
+    // FUNCIÓN: INICIALIZAR CICLOS DE MENÚS
+    // =================================================================
+
     /**
-     * Maneja la inicialización desde listados
+     * Función asíncrona para inicializar o actualizar los ciclos de menús.
+     * @param {string} etc - El ETC seleccionado.
+     * @param {string} focalizacion - La focalización seleccionada.
+     * @param {string} ano - El año seleccionado.
+     * @param {boolean} forzar - Si se debe forzar la actualización sobre datos existentes.
      */
-    async function handleInicializar(forzarActualizacion = false) {
-        const etc = filterEtc.value.trim();
-        const focalizacion = filterFocalizacion.value.trim();
-        const ano = filterAno.value.trim();
-
-        if (!etc || !focalizacion) {
-            showMessage('Por favor seleccione ETC y Focalización', 'error');
-            return;
-        }
-
-        // Primer intento sin forzar
-        if (!forzarActualizacion) {
-            if (!confirm(`¿Desea inicializar la planificación para ${etc} - ${focalizacion}?\n\nSe calcularán las cantidades automáticamente desde los listados de focalización.`)) {
-                return;
-            }
-        }
-
-        showLoading();
-        clearMessage();
+    async function inicializarCiclos(etc, focalizacion, ano, forzar) {
+        // Mostrar indicador de carga
+        btnInicializar.disabled = true;
+        btnInicializar.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...';
 
         try {
             const response = await fetch(config.urlInicializar, {
@@ -99,86 +132,69 @@ document.addEventListener('DOMContentLoaded', function() {
                     etc: etc,
                     focalizacion: focalizacion,
                     ano: parseInt(ano),
-                    forzar_actualizacion: forzarActualizacion
+                    forzar_actualizacion: forzar
                 })
             });
 
             const data = await response.json();
 
-            // Caso especial: Requiere confirmación para sobrescribir
-            if (data.requiere_confirmacion) {
-                const confirmar = confirm(
-                    `⚠️ ADVERTENCIA ⚠️\n\n` +
-                    `Ya existen ${data.total_registros_existentes} registros planificados para:\n` +
-                    `• ETC: ${etc}\n` +
-                    `• Focalización: ${focalizacion}\n` +
-                    `• Año: ${ano}\n\n` +
-                    `Si continúa, se SOBRESCRIBIRÁN todas las ediciones manuales que haya realizado.\n\n` +
-                    `Las cantidades se recalcularán automáticamente desde los listados de focalización.\n\n` +
-                    `¿Está SEGURO de que desea recalcular y sobrescribir los datos existentes?`
-                );
+            if (response.ok) {
+                if (data.success) {
+                    ERPUtils.showNotification(data.message, 'success');
+                    // Renderizar la tabla con los datos recibidos
+                    renderizarTabla(data.datos);
 
-                if (confirmar) {
-                    // Reintentar con forzar_actualizacion = true
-                    handleInicializar(true);
+                } else if (data.requiere_confirmacion) {
+                    // Pedir confirmación al usuario antes de sobrescribir
+                    const userConfirmed = await ERPUtils.showConfirm(
+                        'Confirmación Requerida',
+                        `${data.warning}. Existen ${data.total_registros_existentes} registros que serán sobreescritos. ¿Desea continuar?`,
+                        'warning'
+                    );
+
+                    if (userConfirmed) {
+                        // Si el usuario confirma, llamamos de nuevo forzando la actualización.
+                        inicializarCiclos(etc, focalizacion, ano, true);
+                    } else {
+                        // Si el usuario cancela, cargar los datos existentes sin modificar
+                        ERPUtils.showNotification('Operación cancelada. Los registros existentes se mantienen intactos.', 'info');
+                        buscarDatos(etc, focalizacion, ano);
+                    }
                 } else {
-                    // Usuario canceló: Cargar los datos existentes sin modificar
-                    showMessage('Operación cancelada. Los registros existentes se mantienen intactos.', 'info');
-
-                    // Cargar los datos existentes para mostrarlos
-                    cargarDatosExistentes(etc, focalizacion, ano);
+                    // Otros errores controlados por el backend
+                    ERPUtils.showAlert(data.error || 'Ocurrió un error inesperado.', 'error');
                 }
-                return;
+            } else {
+                // Errores de servidor (500, etc.)
+                const errorMsg = data.error || 'Error desconocido del servidor';
+                ERPUtils.showAlert(`Error del servidor: ${errorMsg}`, 'error');
             }
 
-            if (data.success) {
-                showMessage(`${data.message}`, 'success');
-                renderResults(data.datos);
-            } else {
-                showMessage(data.error || 'Error al inicializar', 'error');
-                resultsContainer.innerHTML = '<div class="no-data"><i class="fas fa-exclamation-circle"></i><p>Error al inicializar</p></div>';
-            }
         } catch (error) {
-            console.error('Error:', error);
-            showMessage('Error de conexión al servidor', 'error');
-            resultsContainer.innerHTML = '<div class="no-data"><i class="fas fa-exclamation-circle"></i><p>Error de conexión</p></div>';
+            console.error('Error de red o al procesar la petición:', error);
+            ERPUtils.showAlert('Error de red. Por favor, intente de nuevo.', 'error');
+        } finally {
+            // Reactivar botón
+            btnInicializar.disabled = false;
+            btnInicializar.innerHTML = '<i class="fas fa-sync-alt"></i> Inicializar desde Listados';
         }
     }
 
-    /**
-     * Carga los datos existentes sin modificarlos
-     */
-    async function cargarDatosExistentes(etc, focalizacion, ano) {
-        showLoading();
-
-        try {
-            const url = `${config.urlObtener}?etc=${encodeURIComponent(etc)}&focalizacion=${encodeURIComponent(focalizacion)}&ano=${ano}`;
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
-
-            const data = await response.json();
-
-            if (data.success && data.datos.length > 0) {
-                renderResults(data.datos);
-            } else {
-                resultsContainer.innerHTML = '<div class="no-data"><i class="fas fa-info-circle"></i><p>No hay datos disponibles</p></div>';
-            }
-        } catch (error) {
-            console.error('Error al cargar datos:', error);
-            resultsContainer.innerHTML = '<div class="no-data"><i class="fas fa-exclamation-circle"></i><p>Error al cargar datos</p></div>';
-        }
-    }
+    // =================================================================
+    // FUNCIÓN: RENDERIZAR TABLA
+    // =================================================================
 
     /**
-     * Renderiza los resultados en tablas por sede
+     * Renderiza los resultados en tablas por sede con acordeón.
      */
-    function renderResults(sedes) {
+    function renderizarTabla(sedes) {
         if (!sedes || sedes.length === 0) {
-            resultsContainer.innerHTML = '<div class="no-data"><i class="fas fa-info-circle"></i><p>No hay datos disponibles</p></div>';
+            resultsContainer.innerHTML = `
+                <div class="no-data">
+                    <i class="fas fa-info-circle"></i>
+                    <p>No hay datos disponibles</p>
+                </div>
+            `;
             return;
         }
 
@@ -215,18 +231,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="sede-body collapsed">
                         <table class="sede-table">
-                        <thead>
-                            <tr>
-                                <th>Nivel Escolar</th>
-                                <th>Grados</th>
-                                <th>CAP AM</th>
-                                <th>CAP PM</th>
-                                <th>Almuerzo JU</th>
-                                <th>Refuerzo</th>
-                                <th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+                            <thead>
+                                <tr>
+                                    <th>Nivel Escolar</th>
+                                    <th>Grados</th>
+                                    <th>CAP AM</th>
+                                    <th>CAP PM</th>
+                                    <th>Almuerzo JU</th>
+                                    <th>Refuerzo</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
             `;
 
             sedeData.niveles.forEach(nivel => {
@@ -255,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
             });
 
-            // Fila de totales (usar los valores ya calculados)
+            // Fila de totales
             html += `
                     <tr class="total-row">
                         <td colspan="2"><strong>TOTAL SEDE</strong></td>
@@ -265,65 +281,64 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td><strong>${totalRefuerzo}</strong></td>
                         <td><strong>${totalGeneral}</strong></td>
                     </tr>
-                        </tbody>
-                    </table>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
             `;
         });
 
         resultsContainer.innerHTML = html;
 
-        // Agregar event listeners a las celdas editables
-        attachEditListeners();
-
-        // Agregar event listeners para acordeón
-        attachAccordionListeners();
+        // Agregar event listeners
+        agregarListenersAcordeon();
+        agregarListenersEdicion();
     }
 
+    // =================================================================
+    // FUNCIÓN: ACORDEÓN
+    // =================================================================
+
     /**
-     * Agrega event listeners para el acordeón
+     * Agrega event listeners para el acordeón de sedes.
      */
-    function attachAccordionListeners() {
+    function agregarListenersAcordeon() {
         const headers = document.querySelectorAll('.sede-header');
 
         headers.forEach(header => {
             header.addEventListener('click', function() {
-                toggleAccordion(this);
+                const body = this.nextElementSibling;
+
+                // Toggle classes
+                this.classList.toggle('collapsed');
+                body.classList.toggle('collapsed');
             });
         });
     }
 
-    /**
-     * Alterna el estado de expansión/contracción del acordeón
-     */
-    function toggleAccordion(header) {
-        const body = header.nextElementSibling;
-
-        // Toggle classes
-        header.classList.toggle('collapsed');
-        body.classList.toggle('collapsed');
-    }
+    // =================================================================
+    // FUNCIÓN: EDICIÓN INLINE
+    // =================================================================
 
     /**
-     * Agrega event listeners a las celdas editables
+     * Agrega event listeners a las celdas editables.
      */
-    function attachEditListeners() {
+    function agregarListenersEdicion() {
         const editableCells = document.querySelectorAll('.editable-cell');
 
         editableCells.forEach(cell => {
             cell.addEventListener('click', function(e) {
                 // Evitar que el click se propague al header del acordeón
                 e.stopPropagation();
-                makeEditable(this);
+                hacerEditable(this);
             });
         });
     }
 
     /**
-     * Convierte una celda en editable
+     * Convierte una celda en editable.
      */
-    function makeEditable(cell) {
+    function hacerEditable(cell) {
         if (cell.querySelector('input')) {
             return; // Ya está en modo edición
         }
@@ -357,7 +372,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             if (!newValue || newValue < 0) {
-                showMessage('Valor inválido', 'error');
+                ERPUtils.showAlert('Valor inválido', 'error');
                 cell.innerHTML = `<span class="value">${currentValue}</span><i class="fas fa-edit edit-icon"></i>`;
                 return;
             }
@@ -381,17 +396,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (data.success) {
                     cell.innerHTML = `<span class="value">${newValue}</span><i class="fas fa-edit edit-icon"></i>`;
-                    showMessage('Valor actualizado exitosamente', 'success');
+                    ERPUtils.showNotification('Valor actualizado exitosamente', 'success');
 
                     // Actualizar totales
-                    updateTotals(cell.closest('table'));
+                    actualizarTotales(cell.closest('table'));
                 } else {
-                    showMessage(data.error || 'Error al actualizar', 'error');
+                    ERPUtils.showAlert(data.error || 'Error al actualizar', 'error');
                     cell.innerHTML = `<span class="value">${currentValue}</span><i class="fas fa-edit edit-icon"></i>`;
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showMessage('Error de conexión al servidor', 'error');
+                ERPUtils.showAlert('Error de conexión al servidor', 'error');
                 cell.innerHTML = `<span class="value">${currentValue}</span><i class="fas fa-edit edit-icon"></i>`;
             }
         };
@@ -407,9 +422,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
-     * Actualiza los totales de una tabla
+     * Actualiza los totales de una tabla después de editar.
      */
-    function updateTotals(table) {
+    function actualizarTotales(table) {
         const rows = table.querySelectorAll('tbody tr:not(.total-row)');
         let totalCapAm = 0;
         let totalCapPm = 0;
@@ -425,7 +440,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 totalRefuerzo += parseInt(cells[5].querySelector('.value')?.textContent || 0);
 
                 // Actualizar total de la fila
-                const rowTotal = totalCapAm + totalCapPm + totalAlmuerzo + totalRefuerzo;
+                const rowTotal =
+                    parseInt(cells[2].querySelector('.value')?.textContent || 0) +
+                    parseInt(cells[3].querySelector('.value')?.textContent || 0) +
+                    parseInt(cells[4].querySelector('.value')?.textContent || 0) +
+                    parseInt(cells[5].querySelector('.value')?.textContent || 0);
                 cells[6].innerHTML = `<strong>${rowTotal}</strong>`;
             }
         });
@@ -442,43 +461,30 @@ document.addEventListener('DOMContentLoaded', function() {
             totalCells[4].innerHTML = `<strong>${totalRefuerzo}</strong>`;
             totalCells[5].innerHTML = `<strong>${totalGeneral}</strong>`;
         }
+
+        // Actualizar resumen en el header
+        const sedeCard = table.closest('.sede-card');
+        if (sedeCard) {
+            const summary = sedeCard.querySelector('.sede-summary span');
+            if (summary) {
+                summary.textContent = `${totalGeneral} raciones`;
+            }
+        }
     }
 
+    // =================================================================
+    // FUNCIÓN: MOSTRAR CARGANDO
+    // =================================================================
+
     /**
-     * Muestra un spinner de carga
+     * Muestra un indicador de carga.
      */
-    function showLoading() {
+    function mostrarCargando() {
         resultsContainer.innerHTML = `
             <div class="loading-spinner">
-                <i class="fas fa-spinner"></i>
+                <i class="fas fa-spinner fa-spin"></i>
                 <p>Cargando datos...</p>
             </div>
         `;
-    }
-
-    /**
-     * Muestra un mensaje al usuario
-     */
-    function showMessage(message, type = 'info') {
-        const alertClass = type === 'error' ? 'alert-error' : type === 'success' ? 'alert-success' : 'alert-info';
-        const icon = type === 'error' ? 'fa-exclamation-circle' : type === 'success' ? 'fa-check-circle' : 'fa-info-circle';
-
-        messageContainer.innerHTML = `
-            <div class="alert ${alertClass}">
-                <i class="fas ${icon}"></i> ${message}
-            </div>
-        `;
-
-        // Auto-ocultar después de 5 segundos
-        setTimeout(() => {
-            messageContainer.innerHTML = '';
-        }, 5000);
-    }
-
-    /**
-     * Limpia el mensaje actual
-     */
-    function clearMessage() {
-        messageContainer.innerHTML = '';
     }
 });

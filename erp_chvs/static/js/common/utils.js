@@ -65,6 +65,34 @@ const ERPUtils = {
     },
     
     /**
+     * Muestra un diálogo de confirmación personalizado.
+     * @param {string} title - El título del diálogo.
+     * @param {string} text - El texto del cuerpo del diálogo.
+     * @param {string} icon - El tipo de ícono ('warning', 'question', etc.).
+     * @returns {Promise<boolean>} - Una promesa que se resuelve a `true` si el usuario confirma, `false` si cancela.
+     */
+    showConfirm: function(title, text, icon = 'warning') {
+        return new Promise((resolve) => {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: title,
+                    text: text,
+                    icon: icon,
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Sí, continuar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    resolve(result.isConfirmed);
+                });
+            } else {
+                resolve(confirm(`${title}\n\n${text}`));
+            }
+        });
+    },
+
+    /**
      * Función para validar campos requeridos en un formulario
      * @param {HTMLFormElement} form - El formulario a validar
      * @param {Array} fieldNames - Lista de nombres de campos requeridos

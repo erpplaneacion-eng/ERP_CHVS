@@ -136,6 +136,8 @@
     {% elif request.resolver_match.app_name == 'planeacion' %}
         {% if 'programas' in request.path %}
             <script src="{% static 'js/planeacion/programas.js' %}"></script>
+        {% elif 'ciclos-menus' in request.path %}
+            <script src="{% static 'js/planeacion/ciclos_menus.js' %}"></script>
         {% endif %}
     {% elif request.resolver_match.app_name == 'facturacion' %}
         <script src="{% static 'js/facturacion/facturacion.js' %}"></script>
