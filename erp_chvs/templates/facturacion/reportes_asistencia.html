@@ -3,6 +3,68 @@
 
 {% block title %}Reportes de Asistencia{% endblock %}
 
+{% block extra_css %}
+<style>
+.bulk-generation-container {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #28a745;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.bulk-header h3 {
+    color: #28a745;
+    margin-bottom: 8px;
+}
+
+.bulk-header p {
+    color: #6c757d;
+    margin-bottom: 15px;
+}
+
+.bulk-form {
+    display: flex;
+    gap: 20px;
+    align-items: end;
+    flex-wrap: wrap;
+}
+
+.bulk-field {
+    flex: 1;
+    min-width: 200px;
+}
+
+.bulk-field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #495057;
+}
+
+.bulk-field .form-select {
+    border: 2px solid #28a745;
+    border-radius: 6px;
+}
+
+.bulk-field .btn {
+    padding: 10px 20px;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .bulk-form {
+        flex-direction: column;
+    }
+    
+    .bulk-field {
+        min-width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="sedes-container">
     <div class="page-header">
@@ -43,9 +105,44 @@
     </div>
 
     {% if filtros_aplicados.etc %}
+    <!-- Opción de generación masiva -->
+    <div class="bulk-generation-container">
+        <div class="bulk-header">
+            <h3><i class="fas fa-download"></i> Generación Masiva por ETC</h3>
+            <p>Generar reportes para todas las sedes de <strong>{{ filtros_aplicados.etc }}</strong> con los mismos parámetros</p>
+        </div>
+        <div class="bulk-controls">
+            <div class="bulk-form">
+                <div class="bulk-field">
+                    <label for="bulk-mes">Mes para todas las sedes:</label>
+                    <select id="bulk-mes" class="form-select">
+                        {% for mes in meses_atencion %}
+                            <option value="{{ mes }}">{{ mes|title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="bulk-field">
+                    <label for="bulk-focalizacion">Focalización para todas las sedes:</label>
+                    <select id="bulk-focalizacion" class="form-select">
+                        {% for focalizacion in focalizaciones_disponibles %}
+                            <option value="{{ focalizacion }}">{{ focalizacion }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="bulk-field">
+                    <button type="button" class="btn btn-success btn-lg" id="btn-generar-masivo" 
+                            data-etc="{{ filtros_aplicados.etc }}">
+                        <i class="fas fa-archive"></i> Generar ZIP Masivo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="table-container">
         <div class="section-header">
             <h3>Sedes Educativas en: <strong>{{ filtros_aplicados.etc }}</strong></h3>
+            <p><small>O generar reportes individualmente por sede:</small></p>
         </div>
         <table class="data-table" id="sedesTable">
             <thead>
@@ -102,6 +199,8 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    
+    // === GENERACIÓN INDIVIDUAL POR SEDE ===
     document.addEventListener('click', async function(e) {
         if (e.target.classList.contains('btn-generar-asistencia') ||
             e.target.closest('.btn-generar-asistencia')) {
@@ -112,7 +211,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 ? e.target
                 : e.target.closest('.btn-generar-asistencia');
 
-            // Declarar la variable aquí para que sea accesible en el bloque 'finally'
             let originalText = button.innerHTML;
 
             try {
@@ -146,68 +244,130 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
 
                 const url = `/facturacion/generar-asistencia/${sedeCod}/${mes}/${focalizacion}/`;
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Error del servidor: ${response.status} - ${errorText}`);
-                }
-
-                const contentType = response.headers.get('content-type');
-
-                if (contentType && contentType.includes('application/zip')) {
-                    const blob = await response.blob();
-                    const downloadUrl = window.URL.createObjectURL(blob);
-
-                    const contentDisposition = response.headers.get('content-disposition');
-                    let filename = 'reportes_asistencia.zip';
-
-                    if (contentDisposition && contentDisposition.indexOf('attachment') !== -1) {
-                        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                        const matches = filenameRegex.exec(contentDisposition);
-                        if (matches != null && matches[1]) {
-                            filename = matches[1].replace(/['"]/g, '');
-                        }
-                    }
-
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = downloadUrl;
-                    a.download = filename;
-
-                    document.body.appendChild(a);
-                    a.click();
-
-                    window.URL.revokeObjectURL(downloadUrl);
-                    document.body.removeChild(a);
-
-                    if (window.showNotification) {
-                        window.showNotification('¡Reporte generado exitosamente!', 'success');
-                    } else {
-                        alert('¡Reporte generado exitosamente!');
-                    }
-
-                } else {
-                    throw new Error('La respuesta del servidor no es un archivo ZIP válido');
-                }
+                await descargarArchivo(url, button, originalText);
 
             } catch (error) {
-                if (window.showNotification) {
-                    window.showNotification(`Error: ${error.message}`, 'error');
-                } else {
-                    alert(`Error: ${error.message}`);
-                }
-            } finally {
+                mostrarError(error.message);
                 button.disabled = false;
                 button.innerHTML = originalText;
             }
         }
     });
+
+    // === GENERACIÓN MASIVA POR ETC ===
+    const btnGenerarMasivo = document.getElementById('btn-generar-masivo');
+    if (btnGenerarMasivo) {
+        btnGenerarMasivo.addEventListener('click', async function(e) {
+            e.preventDefault();
+
+            const etc = this.dataset.etc;
+            const mes = document.getElementById('bulk-mes').value;
+            const focalizacion = document.getElementById('bulk-focalizacion').value;
+
+            if (!etc || !mes || !focalizacion) {
+                alert('Error: Faltan parámetros para la generación masiva.');
+                return;
+            }
+
+            // Confirmar la acción
+            const confirmacion = confirm(
+                `¿Está seguro de generar reportes para TODAS las sedes del ETC "${etc}" con los parámetros:\n\n` +
+                `• Mes: ${mes}\n` +
+                `• Focalización: ${focalizacion}\n\n` +
+                `Esta operación puede tomar varios minutos.`
+            );
+
+            if (!confirmacion) {
+                return;
+            }
+
+            const originalText = this.innerHTML;
+
+            try {
+                this.disabled = true;
+                this.innerHTML = `
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Generando ZIP Masivo... Por favor espere
+                `;
+
+                const url = `/facturacion/generar-zip-masivo/${encodeURIComponent(etc)}/${mes}/${encodeURIComponent(focalizacion)}/`;
+                await descargarArchivo(url, this, originalText);
+
+            } catch (error) {
+                mostrarError(error.message);
+                this.disabled = false;
+                this.innerHTML = originalText;
+            }
+        });
+    }
+
+    // === FUNCIONES AUXILIARES ===
+    async function descargarArchivo(url, button, originalText) {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Error del servidor: ${response.status} - ${errorText}`);
+        }
+
+        const contentType = response.headers.get('content-type');
+
+        if (contentType && contentType.includes('application/zip')) {
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+
+            const contentDisposition = response.headers.get('content-disposition');
+            let filename = 'reportes_asistencia.zip';
+
+            if (contentDisposition && contentDisposition.indexOf('attachment') !== -1) {
+                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                const matches = filenameRegex.exec(contentDisposition);
+                if (matches != null && matches[1]) {
+                    filename = matches[1].replace(/['"]/g, '');
+                }
+            }
+
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = downloadUrl;
+            a.download = filename;
+
+            document.body.appendChild(a);
+            a.click();
+
+            window.URL.revokeObjectURL(downloadUrl);
+            document.body.removeChild(a);
+
+            mostrarExito('¡Reporte generado exitosamente!');
+
+        } else {
+            throw new Error('La respuesta del servidor no es un archivo ZIP válido');
+        }
+
+        button.disabled = false;
+        button.innerHTML = originalText;
+    }
+
+    function mostrarExito(mensaje) {
+        if (window.showNotification) {
+            window.showNotification(mensaje, 'success');
+        } else {
+            alert(mensaje);
+        }
+    }
+
+    function mostrarError(mensaje) {
+        if (window.showNotification) {
+            window.showNotification(`Error: ${mensaje}`, 'error');
+        } else {
+            alert(`Error: ${mensaje}`);
+        }
+    }
 });
 </script>
 {% endblock %}

@@ -14,6 +14,7 @@ urlpatterns = [
     # Nueva vista para la interfaz de generación de reportes de asistencia
     path('reportes-asistencia/', views.reportes_asistencia_view, name='reportes_asistencia'),
     path('generar-asistencia/<str:sede_cod_interprise>/<str:mes>/<str:focalizacion>/', views.generar_pdf_asistencia, name='generar_pdf_asistencia'),
+    path('generar-zip-masivo/<str:etc>/<str:mes>/<str:focalizacion>/', views.generar_zip_masivo_etc, name='generar_zip_masivo_etc'),
 
     # APIs para gestión de listados focalización
     path('api/listados/', views.api_listados, name='api_listados'),

@@ -855,3 +855,20 @@ def generar_pdf_asistencia(request, sede_cod_interprise, mes, focalizacion):
     Delega la lógica principal al PDFAsistenciaService.
     """
     return PDFAsistenciaService.generar_pdf_asistencia(sede_cod_interprise, mes, focalizacion)
+
+@login_required
+def generar_zip_masivo_etc(request, etc, mes, focalizacion):
+    """
+    Vista para generar un ZIP masivo con todos los PDFs de asistencia 
+    para todas las sedes de un ETC específico.
+    
+    Args:
+        request: HttpRequest object
+        etc: Nombre del municipio/ETC
+        mes: Mes de atención
+        focalizacion: Tipo de focalización
+    
+    Returns:
+        HttpResponse: Archivo ZIP con todos los PDFs de las sedes del ETC
+    """
+    return PDFAsistenciaService.generar_zip_masivo_por_etc(etc, mes, focalizacion)
