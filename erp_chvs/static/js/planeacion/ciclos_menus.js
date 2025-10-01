@@ -583,9 +583,317 @@ document.addEventListener('DOMContentLoaded', function() {
         if (typeof ERPUtils !== 'undefined' && typeof ERPUtils.showConfirm === 'function') {
             return ERPUtils.showConfirm(title, text, icon);
         } else {
-            // Fallback con confirm nativo
-            return Promise.resolve(confirm(`${title}\n\n${text}`));
+            // Usar modal HTML personalizado más llamativo
+            return mostrarModalConfirmacionPersonalizado(title, text, icon);
         }
+    }
+
+    /**
+     * Crea y muestra un modal de confirmación personalizado con HTML
+     * @param {string} title - Título del modal
+     * @param {string} message - Mensaje del modal
+     * @param {string} type - Tipo de confirmación (warning, error, info, success)
+     * @returns {Promise<boolean>} - Resultado de la confirmación
+     */
+    function mostrarModalConfirmacionPersonalizado(title, message, type = 'warning') {
+        return new Promise((resolve) => {
+            // Crear modal si no existe
+            let modal = document.getElementById('custom-confirm-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'custom-confirm-modal';
+                modal.className = 'custom-modal-overlay';
+                modal.innerHTML = `
+                    <div class="custom-modal-content">
+                        <div class="custom-modal-header">
+                            <h3 class="custom-modal-title"></h3>
+                            <button class="custom-modal-close">&times;</button>
+                        </div>
+                        <div class="custom-modal-body">
+                            <div class="custom-modal-icon"></div>
+                            <p class="custom-modal-message"></p>
+                        </div>
+                        <div class="custom-modal-footer">
+                            <button class="custom-btn custom-btn-cancel">Cancelar</button>
+                            <button class="custom-btn custom-btn-confirm">Continuar</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+
+                // Agregar estilos CSS
+                agregarEstilosModalPersonalizado();
+
+                // Event listeners
+                modal.querySelector('.custom-modal-close').addEventListener('click', () => {
+                    cerrarModalPersonalizado(modal, false, resolve);
+                });
+
+                modal.querySelector('.custom-btn-cancel').addEventListener('click', () => {
+                    cerrarModalPersonalizado(modal, false, resolve);
+                });
+
+                modal.querySelector('.custom-btn-confirm').addEventListener('click', () => {
+                    cerrarModalPersonalizado(modal, true, resolve);
+                });
+
+                // Cerrar al hacer clic fuera del modal
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        cerrarModalPersonalizado(modal, false, resolve);
+                    }
+                });
+            }
+
+            // Configurar contenido según el tipo
+            const config = getConfiguracionModal(type);
+
+            modal.querySelector('.custom-modal-title').textContent = title;
+            modal.querySelector('.custom-modal-message').innerHTML = message;
+            modal.querySelector('.custom-modal-icon').innerHTML = `<i class="${config.icon}"></i>`;
+            modal.querySelector('.custom-modal-header').style.backgroundColor = config.headerColor;
+            modal.querySelector('.custom-btn-confirm').style.backgroundColor = config.buttonColor;
+            modal.querySelector('.custom-btn-confirm').innerHTML = `<i class="${config.buttonIcon}"></i> ${config.buttonText}`;
+
+            // Mostrar modal
+            modal.style.display = 'flex';
+            modal.querySelector('.custom-modal-content').style.animation = 'modalSlideIn 0.3s ease-out';
+
+            // Auto-focus en el botón de confirmar después de un breve delay
+            setTimeout(() => {
+                modal.querySelector('.custom-btn-confirm').focus();
+            }, 100);
+        });
+    }
+
+    /**
+     * Obtiene la configuración visual según el tipo de modal
+     * @param {string} type - Tipo de modal
+     * @returns {Object} - Configuración de colores e íconos
+     */
+    function getConfiguracionModal(type) {
+        const configs = {
+            warning: {
+                icon: 'fas fa-exclamation-triangle fa-3x',
+                headerColor: '#f39c12',
+                buttonColor: '#f39c12',
+                buttonIcon: 'fas fa-exclamation-triangle',
+                buttonText: 'Continuar'
+            },
+            error: {
+                icon: 'fas fa-times-circle fa-3x',
+                headerColor: '#e74c3c',
+                buttonColor: '#e74c3c',
+                buttonIcon: 'fas fa-times',
+                buttonText: 'Aceptar'
+            },
+            info: {
+                icon: 'fas fa-info-circle fa-3x',
+                headerColor: '#3498db',
+                buttonColor: '#3498db',
+                buttonIcon: 'fas fa-check',
+                buttonText: 'Entendido'
+            },
+            success: {
+                icon: 'fas fa-check-circle fa-3x',
+                headerColor: '#27ae60',
+                buttonColor: '#27ae60',
+                buttonIcon: 'fas fa-check',
+                buttonText: 'Aceptar'
+            }
+        };
+
+        return configs[type] || configs.warning;
+    }
+
+    /**
+     * Cierra el modal personalizado y resuelve la promesa
+     * @param {HTMLElement} modal - Elemento modal
+     * @param {boolean} result - Resultado de la confirmación
+     * @param {Function} resolve - Función resolve de la promesa
+     */
+    function cerrarModalPersonalizado(modal, result, resolve) {
+        modal.style.display = 'none';
+        modal.querySelector('.custom-modal-content').style.animation = 'modalSlideOut 0.3s ease-in';
+        setTimeout(() => {
+            resolve(result);
+        }, 300);
+    }
+
+    /**
+     * Agrega estilos CSS para el modal personalizado
+     */
+    function agregarEstilosModalPersonalizado() {
+        if (document.getElementById('custom-modal-styles')) return;
+
+        const style = document.createElement('style');
+        style.id = 'custom-modal-styles';
+        style.textContent = `
+            .custom-modal-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.7);
+                z-index: 10000;
+                align-items: center;
+                justify-content: center;
+                backdrop-filter: blur(2px);
+            }
+
+            .custom-modal-content {
+                background: white;
+                border-radius: 15px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                max-width: 500px;
+                width: 90%;
+                max-height: 80vh;
+                overflow: hidden;
+                transform: scale(0.9);
+                opacity: 0;
+            }
+
+            .custom-modal-header {
+                padding: 20px 25px;
+                color: white;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-weight: 600;
+                font-size: 18px;
+            }
+
+            .custom-modal-close {
+                background: none;
+                border: none;
+                color: white;
+                font-size: 28px;
+                cursor: pointer;
+                padding: 0;
+                width: 35px;
+                height: 35px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+                transition: background-color 0.3s;
+            }
+
+            .custom-modal-close:hover {
+                background-color: rgba(255, 255, 255, 0.2);
+            }
+
+            .custom-modal-body {
+                padding: 25px;
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 15px;
+            }
+
+            .custom-modal-icon {
+                opacity: 0.8;
+            }
+
+            .custom-modal-icon i {
+                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+            }
+
+            .custom-modal-message {
+                color: #2c3e50;
+                font-size: 16px;
+                line-height: 1.5;
+                margin: 0;
+                text-align: center;
+            }
+
+            .custom-modal-footer {
+                padding: 20px 25px;
+                display: flex;
+                gap: 15px;
+                justify-content: flex-end;
+                background-color: #f8f9fa;
+                border-top: 1px solid #e9ecef;
+            }
+
+            .custom-btn {
+                padding: 12px 25px;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                transition: all 0.3s ease;
+                min-width: 100px;
+                justify-content: center;
+            }
+
+            .custom-btn-cancel {
+                background-color: #6c757d;
+                color: white;
+            }
+
+            .custom-btn-cancel:hover {
+                background-color: #5a6268;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+            }
+
+            .custom-btn-confirm {
+                color: white;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            }
+
+            .custom-btn-confirm:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            }
+
+            @keyframes modalSlideIn {
+                from {
+                    transform: scale(0.8);
+                    opacity: 0;
+                }
+                to {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+            }
+
+            @keyframes modalSlideOut {
+                from {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+                to {
+                    transform: scale(0.8);
+                    opacity: 0;
+                }
+            }
+
+            /* Responsive */
+            @media (max-width: 768px) {
+                .custom-modal-content {
+                    width: 95%;
+                    margin: 20px;
+                }
+
+                .custom-modal-footer {
+                    flex-direction: column;
+                }
+
+                .custom-btn {
+                    width: 100%;
+                }
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     /**
@@ -596,16 +904,32 @@ document.addEventListener('DOMContentLoaded', function() {
      * @param {string} ano - Año para contexto
      */
     async function mostrarConfirmacionNativa(data, etc, focalizacion, ano) {
-        const titulo = 'Confirmación Requerida';
-        const mensaje = `${data.warning}. Existen ${data.total_registros_existentes} registros que serán sobreescritos. ¿Desea continuar?`;
+        const titulo = '⚠️ Confirmación Requerida';
+        const mensaje = `
+            <div style="text-align: center; padding: 10px;">
+                <strong style="color: #e74c3c; font-size: 16px; display: block; margin-bottom: 15px;">
+                    ${data.warning}
+                </strong>
+                <div style="background-color: #fff3cd; border: 2px solid #f39c12; border-radius: 10px; padding: 15px; margin: 15px 0;">
+                    <i class="fas fa-exclamation-triangle" style="color: #f39c12; font-size: 24px; margin-right: 10px;"></i>
+                    <span style="color: #856404; font-weight: 600;">
+                        Existen <strong style="color: #d68910;">${data.total_registros_existentes} registros</strong> que serán sobreescritos
+                    </span>
+                </div>
+                <p style="color: #2c3e50; margin-top: 15px;">
+                    ¿Está seguro de que desea continuar? Esta acción no se puede deshacer.
+                </p>
+            </div>
+        `;
 
-        // Usar función segura de confirmación
-        const userConfirmed = await mostrarConfirmacionSegura(titulo, mensaje);
+        // Usar modal personalizado más llamativo
+        const userConfirmed = await mostrarModalConfirmacionPersonalizado(titulo, mensaje, 'warning');
 
         if (userConfirmed) {
-            console.log('Usuario confirmó vía fallback - procediendo con actualización forzada');
+            console.log('✅ Usuario confirmó vía modal personalizado - procediendo con actualización forzada');
             inicializarCiclos(etc, focalizacion, ano, true);
         } else {
+            console.log('❌ Usuario canceló operación - manteniendo registros existentes');
             mostrarNotificacionSegura('Operación cancelada. Los registros existentes se mantienen intactos.', 'info');
             buscarDatos(etc, focalizacion, ano);
         }
