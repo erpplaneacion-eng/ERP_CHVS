@@ -172,6 +172,8 @@ class FacturacionManager {
 
         const requirements = {
             'nuevo': 'LOTE, NOMBRE INSTITUCION, NOMBRE SEDE, ZONA, TIPO_DOCUMENTO, NRO_DOCUMENTO, APELLIDO1, APELLIDO2, NOMBRE1, NOMBRE2, FECHA_NACIMIENTO, GENERO, TIPO_JORNADA, GRADO, GRUPO',
+            'yumbo': 'ESTADO, SECTOR, MODELO, SEDE',
+            'buga': 'ESTADO, SECTOR, MODELO, SEDE',
             'original': 'ESTADO, SECTOR, MODELO, SEDE'
         };
 

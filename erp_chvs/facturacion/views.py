@@ -132,7 +132,11 @@ def procesar_listados_view(request):
                 # Procesar archivo según formato elegido
                 if tipo_procesamiento == ProcesamientoConfig.TIPO_PROCESAMIENTO_NUEVO:
                     resultado = procesamiento_service.procesar_excel_nuevo_formato(archivo, focalizacion)
+                elif tipo_procesamiento in [ProcesamientoConfig.TIPO_PROCESAMIENTO_YUMBO, ProcesamientoConfig.TIPO_PROCESAMIENTO_BUGA, ProcesamientoConfig.TIPO_PROCESAMIENTO_ORIGINAL]:
+                    # Todos estos usan el formato original
+                    resultado = procesamiento_service.procesar_excel_original(archivo, focalizacion)
                 else:
+                    # Fallback al formato original
                     resultado = procesamiento_service.procesar_excel_original(archivo, focalizacion)
 
                 # Actualizar contexto con los resultados de la visualización
@@ -460,6 +464,7 @@ def lista_listados(request):
     # Obtener parámetros de filtro
     etc_filter = request.GET.get('etc', '').strip()
     sede_filter = request.GET.get('sede', '').strip()
+    focalizacion_filter = request.GET.get('focalizacion', '').strip()
 
     # Query base
     listados = ListadosFocalizacion.objects.all().order_by('-fecha_creacion')
@@ -472,6 +477,9 @@ def lista_listados(request):
     if sede_filter:
         listados = listados.filter(sede__icontains=sede_filter)
 
+    if focalizacion_filter:
+        listados = listados.filter(focalizacion=focalizacion_filter)
+
     # Paginación
     paginator = Paginator(listados, 15)  # 20 registros por página
     page_number = request.GET.get('page')
@@ -480,6 +488,7 @@ def lista_listados(request):
     # Obtener valores únicos para filtros
     etc_values = ListadosFocalizacion.objects.values_list('etc', flat=True).distinct().order_by('etc')
     sede_values = ListadosFocalizacion.objects.values_list('sede', flat=True).distinct().order_by('sede')
+    focalizacion_values = ListadosFocalizacion.objects.values_list('focalizacion', flat=True).distinct().order_by('focalizacion')
 
 
     # Obtener sedes faltantes y grados disponibles (solo si hay filtro ETC aplicado)
@@ -493,16 +502,64 @@ def lista_listados(request):
             ).values_list('nombre_sede_educativa', flat=True).distinct()
         )
 
-        # Sedes que tienen registros en listados_focalizacion para este ETC
-        sedes_con_registros_etc = set(
-            ListadosFocalizacion.objects.filter(
-                etc__icontains=etc_filter
-            ).values_list('sede', flat=True).distinct()
-        )
+        # LÓGICA MEJORADA: Filtrar por focalización si está especificada
+        if focalizacion_filter:
+            # Caso 1: Filtro de focalización específico
+            # Sedes que tienen registros PARA ESTA FOCALIZACIÓN
+            sedes_con_registros_etc = set(
+                ListadosFocalizacion.objects.filter(
+                    etc__icontains=etc_filter,
+                    focalizacion=focalizacion_filter
+                ).values_list('sede', flat=True).distinct()
+            )
 
-        # Sedes faltantes = sedes del catálogo oficial que NO tienen registros
-        # (sedes que deberían tener registros pero aún no han sido procesadas)
-        sedes_faltantes = list(sedes_catalogo_etc - sedes_con_registros_etc)
+            # Sedes faltantes para esta focalización específica
+            sedes_sin_registros = list(sedes_catalogo_etc - sedes_con_registros_etc)
+
+            # Crear estructura con detalle de focalizaciones faltantes
+            sedes_faltantes = []
+            for sede in sedes_sin_registros:
+                sedes_faltantes.append({
+                    'sede': sede,
+                    'focalizaciones_faltantes': [focalizacion_filter]
+                })
+        else:
+            # Caso 2: Sin filtro de focalización - mostrar todas las focalizaciones faltantes por sede
+            # Obtener todas las focalizaciones existentes para este ETC
+            focalizaciones_existentes_etc = set(
+                ListadosFocalizacion.objects.filter(
+                    etc__icontains=etc_filter
+                ).values_list('focalizacion', flat=True).distinct()
+            )
+
+            # Para cada sede del catálogo, verificar qué focalizaciones le faltan
+            sedes_faltantes = []
+            for sede in sedes_catalogo_etc:
+                # Focalizaciones que tiene esta sede
+                focalizaciones_sede = set(
+                    ListadosFocalizacion.objects.filter(
+                        etc__icontains=etc_filter,
+                        sede=sede
+                    ).values_list('focalizacion', flat=True).distinct()
+                )
+
+                # Focalizaciones que le faltan a esta sede
+                focalizaciones_faltantes = focalizaciones_existentes_etc - focalizaciones_sede
+
+                # Solo agregar si le faltan focalizaciones
+                if focalizaciones_faltantes:
+                    sedes_faltantes.append({
+                        'sede': sede,
+                        'focalizaciones_faltantes': sorted(list(focalizaciones_faltantes))
+                    })
+
+        # Obtener sedes con registros (para grados disponibles)
+        # Usamos el filtro de focalización si existe, sino todas las sedes del ETC
+        query_sedes_registros = ListadosFocalizacion.objects.filter(etc__icontains=etc_filter)
+        if focalizacion_filter:
+            query_sedes_registros = query_sedes_registros.filter(focalizacion=focalizacion_filter)
+
+        sedes_con_registros_etc = set(query_sedes_registros.values_list('sede', flat=True).distinct())
 
         if sedes_con_registros_etc:
             # --- INICIO DE OPTIMIZACIÓN (EVITAR N+1) ---
@@ -588,9 +645,11 @@ def lista_listados(request):
         'total_listados': listados.count(),
         'etc_values': etc_values,
         'sede_values': sede_values,
+        'focalizacion_values': focalizacion_values,
         'filtros_aplicados': {
             'etc': etc_filter,
             'sede': sede_filter,
+            'focalizacion': focalizacion_filter,
         },
         'sedes_faltantes': sedes_faltantes,
         'total_sedes_faltantes': len(sedes_faltantes),

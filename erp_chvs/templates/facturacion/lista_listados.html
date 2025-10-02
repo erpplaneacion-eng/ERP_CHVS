@@ -38,6 +38,15 @@
                         {% endfor %}
                     </select>
                 </div>
+                <div class="filter-group">
+                    <label for="focalizacion">Filtrar por Focalización:</label>
+                    <select name="focalizacion" id="focalizacion">
+                        <option value="">Todas las Focalizaciones</option>
+                        {% for foc_val in focalizacion_values %}
+                        <option value="{{ foc_val }}" {% if filtros_aplicados.focalizacion == foc_val %}selected{% endif %}>{{ foc_val }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <div class="filter-actions">
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-filter"></i> Aplicar Filtros
@@ -156,14 +165,30 @@
     <div class="missing-sedes-card">
         <div class="card-header-missing">
             <h3><i class="fas fa-exclamation-triangle"></i> Sedes Sin Registros</h3>
-            <p>Para ETC: <strong>{{ filtros_aplicados.etc }}</strong> | Sedes en catálogo sin registros: <strong>{{ total_sedes_faltantes }}</strong></p>
+            <p>
+                Para ETC: <strong>{{ filtros_aplicados.etc }}</strong>
+                {% if filtros_aplicados.focalizacion %}
+                | Focalización: <strong>{{ filtros_aplicados.focalizacion }}</strong>
+                {% endif %}
+                | Sedes sin registros: <strong>{{ total_sedes_faltantes }}</strong>
+            </p>
         </div>
         <div class="missing-sedes-content">
             <div class="missing-sedes-list">
-                {% for sede in sedes_faltantes %}
+                {% for sede_info in sedes_faltantes %}
                 <div class="missing-sede-item">
-                    <span class="sede-name">{{ sede }}</span>
-                    <button class="btn btn-sm btn-success" onclick="transferirGradosDesdeSede('{{ sede }}', '{{ filtros_aplicados.etc }}', {{ grados_disponibles|safe }})" title="Transferir grados">
+                    <div class="sede-info-header">
+                        <span class="sede-name">{{ sede_info.sede }}</span>
+                        {% if sede_info.focalizaciones_faltantes %}
+                        <div class="focalizaciones-badges">
+                            <span class="badge-label">Focalizaciones faltantes:</span>
+                            {% for foc in sede_info.focalizaciones_faltantes %}
+                                <span class="badge badge-warning">{{ foc }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <button class="btn btn-sm btn-success" onclick="transferirGradosDesdeSede('{{ sede_info.sede }}', '{{ filtros_aplicados.etc }}', {{ grados_disponibles|safe }})" title="Transferir grados">
                         <i class="fas fa-exchange-alt"></i> Transferir Grados
                     </button>
                 </div>
@@ -175,7 +200,13 @@
     <div class="complete-sedes-card">
         <div class="card-header-complete">
             <h3><i class="fas fa-check-circle"></i> Sedes Completas</h3>
-            <p>Todas las sedes del ETC <strong>{{ filtros_aplicados.etc }}</strong> tienen registros en el sistema.</p>
+            <p>
+                Todas las sedes del ETC <strong>{{ filtros_aplicados.etc }}</strong>
+                {% if filtros_aplicados.focalizacion %}
+                para la focalización <strong>{{ filtros_aplicados.focalizacion }}</strong>
+                {% endif %}
+                tienen registros en el sistema.
+            </p>
         </div>
     </div>
     {% endif %}

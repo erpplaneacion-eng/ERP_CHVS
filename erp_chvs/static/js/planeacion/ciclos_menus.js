@@ -559,9 +559,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Función para manejar la resolución
                 const handleResolve = (result) => {
                     console.log('🔍 DEBUG: Resolviendo modal con resultado:', result);
-                    modal.style.display = 'none';
-                    modal.querySelector('.custom-modal-content').style.animation = 'modalSlideOut 0.3s ease-in';
+                    const modalContent = modal.querySelector('.custom-modal-content');
+
+                    // Aplicar animación de salida
+                    modalContent.style.animation = 'modalSlideOut 0.3s ease-in forwards';
+
+                    // Ocultar modal después de la animación
                     setTimeout(() => {
+                        modal.style.display = 'none';
+                        // Resetear estilos para la próxima vez
+                        modalContent.style.animation = '';
+                        modalContent.style.transform = 'scale(0.9)';
+                        modalContent.style.opacity = '0';
                         resolve(result);
                     }, 300);
                 };
@@ -603,14 +612,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
 
-                // Mostrar modal SIN animación inicial para evitar conflictos
+                // Mostrar modal con animación de entrada
                 modal.style.display = 'flex';
-                modal.querySelector('.custom-modal-content').style.transform = 'scale(1)';
-                modal.querySelector('.custom-modal-content').style.opacity = '1';
 
-                console.log('🔍 DEBUG: Modal mostrado en pantalla');
+                // Forzar reflow para que la animación funcione
+                modal.offsetHeight;
 
-                // Auto-focus en el botón de confirmar después de un breve delay
+                // Aplicar animación de entrada después de un frame
+                requestAnimationFrame(() => {
+                    const modalContent = modal.querySelector('.custom-modal-content');
+                    modalContent.style.animation = 'modalSlideIn 0.3s ease-out forwards';
+                    modalContent.style.transform = 'scale(1)';
+                    modalContent.style.opacity = '1';
+                });
+
+                console.log('🔍 DEBUG: Modal mostrado en pantalla con animación');
+
+                // Auto-focus en el botón de confirmar después de la animación
                 setTimeout(() => {
                     const confirmBtn = modal.querySelector('.custom-btn-confirm');
                     if (confirmBtn) {
@@ -619,7 +637,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         console.error('🔍 DEBUG: No se pudo encontrar el botón de confirmar');
                     }
-                }, 100);
+                }, 350);
 
             } catch (error) {
                 console.error('❌ DEBUG: Error al configurar modal:', error);

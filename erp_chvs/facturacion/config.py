@@ -13,6 +13,8 @@ class ProcesamientoConfig:
     # Tipos de procesamiento soportados
     TIPO_PROCESAMIENTO_NUEVO = 'nuevo'
     TIPO_PROCESAMIENTO_ORIGINAL = 'original'
+    TIPO_PROCESAMIENTO_YUMBO = 'yumbo'
+    TIPO_PROCESAMIENTO_BUGA = 'buga'
     
     # Municipios soportados
     MUNICIPIOS_SOPORTADOS = ['CALI', 'YUMBO', 'GUADALAJARA DE BUGA']

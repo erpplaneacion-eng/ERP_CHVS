@@ -80,11 +80,20 @@
                     <i class="fas fa-cogs"></i> Tipo de Procesamiento:
                 </label>
                 <div class="btn-group" role="group" aria-label="Tipo de procesamiento">
-                    <input type="radio" class="btn-check" name="tipo_procesamiento" id="original" value="original" autocomplete="off" checked>
-                    <label class="btn btn-outline-primary" for="original">Procesar archivos de Buga y Yumbo</label>
+                    <input type="radio" class="btn-check" name="tipo_procesamiento" id="yumbo" value="yumbo" autocomplete="off" checked>
+                    <label class="btn btn-outline-primary" for="yumbo">
+                        <i class="fas fa-file-excel"></i> Procesar archivos de Yumbo
+                    </label>
+
+                    <input type="radio" class="btn-check" name="tipo_procesamiento" id="buga" value="buga" autocomplete="off">
+                    <label class="btn btn-outline-primary" for="buga">
+                        <i class="fas fa-file-excel"></i> Procesar archivos de Buga
+                    </label>
 
                     <input type="radio" class="btn-check" name="tipo_procesamiento" id="nuevo" value="nuevo" autocomplete="off">
-                    <label class="btn btn-outline-primary" for="nuevo">Procesar archivos de Cali</label>
+                    <label class="btn btn-outline-primary" for="nuevo">
+                        <i class="fas fa-file-excel"></i> Procesar archivos de Cali
+                    </label>
                 </div>
             </div>
 
@@ -383,24 +392,31 @@
 
         async function actualizarFocalizacionesDisponibles() {
             const tipoSeleccionado = document.querySelector('input[name="tipo_procesamiento"]:checked').value;
-            
+
             // Resetear todas las opciones primero
             Array.from(focalizacionSelect.options).forEach(opt => {
                 opt.disabled = false;
                 opt.textContent = opt.value; // Restaurar texto original
             });
 
-            if (tipoSeleccionado === 'original') { // Buga y Yumbo
+            // Solo validar para Yumbo y Buga (formatos originales)
+            if (tipoSeleccionado === 'yumbo' || tipoSeleccionado === 'buga') {
                 focalizacionSelect.disabled = true; // Bloquear mientras carga
                 const label = document.querySelector('label[for="focalizacion"]');
                 const originalText = label.innerHTML;
                 label.innerHTML += ' <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
 
                 try {
-                    // Municipios para el formato original
-                    const municipios = 'GUADALAJARA DE BUGA,YUMBO';
-                    const response = await fetch(`{% url 'facturacion:api_focalizaciones_existentes' %}?etc=${municipios}`);
-                    
+                    // Determinar municipio según selección
+                    let municipio = '';
+                    if (tipoSeleccionado === 'yumbo') {
+                        municipio = 'YUMBO';
+                    } else if (tipoSeleccionado === 'buga') {
+                        municipio = 'GUADALAJARA DE BUGA';
+                    }
+
+                    const response = await fetch(`{% url 'facturacion:api_focalizaciones_existentes' %}?etc=${municipio}`);
+
                     if (!response.ok) {
                         throw new Error('Error al consultar el servidor.');
                     }
@@ -412,7 +428,7 @@
                         Array.from(focalizacionSelect.options).forEach(opt => {
                             if (focalizacionesExistentes.includes(opt.value)) {
                                 opt.disabled = true;
-                                opt.textContent = `${opt.value} (Ya existe)`;
+                                opt.textContent = `${opt.value} (Ya existe en ${tipoSeleccionado.toUpperCase()})`;
                             }
                         });
                     }
@@ -424,6 +440,7 @@
                     label.innerHTML = originalText; // Restaurar texto del label
                 }
             }
+            // Para Cali (nuevo) no se validan focalizaciones existentes
         }
 
         tipoProcesamientoRadios.forEach(radio => {

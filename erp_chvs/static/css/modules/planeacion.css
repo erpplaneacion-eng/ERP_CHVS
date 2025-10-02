@@ -535,6 +535,16 @@ sn/* ===================================== */
     align-items: center;
     justify-content: center;
     backdrop-filter: blur(2px);
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        background-color: rgba(0, 0, 0, 0);
+    }
+    to {
+        background-color: rgba(0, 0, 0, 0.7);
+    }
 }
 
 .custom-modal-content {
@@ -547,6 +557,7 @@ sn/* ===================================== */
     overflow: hidden;
     transform: scale(0.9);
     opacity: 0;
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
 }
 
 .custom-modal-header {
@@ -651,23 +662,26 @@ sn/* ===================================== */
 
 /* Animaciones para el modal */
 @keyframes modalSlideIn {
-    from {
-        transform: scale(0.8);
+    0% {
+        transform: scale(0.7) translateY(-20px);
         opacity: 0;
     }
-    to {
-        transform: scale(1);
+    50% {
+        transform: scale(1.02) translateY(0);
+    }
+    100% {
+        transform: scale(1) translateY(0);
         opacity: 1;
     }
 }
 
 @keyframes modalSlideOut {
-    from {
-        transform: scale(1);
+    0% {
+        transform: scale(1) translateY(0);
         opacity: 1;
     }
-    to {
-        transform: scale(0.8);
+    100% {
+        transform: scale(0.7) translateY(20px);
         opacity: 0;
     }
 }
