@@ -11,7 +11,8 @@
       "Read(//mnt/c/Users/User/OneDrive/Desktop/CHVS/ERP_CHVS/**)",
       "Bash(curl:*)",
       "Bash(PGPASSWORD='chvs2025' psql -U postgres -d erp_chvs -h localhost -c \"\\d nivel_grado_escolar\")",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(PGPASSWORD='chvs2025' psql -U postgres -d erp_chvs -h localhost -c \"SELECT DISTINCT etc FROM listados_focalizacion ORDER BY etc LIMIT 10;\")"
     ],
     "deny": [],
     "ask": []

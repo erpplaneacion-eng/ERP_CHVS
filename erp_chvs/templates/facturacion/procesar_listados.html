@@ -399,8 +399,8 @@
                 opt.textContent = opt.value; // Restaurar texto original
             });
 
-            // Solo validar para Yumbo y Buga (formatos originales)
-            if (tipoSeleccionado === 'yumbo' || tipoSeleccionado === 'buga') {
+            // Validar para Yumbo, Buga y Cali
+            if (tipoSeleccionado === 'yumbo' || tipoSeleccionado === 'buga' || tipoSeleccionado === 'nuevo') {
                 focalizacionSelect.disabled = true; // Bloquear mientras carga
                 const label = document.querySelector('label[for="focalizacion"]');
                 const originalText = label.innerHTML;
@@ -409,10 +409,17 @@
                 try {
                     // Determinar municipio según selección
                     let municipio = '';
+                    let municipioNombre = ''; // Para mostrar en el mensaje
+
                     if (tipoSeleccionado === 'yumbo') {
                         municipio = 'YUMBO';
+                        municipioNombre = 'YUMBO';
                     } else if (tipoSeleccionado === 'buga') {
                         municipio = 'GUADALAJARA DE BUGA';
+                        municipioNombre = 'BUGA';
+                    } else if (tipoSeleccionado === 'nuevo') {
+                        municipio = 'CALI';
+                        municipioNombre = 'CALI';
                     }
 
                     const response = await fetch(`{% url 'facturacion:api_focalizaciones_existentes' %}?etc=${municipio}`);
@@ -428,7 +435,7 @@
                         Array.from(focalizacionSelect.options).forEach(opt => {
                             if (focalizacionesExistentes.includes(opt.value)) {
                                 opt.disabled = true;
-                                opt.textContent = `${opt.value} (Ya existe en ${tipoSeleccionado.toUpperCase()})`;
+                                opt.textContent = `${opt.value} (Ya existe en ${municipioNombre})`;
                             }
                         });
                     }
@@ -440,7 +447,6 @@
                     label.innerHTML = originalText; // Restaurar texto del label
                 }
             }
-            // Para Cali (nuevo) no se validan focalizaciones existentes
         }
 
         tipoProcesamientoRadios.forEach(radio => {

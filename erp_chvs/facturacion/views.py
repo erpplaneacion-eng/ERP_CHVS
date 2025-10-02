@@ -395,6 +395,7 @@ def api_focalizaciones_existentes(request):
     """
     API para obtener las focalizaciones que ya existen en la BD
     para un conjunto de municipios (ETCs).
+    Usa búsqueda parcial (icontains) para manejar variaciones como CALI/SANTIAGO DE CALI.
     """
     try:
         # Los municipios se pasan como parámetros GET, separados por comas
@@ -404,8 +405,14 @@ def api_focalizaciones_existentes(request):
 
         etc_list = [etc.strip() for etc in etc_param.split(',')]
 
+        # Construir query con OR para búsqueda parcial
+        from django.db.models import Q
+        query = Q()
+        for etc in etc_list:
+            query |= Q(etc__icontains=etc)
+
         focalizaciones = ListadosFocalizacion.objects.filter(
-            etc__in=etc_list
+            query
         ).values_list('focalizacion', flat=True).distinct()
 
         return JsonResponse({'focalizaciones': list(focalizaciones)})
