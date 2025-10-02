@@ -8,10 +8,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-import base64
 import pandas as pd
 from io import StringIO
 import json
@@ -22,7 +20,7 @@ from .services import ProcesamientoService, ValidacionService, EstadisticasServi
 from .config import ProcesamientoConfig, FOCALIZACIONES_DISPONIBLES, MESES_ATENCION
 from .logging_config import FacturacionLogger
 from planeacion.models import SedesEducativas, Programa
-from .utils import _mapear_grado_a_nivel_manual, _extraer_grado_base
+from .utils import _mapear_grado_a_nivel_manual, _extraer_grado_base, _recrear_archivo_desde_sesion
 from .persistence_service import PersistenceService
 from .pdf_generator import crear_formato_asistencia
 from .pdf_service import PDFAsistenciaService
@@ -270,27 +268,6 @@ def procesar_listados_view(request):
         contexto['error'] = f"Error al procesar la solicitud: {str(e)}"
         return render(request, 'facturacion/procesar_listados.html', contexto)
 
-def _recrear_archivo_desde_sesion(datos_sesion: dict) -> SimpleUploadedFile:
-    """
-    Reconstruye un archivo SimpleUploadedFile desde los datos guardados en la sesión.
-    
-    Args:
-        datos_sesion: Diccionario con los datos del archivo de la sesión.
-        
-    Returns:
-        SimpleUploadedFile: El archivo reconstruido.
-        
-    Raises:
-        ValueError: Si faltan datos clave en la sesión.
-    """
-    archivo_contenido_b64 = datos_sesion.get('archivo_contenido_b64')
-    archivo_name = datos_sesion.get('archivo_name')
-    archivo_content_type = datos_sesion.get('archivo_content_type')
-
-    if not all([archivo_contenido_b64, archivo_name, archivo_content_type]):
-        raise ValueError("No se pudo reconstruir el archivo desde la sesión. Faltan datos.")
-
-    return SimpleUploadedFile(archivo_name, base64.b64decode(archivo_contenido_b64), content_type=archivo_content_type)
 
 @login_required
 @require_http_methods(["POST"])

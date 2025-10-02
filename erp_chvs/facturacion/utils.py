@@ -1,3 +1,6 @@
+import base64
+from django.core.files.uploadedfile import SimpleUploadedFile
+
 def _mapear_grado_a_nivel_manual(grado):
     """
     Mapea manualmente grados que no están en la tabla NivelGradoEscolar
@@ -19,6 +22,28 @@ def _mapear_grado_a_nivel_manual(grado):
             return None
     except (ValueError, TypeError):
         return None
+
+def _recrear_archivo_desde_sesion(datos_sesion: dict) -> SimpleUploadedFile:
+    """
+    Reconstruye un archivo SimpleUploadedFile desde los datos guardados en la sesión.
+
+    Args:
+        datos_sesion: Diccionario con los datos del archivo de la sesión.
+
+    Returns:
+        SimpleUploadedFile: El archivo reconstruido.
+
+    Raises:
+        ValueError: Si faltan datos clave en la sesión.
+    """
+    archivo_contenido_b64 = datos_sesion.get('archivo_contenido_b64')
+    archivo_name = datos_sesion.get('archivo_name')
+    archivo_content_type = datos_sesion.get('archivo_content_type')
+
+    if not all([archivo_contenido_b64, archivo_name, archivo_content_type]):
+        raise ValueError("No se pudo reconstruir el archivo desde la sesión. Faltan datos.")
+
+    return SimpleUploadedFile(archivo_name, base64.b64decode(archivo_contenido_b64), content_type=archivo_content_type)
 
 def _extraer_grado_base(grado_grupos):
     """
