@@ -177,7 +177,7 @@ class PDFAsistenciaService:
                 "CAP AM": "CAJMRI",    # Ración Industrializada
                 "CAP PM": "CAJTRI",    # Ración Industrializada
                 "Almuerzo JU": "ALMUERZO",  # Se mantiene igual
-                "Refuerzo": "RRI"      # Ración Industrializada
+                "Refuerzo": "RCRI"      # Refuerzo Complementario Ración Industrializada
             }
         else:
             mapeo_codigos = {
@@ -290,7 +290,7 @@ class PDFAsistenciaService:
                 "CAP AM": "CAJMRI",    # Ración Industrializada
                 "CAP PM": "CAJTRI",    # Ración Industrializada
                 "Almuerzo JU": "ALMUERZO",  # Se mantiene igual
-                "Refuerzo": "RRI"      # Ración Industrializada
+                "Refuerzo": "RCRI"      # Refuerzo Complementario Ración Industrializada
             }
         else:
             mapeo_codigos = {
