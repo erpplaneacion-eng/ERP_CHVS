@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.paginator import Paginator
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 import base64
 import pandas as pd
 from io import StringIO
@@ -817,45 +817,22 @@ def api_transferir_grados(request):
                     if grado_base and grado_base in grados_seleccionados:
                         registros_a_copiar.append(registro)
 
-            # Crear copias con la sede destino
-            registros_creados = 0
-            for registro in registros_a_copiar:
-                try:
-                    # Generar nuevo ID único para el registro copiado
-                    id_nuevo = PersistenceService.generar_id_listado_unico(registro)
-
-                    # Crear copia con sede destino
-                    ListadosFocalizacion.objects.create(
-                        id_listados=id_nuevo,
-                        ano=registro.ano,
-                        etc=registro.etc,
-                        institucion=registro.institucion,
-                        sede=sede_destino,  # ← Cambiar sede
-                        tipodoc=registro.tipodoc,
-                        doc=registro.doc,
-                        apellido1=registro.apellido1,
-                        apellido2=registro.apellido2,
-                        nombre1=registro.nombre1,
-                        nombre2=registro.nombre2,
-                        fecha_nacimiento=registro.fecha_nacimiento,
-                        edad=registro.edad,
-                        etnia=registro.etnia,
-                        genero=registro.genero,
-                        grado_grupos=registro.grado_grupos,
-                        complemento_alimentario_preparado_am=registro.complemento_alimentario_preparado_am,
-                        complemento_alimentario_preparado_pm=registro.complemento_alimentario_preparado_pm,
-                        almuerzo_jornada_unica=registro.almuerzo_jornada_unica,
-                        refuerzo_complemento_am_pm=registro.refuerzo_complemento_am_pm,
-                        focalizacion=registro.focalizacion
-                    )
-                    registros_creados += 1
-                except Exception as e:
-                    continue  # Continuar con el siguiente registro
+            # MOVER registros a la sede destino (no copiar)
+            registros_movidos = 0
+            with transaction.atomic():
+                for registro in registros_a_copiar:
+                    try:
+                        # Actualizar la sede del registro existente (MOVER, no copiar)
+                        registro.sede = sede_destino
+                        registro.save()
+                        registros_movidos += 1
+                    except Exception as e:
+                        continue  # Continuar con el siguiente registro
 
             return JsonResponse({
                 'success': True,
-                'registros_creados': registros_creados,
-                'mensaje': f'Se transfirieron {registros_creados} registros a la sede {sede_destino}'
+                'registros_creados': registros_movidos,
+                'mensaje': f'Se movieron {registros_movidos} registros a la sede {sede_destino}'
             })
 
         except Exception as e:

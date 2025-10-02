@@ -158,9 +158,12 @@ class PDFAsistenciaService:
         ).first()
 
         nombre_sede_focalizacion = primer_estudiante.sede
+        es_industrializado = False
         try:
             sede_info_dane = SedesEducativas.objects.get(nombre_sede_educativa=nombre_sede_focalizacion)
             dane_ie = sede_info_dane.cod_dane
+            # Verificar si la sede es industrializada
+            es_industrializado = sede_info_dane.industrializado == 'VERDADERO'
         except SedesEducativas.DoesNotExist:
             dane_ie = 'DANE no encontrado'
 
@@ -168,10 +171,21 @@ class PDFAsistenciaService:
         if not ano:
             return HttpResponse(f"No se pudo determinar el año para la focalización '{focalizacion}'.", status=404)
 
-        mapeo_codigos = {
-            "CAP AM": "CAJMPS", "CAP PM": "CAJTPS",
-            "Almuerzo JU": "ALMUERZO", "Refuerzo": "RCPS"
-        }
+        # Mapeo de códigos según si es industrializado o no
+        if es_industrializado:
+            mapeo_codigos = {
+                "CAP AM": "CAJMRI",    # Ración Industrializada
+                "CAP PM": "CAJTRI",    # Ración Industrializada
+                "Almuerzo JU": "ALMUERZO",  # Se mantiene igual
+                "Refuerzo": "RRI"      # Ración Industrializada
+            }
+        else:
+            mapeo_codigos = {
+                "CAP AM": "CAJMPS",    # Preparado en Sitio
+                "CAP PM": "CAJTPS",    # Preparado en Sitio
+                "Almuerzo JU": "ALMUERZO",
+                "Refuerzo": "RCPS"     # Preparado en Sitio
+            }
 
         codigos_presentes = set()
         for est in estudiantes_sede:
@@ -257,9 +271,12 @@ class PDFAsistenciaService:
         ).first()
 
         nombre_sede_focalizacion = primer_estudiante.sede
+        es_industrializado = False
         try:
             sede_info_dane = SedesEducativas.objects.get(nombre_sede_educativa=nombre_sede_focalizacion)
             dane_ie = sede_info_dane.cod_dane
+            # Verificar si la sede es industrializada
+            es_industrializado = sede_info_dane.industrializado == 'VERDADERO'
         except SedesEducativas.DoesNotExist:
             dane_ie = 'DANE no encontrado'
 
@@ -267,10 +284,21 @@ class PDFAsistenciaService:
         if not ano:
             return None
 
-        mapeo_codigos = {
-            "CAP AM": "CAJMPS", "CAP PM": "CAJTPS",
-            "Almuerzo JU": "ALMUERZO", "Refuerzo": "RCPS"
-        }
+        # Mapeo de códigos según si es industrializado o no
+        if es_industrializado:
+            mapeo_codigos = {
+                "CAP AM": "CAJMRI",    # Ración Industrializada
+                "CAP PM": "CAJTRI",    # Ración Industrializada
+                "Almuerzo JU": "ALMUERZO",  # Se mantiene igual
+                "Refuerzo": "RRI"      # Ración Industrializada
+            }
+        else:
+            mapeo_codigos = {
+                "CAP AM": "CAJMPS",    # Preparado en Sitio
+                "CAP PM": "CAJTPS",    # Preparado en Sitio
+                "Almuerzo JU": "ALMUERZO",
+                "Refuerzo": "RCPS"     # Preparado en Sitio
+            }
 
         codigos_presentes = set()
         for est in estudiantes_sede:
