@@ -10,6 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
+import base64
 import pandas as pd
 from io import StringIO
 import json
