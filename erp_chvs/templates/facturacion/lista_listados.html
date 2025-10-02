@@ -188,7 +188,7 @@
                         </div>
                         {% endif %}
                     </div>
-                    <button class="btn btn-sm btn-success" onclick="transferirGradosDesdeSede('{{ sede_info.sede }}', '{{ filtros_aplicados.etc }}', {{ grados_disponibles|safe }})" title="Transferir grados">
+                    <button class="btn btn-sm btn-success" onclick="transferirGradosDesdeSede('{{ sede_info.sede }}', '{{ filtros_aplicados.etc }}', {{ grados_disponibles|safe }}, '{{ filtros_aplicados.focalizacion }}')" title="Transferir grados">
                         <i class="fas fa-exchange-alt"></i> Transferir Grados
                     </button>
                 </div>

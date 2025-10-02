@@ -783,7 +783,7 @@ def api_listado_detail(request, id_listado):
 @login_required
 @csrf_exempt
 def api_transferir_grados(request):
-    """API para transferir grados de una sede a otra"""
+    """API para transferir grados de una sede a otra respetando la focalización"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -791,15 +791,23 @@ def api_transferir_grados(request):
             sede_origen = data.get('sede_origen')
             grados_seleccionados = data.get('grados_seleccionados', [])
             etc = data.get('etc')
+            focalizacion = data.get('focalizacion')  # Focalización activa
 
             if not sede_destino or not sede_origen or not grados_seleccionados or not etc:
                 return JsonResponse({'success': False, 'error': 'Parámetros incompletos'})
 
             # Obtener registros fuente (de la sede origen específica con esos grados)
-            registros_fuente = ListadosFocalizacion.objects.filter(
+            # IMPORTANTE: Filtrar también por focalización para evitar mezclar focalizaciones
+            query_fuente = ListadosFocalizacion.objects.filter(
                 etc__icontains=etc,
                 sede=sede_origen
             )
+
+            # Si se especifica focalización, filtrar solo por esa focalización
+            if focalizacion:
+                query_fuente = query_fuente.filter(focalizacion=focalizacion)
+
+            registros_fuente = query_fuente
 
             # Filtrar por grados seleccionados
             registros_a_copiar = []

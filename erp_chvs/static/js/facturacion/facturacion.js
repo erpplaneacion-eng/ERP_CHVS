@@ -607,16 +607,24 @@ function closeTransferModal() {
 
 // ===== FUNCIONES PARA TRANSFERENCIA DE GRADOS =====
 
+// Variable global para almacenar la focalización actual
+let focalizacionActual = '';
+
 // Función para transferir grados desde sede
-function transferirGradosDesdeSede(nombreSede, etc, sedesDisponibles) {
+function transferirGradosDesdeSede(nombreSede, etc, sedesDisponibles, focalizacion) {
     sedeDestinoActual = nombreSede;
     etcActual = etc;
+    focalizacionActual = focalizacion || '';  // Guardar focalización actual
     sedeOrigenActual = '';
     gradosSeleccionados = [];
     gradosDisponiblesData = sedesDisponibles || [];
 
-    // Actualizar título
-    document.getElementById('transferTitle').textContent = `Transferir grados a: ${nombreSede}`;
+    // Actualizar título con focalización si existe
+    let tituloTransfer = `Transferir grados a: ${nombreSede}`;
+    if (focalizacionActual) {
+        tituloTransfer += ` (Focalización: ${focalizacionActual})`;
+    }
+    document.getElementById('transferTitle').textContent = tituloTransfer;
 
     // Cargar sedes disponibles en el selector
     cargarSedesOrigen(sedesDisponibles);
@@ -786,7 +794,8 @@ function confirmarTransferencia() {
                 sede_destino: sedeDestinoActual,
                 sede_origen: sedeOrigenActual,
                 grados_seleccionados: gradosSeleccionados,
-                etc: etcActual
+                etc: etcActual,
+                focalizacion: focalizacionActual  // Enviar focalización actual
             })
         })
         .then(response => response.json())
