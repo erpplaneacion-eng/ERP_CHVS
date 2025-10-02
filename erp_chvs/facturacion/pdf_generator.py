@@ -213,6 +213,9 @@ class AsistenciaPDFGenerator:
         num_dias = len(dias_habiles) if dias_habiles else 22 # Usar 22 como default si no hay días definidos
         casilla_ancho = (ancho_disponible_dias / num_dias) if num_dias > 0 else 0
 
+        # Reducir grosor de línea para las casillas de días
+        c.setLineWidth(0.5)
+
         for i in range(num_dias):
             x_casilla = x_col13 + i * casilla_ancho
             c.rect(x_casilla, y_casillas, casilla_ancho, alto_casillas)
@@ -223,6 +226,9 @@ class AsistenciaPDFGenerator:
 
         x_total = x_col13 + num_dias * casilla_ancho
         c.rect(x_total, y_casillas, ancho_total_dias_col, alto_casillas)
+
+        # Restaurar grosor de línea normal
+        c.setLineWidth(1)
         c.drawCentredString(x_total + ancho_total_dias_col/2, y_casillas + alto_casillas/2 + 3, "Total días")
         c.drawCentredString(x_total + ancho_total_dias_col/2, y_casillas + alto_casillas/2 - 3, "de consumo")
 
@@ -476,10 +482,16 @@ class AsistenciaPDFGenerator:
                     num_dias = len(dias_habiles) if dias_habiles else 22
                     casilla_ancho = (ancho_col13_fijo - ancho_total_dias) / num_dias if num_dias > 0 else 0
 
+                    # Reducir grosor de línea para casillas de días
+                    c.setLineWidth(0.5)
+
                     for k in range(num_dias):
                         c.rect(x_col13 + k * casilla_ancho, y_fila, casilla_ancho, self.alto_fila)
-                    
+
                     c.rect(x_col13 + num_dias * casilla_ancho, y_fila, ancho_total_dias, self.alto_fila)
+
+                    # Restaurar grosor de línea normal
+                    c.setLineWidth(1)
                 
                 else:
                     # Fila vacía - dibujar solo bordes y línea horizontal
