@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestión de Ingredientes{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modules/nutricion.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <div class="page-header">
+        <h1><i class="fas fa-shopping-basket"></i> Gestión de Ingredientes de Inventario</h1>
+        <button class="btn btn-primary" id="btnNuevoIngrediente">
+            <i class="fas fa-plus"></i> Nuevo Ingrediente
+        </button>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <i class="fas fa-shopping-basket"></i>
+            <div>
+                <h3>{{ total_ingredientes }}</h3>
+                <p>Total Ingredientes</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de ingredientes -->
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre del Ingrediente</th>
+                    <th>Unidad de Medida</th>
+                    <th>Presentación</th>
+                    <th>Fecha Creación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tablaIngredientes">
+                {% for ing in ingredientes %}
+                <tr data-id="{{ ing.id_ingrediente_siesa }}">
+                    <td>{{ ing.id_ingrediente_siesa }}</td>
+                    <td>{{ ing.nombre_ingrediente }}</td>
+                    <td>{{ ing.unidades|default:"-" }}</td>
+                    <td>{{ ing.presentacion|default:"-" }}</td>
+                    <td>{{ ing.fecha_creacion|date:"d/m/Y" }}</td>
+                    <td class="action-buttons">
+                        <button class="btn btn-sm btn-edit" onclick="editarIngrediente({{ ing.id_ingrediente_siesa }})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-delete" onclick="eliminarIngrediente({{ ing.id_ingrediente_siesa }})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center;">No hay ingredientes registrados</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación -->
+    {% if ingredientes.has_other_pages %}
+    <div class="pagination">
+        {% if ingredientes.has_previous %}
+        <a href="?page={{ ingredientes.previous_page_number }}">&laquo; Anterior</a>
+        {% endif %}
+
+        <span class="current-page">
+            Página {{ ingredientes.number }} de {{ ingredientes.paginator.num_pages }}
+        </span>
+
+        {% if ingredientes.has_next %}
+        <a href="?page={{ ingredientes.next_page_number }}">Siguiente &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal para crear/editar ingrediente -->
+<div id="modalIngrediente" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="modalTitle">Nuevo Ingrediente</h2>
+        <form id="formIngrediente">
+            <input type="hidden" id="ingredienteId">
+
+            <div class="form-group">
+                <label for="ingredienteNombre">Nombre del Ingrediente <span class="required">*</span></label>
+                <input type="text" id="ingredienteNombre" required>
+            </div>
+
+            <div class="form-group">
+                <label for="ingredienteUnidades">Unidad de Medida</label>
+                <input type="text" id="ingredienteUnidades" placeholder="kg, gr, ml, etc.">
+            </div>
+
+            <div class="form-group">
+                <label for="ingredientePresentacion">Presentación</label>
+                <input type="text" id="ingredientePresentacion" placeholder="Ej: Bolsa 500g, Caja 1kg">
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Guardar
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="cerrarModal()">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/nutricion/ingredientes.js' %}"></script>
+{% endblock %}

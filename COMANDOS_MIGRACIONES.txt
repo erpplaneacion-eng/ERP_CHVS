@@ -1,0 +1,238 @@
+================================================================================
+COMANDOS PARA CREAR LAS TABLAS DEL MÓDULO DE NUTRICIÓN
+================================================================================
+
+ERROR ACTUAL:
+-------------
+django.db.utils.ProgrammingError: no existe la relación «tabla_menus»
+
+CAUSA:
+------
+Las tablas no existen porque falta crear y aplicar las migraciones.
+
+================================================================================
+SOLUCIÓN - OPCIÓN 1: USANDO SCRIPTS AUTOMÁTICOS
+================================================================================
+
+OPCIÓN A - Archivo .BAT (CMD):
+-------------------------------
+1. Abre el Explorador de Windows
+2. Ve a: C:\Users\User\OneDrive\Desktop\CHVS\ERP_CHVS
+3. Haz doble clic en: EJECUTAR_MIGRACIONES.bat
+4. Espera a que termine el proceso
+
+OPCIÓN B - PowerShell:
+----------------------
+1. Abre PowerShell como Administrador
+2. Ejecuta:
+   cd C:\Users\User\OneDrive\Desktop\CHVS\ERP_CHVS
+   .\ejecutar_migraciones.ps1
+
+================================================================================
+SOLUCIÓN - OPCIÓN 2: COMANDOS MANUALES (RECOMENDADO SI TIENES ERRORES)
+================================================================================
+
+1. ACTIVAR EL ENTORNO VIRTUAL
+------------------------------
+CMD:
+    cd C:\Users\User\OneDrive\Desktop\CHVS\ERP_CHVS
+    .venv\Scripts\activate.bat
+
+PowerShell:
+    cd C:\Users\User\OneDrive\Desktop\CHVS\ERP_CHVS
+    .\.venv\Scripts\Activate.ps1
+
+
+2. IR AL DIRECTORIO DEL PROYECTO
+---------------------------------
+    cd erp_chvs
+
+
+3. CREAR LAS MIGRACIONES
+-------------------------
+    python manage.py makemigrations nutricion
+
+SALIDA ESPERADA:
+    Migrations for 'nutricion':
+      nutricion/migrations/000X_auto_YYYYMMDD_HHMM.py
+        - Create model TablaMenus
+        - Create model TablaPreparaciones
+        - Create model TablaIngredientesSiesa
+        - Create model TablaPreparacionIngredientes
+
+
+4. APLICAR LAS MIGRACIONES
+---------------------------
+    python manage.py migrate nutricion
+
+SALIDA ESPERADA:
+    Running migrations:
+      Applying nutricion.000X_auto_... OK
+
+
+5. VERIFICAR QUE LAS TABLAS SE CREARON
+---------------------------------------
+Opción A - Desde Django:
+    python manage.py dbshell
+
+Dentro de PostgreSQL:
+    \dt tabla_*
+
+DEBERÍA MOSTRAR:
+                    List of relations
+ Schema |              Name              | Type  |  Owner
+--------+--------------------------------+-------+----------
+ public | tabla_ingredientes_siesa       | table | postgres
+ public | tabla_menus                    | table | postgres
+ public | tabla_preparacion_ingredientes | table | postgres
+ public | tabla_preparaciones            | table | postgres
+
+Para salir de PostgreSQL:
+    \q
+
+Opción B - Ver estructura de una tabla:
+    \d tabla_menus
+
+
+6. VERIFICAR QUE NO HAY ERRORES
+--------------------------------
+    python manage.py check
+
+SALIDA ESPERADA:
+    System check identified no issues (0 silenced).
+
+
+7. REINICIAR EL SERVIDOR
+-------------------------
+    python manage.py runserver
+
+Luego accede a:
+    http://localhost:8000/nutricion/menus/
+    http://localhost:8000/nutricion/preparaciones/
+    http://localhost:8000/nutricion/ingredientes/
+
+================================================================================
+SOLUCIÓN DE PROBLEMAS COMUNES
+================================================================================
+
+PROBLEMA 1: "django.db.utils.OperationalError: FATAL:  password authentication failed"
+---------------------------------------------------------------------------------------
+SOLUCIÓN:
+    - Verifica que PostgreSQL esté corriendo
+    - Verifica las credenciales en erp_chvs/erp_chvs/settings.py:
+        'NAME': 'erp_chvs',
+        'USER': 'postgres',
+        'PASSWORD': 'chvs2025',
+
+
+PROBLEMA 2: "No changes detected in app 'nutricion'"
+----------------------------------------------------
+SOLUCIÓN:
+    - Verifica que los modelos estén correctamente importados en models.py
+    - Ejecuta: python manage.py makemigrations --dry-run nutricion
+    - Si persiste, ejecuta: python manage.py makemigrations
+
+
+PROBLEMA 3: "django.db.utils.IntegrityError: FOREIGN KEY constraint"
+---------------------------------------------------------------------
+SOLUCIÓN:
+    - Asegúrate de tener datos en las tablas referenciadas:
+        * Tabla: modalidades_de_consumo (módulo principal)
+        * Tabla: programa (módulo planeacion)
+    - Para crearlas, ve a:
+        /principal/ -> Modalidades de Consumo
+        /planeacion/ -> Programas
+
+
+PROBLEMA 4: Las migraciones se crearon pero dan error al aplicarlas
+--------------------------------------------------------------------
+SOLUCIÓN:
+    1. Ver qué migraciones están pendientes:
+       python manage.py showmigrations nutricion
+
+    2. Si hay conflictos, crear una migración vacía:
+       python manage.py makemigrations nutricion --empty
+
+    3. Si todo falla, revertir la última migración:
+       python manage.py migrate nutricion <numero_migracion_anterior>
+
+
+PROBLEMA 5: "ImportError: cannot import name 'ModalidadesDeConsumo'"
+--------------------------------------------------------------------
+SOLUCIÓN:
+    - Verifica que en erp_chvs/nutricion/models.py la importación sea:
+        from principal.models import ModalidadesDeConsumo
+        from planeacion.models import Programa
+
+================================================================================
+VERIFICACIÓN FINAL
+================================================================================
+
+Ejecuta estos comandos para verificar que todo está OK:
+
+1. Ver tablas creadas:
+   python manage.py dbshell
+   \dt tabla_*
+   \q
+
+2. Ver migraciones aplicadas:
+   python manage.py showmigrations nutricion
+
+   DEBE MOSTRAR:
+   nutricion
+    [X] 0001_initial (o similar)
+    [X] 000X_auto_...
+
+3. Verificar modelos:
+   python manage.py check
+
+   DEBE MOSTRAR:
+   System check identified no issues (0 silenced).
+
+4. Probar en el admin:
+   python manage.py runserver
+
+   Ir a: http://localhost:8000/admin/
+   Buscar sección "Nutricion" y verificar que aparezcan:
+   - Menús
+   - Preparaciones/Recetas
+   - Ingredientes de Inventario
+   - Ingredientes de Preparaciones
+
+================================================================================
+COMANDOS ADICIONALES ÚTILES
+================================================================================
+
+Ver SQL que se ejecutará:
+    python manage.py sqlmigrate nutricion <numero_migracion>
+
+Hacer rollback de una migración:
+    python manage.py migrate nutricion <numero_anterior>
+
+Ver todas las migraciones del proyecto:
+    python manage.py showmigrations
+
+Crear datos de prueba (opcional):
+    python manage.py shell
+
+    >>> from nutricion.models import TablaIngredientesSiesa
+    >>> ing = TablaIngredientesSiesa.objects.create(
+    ...     nombre_ingrediente='Arroz Blanco',
+    ...     unidades='kg',
+    ...     presentacion='Bulto 50kg'
+    ... )
+    >>> print(f"Creado: {ing}")
+    >>> exit()
+
+================================================================================
+¿NECESITAS AYUDA?
+================================================================================
+
+Si después de seguir estos pasos sigues teniendo problemas:
+
+1. Copia el error completo que te aparece
+2. Ejecuta: python manage.py showmigrations
+3. Ejecuta: python manage.py check
+4. Comparte esa información para diagnosticar mejor
+
+================================================================================

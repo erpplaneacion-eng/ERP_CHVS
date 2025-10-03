@@ -5,8 +5,6 @@
 
 {% block content %}
 <div id="nutricion-dashboard-background">
-    
-
     <div class="module-dashboard">
         <!-- Tarjeta para ver y editar la tabla de alimentos -->
         <a href="{% url 'nutricion:lista_alimentos' %}" class="card">
@@ -14,30 +12,52 @@
                 <i class="fas fa-carrot"></i>
             </div>
             <div class="card-content">
-                <h3>Gestionar Alimentos</h3>
-                <p>Visualiza, busca y edita los alimentos de la tabla ICBF.</p>
+                <h3>Gestionar Alimentos ICBF</h3>
+                <p>Visualiza, busca y edita los alimentos de la tabla ICBF 2018.</p>
             </div>
         </a>
 
-        <!-- Tarjeta para crear dietas (a futuro) -->
-        <a href="#" class="card">
+        <!-- Tarjeta para gestionar menús -->
+        <a href="{% url 'nutricion:lista_menus' %}" class="card">
             <div class="card-icon">
-                <i class="fas fa-file-alt"></i>
+                <i class="fas fa-utensils"></i>
             </div>
             <div class="card-content">
-                <h3>Crear Plan Nutricional</h3>
-                <p>Diseña nuevos planes nutricionales para pacientes.</p>
+                <h3>Gestionar Menús</h3>
+                <p>Administra los menús por programa y modalidad de consumo.</p>
             </div>
         </a>
 
-        <!-- Puedes añadir más tarjetas aquí -->
+        <!-- Tarjeta para gestionar preparaciones -->
+        <a href="{% url 'nutricion:lista_preparaciones' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-book-open"></i>
+            </div>
+            <div class="card-content">
+                <h3>Gestionar Preparaciones</h3>
+                <p>Administra recetas y preparaciones asociadas a cada menú.</p>
+            </div>
+        </a>
+
+        <!-- Tarjeta para gestionar ingredientes -->
+        <a href="{% url 'nutricion:lista_ingredientes' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-shopping-basket"></i>
+            </div>
+            <div class="card-content">
+                <h3>Gestionar Ingredientes</h3>
+                <p>Administra el inventario de ingredientes Siesa.</p>
+            </div>
+        </a>
+
+        <!-- Tarjeta para reportes (a futuro) -->
         <a href="#" class="card">
             <div class="card-icon">
                 <i class="fas fa-chart-bar"></i>
             </div>
             <div class="card-content">
-                <h3>Reportes</h3>
-                <p>Genera reportes y estadísticas del módulo.</p>
+                <h3>Reportes Nutricionales</h3>
+                <p>Genera reportes y análisis nutricionales del programa.</p>
             </div>
         </a>
     </div>

@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Detalle de Preparación - {{ preparacion.preparacion }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modules/nutricion.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <div class="page-header">
+        <h1><i class="fas fa-book-open"></i> {{ preparacion.preparacion }}</h1>
+        <div>
+            <button class="btn btn-primary" id="btnAgregarIngrediente">
+                <i class="fas fa-plus"></i> Agregar Ingrediente
+            </button>
+            <a href="{% url 'nutricion:lista_preparaciones' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- Info de la preparación -->
+    <div class="info-card">
+        <h3>Información de la Preparación</h3>
+        <div class="info-grid">
+            <div>
+                <strong>ID:</strong> {{ preparacion.id_preparacion }}
+            </div>
+            <div>
+                <strong>Nombre:</strong> {{ preparacion.preparacion }}
+            </div>
+            <div>
+                <strong>Menú:</strong> {{ preparacion.id_menu.menu }}
+            </div>
+            <div>
+                <strong>Fecha de Creación:</strong> {{ preparacion.fecha_creacion|date:"d/m/Y H:i" }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de ingredientes -->
+    <h2><i class="fas fa-list"></i> Ingredientes de la Preparación</h2>
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Ingrediente</th>
+                    <th>Cantidad (kg)</th>
+                    <th>Unidad de Medida</th>
+                    <th>Presentación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tablaIngredientes">
+                {% for item in ingredientes_preparacion %}
+                <tr data-ingrediente-id="{{ item.id_ingrediente_siesa.id_ingrediente_siesa }}">
+                    <td>{{ item.id_ingrediente_siesa.nombre_ingrediente }}</td>
+                    <td>{{ item.cantidad }}</td>
+                    <td>{{ item.id_ingrediente_siesa.unidades|default:"-" }}</td>
+                    <td>{{ item.id_ingrediente_siesa.presentacion|default:"-" }}</td>
+                    <td class="action-buttons">
+                        <button class="btn btn-sm btn-delete" onclick="eliminarIngrediente({{ item.id_ingrediente_siesa.id_ingrediente_siesa }})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center;">No hay ingredientes asociados a esta preparación</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal para agregar ingrediente -->
+<div id="modalIngrediente" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Agregar Ingrediente</h2>
+        <form id="formAgregarIngrediente">
+            <div class="form-group">
+                <label for="ingredienteSelect">Ingrediente <span class="required">*</span></label>
+                <select id="ingredienteSelect" required>
+                    <option value="">Seleccione un ingrediente</option>
+                    {% for ing in ingredientes_disponibles %}
+                    <option value="{{ ing.id_ingrediente_siesa }}">
+                        {{ ing.nombre_ingrediente }}
+                        {% if ing.unidades %}({{ ing.unidades }}){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="ingredienteCantidad">Cantidad (kg) <span class="required">*</span></label>
+                <input type="number" id="ingredienteCantidad" step="0.01" min="0" required>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Agregar
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="cerrarModal()">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const PREPARACION_ID = {{ preparacion.id_preparacion }};
+</script>
+<script src="{% static 'js/nutricion/detalle_preparacion.js' %}"></script>
+{% endblock %}
