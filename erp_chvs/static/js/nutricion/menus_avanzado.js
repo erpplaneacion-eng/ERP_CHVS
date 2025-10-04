@@ -291,8 +291,10 @@ async function generarMenusAutomaticos(modalidadId, modalidadNombre) {
 let menuActualId = null;
 function abrirGestionPreparaciones(menuId, menuNumero) {
     menuActualId = menuId; // Guardar el ID del menú actual
+    menuActualAnalisis = menuId; // Guardar para el análisis nutricional
     document.getElementById('menuNumeroModal').textContent = menuNumero;
     document.getElementById('modalPreparaciones').style.display = 'block';
+
     // Configurar el botón de agregar preparación
     const btnAgregar = document.getElementById('btnAgregarPreparacion');
     if (btnAgregar) {
@@ -675,12 +677,14 @@ function resetearFiltros() {
     document.getElementById('mensajeInicial').style.display = 'block';
 }
 // Cerrar modales
-document.querySelectorAll('.modal .close').forEach(closeBtn => {
-    closeBtn.addEventListener('click', function() {
-        this.closest('.modal').style.display = 'none';
-    });
-});
-window.addEventListener('click', function(event) {
+// Manejador de cierre de modales con delegación de eventos
+document.addEventListener('click', function(event) {
+    // Cerrar modal al hacer click en la X
+    if (event.target.classList.contains('close') && event.target.closest('.modal')) {
+        event.target.closest('.modal').style.display = 'none';
+    }
+
+    // Cerrar modal al hacer click fuera del contenido
     if (event.target.classList.contains('modal')) {
         event.target.style.display = 'none';
     }
@@ -810,5 +814,294 @@ async function eliminarMenuEspecial(menuId, nombreMenu) {
     } catch (error) {
         console.error('Error:', error);
         alert('Error al eliminar el menú especial');
+    }
+}
+
+// =================== ANÁLISIS NUTRICIONAL ===================
+
+let menuActualAnalisis = null;
+
+// Inicializar evento del botón de análisis nutricional
+document.addEventListener('DOMContentLoaded', function() {
+    const btnAnalisis = document.getElementById('btnAnalisisNutricional');
+    if (btnAnalisis) {
+        btnAnalisis.addEventListener('click', function() {
+            if (menuActualAnalisis) {
+                abrirModalAnalisisNutricional(menuActualAnalisis);
+            }
+        });
+    }
+});
+
+function abrirModalAnalisisNutricional(menuId) {
+    // Abrir el modal independiente
+    const modal = document.getElementById('modalAnalisisNutricional');
+    modal.style.display = 'block';
+
+    // Actualizar el título con el nombre del menú
+    const menuNumero = document.getElementById('menuNumeroModal').textContent;
+    document.getElementById('menuNombreAnalisis').textContent = menuNumero;
+
+    // Cargar el análisis
+    cargarAnalisisNutricional(menuId);
+}
+
+async function cargarAnalisisNutricional(menuId) {
+    try {
+        const contenidoAnalisis = document.getElementById('contenidoAnalisis');
+
+        // Mostrar mensaje de carga
+        contenidoAnalisis.innerHTML = '<div style="text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin fa-3x"></i><p>Calculando análisis nutricional...</p></div>';
+
+        // Llamar a la API
+        const response = await fetch(`/nutricion/api/menus/${menuId}/analisis-nutricional/`);
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error || 'Error al cargar análisis');
+        }
+
+        // Renderizar el análisis
+        renderizarAnalisisNutricional(data);
+
+    } catch (error) {
+        console.error('Error al cargar análisis nutricional:', error);
+        document.getElementById('contenidoAnalisis').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i> Error al cargar el análisis nutricional: ${error.message}
+            </div>
+        `;
+    }
+}
+
+function cerrarModalAnalisisNutricional() {
+    document.getElementById('modalAnalisisNutricional').style.display = 'none';
+}
+
+function renderizarAnalisisNutricional(data) {
+    const contenidoAnalisis = document.getElementById('contenidoAnalisis');
+
+    // Mapeo de nombres amigables
+    const nombresNutrientes = {
+        'calorias': 'Calorías',
+        'proteina': 'Proteína',
+        'grasa': 'Grasa',
+        'cho': 'CHO (Carbohidratos)',
+        'calcio': 'Calcio',
+        'hierro': 'Hierro',
+        'sodio': 'Sodio'
+    };
+
+    const unidadesNutrientes = {
+        'calorias': 'Kcal',
+        'proteina': 'g',
+        'grasa': 'g',
+        'cho': 'g',
+        'calcio': 'mg',
+        'hierro': 'mg',
+        'sodio': 'mg'
+    };
+
+    const keysNutrientes = {
+        'calorias': 'calorias_kcal',
+        'proteina': 'proteina_g',
+        'grasa': 'grasa_g',
+        'cho': 'cho_g',
+        'calcio': 'calcio_mg',
+        'hierro': 'hierro_mg',
+        'sodio': 'sodio_mg'
+    };
+
+    const estadosTexto = {
+        'OPTIMO': '✓ ÓPTIMO',
+        'EN_LIMITE': '⚠ CERCA DEL LÍMITE',
+        'EXCEDIDO': '❌ EXCEDIDO',
+        'SIN_REQUERIMIENTOS': 'ℹ SIN REQUERIMIENTOS CONFIGURADOS'
+    };
+
+    let html = '';
+
+    // Información del menú
+    html += `<div class="menu-info-card">
+        <h3><i class="fas fa-utensils"></i> ${data.menu.nombre}</h3>
+        <div class="menu-details">
+            <span><strong>Programa:</strong> ${data.menu.programa}</span> |
+            <span><strong>Modalidad:</strong> ${data.menu.modalidad}</span>
+        </div>
+    </div>`;
+
+    // Totales del menú
+    html += `<div class="totales-menu-card">
+        <h4><i class="fas fa-calculator"></i> TOTALES DEL MENÚ</h4>
+        <div class="totales-grid">`;
+
+    for (const [key, nombre] of Object.entries(nombresNutrientes)) {
+        const totalKey = keysNutrientes[key];
+        const valorActual = data.totales[totalKey];
+        const unidad = unidadesNutrientes[key];
+
+        html += `<div class="total-item">
+            <span class="total-label">${nombre}:</span>
+            <span class="total-value">${valorActual} ${unidad}</span>
+        </div>`;
+    }
+
+    html += `</div>
+    </div>`;
+
+    // Análisis por niveles escolares
+    if (data.analisis_por_nivel && data.analisis_por_nivel.length > 0) {
+        html += `<div class="analisis-niveles-container">
+            <h4><i class="fas fa-graduation-cap"></i> ANÁLISIS POR NIVELES ESCOLARES</h4>
+            <div class="niveles-escolares-grid">`;
+
+        data.analisis_por_nivel.forEach(analisis => {
+            const esNivelPrograma = analisis.nivel_escolar.es_nivel_programa;
+            const claseNivel = esNivelPrograma ? 'nivel-programa-actual' : 'nivel-otro';
+
+            html += `<div class="nivel-escolar-card ${claseNivel}">
+                <div class="nivel-header">
+                    <h5>
+                        ${esNivelPrograma ? '🎯 ' : '📚 '}
+                        ${analisis.nivel_escolar.nombre}
+                        ${esNivelPrograma ? ' (PROGRAMA ACTUAL)' : ''}
+                    </h5>
+                    <div class="estado-badge ${analisis.estado_general.toLowerCase()}">
+                        ${estadosTexto[analisis.estado_general]}
+                    </div>
+                </div>`;
+
+            // Nutrientes para este nivel
+            html += '<div class="nutrientes-nivel-grid">';
+            
+            for (const [key, nombre] of Object.entries(nombresNutrientes)) {
+                const totalKey = keysNutrientes[key];
+                const valorActual = data.totales[totalKey];
+                const valorLimite = analisis.requerimientos[totalKey];
+                const porcentaje = analisis.porcentajes[key];
+                const unidad = unidadesNutrientes[key];
+
+                // Determinar clase de estado
+                let estadoClase = 'optimo';
+                if (porcentaje > 100) {
+                    estadoClase = 'excedido';
+                } else if (porcentaje >= 86) {
+                    estadoClase = 'en-limite';
+                }
+
+                // Limitar el ancho de la barra al 100% visual
+                const porcentajeVisual = Math.min(porcentaje, 100);
+
+                html += `
+                    <div class="nutriente-row ${estadoClase}">
+                        <div class="nutriente-header">
+                            <div class="nutriente-nombre">${nombre}</div>
+                            <div class="nutriente-valores">
+                                <span class="actual">${valorActual}</span> / ${valorLimite} ${unidad}
+                            </div>
+                        </div>
+                        <div class="barra-progreso">
+                            <div class="barra-progreso-fill ${estadoClase}" style="width: ${porcentajeVisual}%">
+                                ${porcentaje.toFixed(1)}%
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+
+            // Alertas para este nivel
+            if (analisis.alertas && analisis.alertas.length > 0) {
+                html += '<div class="alertas-nivel">';
+                html += '<h6><i class="fas fa-exclamation-triangle"></i> Alertas</h6>';
+
+                analisis.alertas.forEach(alerta => {
+                    const claseAlerta = alerta.tipo === 'EXCEDIDO' ? 'excedido' : 'en-limite';
+                    const icono = alerta.tipo === 'EXCEDIDO' ? '❌' : '⚠️';
+                    const mensaje = alerta.tipo === 'EXCEDIDO'
+                        ? `${icono} ${nombresNutrientes[alerta.nutriente]}: ${alerta.valor_actual} / ${alerta.valor_limite} ${unidadesNutrientes[alerta.nutriente]} (${alerta.porcentaje}%) - EXCEDE EL LÍMITE`
+                        : `${icono} ${nombresNutrientes[alerta.nutriente]}: ${alerta.porcentaje}% - Cerca del límite`;
+
+                    html += `<div class="alerta-item ${claseAlerta}">${mensaje}</div>`;
+                });
+
+                html += '</div>';
+            }
+
+            html += '</div>'; // Cerrar nivel-escolar-card
+        });
+
+        html += '</div>'; // Cerrar niveles-escolares-grid
+        html += '</div>'; // Cerrar analisis-niveles-container
+
+    } else {
+        // Sin requerimientos configurados
+        html += '<div class="alert alert-warning">';
+        html += '<i class="fas fa-exclamation-triangle"></i> <strong>No hay requerimientos nutricionales configurados.</strong><br>';
+        html += 'Configure los requerimientos en la tabla de Requerimientos Nutricionales para ver el análisis completo.';
+        html += '</div>';
+    }
+
+    // Detalle por preparaciones
+    if (data.detalle_preparaciones && data.detalle_preparaciones.length > 0) {
+        html += '<div class="detalle-preparaciones">';
+        html += '<h4><i class="fas fa-utensils"></i> Desglose por Preparación</h4>';
+
+        data.detalle_preparaciones.forEach(prep => {
+            html += `<div class="preparacion-detalle-card">`;
+            html += `<div class="preparacion-detalle-header">${prep.nombre}</div>`;
+
+            // Totales de la preparación
+            html += `<div style="margin-bottom: 10px; font-size: 14px; color: #666;">`;
+            html += `<strong>Aporte:</strong> ${prep.totales.calorias_kcal} Kcal | `;
+            html += `${prep.totales.proteina_g}g Proteína | `;
+            html += `${prep.totales.grasa_g}g Grasa | `;
+            html += `${prep.totales.cho_g}g CHO`;
+            html += `</div>`;
+
+            // Ingredientes
+            if (prep.ingredientes && prep.ingredientes.length > 0) {
+                html += `<button class="btn-toggle-detalle" onclick="toggleIngredientes('prep-${prep.id_preparacion}')">`;
+                html += `<i class="fas fa-chevron-down"></i> Ver Ingredientes (${prep.ingredientes.length})`;
+                html += `</button>`;
+
+                html += `<div id="prep-${prep.id_preparacion}" style="display: none; margin-top: 10px;">`;
+                prep.ingredientes.forEach(ing => {
+                    if (ing.alimento_encontrado) {
+                        html += `<div class="ingrediente-detalle">`;
+                        html += `<span>${ing.nombre}</span>`;
+                        html += `<span>${ing.calorias} Kcal</span>`;
+                        html += `</div>`;
+                    } else {
+                        html += `<div class="ingrediente-detalle no-encontrado">`;
+                        html += `<span>${ing.nombre}</span>`;
+                        html += `<span>⚠️ ${ing.mensaje}</span>`;
+                        html += `</div>`;
+                    }
+                });
+                html += `</div>`;
+            }
+
+            html += `</div>`;
+        });
+
+        html += '</div>';
+    }
+
+    contenidoAnalisis.innerHTML = html;
+}
+
+function toggleIngredientes(prepId) {
+    const elemento = document.getElementById(prepId);
+    const boton = elemento.previousElementSibling;
+
+    if (elemento.style.display === 'none') {
+        elemento.style.display = 'block';
+        boton.innerHTML = '<i class="fas fa-chevron-up"></i> Ocultar Ingredientes';
+    } else {
+        elemento.style.display = 'none';
+        const numIngredientes = elemento.querySelectorAll('.ingrediente-detalle').length;
+        boton.innerHTML = `<i class="fas fa-chevron-down"></i> Ver Ingredientes (${numIngredientes})`;
     }
 }

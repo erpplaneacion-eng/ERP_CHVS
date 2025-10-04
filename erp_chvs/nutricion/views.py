@@ -12,7 +12,8 @@ from .models import (
     TablaMenus,
     TablaPreparaciones,
     TablaIngredientesSiesa,
-    TablaPreparacionIngredientes
+    TablaPreparacionIngredientes,
+    TablaRequerimientosNutricionales
 )
 from .forms import AlimentoForm
 from principal.models import ModalidadesDeConsumo
@@ -662,3 +663,220 @@ def api_preparacion_ingrediente_delete(request, id_preparacion, id_ingrediente):
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
+
+
+# =================== ANÁLISIS NUTRICIONAL ===================
+
+@login_required
+def api_analisis_nutricional_menu(request, id_menu):
+    """
+    API para obtener el análisis nutricional completo de un menú.
+    Calcula el aporte nutricional total sumando los valores de todos los ingredientes
+    y lo compara con los requerimientos nutricionales del nivel escolar del programa.
+    """
+    try:
+        # Obtener el menú
+        menu = get_object_or_404(TablaMenus, id_menu=id_menu)
+
+        # Obtener el programa y su nivel escolar asociado
+        programa = menu.id_contrato
+
+        # Obtener el nivel escolar del programa (asumiendo que el programa tiene un nivel escolar)
+        # NOTA: Necesitamos verificar cómo está relacionado el programa con el nivel escolar
+        # Por ahora, buscaremos el requerimiento nutricional basado en el nivel escolar del programa
+
+        # Obtener todas las preparaciones del menú
+        preparaciones = TablaPreparaciones.objects.filter(id_menu=menu).prefetch_related(
+            'ingredientes__id_ingrediente_siesa'
+        )
+
+        # Inicializar contadores de nutrientes
+        totales = {
+            'calorias_kcal': 0.0,
+            'proteina_g': 0.0,
+            'grasa_g': 0.0,
+            'cho_g': 0.0,
+            'calcio_mg': 0.0,
+            'hierro_mg': 0.0,
+            'sodio_mg': 0.0
+        }
+
+        # Lista para detalles por preparación
+        detalle_preparaciones = []
+
+        # Recorrer cada preparación
+        for preparacion in preparaciones:
+            prep_totales = {
+                'calorias_kcal': 0.0,
+                'proteina_g': 0.0,
+                'grasa_g': 0.0,
+                'cho_g': 0.0,
+                'calcio_mg': 0.0,
+                'hierro_mg': 0.0,
+                'sodio_mg': 0.0
+            }
+
+            ingredientes_info = []
+
+            # Obtener ingredientes de la preparación
+            ingredientes_prep = TablaPreparacionIngredientes.objects.filter(
+                id_preparacion=preparacion
+            ).select_related('id_ingrediente_siesa')
+
+            for ing_prep in ingredientes_prep:
+                ingrediente = ing_prep.id_ingrediente_siesa
+
+                # Buscar el ingrediente en la tabla de alimentos ICBF por código o nombre
+                # Intentamos buscar por código primero
+                alimento = TablaAlimentos2018Icbf.objects.filter(
+                    codigo=ingrediente.id_ingrediente_siesa
+                ).first()
+
+                # Si no se encuentra por código, intentar por nombre
+                if not alimento:
+                    alimento = TablaAlimentos2018Icbf.objects.filter(
+                        nombre_del_alimento__icontains=ingrediente.nombre_ingrediente
+                    ).first()
+
+                if alimento:
+                    # Sumar valores nutricionales (asumiendo porción de 100g)
+                    # NOTA: En el futuro se puede agregar campo de cantidad en gramos
+                    prep_totales['calorias_kcal'] += float(alimento.energia_kcal or 0)
+                    prep_totales['proteina_g'] += float(alimento.proteina_g or 0)
+                    prep_totales['grasa_g'] += float(alimento.lipidos_g or 0)
+                    prep_totales['cho_g'] += float(alimento.carbohidratos_totales_g or 0)
+                    prep_totales['calcio_mg'] += float(alimento.calcio_mg or 0)
+                    prep_totales['hierro_mg'] += float(alimento.hierro_mg or 0)
+                    prep_totales['sodio_mg'] += float(alimento.sodio_mg or 0)
+
+                    ingredientes_info.append({
+                        'codigo': ingrediente.id_ingrediente_siesa,
+                        'nombre': ingrediente.nombre_ingrediente,
+                        'alimento_encontrado': True,
+                        'calorias': float(alimento.energia_kcal or 0),
+                        'proteina': float(alimento.proteina_g or 0),
+                        'grasa': float(alimento.lipidos_g or 0),
+                        'cho': float(alimento.carbohidratos_totales_g or 0),
+                        'calcio': float(alimento.calcio_mg or 0),
+                        'hierro': float(alimento.hierro_mg or 0),
+                        'sodio': float(alimento.sodio_mg or 0)
+                    })
+                else:
+                    ingredientes_info.append({
+                        'codigo': ingrediente.id_ingrediente_siesa,
+                        'nombre': ingrediente.nombre_ingrediente,
+                        'alimento_encontrado': False,
+                        'mensaje': 'No se encontró en TABLA_ALIMENTOS_2018_ICBF'
+                    })
+
+            # Agregar al total del menú
+            for key in totales:
+                totales[key] += prep_totales[key]
+
+            detalle_preparaciones.append({
+                'id_preparacion': preparacion.id_preparacion,
+                'nombre': preparacion.preparacion,
+                'totales': prep_totales,
+                'ingredientes': ingredientes_info
+            })
+
+        # Obtener TODOS los requerimientos nutricionales disponibles
+        todos_requerimientos = TablaRequerimientosNutricionales.objects.select_related(
+            'id_nivel_escolar_uapa'
+        ).all()
+
+        # Lista para almacenar el análisis de cada nivel escolar
+        analisis_por_nivel = []
+
+        # Obtener el nivel escolar del programa actual (para marcarlo como actual)
+        nivel_escolar_programa = programa.get_nivel_escolar_uapa()
+
+        for requerimiento in todos_requerimientos:
+            # Calcular porcentajes para este nivel escolar
+            porcentajes = {
+                'calorias': (totales['calorias_kcal'] / float(requerimiento.calorias_kcal)) * 100,
+                'proteina': (totales['proteina_g'] / float(requerimiento.proteina_g)) * 100,
+                'grasa': (totales['grasa_g'] / float(requerimiento.grasa_g)) * 100,
+                'cho': (totales['cho_g'] / float(requerimiento.cho_g)) * 100,
+                'calcio': (totales['calcio_mg'] / float(requerimiento.calcio_mg)) * 100,
+                'hierro': (totales['hierro_mg'] / float(requerimiento.hierro_mg)) * 100,
+                'sodio': (totales['sodio_mg'] / float(requerimiento.sodio_mg)) * 100
+            }
+
+            # Determinar estado para este nivel
+            excedidos = []
+            en_limite = []
+            alertas_nivel = []
+
+            for nutriente, porcentaje in porcentajes.items():
+                if porcentaje > 100:
+                    excedidos.append(nutriente)
+                    alertas_nivel.append({
+                        'tipo': 'EXCEDIDO',
+                        'nutriente': nutriente,
+                        'porcentaje': round(porcentaje, 1),
+                        'valor_actual': round(totales[f"{nutriente.replace('cho', 'cho_g').replace('calorias', 'calorias_kcal').replace('proteina', 'proteina_g').replace('grasa', 'grasa_g').replace('calcio', 'calcio_mg').replace('hierro', 'hierro_mg').replace('sodio', 'sodio_mg')}"], 1),
+                        'valor_limite': float(getattr(requerimiento, nutriente.replace('calorias', 'calorias_kcal').replace('proteina', 'proteina_g').replace('grasa', 'grasa_g').replace('cho', 'cho_g').replace('calcio', 'calcio_mg').replace('hierro', 'hierro_mg').replace('sodio', 'sodio_mg')))
+                    })
+                elif porcentaje >= 86:
+                    en_limite.append(nutriente)
+                    alertas_nivel.append({
+                        'tipo': 'EN_LIMITE',
+                        'nutriente': nutriente,
+                        'porcentaje': round(porcentaje, 1)
+                    })
+
+            # Determinar estado general para este nivel
+            if excedidos:
+                estado_nivel = 'EXCEDIDO'
+            elif en_limite:
+                estado_nivel = 'EN_LIMITE'
+            else:
+                estado_nivel = 'OPTIMO'
+
+            # Verificar si este es el nivel del programa actual
+            es_nivel_programa = (nivel_escolar_programa and 
+                               requerimiento.id_nivel_escolar_uapa.id_grado_escolar_uapa == nivel_escolar_programa.id_grado_escolar_uapa)
+
+            # Agregar análisis de este nivel a la lista
+            analisis_por_nivel.append({
+                'nivel_escolar': {
+                    'id': requerimiento.id_nivel_escolar_uapa.id_grado_escolar_uapa,
+                    'nombre': requerimiento.id_nivel_escolar_uapa.nivel_escolar_uapa,
+                    'es_nivel_programa': es_nivel_programa
+                },
+                'requerimientos': {
+                    'calorias_kcal': float(requerimiento.calorias_kcal),
+                    'proteina_g': float(requerimiento.proteina_g),
+                    'grasa_g': float(requerimiento.grasa_g),
+                    'cho_g': float(requerimiento.cho_g),
+                    'calcio_mg': float(requerimiento.calcio_mg),
+                    'hierro_mg': float(requerimiento.hierro_mg),
+                    'sodio_mg': float(requerimiento.sodio_mg)
+                },
+                'porcentajes': {k: round(v, 1) for k, v in porcentajes.items()},
+                'estado_general': estado_nivel,
+                'alertas': alertas_nivel
+            })
+
+        # Preparar respuesta
+        response_data = {
+            'success': True,
+            'menu': {
+                'id': menu.id_menu,
+                'nombre': menu.menu,
+                'modalidad': menu.id_modalidad.modalidad,
+                'programa': programa.programa
+            },
+            'totales': {k: round(v, 1) for k, v in totales.items()},
+            'analisis_por_nivel': analisis_por_nivel,
+            'detalle_preparaciones': detalle_preparaciones
+        }
+
+        return JsonResponse(response_data)
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al calcular análisis nutricional: {str(e)}'
+        }, status=500)

@@ -32,4 +32,7 @@ urlpatterns = [
     # Preparación - Ingredientes
     path('api/preparaciones/<int:id_preparacion>/ingredientes/', views.api_preparacion_ingredientes, name='api_preparacion_ingredientes'),
     path('api/preparaciones/<int:id_preparacion>/ingredientes/<int:id_ingrediente>/', views.api_preparacion_ingrediente_delete, name='api_preparacion_ingrediente_delete'),
+
+    # Análisis Nutricional
+    path('api/menus/<int:id_menu>/analisis-nutricional/', views.api_analisis_nutricional_menu, name='api_analisis_nutricional_menu'),
 ]

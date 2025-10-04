@@ -1,0 +1,915 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestión de Menús{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modules/nutricion.css' %}">
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    .filtros-container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .filtros-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+        align-items: end;
+    }
+
+    .accordion {
+        background: white;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .accordion-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 20px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s;
+    }
+
+    .accordion-header:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+
+    .accordion-header.active {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .accordion-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        background: #f8f9fa;
+    }
+
+    .accordion-content.active {
+        max-height: 2000px;
+    }
+
+    .menus-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+        padding: 20px;
+    }
+
+    .menu-card {
+        background: white;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+
+    .menu-card:hover {
+        border-color: #667eea;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+    }
+
+    .menu-card.has-preparaciones {
+        border-color: #28a745;
+        background: #f0fff4;
+    }
+
+    .menu-numero {
+        font-size: 32px;
+        font-weight: bold;
+        color: #667eea;
+        margin-bottom: 10px;
+    }
+
+    .menu-card.has-preparaciones .menu-numero {
+        color: #28a745;
+    }
+
+    .menu-actions {
+        margin-top: 10px;
+        display: flex;
+        gap: 5px;
+        justify-content: center;
+    }
+
+    .menu-estado-badge {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .menu-estado-badge.optimo {
+        background: #28a745;
+    }
+
+    .menu-estado-badge.en-limite {
+        background: #ffc107;
+    }
+
+    .menu-estado-badge.excedido {
+        background: #dc3545;
+        animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    .menu-card {
+        position: relative;
+    }
+
+    .btn-generar-auto {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s;
+    }
+
+    .btn-generar-auto:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+    }
+
+    .info-programa {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .preparacion-badge {
+        background: #28a745;
+        color: white;
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 10px;
+    }
+
+    .menu-card-especial {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 2px dashed #667eea;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .menu-card-especial:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        border-color: #764ba2;
+        transform: translateY(-2px) scale(1.02);
+    }
+
+    .menu-numero-especial {
+        font-size: 48px;
+        color: white;
+        margin-bottom: 5px;
+    }
+
+    .menu-label-especial {
+        font-size: 12px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .btn-warning {
+        background: #ffc107;
+        color: #212529;
+    }
+
+    .btn-warning:hover {
+        background: #e0a800;
+        color: white;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+    }
+
+    /* Estilos personalizados para Select2 */
+    .select2-container {
+        width: 100% !important;
+    }
+
+    .select2-container--default .select2-selection--single {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        height: 38px;
+        padding: 6px 12px;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 24px;
+        color: #333;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+
+    .select2-dropdown {
+        border: 1px solid #667eea;
+        border-radius: 4px;
+    }
+
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background-color: #667eea;
+    }
+
+    .select2-search--dropdown .select2-search__field {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 6px 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <div class="page-header">
+        <h1><i class="fas fa-utensils"></i> Gestión de Menús por Modalidad</h1>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filtros-container">
+        <h3><i class="fas fa-filter"></i> Filtros</h3>
+        <div class="filtros-row">
+            <div class="form-group">
+                <label for="filtroMunicipio">Municipio (ETC)</label>
+                <select id="filtroMunicipio" class="form-control">
+                    <option value="">Seleccione un municipio...</option>
+                    {% for mun in municipios %}
+                    <option value="{{ mun.id }}" {% if municipio_seleccionado == mun.id|stringformat:"s" %}selected{% endif %}>
+                        {{ mun.nombre_municipio }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="filtroPrograma">Programa (Contrato Activo)</label>
+                <select id="filtroPrograma" class="form-control" disabled>
+                    <option value="">Primero seleccione un municipio...</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <button id="btnAplicarFiltros" class="btn btn-primary" disabled>
+                    <i class="fas fa-search"></i> Cargar Modalidades
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información del programa seleccionado -->
+    <div id="infoProgramaContainer" style="display: none;">
+        <div class="info-programa">
+            <h3><i class="fas fa-info-circle"></i> Programa Seleccionado</h3>
+            <p id="infoProgramaNombre"><strong>Programa:</strong> <span></span></p>
+            <p id="infoProgramaContrato"><strong>Contrato:</strong> <span></span></p>
+            <p id="infoProgramaMunicipio"><strong>Municipio:</strong> <span></span></p>
+        </div>
+    </div>
+
+    <!-- Acordeones de Modalidades -->
+    <div id="modalidadesContainer">
+        <!-- Se llenarán dinámicamente con JavaScript -->
+    </div>
+
+    <!-- Mensaje inicial -->
+    <div id="mensajeInicial" class="alert alert-info">
+        <i class="fas fa-info-circle"></i> Seleccione un municipio y un programa para visualizar las modalidades y menús.
+    </div>
+</div>
+
+<!-- Modal para gestionar preparaciones -->
+<div id="modalPreparaciones" class="modal">
+    <div class="modal-content" style="max-width: 1200px; max-height: 90vh; overflow-y: auto;">
+        <span class="close">&times;</span>
+        <h2 id="modalTitlePrep">Gestionar Preparaciones - Menú <span id="menuNumeroModal"></span></h2>
+
+        <div class="form-group" style="display: flex; gap: 10px;">
+            <button class="btn btn-primary" id="btnAgregarPreparacion">
+                <i class="fas fa-plus"></i> Agregar Preparación
+            </button>
+            <button class="btn btn-success" id="btnAnalisisNutricional">
+                <i class="fas fa-chart-bar"></i> Ver Análisis Nutricional
+            </button>
+        </div>
+
+        <div id="listaPreparacionesAcordeon">
+            <!-- Se llenará dinámicamente con acordeones -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal INDEPENDIENTE para Análisis Nutricional -->
+<div id="modalAnalisisNutricional" class="modal" style="z-index: 10001;">
+    <div class="modal-content" style="max-width: 1400px; max-height: 95vh; overflow-y: auto;">
+        <span class="close" onclick="cerrarModalAnalisisNutricional()">&times;</span>
+        <h2><i class="fas fa-chart-pie"></i> Análisis Nutricional - Menú <span id="menuNombreAnalisis"></span></h2>
+
+        <div id="contenidoAnalisis">
+            <!-- Se llenará dinámicamente con JavaScript -->
+        </div>
+    </div>
+</div>
+
+<style>
+    .preparacion-accordion {
+        background: white;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        overflow: hidden;
+    }
+
+    .preparacion-accordion-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 20px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s;
+    }
+
+    .preparacion-accordion-header:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+
+    .preparacion-accordion-header.active {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .preparacion-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex: 1;
+    }
+
+    .preparacion-nombre {
+        font-weight: bold;
+        font-size: 16px;
+    }
+
+    .ingredientes-badge {
+        background: rgba(255,255,255,0.3);
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+    }
+
+    .preparacion-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .preparacion-accordion-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        background: #f8f9fa;
+    }
+
+    .preparacion-accordion-content.active {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
+    .ingredientes-container {
+        padding: 20px;
+    }
+
+    .ingrediente-item {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        padding: 12px 15px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s;
+    }
+
+    .ingrediente-item:hover {
+        border-color: #667eea;
+        box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+    }
+
+    .ingrediente-info {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr;
+        gap: 15px;
+        align-items: center;
+    }
+
+    .ingrediente-nombre {
+        font-weight: 500;
+        color: #333;
+    }
+
+    .ingrediente-cantidad {
+        color: #666;
+        font-size: 14px;
+    }
+
+    .ingrediente-acciones {
+        display: flex;
+        gap: 8px;
+    }
+
+    .btn-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .btn-icon.btn-edit {
+        background: #ffc107;
+        color: white;
+    }
+
+    .btn-icon.btn-edit:hover {
+        background: #e0a800;
+        transform: scale(1.1);
+    }
+
+    .btn-icon.btn-delete {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-icon.btn-delete:hover {
+        background: #c82333;
+        transform: scale(1.1);
+    }
+
+    .no-ingredientes {
+        text-align: center;
+        padding: 30px;
+        color: #999;
+    }
+
+    .btn-agregar-ingrediente {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .btn-agregar-ingrediente:hover {
+        background: #218838;
+        transform: translateY(-1px);
+    }
+</style>
+
+<!-- Modal para crear preparación -->
+<div id="modalNuevaPreparacion" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="cerrarModalPreparacion()">&times;</span>
+        <h2>Nueva Preparación</h2>
+        <form id="formNuevaPreparacion">
+            <input type="hidden" id="menuIdPrep">
+
+            <div class="form-group">
+                <label>Nombre de la Preparación <span class="required">*</span></label>
+                <input type="text" id="nombrePreparacion" required>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Guardar
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalPreparacion()">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal para crear menú especial -->
+<div id="modalMenuEspecial" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2><i class="fas fa-star"></i> Crear Menú Especial</h2>
+        <form id="formMenuEspecial" onsubmit="event.preventDefault(); crearMenuEspecial();">
+            <input type="hidden" id="modalidadIdEspecial">
+
+            <div class="form-group">
+                <label>Nombre del Menú Especial <span class="required">*</span></label>
+                <input type="text" id="nombreMenuEspecial" class="form-control"
+                       placeholder="Ej: Menú Navideño, Menú Día del Niño, etc." required>
+                <small style="color: #666; margin-top: 5px; display: block;">
+                    Este menú aparecerá junto a los 20 menús regulares
+                </small>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Crear Menú
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalMenuEspecial').style.display='none'">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal para editar menú especial -->
+<div id="modalEditarMenuEspecial" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2><i class="fas fa-edit"></i> Editar Menú Especial</h2>
+        <form id="formEditarMenuEspecial" onsubmit="event.preventDefault(); guardarEdicionMenuEspecial();">
+            <input type="hidden" id="menuIdEditar">
+
+            <div class="form-group">
+                <label>Nombre del Menú <span class="required">*</span></label>
+                <input type="text" id="nombreMenuEditado" class="form-control"
+                       placeholder="Nombre del menú" required>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Guardar Cambios
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalEditarMenuEspecial').style.display='none'">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal para agregar ingredientes múltiples -->
+<div id="modalAgregarIngredientes" class="modal">
+    <div class="modal-content" style="max-width: 1000px; max-height: 90vh;">
+        <span class="close">&times;</span>
+        <h2><i class="fas fa-plus-circle"></i> Agregar Ingredientes</h2>
+        <input type="hidden" id="preparacionIdIngredientes">
+
+        <div style="margin-bottom: 20px;">
+            <button type="button" class="btn btn-primary" onclick="agregarFilaIngrediente()">
+                <i class="fas fa-plus"></i> Agregar Fila
+            </button>
+        </div>
+
+        <div style="max-height: 400px; overflow-y: auto;">
+            <table class="data-table" id="tablaIngredientes">
+                <thead>
+                    <tr>
+                        <th style="width: 80%;">Ingrediente</th>
+                        <th style="width: 20%;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyIngredientes">
+                    <!-- Filas dinámicas -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="form-actions" style="margin-top: 20px;">
+            <button type="button" class="btn btn-success" onclick="guardarIngredientes()">
+                <i class="fas fa-save"></i> Guardar Ingredientes
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="cerrarModalIngredientes()">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .fila-ingrediente {
+        transition: all 0.2s;
+    }
+
+    .fila-ingrediente:hover {
+        background-color: #f8f9fa;
+    }
+
+    .fila-ingrediente td {
+        vertical-align: middle;
+    }
+
+    .select-ingrediente {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .select-ingrediente:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    .input-cantidad {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        text-align: center;
+    }
+
+    .input-cantidad:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    .btn-eliminar-fila {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+    }
+
+    .btn-eliminar-fila:hover {
+        background: #c82333;
+        transform: scale(1.05);
+    }
+
+    /* Estilos para Análisis Nutricional */
+    .analisis-container {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .analisis-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #667eea;
+    }
+
+    .analisis-header h3 {
+        margin: 0;
+        color: #667eea;
+        font-size: 20px;
+    }
+
+    .nivel-escolar-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .nutrientes-grid {
+        display: grid;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .nutriente-row {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        border-left: 4px solid #ddd;
+        transition: all 0.3s;
+    }
+
+    .nutriente-row.optimo {
+        border-left-color: #28a745;
+    }
+
+    .nutriente-row.en-limite {
+        border-left-color: #ffc107;
+    }
+
+    .nutriente-row.excedido {
+        border-left-color: #dc3545;
+        background: #fff5f5;
+    }
+
+    .nutriente-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .nutriente-nombre {
+        font-weight: bold;
+        font-size: 16px;
+        color: #333;
+    }
+
+    .nutriente-valores {
+        font-size: 14px;
+        color: #666;
+    }
+
+    .nutriente-valores .actual {
+        font-weight: bold;
+        color: #333;
+    }
+
+    .barra-progreso {
+        height: 25px;
+        background: #e9ecef;
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+        margin-bottom: 5px;
+    }
+
+    .barra-progreso-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+        transition: width 0.5s ease;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding-right: 10px;
+        font-weight: bold;
+        color: white;
+        font-size: 12px;
+    }
+
+    .barra-progreso-fill.en-limite {
+        background: linear-gradient(90deg, #ffc107 0%, #ffca2c 100%);
+    }
+
+    .barra-progreso-fill.excedido {
+        background: linear-gradient(90deg, #dc3545 0%, #f85858 100%);
+    }
+
+    .estado-general-card {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+
+    .estado-general-card.EN_LIMITE {
+        background: linear-gradient(135deg, #ffc107 0%, #ffca2c 100%);
+        color: #212529;
+    }
+
+    .estado-general-card.EXCEDIDO {
+        background: linear-gradient(135deg, #dc3545 0%, #f85858 100%);
+    }
+
+    .estado-general-card.SIN_REQUERIMIENTOS {
+        background: linear-gradient(135deg, #6c757d 0%, #868e96 100%);
+    }
+
+    .alertas-container {
+        margin-top: 20px;
+    }
+
+    .alerta-item {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+    }
+
+    .alerta-item.excedido {
+        background: #f8d7da;
+        border-left-color: #dc3545;
+    }
+
+    .detalle-preparaciones {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 2px solid #e9ecef;
+    }
+
+    .detalle-preparaciones h4 {
+        color: #667eea;
+        margin-bottom: 15px;
+    }
+
+    .preparacion-detalle-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        border: 1px solid #dee2e6;
+    }
+
+    .preparacion-detalle-header {
+        font-weight: bold;
+        font-size: 16px;
+        color: #333;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .ingrediente-detalle {
+        padding: 8px 0;
+        font-size: 14px;
+        color: #666;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .ingrediente-detalle.no-encontrado {
+        color: #dc3545;
+        font-style: italic;
+    }
+
+    .btn-toggle-detalle {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-top: 10px;
+        font-size: 14px;
+    }
+
+    .btn-toggle-detalle:hover {
+        background: #5a6268;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<!-- jQuery (requerido por Select2) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    const PROGRAMA_ACTUAL = {{ programa_seleccionado|default:"null" }};
+    const MUNICIPIO_ACTUAL = {{ municipio_seleccionado|default:"null" }};
+</script>
+<script src="{% static 'js/nutricion/menus_avanzado.js' %}"></script>
+{% endblock %}

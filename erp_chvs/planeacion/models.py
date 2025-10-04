@@ -119,6 +119,47 @@ class Programa(models.Model):
         db_column="id_municipio"  # Nombre específico en BD
     )
 
+    def get_nivel_escolar_uapa(self):
+        """
+        Determina el nivel escolar UAPA del programa basándose en los grados escolares
+        de las planificaciones del municipio asociado.
+        Retorna el nivel escolar más común o el primero encontrado.
+        """
+        from principal.models import TablaGradosEscolaresUapa
+        from collections import Counter
+
+        # Obtener planificaciones del municipio del programa
+        planificaciones = PlanificacionRaciones.objects.filter(
+            etc=self.municipio
+        ).select_related('nivel_escolar__nivel_escolar_uapa')
+
+        niveles_escolares = []
+        for plan in planificaciones:
+            if hasattr(plan, 'nivel_escolar') and plan.nivel_escolar and plan.nivel_escolar.nivel_escolar_uapa:
+                niveles_escolares.append(plan.nivel_escolar.nivel_escolar_uapa)
+
+        if not niveles_escolares:
+            # Si no hay planificaciones, usar nivel por defecto (PRIMERA INFANCIA o el primero disponible)
+            nivel_defecto = TablaGradosEscolaresUapa.objects.filter(
+                id_grado_escolar_uapa='-1'
+            ).first()
+            if nivel_defecto:
+                return nivel_defecto
+
+            # Si no existe el nivel -1, retornar el primero disponible
+            return TablaGradosEscolaresUapa.objects.first()
+
+        # Retornar el nivel más común
+        contador = Counter([nivel.id_grado_escolar_uapa for nivel in niveles_escolares])
+        nivel_id_mas_comun = contador.most_common(1)[0][0]
+
+        # Buscar el objeto completo
+        for nivel in niveles_escolares:
+            if nivel.id_grado_escolar_uapa == nivel_id_mas_comun:
+                return nivel
+
+        return None
+
     def __str__(self):
         return self.programa
 
