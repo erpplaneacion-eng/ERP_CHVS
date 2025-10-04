@@ -170,8 +170,8 @@ class DataTransformer:
         """
         try:
             # Obtener mapeo de niveles de grado
-            niveles_grado = NivelGradoEscolar.objects.all()
-            mapeo_niveles = {n.grados_sedes: n.nivel_escolar_uapa for n in niveles_grado}
+            niveles_grado = NivelGradoEscolar.objects.select_related('nivel_escolar_uapa').all()
+            mapeo_niveles = {n.grados_sedes: n.nivel_escolar_uapa.nivel_escolar_uapa for n in niveles_grado}
             
             # Convertir GRADO a entero primero, luego a string para el mapeo
             df[f'{columna_grado}_clean'] = df[columna_grado].fillna(0).astype(int).astype(str)

@@ -630,14 +630,19 @@ def api_sede_detail(request, cod_interprise):
 @login_required
 def lista_niveles_grado(request):
     """Vista para mostrar el listado de niveles grado escolar."""
-    niveles_grado_list = NivelGradoEscolar.objects.all().order_by('id_grado_escolar')
+    niveles_grado_list = NivelGradoEscolar.objects.select_related('nivel_escolar_uapa').all().order_by('id_grado_escolar')
     paginator = Paginator(niveles_grado_list, 10)  # 10 items por página
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
 
+    # Obtener todos los grados UAPA disponibles para el select
+    from principal.models import TablaGradosEscolaresUapa
+    grados_uapa = TablaGradosEscolaresUapa.objects.all().order_by('nivel_escolar_uapa')
+
     return render(request, 'principal/niveles_grado.html', {
         'niveles_grado': page_obj,
-        'total_niveles_grado': paginator.count
+        'total_niveles_grado': paginator.count,
+        'grados_uapa': grados_uapa
     })
 
 # NOTA: El JavaScript de niveles_grado.html ahora solo se usa para paginación AJAX, creación, edición y eliminación.
@@ -659,7 +664,8 @@ def api_niveles_grado(request):
                 {
                     'id_grado_escolar': nivel.id_grado_escolar,
                     'grados_sedes': nivel.grados_sedes,
-                    'nivel_escolar_uapa': nivel.nivel_escolar_uapa,
+                    'nivel_escolar_uapa': nivel.nivel_escolar_uapa_id,
+                    'nivel_escolar_uapa_nombre': nivel.nivel_escolar_uapa.nivel_escolar_uapa,
                 }
                 for nivel in page_obj
             ],
@@ -678,14 +684,15 @@ def api_niveles_grado(request):
             nivel_grado = NivelGradoEscolar(
                 id_grado_escolar=data['id_grado_escolar'],
                 grados_sedes=data['grados_sedes'],
-                nivel_escolar_uapa=data['nivel_escolar_uapa']
+                nivel_escolar_uapa_id=data['nivel_escolar_uapa']
             )
             nivel_grado.save()
             return JsonResponse({
                 'success': True,
                 'id_grado_escolar': nivel_grado.id_grado_escolar,
                 'grados_sedes': nivel_grado.grados_sedes,
-                'nivel_escolar_uapa': nivel_grado.nivel_escolar_uapa,
+                'nivel_escolar_uapa': nivel_grado.nivel_escolar_uapa_id,
+                'nivel_escolar_uapa_nombre': nivel_grado.nivel_escolar_uapa.nivel_escolar_uapa,
             })
         except IntegrityError:
             return JsonResponse({'success': False, 'error': 'El ID de grado escolar ya existe'})
@@ -708,14 +715,15 @@ def api_nivel_grado_detail(request, id_grado_escolar):
         return JsonResponse({
             'id_grado_escolar': nivel_grado.id_grado_escolar,
             'grados_sedes': nivel_grado.grados_sedes,
-            'nivel_escolar_uapa': nivel_grado.nivel_escolar_uapa,
+            'nivel_escolar_uapa': nivel_grado.nivel_escolar_uapa_id,
+            'nivel_escolar_uapa_nombre': nivel_grado.nivel_escolar_uapa.nivel_escolar_uapa,
         })
 
     elif request.method == 'PUT':
         try:
             data = json.loads(request.body)
             nivel_grado.grados_sedes = data['grados_sedes']
-            nivel_grado.nivel_escolar_uapa = data['nivel_escolar_uapa']
+            nivel_grado.nivel_escolar_uapa_id = data['nivel_escolar_uapa']
             nivel_grado.save()
             return JsonResponse({'success': True})
         except Exception as e:

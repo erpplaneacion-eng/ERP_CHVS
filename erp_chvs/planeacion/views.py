@@ -143,7 +143,7 @@ def inicializar_ciclos_menus(request):
                 if nivel_manual_nombre:
                     # Buscar nivel que contenga el nombre manual (ej: "Primaria" en "PRIMARIA 1 Y 2")
                     nivel_obj = next(
-                        (n for n in niveles_escolares if nivel_manual_nombre.upper() in n.nivel_escolar_uapa.upper()),
+                        (n for n in niveles_escolares if nivel_manual_nombre.upper() in n.nivel_escolar_uapa.nivel_escolar_uapa.upper()),
                         None
                     )
 
@@ -413,7 +413,7 @@ def _obtener_datos_planificacion(municipio_obj, focalizacion, ano):
 
         sedes_dict[plan.sede_educativa.nombre_sede_educativa].append({
             'id': plan.id,
-            'nivel_escolar': plan.nivel_escolar.nivel_escolar_uapa,
+            'nivel_escolar': plan.nivel_escolar.nivel_escolar_uapa.nivel_escolar_uapa,
             'grados': ', '.join(sorted(grados_del_nivel)) if grados_del_nivel else plan.nivel_escolar.grados_sedes,
             'cap_am': plan.cap_am,
             'cap_pm': plan.cap_pm,

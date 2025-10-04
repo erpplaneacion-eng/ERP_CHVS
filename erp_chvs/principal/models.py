@@ -114,7 +114,13 @@ class MunicipioModalidades(models.Model):
 class NivelGradoEscolar(models.Model):
     id_grado_escolar = models.CharField(max_length=50, primary_key=True, verbose_name="ID Grado Escolar")
     grados_sedes = models.CharField(max_length=200, verbose_name="Grados Sedes")
-    nivel_escolar_uapa = models.CharField(max_length=100, verbose_name="Nivel Escolar UAPA")
+    nivel_escolar_uapa = models.ForeignKey(
+        'TablaGradosEscolaresUapa',
+        on_delete=models.PROTECT,
+        db_column='nivel_escolar_uapa',
+        verbose_name="Nivel Escolar UAPA",
+        related_name='niveles_grado'
+    )
 
     class Meta:
         db_table = 'nivel_grado_escolar'
@@ -123,7 +129,7 @@ class NivelGradoEscolar(models.Model):
         ordering = ['id_grado_escolar']
 
     def __str__(self):
-        return f"{self.id_grado_escolar} - {self.nivel_escolar_uapa}"
+        return f"{self.id_grado_escolar} - {self.nivel_escolar_uapa.nivel_escolar_uapa}"
 
 
 class TablaGradosEscolaresUapa(models.Model):

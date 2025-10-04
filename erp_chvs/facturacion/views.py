@@ -569,8 +569,8 @@ def lista_listados(request):
 
             # 3. Obtener todos los mapeos de nivel-grado en una sola consulta
             mapeo_niveles = {
-                nivel.grados_sedes: nivel.nivel_escolar_uapa
-                for nivel in NivelGradoEscolar.objects.filter(grados_sedes__in=todos_los_grados_base)
+                nivel.grados_sedes: nivel.nivel_escolar_uapa.nivel_escolar_uapa
+                for nivel in NivelGradoEscolar.objects.filter(grados_sedes__in=todos_los_grados_base).select_related('nivel_escolar_uapa')
             }
 
             # 4. Procesar los datos en memoria

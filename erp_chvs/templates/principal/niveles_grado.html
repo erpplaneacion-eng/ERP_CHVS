@@ -34,12 +34,12 @@
                 <tr data-id="{{ nivel.id_grado_escolar }}">
                     <td>{{ nivel.id_grado_escolar }}</td>
                     <td>{{ nivel.grados_sedes }}</td>
-                    <td>{{ nivel.nivel_escolar_uapa }}</td>
+                    <td>{{ nivel.nivel_escolar_uapa.nivel_escolar_uapa }}</td>
                     <td>
                         <button class="btn btn-sm btn-warning" onclick="editNivelGrado('{{ nivel.id_grado_escolar }}')">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteNivelGrado('{{ nivel.id_grado_escolar }}', '{{ nivel.nivel_escolar_uapa }}')">
+                        <button class="btn btn-sm btn-danger" onclick="deleteNivelGrado('{{ nivel.id_grado_escolar }}', '{{ nivel.nivel_escolar_uapa.nivel_escolar_uapa }}')">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -94,7 +94,12 @@
                 </div>
                 <div class="form-group">
                     <label for="nivel_escolar_uapa">Nivel Escolar UAPA:</label>
-                    <input type="text" id="nivel_escolar_uapa" name="nivel_escolar_uapa" required maxlength="100">
+                    <select id="nivel_escolar_uapa" name="nivel_escolar_uapa" required>
+                        <option value="">Seleccione un nivel...</option>
+                        {% for grado in grados_uapa %}
+                        <option value="{{ grado.id_grado_escolar_uapa }}">{{ grado.id_grado_escolar_uapa }} - {{ grado.nivel_escolar_uapa }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
             </form>
         </div>

@@ -41,8 +41,9 @@ class ModalidadesDeConsumoAdmin(admin.ModelAdmin):
 @admin.register(NivelGradoEscolar)
 class NivelGradoEscolarAdmin(admin.ModelAdmin):
     list_display = ('id_grado_escolar', 'grados_sedes', 'nivel_escolar_uapa')
-    search_fields = ('id_grado_escolar', 'grados_sedes', 'nivel_escolar_uapa')
+    search_fields = ('id_grado_escolar', 'grados_sedes', 'nivel_escolar_uapa__nivel_escolar_uapa')
     list_filter = ('nivel_escolar_uapa',)
+    autocomplete_fields = ['nivel_escolar_uapa']
 
 @admin.register(TablaGradosEscolaresUapa)
 class TablaGradosEscolaresUapaAdmin(admin.ModelAdmin):
