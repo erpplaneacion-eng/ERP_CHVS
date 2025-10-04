@@ -881,215 +881,39 @@ function cerrarModalAnalisisNutricional() {
 function renderizarAnalisisNutricional(data) {
     const contenidoAnalisis = document.getElementById('contenidoAnalisis');
 
-    // Mapeo de nombres amigables
-    const nombresNutrientes = {
-        'calorias': 'Calorías',
-        'proteina': 'Proteína',
-        'grasa': 'Grasa',
-        'cho': 'CHO (Carbohidratos)',
-        'calcio': 'Calcio',
-        'hierro': 'Hierro',
-        'sodio': 'Sodio'
-    };
+    if (!data.success) {
+        contenidoAnalisis.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i>
+                Error: ${data.error}
+            </div>
+        `;
+        return;
+    }
 
-    const unidadesNutrientes = {
-        'calorias': 'Kcal',
-        'proteina': 'g',
-        'grasa': 'g',
-        'cho': 'g',
-        'calcio': 'mg',
-        'hierro': 'mg',
-        'sodio': 'mg'
-    };
+    const { menu, analisis_por_nivel } = data;
 
-    const keysNutrientes = {
-        'calorias': 'calorias_kcal',
-        'proteina': 'proteina_g',
-        'grasa': 'grasa_g',
-        'cho': 'cho_g',
-        'calcio': 'calcio_mg',
-        'hierro': 'hierro_mg',
-        'sodio': 'sodio_mg'
-    };
-
-    const estadosTexto = {
-        'OPTIMO': '✓ ÓPTIMO',
-        'EN_LIMITE': '⚠ CERCA DEL LÍMITE',
-        'EXCEDIDO': '❌ EXCEDIDO',
-        'SIN_REQUERIMIENTOS': 'ℹ SIN REQUERIMIENTOS CONFIGURADOS'
-    };
-
-    let html = '';
-
-    // Información del menú
-    html += `<div class="menu-info-card">
-        <h3><i class="fas fa-utensils"></i> ${data.menu.nombre}</h3>
-        <div class="menu-details">
-            <span><strong>Programa:</strong> ${data.menu.programa}</span> |
-            <span><strong>Modalidad:</strong> ${data.menu.modalidad}</span>
+    contenidoAnalisis.innerHTML = `
+        <!-- Información del Menú -->
+        <div class="menu-info-header">
+            <h4><i class="fas fa-utensils"></i> ${menu.nombre}</h4>
+            <div class="menu-details">
+                <span class="badge badge-primary">Programa: ${menu.programa}</span>
+                <span class="badge badge-secondary">Modalidad: ${menu.modalidad}</span>
+            </div>
         </div>
-    </div>`;
-
-    // Totales del menú
-    html += `<div class="totales-menu-card">
-        <h4><i class="fas fa-calculator"></i> TOTALES DEL MENÚ</h4>
-        <div class="totales-grid">`;
-
-    for (const [key, nombre] of Object.entries(nombresNutrientes)) {
-        const totalKey = keysNutrientes[key];
-        const valorActual = data.totales[totalKey];
-        const unidad = unidadesNutrientes[key];
-
-        html += `<div class="total-item">
-            <span class="total-label">${nombre}:</span>
-            <span class="total-value">${valorActual} ${unidad}</span>
-        </div>`;
-    }
-
-    html += `</div>
-    </div>`;
-
-    // Análisis por niveles escolares
-    if (data.analisis_por_nivel && data.analisis_por_nivel.length > 0) {
-        html += `<div class="analisis-niveles-container">
-            <h4><i class="fas fa-graduation-cap"></i> ANÁLISIS POR NIVELES ESCOLARES</h4>
-            <div class="niveles-escolares-grid">`;
-
-        data.analisis_por_nivel.forEach(analisis => {
-            const esNivelPrograma = analisis.nivel_escolar.es_nivel_programa;
-            const claseNivel = esNivelPrograma ? 'nivel-programa-actual' : 'nivel-otro';
-
-            html += `<div class="nivel-escolar-card ${claseNivel}">
-                <div class="nivel-header">
-                    <h5>
-                        ${esNivelPrograma ? '🎯 ' : '📚 '}
-                        ${analisis.nivel_escolar.nombre}
-                        ${esNivelPrograma ? ' (PROGRAMA ACTUAL)' : ''}
-                    </h5>
-                    <div class="estado-badge ${analisis.estado_general.toLowerCase()}">
-                        ${estadosTexto[analisis.estado_general]}
-                    </div>
-                </div>`;
-
-            // Nutrientes para este nivel
-            html += '<div class="nutrientes-nivel-grid">';
-            
-            for (const [key, nombre] of Object.entries(nombresNutrientes)) {
-                const totalKey = keysNutrientes[key];
-                const valorActual = data.totales[totalKey];
-                const valorLimite = analisis.requerimientos[totalKey];
-                const porcentaje = analisis.porcentajes[key];
-                const unidad = unidadesNutrientes[key];
-
-                // Determinar clase de estado
-                let estadoClase = 'optimo';
-                if (porcentaje > 100) {
-                    estadoClase = 'excedido';
-                } else if (porcentaje >= 86) {
-                    estadoClase = 'en-limite';
-                }
-
-                // Limitar el ancho de la barra al 100% visual
-                const porcentajeVisual = Math.min(porcentaje, 100);
-
-                html += `
-                    <div class="nutriente-row ${estadoClase}">
-                        <div class="nutriente-header">
-                            <div class="nutriente-nombre">${nombre}</div>
-                            <div class="nutriente-valores">
-                                <span class="actual">${valorActual}</span> / ${valorLimite} ${unidad}
-                            </div>
-                        </div>
-                        <div class="barra-progreso">
-                            <div class="barra-progreso-fill ${estadoClase}" style="width: ${porcentajeVisual}%">
-                                ${porcentaje.toFixed(1)}%
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            html += '</div>';
-
-            // Alertas para este nivel
-            if (analisis.alertas && analisis.alertas.length > 0) {
-                html += '<div class="alertas-nivel">';
-                html += '<h6><i class="fas fa-exclamation-triangle"></i> Alertas</h6>';
-
-                analisis.alertas.forEach(alerta => {
-                    const claseAlerta = alerta.tipo === 'EXCEDIDO' ? 'excedido' : 'en-limite';
-                    const icono = alerta.tipo === 'EXCEDIDO' ? '❌' : '⚠️';
-                    const mensaje = alerta.tipo === 'EXCEDIDO'
-                        ? `${icono} ${nombresNutrientes[alerta.nutriente]}: ${alerta.valor_actual} / ${alerta.valor_limite} ${unidadesNutrientes[alerta.nutriente]} (${alerta.porcentaje}%) - EXCEDE EL LÍMITE`
-                        : `${icono} ${nombresNutrientes[alerta.nutriente]}: ${alerta.porcentaje}% - Cerca del límite`;
-
-                    html += `<div class="alerta-item ${claseAlerta}">${mensaje}</div>`;
-                });
-
-                html += '</div>';
-            }
-
-            html += '</div>'; // Cerrar nivel-escolar-card
-        });
-
-        html += '</div>'; // Cerrar niveles-escolares-grid
-        html += '</div>'; // Cerrar analisis-niveles-container
-
-    } else {
-        // Sin requerimientos configurados
-        html += '<div class="alert alert-warning">';
-        html += '<i class="fas fa-exclamation-triangle"></i> <strong>No hay requerimientos nutricionales configurados.</strong><br>';
-        html += 'Configure los requerimientos en la tabla de Requerimientos Nutricionales para ver el análisis completo.';
-        html += '</div>';
-    }
-
-    // Detalle por preparaciones
-    if (data.detalle_preparaciones && data.detalle_preparaciones.length > 0) {
-        html += '<div class="detalle-preparaciones">';
-        html += '<h4><i class="fas fa-utensils"></i> Desglose por Preparación</h4>';
-
-        data.detalle_preparaciones.forEach(prep => {
-            html += `<div class="preparacion-detalle-card">`;
-            html += `<div class="preparacion-detalle-header">${prep.nombre}</div>`;
-
-            // Totales de la preparación
-            html += `<div style="margin-bottom: 10px; font-size: 14px; color: #666;">`;
-            html += `<strong>Aporte:</strong> ${prep.totales.calorias_kcal} Kcal | `;
-            html += `${prep.totales.proteina_g}g Proteína | `;
-            html += `${prep.totales.grasa_g}g Grasa | `;
-            html += `${prep.totales.cho_g}g CHO`;
-            html += `</div>`;
-
-            // Ingredientes
-            if (prep.ingredientes && prep.ingredientes.length > 0) {
-                html += `<button class="btn-toggle-detalle" onclick="toggleIngredientes('prep-${prep.id_preparacion}')">`;
-                html += `<i class="fas fa-chevron-down"></i> Ver Ingredientes (${prep.ingredientes.length})`;
-                html += `</button>`;
-
-                html += `<div id="prep-${prep.id_preparacion}" style="display: none; margin-top: 10px;">`;
-                prep.ingredientes.forEach(ing => {
-                    if (ing.alimento_encontrado) {
-                        html += `<div class="ingrediente-detalle">`;
-                        html += `<span>${ing.nombre}</span>`;
-                        html += `<span>${ing.calorias} Kcal</span>`;
-                        html += `</div>`;
-                    } else {
-                        html += `<div class="ingrediente-detalle no-encontrado">`;
-                        html += `<span>${ing.nombre}</span>`;
-                        html += `<span>⚠️ ${ing.mensaje}</span>`;
-                        html += `</div>`;
-                    }
-                });
-                html += `</div>`;
-            }
-
-            html += `</div>`;
-        });
-
-        html += '</div>';
-    }
-
-    contenidoAnalisis.innerHTML = html;
+        
+        <!-- Análisis por Niveles Escolares -->
+        <div class="analisis-niveles-container">
+            <h5><i class="fas fa-graduation-cap"></i> Análisis por Nivel Escolar</h5>
+            <div class="niveles-accordion" id="nivelesAccordion">
+                ${analisis_por_nivel.map((nivel, index) => crearAccordionNivelEscolar(nivel, index)).join('')}
+            </div>
+        </div>
+    `;
+    
+    // Inicializar eventos para inputs dinámicos
+    inicializarEventosInputs();
 }
 
 function toggleIngredientes(prepId) {
@@ -1104,4 +928,283 @@ function toggleIngredientes(prepId) {
         const numIngredientes = elemento.querySelectorAll('.ingrediente-detalle').length;
         boton.innerHTML = `<i class="fas fa-chevron-down"></i> Ver Ingredientes (${numIngredientes})`;
     }
+}
+
+// =================== FUNCIONES PARA ANÁLISIS DINÁMICO ===================
+
+function crearAccordionNivelEscolar(nivel, index) {
+    const cardId = `collapse-${index}`;
+    
+    return `
+        <div class="card nivel-card">
+            <div class="card-header" id="heading-${index}">
+                <h6 class="mb-0">
+                    <button class="btn btn-link nivel-header-btn ${index === 0 ? '' : 'collapsed'}" type="button" 
+                            data-target="#${cardId}" 
+                            aria-expanded="${index === 0 ? 'true' : 'false'}" aria-controls="${cardId}">
+                        <i class="fas fa-graduation-cap"></i>
+                        ${nivel.nivel_escolar.nombre}
+                        <div class="nivel-summary">
+                            <span class="badge badge-primary">${nivel.totales.calorias_kcal.toFixed(0)} Kcal</span>
+                            <span class="badge badge-success">${nivel.totales.peso_neto_total.toFixed(0)}g neto</span>
+                            <span class="badge badge-warning">${nivel.totales.peso_bruto_total.toFixed(0)}g bruto</span>
+                        </div>
+                        <i class="fas fa-chevron-down toggle-icon" style="transform: ${index === 0 ? 'rotate(180deg)' : 'rotate(0deg)'}"></i>
+                    </button>
+                </h6>
+            </div>
+            
+            <div id="${cardId}" class="collapse ${index === 0 ? 'show' : ''}" 
+                 aria-labelledby="heading-${index}" data-parent="#nivelesAccordion">
+                <div class="card-body">
+                    <!-- Totales del Nivel -->
+                    <div class="nivel-totales mb-3">
+                        <h6><i class="fas fa-calculator"></i> Totales del Nivel</h6>
+                        <div class="totales-grid-mini">
+                            <div class="total-mini">
+                                <span>Calorías:</span>
+                                <span class="value" id="nivel-${index}-calorias">${nivel.totales.calorias_kcal.toFixed(1)} Kcal</span>
+                            </div>
+                            <div class="total-mini">
+                                <span>Proteína:</span>
+                                <span class="value" id="nivel-${index}-proteina">${nivel.totales.proteina_g.toFixed(1)} g</span>
+                            </div>
+                            <div class="total-mini">
+                                <span>Grasa:</span>
+                                <span class="value" id="nivel-${index}-grasa">${nivel.totales.grasa_g.toFixed(1)} g</span>
+                            </div>
+                            <div class="total-mini">
+                                <span>CHO:</span>
+                                <span class="value" id="nivel-${index}-cho">${nivel.totales.cho_g.toFixed(1)} g</span>
+                            </div>
+                            <div class="total-mini">
+                                <span>Calcio:</span>
+                                <span class="value" id="nivel-${index}-calcio">${nivel.totales.calcio_mg.toFixed(1)} mg</span>
+                            </div>
+                            <div class="total-mini">
+                                <span>Hierro:</span>
+                                <span class="value" id="nivel-${index}-hierro">${nivel.totales.hierro_mg.toFixed(1)} mg</span>
+                            </div>
+                            <div class="total-mini">
+                                <span>Sodio:</span>
+                                <span class="value" id="nivel-${index}-sodio">${nivel.totales.sodio_mg.toFixed(1)} mg</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Preparaciones e Ingredientes -->
+                    <div class="preparaciones-container">
+                        <h6><i class="fas fa-list-ul"></i> Preparaciones e Ingredientes</h6>
+                        ${nivel.preparaciones.map((prep, prepIndex) => crearPreparacion(prep, index, prepIndex)).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function crearPreparacion(preparacion, nivelIndex, prepIndex) {
+    return `
+        <div class="preparacion-item">
+            <h6 class="preparacion-titulo">
+                <i class="fas fa-utensils"></i> ${preparacion.nombre}
+            </h6>
+            <div class="ingredientes-table">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Ingrediente</th>
+                            <th>Peso Neto (g)</th>
+                            <th>Peso Bruto (g)</th>
+                            <th>% Comestible</th>
+                            <th>Calorías (kcal)</th>
+                            <th>Proteína (g)</th>
+                            <th>Grasa (g)</th>
+                            <th>CHO (g)</th>
+                            <th>Calcio (mg)</th>
+                            <th>Hierro (mg)</th>
+                            <th>Sodio (mg)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${preparacion.ingredientes.map((ing, ingIndex) => crearFilaIngrediente(ing, nivelIndex, prepIndex, ingIndex)).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+function crearFilaIngrediente(ingrediente, nivelIndex, prepIndex, ingIndex) {
+    const inputId = `peso-${nivelIndex}-${prepIndex}-${ingIndex}`;
+    const valores = ingrediente.valores_por_100g;
+    
+    return `
+        <tr class="ingrediente-row" data-nivel="${nivelIndex}" data-prep="${prepIndex}" data-ing="${ingIndex}">
+            <td class="ingrediente-nombre">${ingrediente.nombre}</td>
+            <td>
+                <input type="number" 
+                       class="form-control form-control-sm peso-input" 
+                       id="${inputId}"
+                       value="${ingrediente.peso_neto_base.toFixed(0)}" 
+                       min="0" 
+                       step="1"
+                       data-base="${ingrediente.peso_neto_base}"
+                       data-parte-comestible="${ingrediente.parte_comestible}"
+                       data-calorias="${valores.calorias_kcal}"
+                       data-proteina="${valores.proteina_g}"
+                       data-grasa="${valores.grasa_g}"
+                       data-cho="${valores.cho_g}"
+                       data-calcio="${valores.calcio_mg}"
+                       data-hierro="${valores.hierro_mg}"
+                       data-sodio="${valores.sodio_mg}">
+            </td>
+            <td class="peso-bruto-calc" id="bruto-${nivelIndex}-${prepIndex}-${ingIndex}">
+                ${ingrediente.peso_bruto_base.toFixed(0)}
+            </td>
+            <td class="parte-comestible">${ingrediente.parte_comestible}%</td>
+            <td class="nutriente-cal" id="cal-${nivelIndex}-${prepIndex}-${ingIndex}">
+                ${valores.calorias_kcal.toFixed(1)}
+            </td>
+            <td class="nutriente-prot" id="prot-${nivelIndex}-${prepIndex}-${ingIndex}">
+                ${valores.proteina_g.toFixed(1)}
+            </td>
+            <td class="nutriente-grasa" id="grasa-${nivelIndex}-${prepIndex}-${ingIndex}">
+                ${valores.grasa_g.toFixed(1)}
+            </td>
+            <td class="nutriente-cho" id="cho-${nivelIndex}-${prepIndex}-${ingIndex}">
+                ${valores.cho_g.toFixed(1)}
+            </td>
+            <td class="nutriente-calcio" id="calcio-${nivelIndex}-${prepIndex}-${ingIndex}">
+                ${valores.calcio_mg.toFixed(1)}
+            </td>
+            <td class="nutriente-hierro" id="hierro-${nivelIndex}-${prepIndex}-${ingIndex}">
+                ${valores.hierro_mg.toFixed(1)}
+            </td>
+            <td class="nutriente-sodio" id="sodio-${nivelIndex}-${prepIndex}-${ingIndex}">
+                ${valores.sodio_mg.toFixed(1)}
+            </td>
+        </tr>
+    `;
+}
+
+function inicializarEventosInputs() {
+    // Eventos para inputs de peso neto
+    $(document).on('input change', '.peso-input', function() {
+        const input = $(this);
+        const nivelIndex = input.closest('.ingrediente-row').data('nivel');
+        const prepIndex = input.closest('.ingrediente-row').data('prep');
+        const ingIndex = input.closest('.ingrediente-row').data('ing');
+        
+        const pesoNeto = parseFloat(input.val()) || 0;
+        const parteComestible = parseFloat(input.data('parte-comestible')) || 100;
+        const caloriasPor100g = parseFloat(input.data('calorias')) || 0;
+        const proteinaPor100g = parseFloat(input.data('proteina')) || 0;
+        const grasaPor100g = parseFloat(input.data('grasa')) || 0;
+        const choPor100g = parseFloat(input.data('cho')) || 0;
+        const calcioPor100g = parseFloat(input.data('calcio')) || 0;
+        const hierroPor100g = parseFloat(input.data('hierro')) || 0;
+        const sodioPor100g = parseFloat(input.data('sodio')) || 0;
+        
+        // Calcular peso bruto
+        const pesoBruto = (pesoNeto * 100) / parteComestible;
+        
+        // Calcular nutrientes por cada 100g de peso neto
+        const factor = pesoNeto / 100;
+        const calorias = caloriasPor100g * factor;
+        const proteina = proteinaPor100g * factor;
+        const grasa = grasaPor100g * factor;
+        const cho = choPor100g * factor;
+        const calcio = calcioPor100g * factor;
+        const hierro = hierroPor100g * factor;
+        const sodio = sodioPor100g * factor;
+        
+        // Actualizar peso bruto
+        $(`#bruto-${nivelIndex}-${prepIndex}-${ingIndex}`).text(pesoBruto.toFixed(0));
+        
+        // Actualizar nutrientes
+        $(`#cal-${nivelIndex}-${prepIndex}-${ingIndex}`).text(calorias.toFixed(1));
+        $(`#prot-${nivelIndex}-${prepIndex}-${ingIndex}`).text(proteina.toFixed(1));
+        $(`#grasa-${nivelIndex}-${prepIndex}-${ingIndex}`).text(grasa.toFixed(1));
+        $(`#cho-${nivelIndex}-${prepIndex}-${ingIndex}`).text(cho.toFixed(1));
+        $(`#calcio-${nivelIndex}-${prepIndex}-${ingIndex}`).text(calcio.toFixed(1));
+        $(`#hierro-${nivelIndex}-${prepIndex}-${ingIndex}`).text(hierro.toFixed(1));
+        $(`#sodio-${nivelIndex}-${prepIndex}-${ingIndex}`).text(sodio.toFixed(1));
+        
+        // Recalcular totales del nivel
+        recalcularTotalesNivel(nivelIndex);
+    });
+    
+    // Eventos para accordion de niveles escolares
+    $(document).on('click', '.nivel-header-btn', function() {
+        const button = $(this);
+        const targetId = button.data('target');
+        const target = $(targetId);
+        const icon = button.find('.toggle-icon');
+        
+        if (target.hasClass('show')) {
+            // Cerrar este accordion
+            target.removeClass('show').slideUp(300);
+            button.attr('aria-expanded', 'false').addClass('collapsed');
+            icon.css('transform', 'rotate(0deg)');
+        } else {
+            // Cerrar todos los otros accordions
+            $('.nivel-card .collapse.show').each(function() {
+                const otherCollapse = $(this);
+                const otherButton = $(`[data-target="#${otherCollapse.attr('id')}"]`);
+                const otherIcon = otherButton.find('.toggle-icon');
+                
+                otherCollapse.removeClass('show').slideUp(300);
+                otherButton.attr('aria-expanded', 'false').addClass('collapsed');
+                otherIcon.css('transform', 'rotate(0deg)');
+            });
+            
+            // Abrir este accordion
+            target.addClass('show').slideDown(300);
+            button.attr('aria-expanded', 'true').removeClass('collapsed');
+            icon.css('transform', 'rotate(180deg)');
+        }
+    });
+}
+
+function recalcularTotalesNivel(nivelIndex) {
+    let totalCalorias = 0;
+    let totalProteina = 0;
+    let totalGrasa = 0;
+    let totalCho = 0;
+    let totalCalcio = 0;
+    let totalHierro = 0;
+    let totalSodio = 0;
+    
+    // Sumar todos los ingredientes del nivel
+    $(`.ingrediente-row[data-nivel="${nivelIndex}"]`).each(function() {
+        const fila = $(this);
+        const prepIndex = fila.data('prep');
+        const ingIndex = fila.data('ing');
+        
+        const calorias = parseFloat($(`#cal-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
+        const proteina = parseFloat($(`#prot-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
+        const grasa = parseFloat($(`#grasa-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
+        const cho = parseFloat($(`#cho-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
+        const calcio = parseFloat($(`#calcio-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
+        const hierro = parseFloat($(`#hierro-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
+        const sodio = parseFloat($(`#sodio-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
+        
+        totalCalorias += calorias;
+        totalProteina += proteina;
+        totalGrasa += grasa;
+        totalCho += cho;
+        totalCalcio += calcio;
+        totalHierro += hierro;
+        totalSodio += sodio;
+    });
+    
+    // Actualizar totales en la interfaz
+    $(`#nivel-${nivelIndex}-calorias`).text(`${totalCalorias.toFixed(1)} Kcal`);
+    $(`#nivel-${nivelIndex}-proteina`).text(`${totalProteina.toFixed(1)} g`);
+    $(`#nivel-${nivelIndex}-grasa`).text(`${totalGrasa.toFixed(1)} g`);
+    $(`#nivel-${nivelIndex}-cho`).text(`${totalCho.toFixed(1)} g`);
+    $(`#nivel-${nivelIndex}-calcio`).text(`${totalCalcio.toFixed(1)} mg`);
+    $(`#nivel-${nivelIndex}-hierro`).text(`${totalHierro.toFixed(1)} mg`);
+    $(`#nivel-${nivelIndex}-sodio`).text(`${totalSodio.toFixed(1)} mg`);
 }

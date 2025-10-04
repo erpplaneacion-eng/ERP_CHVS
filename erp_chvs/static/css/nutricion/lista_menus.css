@@ -688,11 +688,11 @@
 }
 
 /* ===================================== */
-/* ESTILOS PARA ANÁLISIS NUTRICIONAL    */
+/* ESTILOS PARA ANÁLISIS NUTRICIONAL DINÁMICO */
 /* ===================================== */
 
 /* Información del menú */
-.menu-info-card {
+.menu-info-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     padding: 20px;
@@ -701,7 +701,7 @@
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
-.menu-info-card h3 {
+.menu-info-header h4 {
     margin: 0 0 10px 0;
     font-size: 24px;
     font-weight: bold;
@@ -712,61 +712,184 @@
     opacity: 0.9;
 }
 
-/* Totales del menú */
-.totales-menu-card {
-    background: #f8f9fa;
-    border: 2px solid #dee2e6;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
+.badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-right: 8px;
 }
 
-.totales-menu-card h4 {
-    color: #495057;
+.badge-primary {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.badge-secondary {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+/* Control global de porcentaje */
+.control-global-container {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.control-global-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.control-global-header h5 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.porcentaje-display {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 1.2em;
+    font-weight: bold;
+    backdrop-filter: blur(10px);
+}
+
+.slider-container {
+    position: relative;
+}
+
+.slider-global {
+    width: 100%;
+    height: 8px;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.3);
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+.slider-global::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.slider-global::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.slider-global::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    border: none;
+}
+
+.slider-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+
+/* Totales del menú */
+.totales-container {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    border-left: 4px solid #007bff;
+    margin-bottom: 25px;
+}
+
+.totales-container h5 {
     margin: 0 0 15px 0;
+    color: #495057;
     font-size: 18px;
     font-weight: bold;
-    border-bottom: 2px solid #dee2e6;
-    padding-bottom: 10px;
 }
 
 .totales-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 15px;
 }
 
 .total-item {
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
-    border-left: 4px solid #007bff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    align-items: center;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+    text-align: center;
+}
+
+.total-item:hover {
+    transform: translateY(-2px);
+}
+
+.total-item.peso-neto {
+    border-left: 4px solid #28a745;
+}
+
+.total-item.peso-bruto {
+    border-left: 4px solid #ffc107;
 }
 
 .total-label {
-    font-size: 12px;
+    font-size: 0.9em;
     color: #6c757d;
+    margin-bottom: 4px;
     font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
 .total-value {
-    font-size: 18px;
+    font-size: 1.4em;
     font-weight: bold;
-    color: #495057;
+    color: #2c3e50;
 }
 
-/* Contenedor de análisis por niveles */
+.total-unit {
+    font-size: 0.8em;
+    color: #6c757d;
+    margin-top: 2px;
+}
+
+.divider {
+    border: none;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #dee2e6, transparent);
+    margin: 30px 0;
+}
+
+/* Análisis por niveles escolares */
 .analisis-niveles-container {
     margin-bottom: 30px;
 }
 
-.analisis-niveles-container > h4 {
+.analisis-niveles-container h5 {
     color: #495057;
     margin: 0 0 20px 0;
     font-size: 20px;
@@ -775,14 +898,14 @@
     padding-bottom: 10px;
 }
 
-.niveles-escolares-grid {
+.niveles-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
     gap: 20px;
 }
 
 /* Cards de niveles escolares */
-.nivel-escolar-card {
+.nivel-card {
     background: white;
     border-radius: 12px;
     overflow: hidden;
@@ -791,21 +914,21 @@
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.nivel-escolar-card:hover {
+.nivel-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 16px rgba(0,0,0,0.15);
 }
 
-.nivel-escolar-card.nivel-programa-actual {
+.nivel-card.nivel-actual {
     border-color: #28a745;
     box-shadow: 0 4px 8px rgba(40, 167, 69, 0.2);
 }
 
-.nivel-escolar-card.nivel-programa-actual:hover {
+.nivel-card.nivel-actual:hover {
     box-shadow: 0 8px 16px rgba(40, 167, 69, 0.3);
 }
 
-.nivel-escolar-card.nivel-otro {
+.nivel-card.nivel-otro {
     border-color: #6c757d;
 }
 
@@ -819,184 +942,300 @@
     border-bottom: 1px solid #dee2e6;
 }
 
-.nivel-programa-actual .nivel-header {
+.nivel-actual .nivel-header {
     background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
 }
 
-.nivel-header h5 {
-    margin: 0;
+.nivel-title {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.nivel-title strong {
     font-size: 16px;
     font-weight: bold;
     color: #495057;
 }
 
-.nivel-programa-actual .nivel-header h5 {
+.nivel-actual .nivel-header strong {
     color: #155724;
 }
 
-/* Estados del análisis */
-.estado-badge {
-    padding: 6px 12px;
-    border-radius: 20px;
+.nivel-rango {
     font-size: 12px;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    color: #6c757d;
+    font-weight: normal;
 }
 
-.estado-badge.optimo {
+.badge-success {
     background: #d4edda;
     color: #155724;
     border: 1px solid #c3e6cb;
 }
 
-.estado-badge.en_limite {
+.badge-warning {
     background: #fff3cd;
     color: #856404;
     border: 1px solid #ffeaa7;
 }
 
-.estado-badge.excedido {
+.badge-danger {
     background: #f8d7da;
     color: #721c24;
     border: 1px solid #f5c6cb;
 }
 
-/* Grid de nutrientes por nivel */
-.nutrientes-nivel-grid {
+.badge-secondary {
+    background: #e2e3e5;
+    color: #383d41;
+    border: 1px solid #d6d8db;
+}
+
+/* Información de pesos */
+.nivel-pesos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 15px 20px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+}
+
+.desperdicio-info {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    font-size: 0.9em;
+    color: #dc3545;
+}
+
+.peso-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9em;
+}
+
+.peso-info i {
+    color: #6c757d;
+    width: 16px;
+}
+
+/* Progreso de nutrientes */
+.nutrientes-progress {
     padding: 20px;
 }
 
 .nutriente-row {
-    margin-bottom: 15px;
-    padding: 12px;
-    border-radius: 8px;
-    background: #f8f9fa;
-    border-left: 4px solid #dee2e6;
-}
-
-.nutriente-row.optimo {
-    background: #d4edda;
-    border-left-color: #28a745;
-}
-
-.nutriente-row.en-limite {
-    background: #fff3cd;
-    border-left-color: #ffc107;
-}
-
-.nutriente-row.excedido {
-    background: #f8d7da;
-    border-left-color: #dc3545;
-}
-
-.nutriente-header {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr 2fr;
     align-items: center;
-    margin-bottom: 8px;
+    gap: 15px;
+    margin-bottom: 12px;
+}
+
+.nutriente-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 .nutriente-nombre {
-    font-weight: bold;
-    font-size: 14px;
+    font-weight: 600;
+    font-size: 0.9em;
     color: #495057;
 }
 
 .nutriente-valores {
-    font-size: 13px;
+    font-size: 0.85em;
     color: #6c757d;
 }
 
-.nutriente-valores .actual {
+.valor-actual {
     font-weight: bold;
-    color: #495057;
+    color: #2c3e50;
 }
 
-/* Barras de progreso */
-.barra-progreso {
-    background: #e9ecef;
-    border-radius: 10px;
-    height: 8px;
-    overflow: hidden;
+.progress-container {
     position: relative;
 }
 
-.barra-progreso-fill {
-    height: 100%;
-    border-radius: 10px;
-    transition: width 0.3s ease;
+.progress {
+    height: 8px;
+    border-radius: 4px;
+    background-color: #e9ecef;
+    overflow: visible;
+}
+
+.progress-bar {
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    position: relative;
+    min-width: 30px;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     padding-right: 8px;
-    font-size: 11px;
+}
+
+.porcentaje-dinamico {
+    font-size: 0.75em;
     font-weight: bold;
+    white-space: nowrap;
     color: white;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
 }
 
-.barra-progreso-fill.optimo {
-    background: linear-gradient(90deg, #28a745, #20c997);
+.bg-success {
+    background: linear-gradient(90deg, #28a745, #20c997) !important;
 }
 
-.barra-progreso-fill.en-limite {
-    background: linear-gradient(90deg, #ffc107, #fd7e14);
+.bg-warning {
+    background: linear-gradient(90deg, #ffc107, #fd7e14) !important;
 }
 
-.barra-progreso-fill.excedido {
-    background: linear-gradient(90deg, #dc3545, #e74c3c);
+.bg-info {
+    background: linear-gradient(90deg, #17a2b8, #6f42c1) !important;
 }
 
-/* Alertas por nivel */
-.alertas-nivel {
-    margin-top: 15px;
-    padding: 15px;
+.bg-danger {
+    background: linear-gradient(90deg, #dc3545, #e74c3c) !important;
+}
+
+/* Desglose de ingredientes */
+.ingredientes-desglose-container {
+    margin-top: 30px;
+    padding: 20px;
     background: #f8f9fa;
-    border-radius: 8px;
-    border-top: 1px solid #dee2e6;
+    border-radius: 10px;
+    border-left: 4px solid #17a2b8;
 }
 
-.alertas-nivel h6 {
-    margin: 0 0 10px 0;
-    font-size: 14px;
-    font-weight: bold;
-    color: #495057;
-}
-
-.alerta-item {
-    background: white;
-    padding: 10px;
+.btn-outline-info {
+    background: transparent;
+    border: 1px solid #17a2b8;
+    color: #17a2b8;
+    padding: 8px 16px;
     border-radius: 6px;
-    margin-bottom: 8px;
-    font-size: 13px;
-    border-left: 4px solid #6c757d;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 
-.alerta-item.excedido {
-    border-left-color: #dc3545;
-    background: #f8d7da;
-    color: #721c24;
+.btn-outline-info:hover {
+    background: #17a2b8;
+    color: white;
 }
 
-.alerta-item.en-limite {
-    border-left-color: #ffc107;
-    background: #fff3cd;
-    color: #856404;
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
 }
 
-.alerta-item:last-child {
-    margin-bottom: 0;
+.collapse-content {
+    margin-top: 15px;
+    animation: slideDown 0.3s ease-out;
 }
 
-/* Responsive design para análisis nutricional */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 500px;
+    }
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.table th {
+    background-color: #e9ecef;
+    font-weight: 600;
+    font-size: 0.9em;
+    border-bottom: 2px solid #dee2e6;
+    padding: 12px 8px;
+    text-align: left;
+}
+
+.table td {
+    font-size: 0.85em;
+    vertical-align: middle;
+    padding: 10px 8px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0,0,0,.05);
+}
+
+.peso-neto-ingrediente {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.peso-bruto-ingrediente {
+    color: #ffc107;
+    font-weight: 600;
+}
+
+/* Animaciones */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.nivel-card {
+    animation: slideIn 0.5s ease-out;
+}
+
+.total-item {
+    animation: slideIn 0.5s ease-out;
+}
+
+/* Responsive design */
 @media (max-width: 768px) {
-    .niveles-escolares-grid {
-        grid-template-columns: 1fr;
+    .control-global-header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
     }
     
     .totales-grid {
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    .niveles-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .nivel-pesos {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .nutriente-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
     }
     
     .nivel-header {
@@ -1004,10 +1243,302 @@
         gap: 10px;
         align-items: flex-start;
     }
+}
+
+@media (max-width: 480px) {
+    .menu-info-header h4 {
+        font-size: 20px;
+    }
     
-    .nutriente-header {
+    .totales-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .control-global-container {
+        padding: 15px;
+    }
+    
+    .nivel-card {
+        margin-bottom: 15px;
+    }
+}
+
+/* ===== NUEVOS ESTILOS PARA INTERFAZ DE INGREDIENTES ===== */
+
+/* Accordion de Niveles Escolares */
+.analisis-niveles-container {
+    margin-top: 20px;
+}
+
+.niveles-accordion .card {
+    margin-bottom: 10px;
+    border: 1px solid #e3e6f0;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.nivel-header-btn {
+    width: 100%;
+    text-align: left;
+    padding: 15px 20px;
+    border: none;
+    background: none;
+    color: #2c3e50;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.nivel-header-btn:hover {
+    text-decoration: none;
+    color: #1a252f;
+    background: rgba(52, 144, 220, 0.05);
+}
+
+.nivel-header-btn:focus {
+    outline: none;
+    box-shadow: none;
+    text-decoration: none;
+}
+
+.nivel-summary {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+    margin-right: 15px;
+}
+
+.nivel-summary .badge {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+}
+
+.toggle-icon {
+    transition: transform 0.3s ease;
+    color: #6c757d;
+}
+
+.nivel-header-btn[aria-expanded="true"] .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.nivel-header-btn.collapsed .toggle-icon {
+    transform: rotate(0deg);
+}
+
+.collapse {
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.collapse.show {
+    display: block !important;
+}
+
+.collapse:not(.show) {
+    display: none !important;
+}
+
+/* Mejoras para el accordion */
+.nivel-header-btn {
+    width: 100%;
+    text-align: left;
+    padding: 15px 20px;
+    border: none;
+    background: none;
+    color: #2c3e50;
+    text-decoration: none !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+}
+
+.nivel-header-btn:hover,
+.nivel-header-btn:focus {
+    text-decoration: none !important;
+    color: #1a252f;
+    background: rgba(52, 144, 220, 0.05);
+    outline: none;
+    box-shadow: none;
+}
+
+/* Totales del Nivel */
+.nivel-totales {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.totales-grid-mini {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.total-mini {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e3e6f0;
+}
+
+.total-mini span:first-child {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 4px;
+}
+
+.total-mini .value {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.9rem;
+}
+
+/* Preparaciones e Ingredientes */
+.preparaciones-container {
+    margin-top: 20px;
+}
+
+.preparacion-item {
+    margin-bottom: 25px;
+    border: 1px solid #e3e6f0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.preparacion-titulo {
+    background: linear-gradient(135deg, #3490dc, #2779bd);
+    color: white;
+    margin: 0;
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.preparacion-titulo i {
+    margin-right: 8px;
+}
+
+.ingredientes-table {
+    padding: 15px;
+}
+
+.ingredientes-table table {
+    margin-bottom: 0;
+}
+
+.ingredientes-table th {
+    background: #f8f9fa;
+    border-top: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #495057;
+    padding: 10px 8px;
+}
+
+.ingrediente-row td {
+    padding: 8px;
+    font-size: 0.9rem;
+    vertical-align: middle;
+}
+
+.ingrediente-nombre {
+    font-weight: 500;
+    color: #2c3e50;
+    max-width: 150px;
+}
+
+/* Inputs de Peso */
+.peso-input {
+    width: 80px;
+    text-align: center;
+    border: 2px solid #e3e6f0;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.peso-input:focus {
+    border-color: #3490dc;
+    box-shadow: 0 0 0 0.2rem rgba(52, 144, 220, 0.25);
+    outline: none;
+}
+
+.peso-input:hover {
+    border-color: #a2b3c7;
+}
+
+/* Columnas de nutrientes */
+.peso-bruto-calc {
+    font-weight: 600;
+    color: #e67e22;
+    text-align: center;
+}
+
+.parte-comestible {
+    text-align: center;
+    color: #27ae60;
+    font-weight: 500;
+}
+
+.nutriente-cal, .nutriente-prot, .nutriente-grasa, .nutriente-cho,
+.nutriente-calcio, .nutriente-hierro, .nutriente-sodio {
+    text-align: center;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    font-size: 0.85rem;
+}
+
+.nutriente-cal { color: #e74c3c; }
+.nutriente-prot { color: #2980b9; }
+.nutriente-grasa { color: #f39c12; }
+.nutriente-cho { color: #27ae60; }
+.nutriente-calcio { color: #9b59b6; }
+.nutriente-hierro { color: #e74c3c; }
+.nutriente-sodio { color: #34495e; }
+
+/* Estilos mejorados para totales */
+.totales-grid-mini {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+/* Responsive para nueva interfaz */
+@media (max-width: 768px) {
+    .nivel-header-btn {
+        padding: 12px 15px;
         flex-direction: column;
         align-items: flex-start;
-        gap: 5px;
+    }
+    
+    .nivel-summary {
+        margin-left: 0;
+        margin-top: 8px;
+        margin-right: 0;
+        flex-wrap: wrap;
+    }
+    
+    .totales-grid-mini {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .ingredientes-table {
+        overflow-x: auto;
+    }
+    
+    .peso-input {
+        width: 60px;
+        font-size: 0.8rem;
+        padding: 4px 6px;
     }
 }
