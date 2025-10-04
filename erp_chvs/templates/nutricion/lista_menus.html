@@ -228,7 +228,7 @@
 
 <!-- Modal para gestionar preparaciones -->
 <div id="modalPreparaciones" class="modal">
-    <div class="modal-content" style="max-width: 800px;">
+    <div class="modal-content" style="max-width: 1200px; max-height: 90vh; overflow-y: auto;">
         <span class="close">&times;</span>
         <h2 id="modalTitlePrep">Gestionar Preparaciones - Menú <span id="menuNumeroModal"></span></h2>
 
@@ -238,22 +238,178 @@
             </button>
         </div>
 
-        <div class="table-container">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Preparación</th>
-                        <th>Ingredientes</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="tablaPreparacionesMenu">
-                    <!-- Se llenará dinámicamente -->
-                </tbody>
-            </table>
+        <div id="listaPreparacionesAcordeon">
+            <!-- Se llenará dinámicamente con acordeones -->
         </div>
     </div>
 </div>
+
+<style>
+    .preparacion-accordion {
+        background: white;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        overflow: hidden;
+    }
+
+    .preparacion-accordion-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 20px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s;
+    }
+
+    .preparacion-accordion-header:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+
+    .preparacion-accordion-header.active {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .preparacion-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex: 1;
+    }
+
+    .preparacion-nombre {
+        font-weight: bold;
+        font-size: 16px;
+    }
+
+    .ingredientes-badge {
+        background: rgba(255,255,255,0.3);
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+    }
+
+    .preparacion-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .preparacion-accordion-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        background: #f8f9fa;
+    }
+
+    .preparacion-accordion-content.active {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
+    .ingredientes-container {
+        padding: 20px;
+    }
+
+    .ingrediente-item {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        padding: 12px 15px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s;
+    }
+
+    .ingrediente-item:hover {
+        border-color: #667eea;
+        box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+    }
+
+    .ingrediente-info {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr;
+        gap: 15px;
+        align-items: center;
+    }
+
+    .ingrediente-nombre {
+        font-weight: 500;
+        color: #333;
+    }
+
+    .ingrediente-cantidad {
+        color: #666;
+        font-size: 14px;
+    }
+
+    .ingrediente-acciones {
+        display: flex;
+        gap: 8px;
+    }
+
+    .btn-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .btn-icon.btn-edit {
+        background: #ffc107;
+        color: white;
+    }
+
+    .btn-icon.btn-edit:hover {
+        background: #e0a800;
+        transform: scale(1.1);
+    }
+
+    .btn-icon.btn-delete {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-icon.btn-delete:hover {
+        background: #c82333;
+        transform: scale(1.1);
+    }
+
+    .no-ingredientes {
+        text-align: center;
+        padding: 30px;
+        color: #999;
+    }
+
+    .btn-agregar-ingrediente {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .btn-agregar-ingrediente:hover {
+        background: #218838;
+        transform: translateY(-1px);
+    }
+</style>
 
 <!-- Modal para crear preparación -->
 <div id="modalNuevaPreparacion" class="modal">

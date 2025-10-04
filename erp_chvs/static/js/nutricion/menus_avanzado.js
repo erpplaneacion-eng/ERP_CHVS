@@ -378,46 +378,287 @@ async function generarMenusAutomaticos(modalidadId, modalidadNombre) {
     }
 }
 
+let menuActualId = null;
+
 function abrirGestionPreparaciones(menuId, menuNumero) {
-    // TODO: Implementar modal de gestión de preparaciones
+    console.log('[DEBUG] Abriendo gestión de preparaciones para menú:', menuId, menuNumero);
+
+    menuActualId = menuId; // Guardar el ID del menú actual
+
     document.getElementById('menuNumeroModal').textContent = menuNumero;
     document.getElementById('modalPreparaciones').style.display = 'block';
+
+    // Configurar el botón de agregar preparación
+    const btnAgregar = document.getElementById('btnAgregarPreparacion');
+    if (btnAgregar) {
+        // Remover listeners anteriores
+        btnAgregar.replaceWith(btnAgregar.cloneNode(true));
+        const nuevoBtn = document.getElementById('btnAgregarPreparacion');
+
+        nuevoBtn.addEventListener('click', function() {
+            abrirModalNuevaPreparacion(menuId);
+        });
+    }
 
     // Cargar preparaciones del menú
     cargarPreparacionesMenu(menuId);
 }
+
+function abrirModalNuevaPreparacion(menuId) {
+    console.log('[DEBUG] Abriendo modal nueva preparación para menú:', menuId);
+
+    document.getElementById('menuIdPrep').value = menuId;
+    document.getElementById('nombrePreparacion').value = '';
+    document.getElementById('modalNuevaPreparacion').style.display = 'block';
+}
+
+// Configurar el formulario de nueva preparación
+document.addEventListener('DOMContentLoaded', function() {
+    const formNuevaPrep = document.getElementById('formNuevaPreparacion');
+    if (formNuevaPrep) {
+        formNuevaPrep.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const menuId = document.getElementById('menuIdPrep').value;
+            const nombrePrep = document.getElementById('nombrePreparacion').value.trim();
+
+            if (!nombrePrep) {
+                alert('Por favor ingrese un nombre para la preparación');
+                return;
+            }
+
+            console.log('[DEBUG] Creando preparación:', nombrePrep, 'para menú:', menuId);
+
+            try {
+                const response = await fetch('/nutricion/api/preparaciones/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        id_menu: menuId,
+                        preparacion: nombrePrep
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success || data.id_preparacion) {
+                    alert(`✓ Preparación "${nombrePrep}" creada exitosamente`);
+                    document.getElementById('modalNuevaPreparacion').style.display = 'none';
+                    // Recargar la tabla de preparaciones
+                    cargarPreparacionesMenu(menuId);
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo crear la preparación'));
+                }
+            } catch (error) {
+                console.error('[DEBUG] Error:', error);
+                alert('Error al crear la preparación');
+            }
+        });
+    }
+});
 
 async function cargarPreparacionesMenu(menuId) {
     try {
         const response = await fetch(`/nutricion/api/preparaciones/?menu_id=${menuId}`);
         const data = await response.json();
 
-        const tbody = document.getElementById('tablaPreparacionesMenu');
-        tbody.innerHTML = '';
+        const container = document.getElementById('listaPreparacionesAcordeon');
+        container.innerHTML = '';
 
         if (data.preparaciones && data.preparaciones.length > 0) {
             data.preparaciones.forEach(prep => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${prep.preparacion}</td>
-                    <td>
-                        <a href="/nutricion/preparaciones/${prep.id_preparacion}/" class="btn btn-sm btn-info">
-                            <i class="fas fa-list"></i> Ver Ingredientes
-                        </a>
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-delete" onclick="eliminarPreparacion(${prep.id_preparacion})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
+                const accordion = crearAcordeonPreparacion(prep, menuId);
+                container.appendChild(accordion);
             });
         } else {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">No hay preparaciones asociadas</td></tr>';
+            container.innerHTML = '<div class="no-ingredientes"><i class="fas fa-info-circle"></i> No hay preparaciones asociadas a este menú</div>';
         }
     } catch (error) {
         console.error('Error:', error);
+    }
+}
+
+function crearAcordeonPreparacion(preparacion, menuId) {
+    const accordionDiv = document.createElement('div');
+    accordionDiv.className = 'preparacion-accordion';
+
+    // Header del acordeón
+    const header = document.createElement('div');
+    header.className = 'preparacion-accordion-header';
+    header.innerHTML = `
+        <div class="preparacion-info">
+            <div class="preparacion-nombre">${preparacion.preparacion}</div>
+            <span class="ingredientes-badge">
+                <i class="fas fa-cubes"></i> ${preparacion.cantidad_ingredientes || 0} ingredientes
+            </span>
+        </div>
+        <div class="preparacion-actions">
+            <button class="btn btn-icon btn-delete" title="Eliminar preparación">
+                <i class="fas fa-trash"></i>
+            </button>
+            <i class="fas fa-chevron-down"></i>
+        </div>
+    `;
+
+    // Event para toggle
+    header.addEventListener('click', function(e) {
+        if (!e.target.closest('.btn-delete')) {
+            togglePreparacionAccordion(this);
+        }
+    });
+
+    // Event para eliminar
+    const btnDelete = header.querySelector('.btn-delete');
+    btnDelete.addEventListener('click', function(e) {
+        e.stopPropagation();
+        eliminarPreparacion(preparacion.id_preparacion, menuId);
+    });
+
+    // Content del acordeón
+    const content = document.createElement('div');
+    content.className = 'preparacion-accordion-content';
+    content.id = `prep-content-${preparacion.id_preparacion}`;
+
+    const container = document.createElement('div');
+    container.className = 'ingredientes-container';
+    container.innerHTML = `
+        <button class="btn-agregar-ingrediente" onclick="abrirAgregarIngrediente(${preparacion.id_preparacion})">
+            <i class="fas fa-plus"></i> Agregar Ingrediente
+        </button>
+        <div id="ingredientes-${preparacion.id_preparacion}" style="margin-top: 15px;">
+            <div class="no-ingredientes">Haz clic para cargar ingredientes</div>
+        </div>
+    `;
+
+    content.appendChild(container);
+    accordionDiv.appendChild(header);
+    accordionDiv.appendChild(content);
+
+    return accordionDiv;
+}
+
+function togglePreparacionAccordion(header) {
+    const content = header.nextElementSibling;
+    const isActive = content.classList.contains('active');
+
+    // Cerrar todos los acordeones
+    document.querySelectorAll('.preparacion-accordion-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.preparacion-accordion-header').forEach(h => h.classList.remove('active'));
+
+    // Abrir el actual si estaba cerrado
+    if (!isActive) {
+        content.classList.add('active');
+        header.classList.add('active');
+
+        // Cargar ingredientes si no están cargados
+        const prepId = content.id.replace('prep-content-', '');
+        const ingredientesDiv = document.getElementById(`ingredientes-${prepId}`);
+        if (ingredientesDiv && ingredientesDiv.querySelector('.no-ingredientes')) {
+            cargarIngredientesPreparacion(prepId);
+        }
+    }
+}
+
+async function cargarIngredientesPreparacion(preparacionId) {
+    try {
+        const response = await fetch(`/nutricion/api/preparaciones/${preparacionId}/ingredientes/`);
+        const data = await response.json();
+
+        const container = document.getElementById(`ingredientes-${preparacionId}`);
+
+        if (data.ingredientes && data.ingredientes.length > 0) {
+            container.innerHTML = data.ingredientes.map(ing => `
+                <div class="ingrediente-item">
+                    <div class="ingrediente-info">
+                        <div class="ingrediente-nombre">
+                            <i class="fas fa-carrot"></i> ${ing.nombre_ingrediente}
+                        </div>
+                        <div class="ingrediente-cantidad">
+                            <strong>${ing.cantidad || 0}</strong> ${ing.unidad_medida || 'unidades'}
+                        </div>
+                    </div>
+                    <div class="ingrediente-acciones">
+                        <button class="btn-icon btn-edit" onclick="editarIngrediente(${preparacionId}, ${ing.id_ingrediente})" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon btn-delete" onclick="eliminarIngrediente(${preparacionId}, ${ing.id_ingrediente})" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = '<div class="no-ingredientes"><i class="fas fa-info-circle"></i> No hay ingredientes agregados</div>';
+        }
+    } catch (error) {
+        console.error('Error al cargar ingredientes:', error);
+    }
+}
+
+async function eliminarPreparacion(preparacionId, menuId) {
+    if (!confirm('¿Está seguro de eliminar esta preparación?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/nutricion/api/preparaciones/${preparacionId}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert('✓ Preparación eliminada exitosamente');
+            cargarPreparacionesMenu(menuId);
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo eliminar'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al eliminar la preparación');
+    }
+}
+
+function abrirAgregarIngrediente(preparacionId) {
+    alert('Funcionalidad de agregar ingrediente en desarrollo. ID Preparación: ' + preparacionId);
+    // TODO: Implementar modal para agregar ingredientes
+}
+
+function editarIngrediente(preparacionId, ingredienteId) {
+    alert(`Editar ingrediente ${ingredienteId} de preparación ${preparacionId}`);
+    // TODO: Implementar modal de edición
+}
+
+async function eliminarIngrediente(preparacionId, ingredienteId) {
+    if (!confirm('¿Está seguro de eliminar este ingrediente?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/nutricion/api/preparaciones/${preparacionId}/ingredientes/${ingredienteId}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert('✓ Ingrediente eliminado exitosamente');
+            cargarIngredientesPreparacion(preparacionId);
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo eliminar'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al eliminar el ingrediente');
     }
 }
 
