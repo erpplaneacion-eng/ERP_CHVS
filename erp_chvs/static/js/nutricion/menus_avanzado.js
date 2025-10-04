@@ -304,7 +304,7 @@ function crearAcordeon(modalidad) {
 }
 
 function generarTarjetasMenus(menus) {
-    return menus.map(menu => `
+    const tarjetasMenus = menus.map(menu => `
         <div class="menu-card ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
              onclick="abrirGestionPreparaciones(${menu.id_menu}, '${menu.menu}')">
             <div class="menu-numero">${menu.menu}</div>
@@ -315,6 +315,19 @@ function generarTarjetasMenus(menus) {
             </div>
         </div>
     `).join('');
+
+    // Agregar tarjeta para menú especial
+    const modalidadId = menus.length > 0 ? menus[0].id_modalidad__id_modalidades : '';
+    const tarjetaEspecial = `
+        <div class="menu-card menu-card-especial" onclick="abrirModalMenuEspecial('${modalidadId}')">
+            <div class="menu-numero-especial">
+                <i class="fas fa-plus-circle"></i>
+            </div>
+            <div class="menu-label-especial">Menú Especial</div>
+        </div>
+    `;
+
+    return tarjetasMenus + tarjetaEspecial;
 }
 
 function toggleAccordion(header) {
@@ -429,6 +442,56 @@ window.addEventListener('click', function(event) {
         event.target.style.display = 'none';
     }
 });
+
+function abrirModalMenuEspecial(modalidadId) {
+    console.log('[DEBUG] Abriendo modal de menú especial para modalidad:', modalidadId);
+
+    // Guardar modalidad actual en variable global o en el modal
+    document.getElementById('modalidadIdEspecial').value = modalidadId;
+    document.getElementById('nombreMenuEspecial').value = '';
+    document.getElementById('modalMenuEspecial').style.display = 'block';
+}
+
+async function crearMenuEspecial() {
+    const modalidadId = document.getElementById('modalidadIdEspecial').value;
+    const nombreMenu = document.getElementById('nombreMenuEspecial').value.trim();
+
+    if (!nombreMenu) {
+        alert('Por favor ingrese un nombre para el menú especial');
+        return;
+    }
+
+    console.log('[DEBUG] Creando menú especial:', nombreMenu, 'para modalidad:', modalidadId);
+
+    try {
+        const response = await fetch('/nutricion/api/crear-menu-especial/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                programa_id: programaActual.id,
+                modalidad_id: modalidadId,
+                nombre_menu: nombreMenu
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`✓ Menú especial "${nombreMenu}" creado exitosamente`);
+            document.getElementById('modalMenuEspecial').style.display = 'none';
+            // Recargar modalidades para mostrar el nuevo menú
+            cargarModalidadesPorPrograma(programaActual.id);
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo crear el menú especial'));
+        }
+    } catch (error) {
+        console.error('[DEBUG] Error:', error);
+        alert('Error al crear menú especial');
+    }
+}
 
 function getCookie(name) {
     let cookieValue = null;

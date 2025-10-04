@@ -308,6 +308,72 @@ def api_generar_menus_automaticos(request):
 
 @login_required
 @csrf_exempt
+def api_crear_menu_especial(request):
+    """API para crear un menú especial con nombre personalizado"""
+    print(f"[DEBUG MENU ESPECIAL] Método recibido: {request.method}")
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        programa_id = data.get('programa_id')
+        modalidad_id = data.get('modalidad_id')
+        nombre_menu = data.get('nombre_menu', '').strip()
+
+        print(f"[DEBUG MENU ESPECIAL] programa_id: {programa_id}, modalidad_id: {modalidad_id}, nombre: {nombre_menu}")
+
+        if not programa_id or not modalidad_id or not nombre_menu:
+            return JsonResponse({'error': 'Faltan parámetros'}, status=400)
+
+        programa = Programa.objects.get(id=programa_id)
+        modalidad = ModalidadesDeConsumo.objects.get(id_modalidades=modalidad_id)
+
+        # Verificar si ya existe un menú con ese nombre
+        menu_existente = TablaMenus.objects.filter(
+            id_contrato=programa,
+            id_modalidad=modalidad,
+            menu=nombre_menu
+        ).exists()
+
+        if menu_existente:
+            return JsonResponse({
+                'error': f'Ya existe un menú con el nombre "{nombre_menu}"'
+            }, status=400)
+
+        # Crear el menú especial
+        menu = TablaMenus.objects.create(
+            menu=nombre_menu,
+            id_modalidad=modalidad,
+            id_contrato=programa
+        )
+
+        print(f"[DEBUG MENU ESPECIAL] ✓ Menú especial creado con ID: {menu.id_menu}")
+
+        return JsonResponse({
+            'success': True,
+            'menu': {
+                'id': menu.id_menu,
+                'nombre': menu.menu,
+                'modalidad': modalidad.modalidad
+            }
+        })
+
+    except Programa.DoesNotExist:
+        print(f"[DEBUG MENU ESPECIAL] ❌ Programa no encontrado: {programa_id}")
+        return JsonResponse({'error': 'Programa no encontrado'}, status=404)
+    except ModalidadesDeConsumo.DoesNotExist:
+        print(f"[DEBUG MENU ESPECIAL] ❌ Modalidad no encontrada: {modalidad_id}")
+        return JsonResponse({'error': 'Modalidad no encontrada'}, status=404)
+    except Exception as e:
+        print(f"[DEBUG MENU ESPECIAL] ❌ Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@csrf_exempt
 def api_menus(request):
     """API para manejar menús via AJAX"""
     if request.method == 'GET':

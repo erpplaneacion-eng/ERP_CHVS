@@ -136,6 +136,35 @@
         padding: 2px 8px;
         border-radius: 10px;
     }
+
+    .menu-card-especial {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 2px dashed #667eea;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .menu-card-especial:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        border-color: #764ba2;
+        transform: translateY(-2px) scale(1.02);
+    }
+
+    .menu-numero-especial {
+        font-size: 48px;
+        color: white;
+        margin-bottom: 5px;
+    }
+
+    .menu-label-especial {
+        font-size: 12px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
 </style>
 {% endblock %}
 
@@ -244,6 +273,35 @@
                     <i class="fas fa-save"></i> Guardar
                 </button>
                 <button type="button" class="btn btn-secondary" onclick="cerrarModalPreparacion()">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal para crear menú especial -->
+<div id="modalMenuEspecial" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2><i class="fas fa-star"></i> Crear Menú Especial</h2>
+        <form id="formMenuEspecial" onsubmit="event.preventDefault(); crearMenuEspecial();">
+            <input type="hidden" id="modalidadIdEspecial">
+
+            <div class="form-group">
+                <label>Nombre del Menú Especial <span class="required">*</span></label>
+                <input type="text" id="nombreMenuEspecial" class="form-control"
+                       placeholder="Ej: Menú Navideño, Menú Día del Niño, etc." required>
+                <small style="color: #666; margin-top: 5px; display: block;">
+                    Este menú aparecerá junto a los 20 menús regulares
+                </small>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Crear Menú
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalMenuEspecial').style.display='none'">
                     <i class="fas fa-times"></i> Cancelar
                 </button>
             </div>
