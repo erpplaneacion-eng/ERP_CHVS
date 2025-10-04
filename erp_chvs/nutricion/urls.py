@@ -13,6 +13,9 @@ urlpatterns = [
     path('menus/', views.lista_menus, name='lista_menus'),
     path('api/menus/', views.api_menus, name='api_menus'),
     path('api/menus/<int:id_menu>/', views.api_menu_detail, name='api_menu_detail'),
+    path('api/programas-por-municipio/', views.api_programas_por_municipio, name='api_programas_por_municipio'),
+    path('api/modalidades-por-programa/', views.api_modalidades_por_programa, name='api_modalidades_por_programa'),
+    path('api/generar-menus-automaticos/', views.api_generar_menus_automaticos, name='api_generar_menus_automaticos'),
 
     # Preparaciones
     path('preparaciones/', views.lista_preparaciones, name='lista_preparaciones'),

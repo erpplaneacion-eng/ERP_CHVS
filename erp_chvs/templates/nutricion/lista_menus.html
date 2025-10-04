@@ -5,123 +5,245 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/modules/nutricion.css' %}">
+<style>
+    .filtros-container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .filtros-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+        align-items: end;
+    }
+
+    .accordion {
+        background: white;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .accordion-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 20px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s;
+    }
+
+    .accordion-header:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+
+    .accordion-header.active {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .accordion-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        background: #f8f9fa;
+    }
+
+    .accordion-content.active {
+        max-height: 2000px;
+    }
+
+    .menus-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+        padding: 20px;
+    }
+
+    .menu-card {
+        background: white;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+
+    .menu-card:hover {
+        border-color: #667eea;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+    }
+
+    .menu-card.has-preparaciones {
+        border-color: #28a745;
+        background: #f0fff4;
+    }
+
+    .menu-numero {
+        font-size: 32px;
+        font-weight: bold;
+        color: #667eea;
+        margin-bottom: 10px;
+    }
+
+    .menu-card.has-preparaciones .menu-numero {
+        color: #28a745;
+    }
+
+    .menu-actions {
+        margin-top: 10px;
+        display: flex;
+        gap: 5px;
+        justify-content: center;
+    }
+
+    .btn-generar-auto {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s;
+    }
+
+    .btn-generar-auto:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+    }
+
+    .info-programa {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .preparacion-badge {
+        background: #28a745;
+        color: white;
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 10px;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="content-wrapper">
     <div class="page-header">
-        <h1><i class="fas fa-utensils"></i> Gestión de Menús</h1>
-        <button class="btn btn-primary" id="btnNuevoMenu">
-            <i class="fas fa-plus"></i> Nuevo Menú
-        </button>
+        <h1><i class="fas fa-utensils"></i> Gestión de Menús por Modalidad</h1>
     </div>
 
-    <!-- Estadísticas -->
-    <div class="stats-row">
-        <div class="stat-card">
-            <i class="fas fa-utensils"></i>
-            <div>
-                <h3>{{ total_menus }}</h3>
-                <p>Total Menús</p>
+    <!-- Filtros -->
+    <div class="filtros-container">
+        <h3><i class="fas fa-filter"></i> Filtros</h3>
+        <div class="filtros-row">
+            <div class="form-group">
+                <label for="filtroMunicipio">Municipio (ETC)</label>
+                <select id="filtroMunicipio" class="form-control">
+                    <option value="">Seleccione un municipio...</option>
+                    {% for mun in municipios %}
+                    <option value="{{ mun.id }}" {% if municipio_seleccionado == mun.id|stringformat:"s" %}selected{% endif %}>
+                        {{ mun.nombre_municipio }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="filtroPrograma">Programa (Contrato Activo)</label>
+                <select id="filtroPrograma" class="form-control" disabled>
+                    <option value="">Primero seleccione un municipio...</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <button id="btnAplicarFiltros" class="btn btn-primary" disabled>
+                    <i class="fas fa-search"></i> Cargar Modalidades
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Tabla de menús -->
-    <div class="table-container">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Nombre del Menú</th>
-                    <th>Modalidad</th>
-                    <th>Programa</th>
-                    <th>Fecha Creación</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody id="tablaMenus">
-                {% for menu in menus %}
-                <tr data-id="{{ menu.id_menu }}">
-                    <td>{{ menu.id_menu }}</td>
-                    <td>{{ menu.menu }}</td>
-                    <td>{{ menu.id_modalidad.modalidad }}</td>
-                    <td>{{ menu.id_contrato.programa }}</td>
-                    <td>{{ menu.fecha_creacion|date:"d/m/Y" }}</td>
-                    <td class="action-buttons">
-                        <button class="btn btn-sm btn-edit" onclick="editarMenu({{ menu.id_menu }})">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-delete" onclick="eliminarMenu({{ menu.id_menu }})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" style="text-align: center;">No hay menús registrados</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Información del programa seleccionado -->
+    <div id="infoProgramaContainer" style="display: none;">
+        <div class="info-programa">
+            <h3><i class="fas fa-info-circle"></i> Programa Seleccionado</h3>
+            <p id="infoProgramaNombre"><strong>Programa:</strong> <span></span></p>
+            <p id="infoProgramaContrato"><strong>Contrato:</strong> <span></span></p>
+            <p id="infoProgramaMunicipio"><strong>Municipio:</strong> <span></span></p>
+        </div>
     </div>
 
-    <!-- Paginación -->
-    {% if menus.has_other_pages %}
-    <div class="pagination">
-        {% if menus.has_previous %}
-        <a href="?page={{ menus.previous_page_number }}">&laquo; Anterior</a>
-        {% endif %}
-
-        <span class="current-page">
-            Página {{ menus.number }} de {{ menus.paginator.num_pages }}
-        </span>
-
-        {% if menus.has_next %}
-        <a href="?page={{ menus.next_page_number }}">Siguiente &raquo;</a>
-        {% endif %}
+    <!-- Acordeones de Modalidades -->
+    <div id="modalidadesContainer">
+        <!-- Se llenarán dinámicamente con JavaScript -->
     </div>
-    {% endif %}
+
+    <!-- Mensaje inicial -->
+    <div id="mensajeInicial" class="alert alert-info">
+        <i class="fas fa-info-circle"></i> Seleccione un municipio y un programa para visualizar las modalidades y menús.
+    </div>
 </div>
 
-<!-- Modal para crear/editar menú -->
-<div id="modalMenu" class="modal">
-    <div class="modal-content">
+<!-- Modal para gestionar preparaciones -->
+<div id="modalPreparaciones" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
         <span class="close">&times;</span>
-        <h2 id="modalTitle">Nuevo Menú</h2>
-        <form id="formMenu">
-            <input type="hidden" id="menuId">
+        <h2 id="modalTitlePrep">Gestionar Preparaciones - Menú <span id="menuNumeroModal"></span></h2>
+
+        <div class="form-group">
+            <button class="btn btn-primary" id="btnAgregarPreparacion">
+                <i class="fas fa-plus"></i> Agregar Preparación
+            </button>
+        </div>
+
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Preparación</th>
+                        <th>Ingredientes</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaPreparacionesMenu">
+                    <!-- Se llenará dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para crear preparación -->
+<div id="modalNuevaPreparacion" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="cerrarModalPreparacion()">&times;</span>
+        <h2>Nueva Preparación</h2>
+        <form id="formNuevaPreparacion">
+            <input type="hidden" id="menuIdPrep">
 
             <div class="form-group">
-                <label for="menuNombre">Nombre del Menú <span class="required">*</span></label>
-                <input type="text" id="menuNombre" required>
-            </div>
-
-            <div class="form-group">
-                <label for="menuModalidad">Modalidad de Consumo <span class="required">*</span></label>
-                <select id="menuModalidad" required>
-                    <option value="">Seleccione una modalidad</option>
-                    {% for modalidad in modalidades %}
-                    <option value="{{ modalidad.id_modalidades }}">{{ modalidad.modalidad }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="menuPrograma">Programa <span class="required">*</span></label>
-                <select id="menuPrograma" required>
-                    <option value="">Seleccione un programa</option>
-                    {% for programa in programas %}
-                    <option value="{{ programa.id }}">{{ programa.programa }}</option>
-                    {% endfor %}
-                </select>
+                <label>Nombre de la Preparación <span class="required">*</span></label>
+                <input type="text" id="nombrePreparacion" required>
             </div>
 
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-save"></i> Guardar
                 </button>
-                <button type="button" class="btn btn-secondary" onclick="cerrarModal()">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalPreparacion()">
                     <i class="fas fa-times"></i> Cancelar
                 </button>
             </div>
@@ -131,5 +253,9 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/nutricion/menus.js' %}"></script>
+<script>
+    const PROGRAMA_ACTUAL = {{ programa_seleccionado|default:"null" }};
+    const MUNICIPIO_ACTUAL = {{ municipio_seleccionado|default:"null" }};
+</script>
+<script src="{% static 'js/nutricion/menus_avanzado.js' %}"></script>
 {% endblock %}

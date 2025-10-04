@@ -80,22 +80,212 @@ def editar_alimento(request, codigo):
 
 @login_required
 def lista_menus(request):
-    """Vista para listar menús"""
-    menus = TablaMenus.objects.select_related('id_modalidad', 'id_contrato').all().order_by('-fecha_creacion')
-    paginator = Paginator(menus, 15)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    """Vista para listar y gestionar menús por municipio/programa/modalidad"""
+    # Obtener SOLO municipios que tienen programas activos
+    from principal.models import PrincipalMunicipio
+    municipios = PrincipalMunicipio.objects.filter(
+        programa__estado='activo'
+    ).distinct().order_by('nombre_municipio')
 
-    # Obtener datos para los selectores
-    modalidades = ModalidadesDeConsumo.objects.all().order_by('modalidad')
-    programas = Programa.objects.filter(estado='activo').order_by('-fecha_inicial')
+    print(f"[DEBUG VISTA] Total municipios con programas activos: {municipios.count()}")
+    for mun in municipios[:5]:  # Primeros 5
+        print(f"[DEBUG VISTA] - ID: {mun.id}, Código: {mun.codigo_municipio}, Nombre: {mun.nombre_municipio}")
 
-    return render(request, 'nutricion/lista_menus.html', {
-        'menus': page_obj,
-        'total_menus': menus.count(),
-        'modalidades': modalidades,
-        'programas': programas
-    })
+    # Obtener filtros
+    municipio_id = request.GET.get('municipio')
+    programa_id = request.GET.get('programa')
+
+    # Contexto inicial
+    context = {
+        'municipios': municipios,  # Cambio aquí
+        'municipio_seleccionado': municipio_id,
+        'programa_seleccionado': programa_id,
+    }
+
+    # Si hay municipio seleccionado, obtener programas activos
+    if municipio_id:
+        programas_activos = Programa.objects.filter(
+            municipio_id=municipio_id,
+            estado='activo'
+        ).order_by('-fecha_inicial')
+        context['programas'] = programas_activos
+
+        # Si hay programa seleccionado, obtener modalidades y menús
+        if programa_id:
+            try:
+                programa = Programa.objects.get(id=programa_id)
+                context['programa_obj'] = programa
+
+                # Obtener modalidades del municipio
+                # Esto requiere saber qué modalidades están configuradas para ese municipio
+                # Por ahora, traemos todas las modalidades
+                modalidades = ModalidadesDeConsumo.objects.all().order_by('modalidad')
+                context['modalidades'] = modalidades
+
+                # Obtener menús existentes del programa
+                menus_existentes = TablaMenus.objects.filter(
+                    id_contrato=programa
+                ).select_related('id_modalidad').order_by('id_modalidad', 'menu')
+
+                # Agrupar menús por modalidad
+                from collections import defaultdict
+                menus_por_modalidad = defaultdict(list)
+                for menu in menus_existentes:
+                    menus_por_modalidad[menu.id_modalidad.id_modalidades].append(menu)
+
+                context['menus_por_modalidad'] = dict(menus_por_modalidad)
+
+            except Programa.DoesNotExist:
+                context['error'] = 'Programa no encontrado'
+
+    return render(request, 'nutricion/lista_menus.html', context)
+
+
+@login_required
+def api_programas_por_municipio(request):
+    """API para obtener programas activos de un municipio"""
+    municipio_id = request.GET.get('municipio_id')
+
+    print(f"[DEBUG] municipio_id recibido: {municipio_id}")
+
+    if not municipio_id:
+        return JsonResponse({'programas': [], 'debug': 'No se recibió municipio_id'})
+
+    try:
+        programas = Programa.objects.filter(
+            municipio_id=municipio_id,
+            estado='activo'
+        ).values('id', 'programa', 'contrato', 'fecha_inicial', 'fecha_final')
+
+        programas_list = list(programas)
+        print(f"[DEBUG] Programas encontrados: {len(programas_list)}")
+
+        return JsonResponse({
+            'programas': programas_list,
+            'debug': f'{len(programas_list)} programas encontrados',
+            'municipio_id': municipio_id
+        })
+
+    except Exception as e:
+        print(f"[DEBUG] Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'programas': [],
+            'error': str(e),
+            'debug': 'Error en la consulta'
+        })
+
+
+@login_required
+def api_modalidades_por_programa(request):
+    """API para obtener modalidades configuradas por programa/municipio"""
+    programa_id = request.GET.get('programa_id')
+
+    if not programa_id:
+        return JsonResponse({'modalidades': []})
+
+    try:
+        programa = Programa.objects.get(id=programa_id)
+
+        # Importar el modelo de relación municipio-modalidades
+        from principal.models import MunicipioModalidades
+
+        # Obtener modalidades configuradas para el municipio del programa
+        modalidades_configuradas = MunicipioModalidades.objects.filter(
+            municipio=programa.municipio
+        ).select_related('modalidad').values(
+            'modalidad__id_modalidades',
+            'modalidad__modalidad'
+        ).order_by('modalidad__modalidad')
+
+        # Si no hay configuración específica, retornar todas las modalidades
+        if not modalidades_configuradas.exists():
+            print(f"[DEBUG] No hay modalidades configuradas para {programa.municipio.nombre_municipio}, retornando todas")
+            modalidades = ModalidadesDeConsumo.objects.all().values(
+                'id_modalidades', 'modalidad'
+            ).order_by('modalidad')
+            modalidades_list = list(modalidades)
+        else:
+            # Formatear modalidades configuradas
+            modalidades_list = [
+                {
+                    'id_modalidades': m['modalidad__id_modalidades'],
+                    'modalidad': m['modalidad__modalidad']
+                }
+                for m in modalidades_configuradas
+            ]
+            print(f"[DEBUG] Modalidades configuradas para {programa.municipio.nombre_municipio}: {len(modalidades_list)}")
+
+        return JsonResponse({
+            'modalidades': modalidades_list,
+            'programa': {
+                'id': programa.id,
+                'nombre': programa.programa,
+                'contrato': programa.contrato
+            }
+        })
+    except Programa.DoesNotExist:
+        return JsonResponse({'error': 'Programa no encontrado'}, status=404)
+
+
+@login_required
+@csrf_exempt
+def api_generar_menus_automaticos(request):
+    """API para generar automáticamente los 20 menús de una modalidad"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        programa_id = data.get('programa_id')
+        modalidad_id = data.get('modalidad_id')
+
+        if not programa_id or not modalidad_id:
+            return JsonResponse({'error': 'Faltan parámetros'}, status=400)
+
+        programa = Programa.objects.get(id=programa_id)
+        modalidad = ModalidadesDeConsumo.objects.get(id_modalidades=modalidad_id)
+
+        # Verificar si ya existen menús
+        menus_existentes = TablaMenus.objects.filter(
+            id_contrato=programa,
+            id_modalidad=modalidad
+        ).count()
+
+        if menus_existentes > 0:
+            return JsonResponse({
+                'error': f'Ya existen {menus_existentes} menús para esta modalidad',
+                'menus_existentes': menus_existentes
+            }, status=400)
+
+        # Crear los 20 menús automáticamente
+        menus_creados = []
+        with transaction.atomic():
+            for i in range(1, 21):
+                menu = TablaMenus.objects.create(
+                    menu=str(i),  # Nombre del menú: 1, 2, 3, ..., 20
+                    id_modalidad=modalidad,
+                    id_contrato=programa
+                )
+                menus_creados.append({
+                    'id': menu.id_menu,
+                    'nombre': menu.menu,
+                    'modalidad': modalidad.modalidad
+                })
+
+        return JsonResponse({
+            'success': True,
+            'menus_creados': len(menus_creados),
+            'menus': menus_creados
+        })
+
+    except Programa.DoesNotExist:
+        return JsonResponse({'error': 'Programa no encontrado'}, status=404)
+    except ModalidadesDeConsumo.DoesNotExist:
+        return JsonResponse({'error': 'Modalidad no encontrada'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @login_required
@@ -103,10 +293,19 @@ def lista_menus(request):
 def api_menus(request):
     """API para manejar menús via AJAX"""
     if request.method == 'GET':
-        menus = TablaMenus.objects.select_related('id_modalidad', 'id_contrato').all().values(
+        # Filtrar por programa si se proporciona
+        programa_id = request.GET.get('programa_id')
+
+        menus_query = TablaMenus.objects.select_related('id_modalidad', 'id_contrato')
+
+        if programa_id:
+            menus_query = menus_query.filter(id_contrato_id=programa_id)
+
+        menus = menus_query.values(
             'id_menu', 'menu', 'id_modalidad__id_modalidades', 'id_modalidad__modalidad',
             'id_contrato__id', 'id_contrato__programa', 'fecha_creacion'
-        )
+        ).order_by('id_modalidad__id_modalidades', 'menu')
+
         return JsonResponse({'menus': list(menus)})
 
     elif request.method == 'POST':
@@ -192,9 +391,18 @@ def lista_preparaciones(request):
 def api_preparaciones(request):
     """API para manejar preparaciones via AJAX"""
     if request.method == 'GET':
-        preparaciones = TablaPreparaciones.objects.select_related('id_menu').all().values(
+        # Filtrar por menú si se proporciona
+        menu_id = request.GET.get('menu_id')
+
+        preparaciones_query = TablaPreparaciones.objects.select_related('id_menu')
+
+        if menu_id:
+            preparaciones_query = preparaciones_query.filter(id_menu_id=menu_id)
+
+        preparaciones = preparaciones_query.values(
             'id_preparacion', 'preparacion', 'id_menu__id_menu', 'id_menu__menu', 'fecha_creacion'
-        )
+        ).order_by('preparacion')
+
         return JsonResponse({'preparaciones': list(preparaciones)})
 
     elif request.method == 'POST':
