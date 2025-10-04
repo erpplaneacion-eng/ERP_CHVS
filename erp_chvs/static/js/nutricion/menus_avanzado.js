@@ -203,6 +203,15 @@ async function cargarMenusExistentes(programaId) {
                 }
                 menusData[modalidadId].push(menu);
             });
+
+            // Ordenar menús numéricamente dentro de cada modalidad
+            Object.keys(menusData).forEach(modalidadId => {
+                menusData[modalidadId].sort((a, b) => {
+                    const numA = parseInt(a.menu) || 0;
+                    const numB = parseInt(b.menu) || 0;
+                    return numA - numB;
+                });
+            });
         }
     } catch (error) {
         console.error('Error al cargar menús:', error);
@@ -238,27 +247,58 @@ function crearAcordeon(modalidad) {
 
     const accordionDiv = document.createElement('div');
     accordionDiv.className = 'accordion';
-    accordionDiv.innerHTML = `
-        <div class="accordion-header" onclick="toggleAccordion(this)">
-            <div>
-                <strong>${modalidad.modalidad}</strong>
-                <span class="preparacion-badge">${menusModalidad.length} / 20 menús</span>
-            </div>
-            <div>
-                ${!tieneMenus ? `
-                    <button class="btn-generar-auto" onclick="event.stopPropagation(); generarMenusAutomaticos(${modalidadId}, '${modalidad.modalidad}')">
-                        <i class="fas fa-magic"></i> Generar 20 Menús
-                    </button>
-                ` : ''}
-                <i class="fas fa-chevron-down"></i>
-            </div>
+
+    // Crear header
+    const header = document.createElement('div');
+    header.className = 'accordion-header';
+    header.onclick = function() { toggleAccordion(this); };
+
+    header.innerHTML = `
+        <div>
+            <strong>${modalidad.modalidad}</strong>
+            <span class="preparacion-badge">${menusModalidad.length} / 20 menús</span>
         </div>
-        <div class="accordion-content" id="content-${modalidadId}">
-            <div class="menus-grid" id="grid-${modalidadId}">
-                ${tieneMenus ? generarTarjetasMenus(menusModalidad) : '<p style="padding: 20px;">Genere los menús para esta modalidad</p>'}
-            </div>
+        <div>
+            ${!tieneMenus ? `<button class="btn-generar-auto" data-modalidad-id="${modalidadId}" data-modalidad-nombre="${modalidad.modalidad}">
+                <i class="fas fa-magic"></i> Generar 20 Menús
+            </button>` : ''}
+            <i class="fas fa-chevron-down"></i>
         </div>
     `;
+
+    // Agregar event listener al botón si existe
+    if (!tieneMenus) {
+        setTimeout(() => {
+            const btn = header.querySelector('.btn-generar-auto');
+            if (btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const modalidadId = this.getAttribute('data-modalidad-id');
+                    const modalidadNombre = this.getAttribute('data-modalidad-nombre');
+                    generarMenusAutomaticos(modalidadId, modalidadNombre);
+                });
+            }
+        }, 0);
+    }
+
+    // Crear content
+    const content = document.createElement('div');
+    content.className = 'accordion-content';
+    content.id = `content-${modalidadId}`;
+
+    const grid = document.createElement('div');
+    grid.className = 'menus-grid';
+    grid.id = `grid-${modalidadId}`;
+
+    if (tieneMenus) {
+        grid.innerHTML = generarTarjetasMenus(menusModalidad);
+    } else {
+        grid.innerHTML = '<p style="padding: 20px;">Genere los menús para esta modalidad</p>';
+    }
+
+    content.appendChild(grid);
+    accordionDiv.appendChild(header);
+    accordionDiv.appendChild(content);
 
     return accordionDiv;
 }

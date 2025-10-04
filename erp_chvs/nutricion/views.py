@@ -4,7 +4,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 import json
 
 from .models import (
@@ -233,6 +233,8 @@ def api_modalidades_por_programa(request):
 @csrf_exempt
 def api_generar_menus_automaticos(request):
     """API para generar automáticamente los 20 menús de una modalidad"""
+    print(f"[DEBUG GENERAR] Método recibido: {request.method}")
+
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
@@ -241,17 +243,23 @@ def api_generar_menus_automaticos(request):
         programa_id = data.get('programa_id')
         modalidad_id = data.get('modalidad_id')
 
+        print(f"[DEBUG GENERAR] programa_id: {programa_id}, modalidad_id: {modalidad_id}")
+
         if not programa_id or not modalidad_id:
             return JsonResponse({'error': 'Faltan parámetros'}, status=400)
 
         programa = Programa.objects.get(id=programa_id)
         modalidad = ModalidadesDeConsumo.objects.get(id_modalidades=modalidad_id)
 
+        print(f"[DEBUG GENERAR] Programa: {programa.programa}, Modalidad: {modalidad.modalidad}")
+
         # Verificar si ya existen menús
         menus_existentes = TablaMenus.objects.filter(
             id_contrato=programa,
             id_modalidad=modalidad
         ).count()
+
+        print(f"[DEBUG GENERAR] Menús existentes: {menus_existentes}")
 
         if menus_existentes > 0:
             return JsonResponse({
@@ -261,6 +269,8 @@ def api_generar_menus_automaticos(request):
 
         # Crear los 20 menús automáticamente
         menus_creados = []
+        print(f"[DEBUG GENERAR] Iniciando creación de 20 menús...")
+
         with transaction.atomic():
             for i in range(1, 21):
                 menu = TablaMenus.objects.create(
@@ -273,6 +283,9 @@ def api_generar_menus_automaticos(request):
                     'nombre': menu.menu,
                     'modalidad': modalidad.modalidad
                 })
+                print(f"[DEBUG GENERAR] Menú {i} creado con ID: {menu.id_menu}")
+
+        print(f"[DEBUG GENERAR] ✓ {len(menus_creados)} menús creados exitosamente")
 
         return JsonResponse({
             'success': True,
@@ -281,10 +294,15 @@ def api_generar_menus_automaticos(request):
         })
 
     except Programa.DoesNotExist:
+        print(f"[DEBUG GENERAR] ❌ Programa no encontrado: {programa_id}")
         return JsonResponse({'error': 'Programa no encontrado'}, status=404)
     except ModalidadesDeConsumo.DoesNotExist:
+        print(f"[DEBUG GENERAR] ❌ Modalidad no encontrada: {modalidad_id}")
         return JsonResponse({'error': 'Modalidad no encontrada'}, status=404)
     except Exception as e:
+        print(f"[DEBUG GENERAR] ❌ Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
 
 
