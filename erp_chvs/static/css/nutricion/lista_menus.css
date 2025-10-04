@@ -1524,6 +1524,35 @@
     transition: all 0.3s ease;
 }
 
+/* Estilos para inputs de porcentaje de adecuación */
+.porcentaje-input {
+    width: 60px;
+    padding: 2px 4px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    text-align: center;
+    font-size: 12px;
+    background-color: white;
+    transition: all 0.2s ease;
+}
+
+.porcentaje-input:hover {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+}
+
+.porcentaje-input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    background-color: white;
+}
+
+.porcentaje-input:invalid {
+    border-color: #dc3545;
+    background-color: #fff5f5;
+}
+
 /* Estados de adecuación - Colores actualizados */
 /* 0-35% = Verde (Óptimo) */
 .total-mini[data-estado="optimo"], .adecuacion-mini[data-estado="optimo"] {

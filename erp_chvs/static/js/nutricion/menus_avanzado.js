@@ -1031,35 +1031,98 @@ function crearAccordionNivelEscolar(nivel, index) {
                         </div>
                         
                         <!-- Porcentajes de Adecuación -->
-                        <h6 class="mt-3"><i class="fas fa-percentage"></i> % de Adecuación</h6>
+                        <h6 class="mt-3"><i class="fas fa-percentage"></i> % de Adecuación (Editable)</h6>
                         <div class="adecuacion-grid-mini">
                             <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.calorias_kcal.estado}">
                                 <span>Calorías:</span>
-                                <span class="value porcentaje" id="nivel-${index}-calorias-pct">${nivel.porcentajes_adecuacion.calorias_kcal.porcentaje}%</span>
+                                <input type="number" 
+                                       class="form-control form-control-sm porcentaje-input" 
+                                       id="nivel-${index}-calorias-pct"
+                                       value="${nivel.porcentajes_adecuacion.calorias_kcal.porcentaje}" 
+                                       min="0" 
+                                       max="100" 
+                                       step="0.1"
+                                       data-nutriente="calorias_kcal"
+                                       data-nivel="${index}">
+                                <span class="porcentaje-symbol">%</span>
                             </div>
                             <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.proteina_g.estado}">
                                 <span>Proteína:</span>
-                                <span class="value porcentaje" id="nivel-${index}-proteina-pct">${nivel.porcentajes_adecuacion.proteina_g.porcentaje}%</span>
+                                <input type="number" 
+                                       class="form-control form-control-sm porcentaje-input" 
+                                       id="nivel-${index}-proteina-pct"
+                                       value="${nivel.porcentajes_adecuacion.proteina_g.porcentaje}" 
+                                       min="0" 
+                                       max="100" 
+                                       step="0.1"
+                                       data-nutriente="proteina_g"
+                                       data-nivel="${index}">
+                                <span class="porcentaje-symbol">%</span>
                             </div>
                             <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.grasa_g.estado}">
                                 <span>Grasa:</span>
-                                <span class="value porcentaje" id="nivel-${index}-grasa-pct">${nivel.porcentajes_adecuacion.grasa_g.porcentaje}%</span>
+                                <input type="number" 
+                                       class="form-control form-control-sm porcentaje-input" 
+                                       id="nivel-${index}-grasa-pct"
+                                       value="${nivel.porcentajes_adecuacion.grasa_g.porcentaje}" 
+                                       min="0" 
+                                       max="100" 
+                                       step="0.1"
+                                       data-nutriente="grasa_g"
+                                       data-nivel="${index}">
+                                <span class="porcentaje-symbol">%</span>
                             </div>
                             <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.cho_g.estado}">
                                 <span>CHO:</span>
-                                <span class="value porcentaje" id="nivel-${index}-cho-pct">${nivel.porcentajes_adecuacion.cho_g.porcentaje}%</span>
+                                <input type="number" 
+                                       class="form-control form-control-sm porcentaje-input" 
+                                       id="nivel-${index}-cho-pct"
+                                       value="${nivel.porcentajes_adecuacion.cho_g.porcentaje}" 
+                                       min="0" 
+                                       max="100" 
+                                       step="0.1"
+                                       data-nutriente="cho_g"
+                                       data-nivel="${index}">
+                                <span class="porcentaje-symbol">%</span>
                             </div>
                             <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.calcio_mg.estado}">
                                 <span>Calcio:</span>
-                                <span class="value porcentaje" id="nivel-${index}-calcio-pct">${nivel.porcentajes_adecuacion.calcio_mg.porcentaje}%</span>
+                                <input type="number" 
+                                       class="form-control form-control-sm porcentaje-input" 
+                                       id="nivel-${index}-calcio-pct"
+                                       value="${nivel.porcentajes_adecuacion.calcio_mg.porcentaje}" 
+                                       min="0" 
+                                       max="100" 
+                                       step="0.1"
+                                       data-nutriente="calcio_mg"
+                                       data-nivel="${index}">
+                                <span class="porcentaje-symbol">%</span>
                             </div>
                             <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.hierro_mg.estado}">
                                 <span>Hierro:</span>
-                                <span class="value porcentaje" id="nivel-${index}-hierro-pct">${nivel.porcentajes_adecuacion.hierro_mg.porcentaje}%</span>
+                                <input type="number" 
+                                       class="form-control form-control-sm porcentaje-input" 
+                                       id="nivel-${index}-hierro-pct"
+                                       value="${nivel.porcentajes_adecuacion.hierro_mg.porcentaje}" 
+                                       min="0" 
+                                       max="100" 
+                                       step="0.1"
+                                       data-nutriente="hierro_mg"
+                                       data-nivel="${index}">
+                                <span class="porcentaje-symbol">%</span>
                             </div>
                             <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.sodio_mg.estado}">
                                 <span>Sodio:</span>
-                                <span class="value porcentaje" id="nivel-${index}-sodio-pct">${nivel.porcentajes_adecuacion.sodio_mg.porcentaje}%</span>
+                                <input type="number" 
+                                       class="form-control form-control-sm porcentaje-input" 
+                                       id="nivel-${index}-sodio-pct"
+                                       value="${nivel.porcentajes_adecuacion.sodio_mg.porcentaje}" 
+                                       min="0" 
+                                       max="100" 
+                                       step="0.1"
+                                       data-nutriente="sodio_mg"
+                                       data-nivel="${index}">
+                                <span class="porcentaje-symbol">%</span>
                             </div>
                         </div>
                     </div>
@@ -1161,14 +1224,31 @@ function crearFilaIngrediente(ingrediente, nivelIndex, prepIndex, ingIndex) {
 }
 
 function inicializarEventosInputs() {
-    // Eventos para inputs de peso neto
+    // Variable para evitar loops infinitos durante sincronización
+    let actualizandoPorPeso = false;
+    let actualizandoPorPorcentaje = false;
+    
+    /**
+     * Evento para cambios en inputs de peso neto.
+     * FLUJO: Peso Neto → Peso Bruto → Valores Nutricionales → Totales → % Adecuación
+     *
+     * FÓRMULAS:
+     * - Peso Bruto = (Peso Neto × 100) / Parte Comestible
+     * - Nutriente = (Nutriente por 100g × Peso Neto) / 100
+     * - % Adecuación = (Total Nutriente / Requerimiento) × 100
+     */
     $(document).on('input change', '.peso-input', function() {
+        if (actualizandoPorPorcentaje) return; // Evitar loop infinito
+
+        actualizandoPorPeso = true;
+
         const input = $(this);
         const nivelIndex = input.closest('.ingrediente-row').data('nivel');
         const prepIndex = input.closest('.ingrediente-row').data('prep');
         const ingIndex = input.closest('.ingrediente-row').data('ing');
-        
-        const pesoNeto = parseFloat(input.val()) || 0;
+
+        // Obtener valores del input y data attributes
+        const pesoNeto = Math.max(0, parseFloat(input.val()) || 0); // Validar >= 0
         const parteComestible = parseFloat(input.data('parte-comestible')) || 100;
         const caloriasPor100g = parseFloat(input.data('calorias')) || 0;
         const proteinaPor100g = parseFloat(input.data('proteina')) || 0;
@@ -1177,11 +1257,15 @@ function inicializarEventosInputs() {
         const calcioPor100g = parseFloat(input.data('calcio')) || 0;
         const hierroPor100g = parseFloat(input.data('hierro')) || 0;
         const sodioPor100g = parseFloat(input.data('sodio')) || 0;
-        
-        // Calcular peso bruto
-        const pesoBruto = (pesoNeto * 100) / parteComestible;
-        
-        // Calcular nutrientes por cada 100g de peso neto
+
+        // CÁLCULO 1: Peso Bruto desde Peso Neto
+        // Fórmula: Peso Bruto = (Peso Neto × 100) / % Parte Comestible
+        // Ejemplo: 80g neto con 85% comestible = (80 × 100) / 85 = 94.1g bruto
+        const pesoBruto = parteComestible > 0 ? (pesoNeto * 100) / parteComestible : pesoNeto;
+
+        // CÁLCULO 2: Valores nutricionales
+        // Fórmula: Nutriente = (Nutriente por 100g × Peso Neto) / 100
+        // Ejemplo: 50 kcal/100g en 80g neto = (50 × 80) / 100 = 40 kcal
         const factor = pesoNeto / 100;
         const calorias = caloriasPor100g * factor;
         const proteina = proteinaPor100g * factor;
@@ -1190,11 +1274,11 @@ function inicializarEventosInputs() {
         const calcio = calcioPor100g * factor;
         const hierro = hierroPor100g * factor;
         const sodio = sodioPor100g * factor;
-        
-        // Actualizar peso bruto
+
+        // Actualizar peso bruto en la interfaz
         $(`#bruto-${nivelIndex}-${prepIndex}-${ingIndex}`).text(pesoBruto.toFixed(0));
-        
-        // Actualizar nutrientes
+
+        // Actualizar nutrientes en la interfaz
         $(`#cal-${nivelIndex}-${prepIndex}-${ingIndex}`).text(calorias.toFixed(1));
         $(`#prot-${nivelIndex}-${prepIndex}-${ingIndex}`).text(proteina.toFixed(1));
         $(`#grasa-${nivelIndex}-${prepIndex}-${ingIndex}`).text(grasa.toFixed(1));
@@ -1202,9 +1286,30 @@ function inicializarEventosInputs() {
         $(`#calcio-${nivelIndex}-${prepIndex}-${ingIndex}`).text(calcio.toFixed(1));
         $(`#hierro-${nivelIndex}-${prepIndex}-${ingIndex}`).text(hierro.toFixed(1));
         $(`#sodio-${nivelIndex}-${prepIndex}-${ingIndex}`).text(sodio.toFixed(1));
-        
-        // Recalcular totales del nivel
+
+        // CÁLCULO 3: Recalcular totales del nivel y porcentajes de adecuación
         recalcularTotalesNivel(nivelIndex);
+
+        actualizandoPorPeso = false;
+    });
+    
+    // Eventos para inputs de porcentaje de adecuación
+    $(document).on('input change', '.porcentaje-input', function() {
+        if (actualizandoPorPeso) return; // Evitar loop
+        
+        actualizandoPorPorcentaje = true;
+        
+        const input = $(this);
+        const nivelIndex = input.data('nivel');
+        const nutriente = input.data('nutriente');
+        const porcentajeDeseado = parseFloat(input.val()) || 0;
+        
+        console.log('Editando porcentaje:', { nivelIndex, nutriente, porcentajeDeseado });
+        
+        // Calcular desde porcentaje hacia pesos
+        calcularPesosDesdeAdecuacion(nivelIndex, nutriente, porcentajeDeseado);
+        
+        actualizandoPorPorcentaje = false;
     });
     
     // Eventos para accordion de niveles escolares
@@ -1292,12 +1397,161 @@ function recalcularTotalesNivel(nivelIndex) {
     });
 }
 
+/**
+ * Calcula y ajusta los pesos de los ingredientes desde el porcentaje de adecuación deseado.
+ * MEJORA: Distribuye proporcionalmente el ajuste entre TODOS los ingredientes que aportan el nutriente,
+ * manteniendo las proporciones originales de la receta.
+ *
+ * @param {number} nivelIndex - Índice del nivel escolar
+ * @param {string} nutriente - Nutriente a ajustar (ej: 'calorias_kcal', 'proteina_g')
+ * @param {number} porcentajeDeseado - Porcentaje de adecuación deseado (0-100)
+ */
+function calcularPesosDesdeAdecuacion(nivelIndex, nutriente, porcentajeDeseado) {
+    // Obtener el requerimiento nutricional para este nivel y nutriente
+    if (!window.requerimientosNiveles || !window.requerimientosNiveles[nivelIndex]) {
+        console.warn('No hay datos nutricionales disponibles para nivel:', nivelIndex);
+        return;
+    }
+
+    const requerimientos = window.requerimientosNiveles[nivelIndex];
+
+    // Mapeo de nombres de nutrientes a claves de requerimientos
+    const nutrienteMap = {
+        'calorias_kcal': 'calorias_kcal',
+        'calorias': 'calorias_kcal',
+        'proteina_g': 'proteina_g',
+        'proteina': 'proteina_g',
+        'grasa_g': 'grasa_g',
+        'grasa': 'grasa_g',
+        'cho_g': 'cho_g',
+        'cho': 'cho_g',
+        'calcio_mg': 'calcio_mg',
+        'calcio': 'calcio_mg',
+        'hierro_mg': 'hierro_mg',
+        'hierro': 'hierro_mg',
+        'sodio_mg': 'sodio_mg',
+        'sodio': 'sodio_mg'
+    };
+
+    const nutrienteKey = nutrienteMap[nutriente];
+    const requerimientoNecesario = requerimientos[nutrienteKey] || 0;
+
+    if (requerimientoNecesario === 0) {
+        console.warn('Requerimiento no encontrado para:', nutriente);
+        return;
+    }
+
+    // Calcular el valor objetivo del nutriente (limitado entre 0-100%)
+    const porcentajeValido = Math.max(0, Math.min(100, porcentajeDeseado));
+    const valorObjetivo = (porcentajeValido * requerimientoNecesario) / 100;
+
+    console.log(`[${nutriente}] Objetivo: ${valorObjetivo.toFixed(2)} (${porcentajeValido}% de ${requerimientoNecesario})`);
+
+    // Recolectar información de todos los ingredientes con sus aportes actuales
+    const ingredientesData = [];
+    let valorActualTotal = 0;
+
+    $(`.ingrediente-row[data-nivel="${nivelIndex}"]`).each(function() {
+        const row = $(this);
+        const pesoInput = row.find('.peso-input');
+        const prepIndex = row.data('prep');
+        const ingIndex = row.data('ing');
+        const pesoActual = parseFloat(pesoInput.val()) || 0;
+
+        // Obtener nutriente por 100g del data attribute
+        let nutrientePor100g = 0;
+        switch (nutrienteKey) {
+            case 'calorias_kcal':
+                nutrientePor100g = parseFloat(pesoInput.data('calorias')) || 0;
+                break;
+            case 'proteina_g':
+                nutrientePor100g = parseFloat(pesoInput.data('proteina')) || 0;
+                break;
+            case 'grasa_g':
+                nutrientePor100g = parseFloat(pesoInput.data('grasa')) || 0;
+                break;
+            case 'cho_g':
+                nutrientePor100g = parseFloat(pesoInput.data('cho')) || 0;
+                break;
+            case 'calcio_mg':
+                nutrientePor100g = parseFloat(pesoInput.data('calcio')) || 0;
+                break;
+            case 'hierro_mg':
+                nutrientePor100g = parseFloat(pesoInput.data('hierro')) || 0;
+                break;
+            case 'sodio_mg':
+                nutrientePor100g = parseFloat(pesoInput.data('sodio')) || 0;
+                break;
+        }
+
+        const valorActual = (nutrientePor100g * pesoActual) / 100;
+        valorActualTotal += valorActual;
+
+        // Solo guardar ingredientes que aportan este nutriente
+        if (nutrientePor100g > 0.1) {
+            ingredientesData.push({
+                pesoInput: pesoInput,
+                nutrientePor100g: nutrientePor100g,
+                pesoActual: pesoActual,
+                valorActual: valorActual,
+                prepIndex: prepIndex,
+                ingIndex: ingIndex,
+                row: row
+            });
+        }
+    });
+
+    if (ingredientesData.length === 0) {
+        console.warn('No hay ingredientes que aporten el nutriente:', nutriente);
+        return;
+    }
+
+    // Calcular cuánto necesitamos ajustar
+    const diferencia = valorObjetivo - valorActualTotal;
+
+    if (Math.abs(diferencia) < 0.01) {
+        console.log('El valor actual ya está muy cerca del objetivo');
+        return;
+    }
+
+    console.log(`Diferencia a ajustar: ${diferencia.toFixed(2)}`);
+
+    // ESTRATEGIA DE AJUSTE PROPORCIONAL:
+    // Calcular el factor de escala proporcional para mantener las proporciones de la receta
+    const factorEscala = valorActualTotal > 0 ? (valorObjetivo / valorActualTotal) : 1;
+
+    // Aplicar el factor de escala a todos los ingredientes que aportan el nutriente
+    ingredientesData.forEach(ing => {
+        const nuevoPeso = ing.pesoActual * factorEscala;
+
+        // Aplicar el nuevo peso con validación (mínimo 0g)
+        const pesoFinal = Math.max(0, nuevoPeso);
+
+        ing.pesoInput.val(pesoFinal.toFixed(1));
+
+        console.log(`  - Ingrediente [${ing.prepIndex}-${ing.ingIndex}]: ${ing.pesoActual.toFixed(1)}g → ${pesoFinal.toFixed(1)}g`);
+    });
+
+    // Disparar eventos de cambio para recalcular todo
+    // Usamos un pequeño delay para evitar que se disparen todos a la vez
+    ingredientesData.forEach((ing, index) => {
+        setTimeout(() => {
+            ing.pesoInput.trigger('change');
+        }, index * 10);
+    });
+
+    console.log(`✓ Ajuste proporcional completado para ${nutriente} (factor: ${factorEscala.toFixed(3)})`);
+}
+
 function recalcularPorcentajesAdecuacion(nivelIndex, totales) {
+    console.log('Recalculando porcentajes para nivel:', nivelIndex, 'totales:', totales);
+    
     // Obtener requerimientos desde los datos almacenados globalmente
     const requerimientos = window.requerimientosNiveles && window.requerimientosNiveles[nivelIndex];
     
     if (!requerimientos) {
         console.warn(`No se encontraron requerimientos para nivel ${nivelIndex}`);
+        console.log('window.requerimientosNiveles:', window.requerimientosNiveles);
         return;
     }
     
@@ -1328,6 +1582,13 @@ function recalcularPorcentajesAdecuacion(nivelIndex, totales) {
             elementoPorcentaje.closest('.adecuacion-mini').attr('data-estado', estado);
         }
         
+        // Actualizar input de porcentaje editable
+        const inputPorcentaje = $(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="${nutriente.id}"]`);
+        if (inputPorcentaje.length) {
+            inputPorcentaje.val(porcentaje.toFixed(1));
+            inputPorcentaje.attr('data-estado', estado);
+        }
+        
         // Actualizar estado de la tarjeta de total
         const elementoTotal = $(`#nivel-${nivelIndex}-${nutriente.id}`);
         if (elementoTotal.length) {
@@ -1336,17 +1597,31 @@ function recalcularPorcentajesAdecuacion(nivelIndex, totales) {
     });
 }
 
+/**
+ * Determina el estado de adecuación nutricional según el porcentaje alcanzado.
+ *
+ * RANGOS DE EVALUACIÓN (consistentes con el backend Python):
+ * - 0-35%: ÓPTIMO (verde) - Aporte bajo pero seguro
+ * - 35.1-70%: ACEPTABLE (amarillo) - Aporte moderado
+ * - >70%: ALTO (rojo) - Aporte elevado, cerca del límite máximo
+ *
+ * NOTA: Los rangos son uniformes para todos los nutrientes (incluido sodio).
+ * El 100% representa el máximo permitido según ICBF 2018.
+ *
+ * @param {number} porcentaje - Porcentaje de adecuación (0-100)
+ * @param {string} nutriente - Nombre del nutriente (opcional, para futuras extensiones)
+ * @returns {string} Estado: 'optimo', 'aceptable', o 'alto'
+ */
 function getEstadoAdecuacion(porcentaje, nutriente) {
-    // Nuevos rangos: 0-35% verde, 35.1-70% amarillo, >70% rojo
-    // Para sodio, menos es mejor (límites invertidos) - máximo 100%
-    if (nutriente === 'sodio_mg') {
-        if (porcentaje <= 35) return 'optimo';      // 0-35% = verde (muy bajo sodio)
-        if (porcentaje <= 70) return 'aceptable';   // 35.1-70% = amarillo (sodio moderado)
-        return 'alto';                              // >70% = rojo (sodio alto)
+    // Validar y limitar porcentaje entre 0-100
+    porcentaje = Math.max(0, Math.min(100, porcentaje));
+
+    // Rangos uniformes para todos los nutrientes
+    if (porcentaje <= 35) {
+        return 'optimo';      // 0-35%: Verde
+    } else if (porcentaje <= 70) {
+        return 'aceptable';   // 35.1-70%: Amarillo
+    } else {
+        return 'alto';        // >70%: Rojo
     }
-    
-    // Para otros nutrientes, más cerca del 100% es mejor
-    if (porcentaje <= 35) return 'optimo';          // 0-35% = verde
-    if (porcentaje <= 70) return 'aceptable';       // 35.1-70% = amarillo
-    return 'alto';                                  // >70% = rojo
 }

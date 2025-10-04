@@ -670,33 +670,75 @@ def api_preparacion_ingrediente_delete(request, id_preparacion, id_ingrediente):
 @login_required
 def api_analisis_nutricional_menu(request, id_menu):
     """
-    API para obtener análisis nutricional por niveles escolares con ingredientes editables.
-    Cada nivel escolar muestra preparaciones con ingredientes y pesos individuales editables.
+    API para obtener análisis nutricional completo de un menú por niveles escolares.
+
+    Retorna información detallada de:
+    - Preparaciones e ingredientes del menú
+    - Valores nutricionales por 100g de cada ingrediente
+    - Pesos neto y bruto calculados
+    - Totales nutricionales por nivel escolar
+    - Porcentajes de adecuación nutricional (limitados a 100%)
+    - Estados de adecuación (óptimo/aceptable/alto)
+
+    CÁLCULOS PRINCIPALES:
+    1. Peso Bruto = (Peso Neto × 100) / Parte Comestible
+    2. Nutriente = (Valor por 100g × Peso Neto) / 100
+    3. % Adecuación = min((Total / Requerimiento) × 100, 100)
+
+    Args:
+        request: HttpRequest object
+        id_menu: ID del menú a analizar
+
+    Returns:
+        JsonResponse con estructura:
+        {
+            'success': True,
+            'menu': {...},
+            'analisis_por_nivel': [
+                {
+                    'nivel_escolar': {...},
+                    'es_programa_actual': bool,
+                    'requerimientos': {...},
+                    'totales': {...},
+                    'porcentajes_adecuacion': {...},
+                    'preparaciones': [...]
+                }
+            ]
+        }
     """
     
     def get_estado_adecuacion(porcentaje, nutriente):
         """
-        Determina el estado de adecuación según el porcentaje y tipo de nutriente
-        Rango: 0-100% donde 100% es el máximo permitido
-        Colores: 0-35% verde, 35.1-70% amarillo, >70% rojo
+        Determina el estado de adecuación nutricional según el porcentaje alcanzado.
+
+        RANGOS DE EVALUACIÓN (válidos para todos los nutrientes):
+        - 0-35%: ÓPTIMO (verde) - Aporte bajo pero seguro
+        - 35.1-70%: ACEPTABLE (amarillo) - Aporte moderado
+        - >70%: ALTO (rojo) - Aporte elevado, cerca del límite máximo
+
+        NOTA IMPORTANTE:
+        - El 100% representa el MÁXIMO permitido según ICBF 2018
+        - Para sodio, valores bajos son mejores (pero el rango de colores es el mismo)
+        - Para otros nutrientes, alcanzar valores altos es aceptable pero no debe exceder 100%
+
+        Args:
+            porcentaje (float): Porcentaje de adecuación (0-100)
+            nutriente (str): Nombre del nutriente evaluado
+
+        Returns:
+            str: Estado ('optimo', 'aceptable', 'alto')
         """
-        # Para sodio, menos es mejor (límites invertidos) - máximo 100%
-        if nutriente == 'sodio_mg':
-            if porcentaje <= 35:
-                return 'optimo'      # 0-35% = verde (muy bajo sodio)
-            elif porcentaje <= 70:
-                return 'aceptable'   # 35.1-70% = amarillo (sodio moderado)
-            else:
-                return 'alto'        # >70% = rojo (sodio alto)
-        
-        # Para otros nutrientes, más cerca del 100% es mejor
+        # Validar entrada
+        porcentaje = max(0, min(100, porcentaje))  # Limitar entre 0-100
+
+        # Rangos uniformes para todos los nutrientes
+        # (La interpretación nutricional varía, pero los rangos son consistentes)
+        if porcentaje <= 35:
+            return 'optimo'      # 0-35%: Verde
+        elif porcentaje <= 70:
+            return 'aceptable'   # 35.1-70%: Amarillo
         else:
-            if porcentaje <= 35:
-                return 'optimo'      # 0-35% = verde
-            elif porcentaje <= 70:
-                return 'aceptable'   # 35.1-70% = amarillo
-            else:
-                return 'alto'        # >70% = rojo
+            return 'alto'        # >70%: Rojo
     
     try:
         from decimal import Decimal
@@ -738,13 +780,17 @@ def api_analisis_nutricional_menu(request, id_menu):
                 if alimento:
                     # Peso neto base por defecto (100g)
                     peso_neto_base = 100
-                    
+
                     # Calcular peso bruto usando parte_comestible_field
-                    parte_comestible = alimento.parte_comestible_field or 100
-                    if parte_comestible > 0:
-                        peso_bruto_base = peso_neto_base / (parte_comestible / 100)
-                    else:
-                        peso_bruto_base = peso_neto_base
+                    # Fórmula: Peso Bruto = (Peso Neto × 100) / % Parte Comestible
+                    # Ejemplo: 100g neto con 85% comestible = (100 × 100) / 85 = 117.6g bruto
+                    parte_comestible = float(alimento.parte_comestible_field) if alimento.parte_comestible_field else 100.0
+
+                    # Validar que parte_comestible esté en rango válido (1-100%)
+                    parte_comestible = max(1.0, min(100.0, parte_comestible))
+
+                    # Calcular peso bruto
+                    peso_bruto_base = (peso_neto_base * 100) / parte_comestible
                     
                     # Valores nutricionales por 100g
                     valores_por_100g = {

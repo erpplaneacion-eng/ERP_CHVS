@@ -212,6 +212,12 @@ class TablaRequerimientosNutricionales(models.Model):
     """
     Tabla de requerimientos nutricionales por nivel escolar.
     Define los límites máximos de macronutrientes y micronutrientes que se deben suministrar.
+
+    Los requerimientos representan el 100% de adecuación nutricional permitido.
+    Los rangos de evaluación son:
+    - 0-35%: Óptimo (verde)
+    - 35.1-70%: Aceptable (amarillo)
+    - >70%: Alto (rojo)
     """
     id_requerimiento_nutricional = models.CharField(
         max_length=50,
