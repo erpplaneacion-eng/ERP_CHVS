@@ -892,6 +892,12 @@ function renderizarAnalisisNutricional(data) {
     }
 
     const { menu, analisis_por_nivel } = data;
+    
+    // Almacenar requerimientos globalmente para recálculos
+    window.requerimientosNiveles = {};
+    analisis_por_nivel.forEach((nivel, index) => {
+        window.requerimientosNiveles[index] = nivel.requerimientos;
+    });
 
     contenidoAnalisis.innerHTML = `
         <!-- Información del Menú -->
@@ -961,33 +967,99 @@ function crearAccordionNivelEscolar(nivel, index) {
                     <div class="nivel-totales mb-3">
                         <h6><i class="fas fa-calculator"></i> Totales del Nivel</h6>
                         <div class="totales-grid-mini">
-                            <div class="total-mini">
+                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.calorias_kcal.estado}">
                                 <span>Calorías:</span>
                                 <span class="value" id="nivel-${index}-calorias">${nivel.totales.calorias_kcal.toFixed(1)} Kcal</span>
                             </div>
-                            <div class="total-mini">
+                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.proteina_g.estado}">
                                 <span>Proteína:</span>
                                 <span class="value" id="nivel-${index}-proteina">${nivel.totales.proteina_g.toFixed(1)} g</span>
                             </div>
-                            <div class="total-mini">
+                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.grasa_g.estado}">
                                 <span>Grasa:</span>
                                 <span class="value" id="nivel-${index}-grasa">${nivel.totales.grasa_g.toFixed(1)} g</span>
                             </div>
-                            <div class="total-mini">
+                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.cho_g.estado}">
                                 <span>CHO:</span>
                                 <span class="value" id="nivel-${index}-cho">${nivel.totales.cho_g.toFixed(1)} g</span>
                             </div>
-                            <div class="total-mini">
+                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.calcio_mg.estado}">
                                 <span>Calcio:</span>
                                 <span class="value" id="nivel-${index}-calcio">${nivel.totales.calcio_mg.toFixed(1)} mg</span>
                             </div>
-                            <div class="total-mini">
+                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.hierro_mg.estado}">
                                 <span>Hierro:</span>
                                 <span class="value" id="nivel-${index}-hierro">${nivel.totales.hierro_mg.toFixed(1)} mg</span>
                             </div>
-                            <div class="total-mini">
+                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.sodio_mg.estado}">
                                 <span>Sodio:</span>
                                 <span class="value" id="nivel-${index}-sodio">${nivel.totales.sodio_mg.toFixed(1)} mg</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Requerimientos del Nivel -->
+                        <h6 class="mt-3"><i class="fas fa-target"></i> Requerimientos</h6>
+                        <div class="requerimientos-grid-mini">
+                            <div class="requerimiento-mini">
+                                <span>Calorías:</span>
+                                <span class="value">${nivel.requerimientos.calorias_kcal.toFixed(1)} Kcal</span>
+                            </div>
+                            <div class="requerimiento-mini">
+                                <span>Proteína:</span>
+                                <span class="value">${nivel.requerimientos.proteina_g.toFixed(1)} g</span>
+                            </div>
+                            <div class="requerimiento-mini">
+                                <span>Grasa:</span>
+                                <span class="value">${nivel.requerimientos.grasa_g.toFixed(1)} g</span>
+                            </div>
+                            <div class="requerimiento-mini">
+                                <span>CHO:</span>
+                                <span class="value">${nivel.requerimientos.cho_g.toFixed(1)} g</span>
+                            </div>
+                            <div class="requerimiento-mini">
+                                <span>Calcio:</span>
+                                <span class="value">${nivel.requerimientos.calcio_mg.toFixed(1)} mg</span>
+                            </div>
+                            <div class="requerimiento-mini">
+                                <span>Hierro:</span>
+                                <span class="value">${nivel.requerimientos.hierro_mg.toFixed(1)} mg</span>
+                            </div>
+                            <div class="requerimiento-mini">
+                                <span>Sodio:</span>
+                                <span class="value">${nivel.requerimientos.sodio_mg.toFixed(1)} mg</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Porcentajes de Adecuación -->
+                        <h6 class="mt-3"><i class="fas fa-percentage"></i> % de Adecuación</h6>
+                        <div class="adecuacion-grid-mini">
+                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.calorias_kcal.estado}">
+                                <span>Calorías:</span>
+                                <span class="value porcentaje" id="nivel-${index}-calorias-pct">${nivel.porcentajes_adecuacion.calorias_kcal.porcentaje}%</span>
+                            </div>
+                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.proteina_g.estado}">
+                                <span>Proteína:</span>
+                                <span class="value porcentaje" id="nivel-${index}-proteina-pct">${nivel.porcentajes_adecuacion.proteina_g.porcentaje}%</span>
+                            </div>
+                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.grasa_g.estado}">
+                                <span>Grasa:</span>
+                                <span class="value porcentaje" id="nivel-${index}-grasa-pct">${nivel.porcentajes_adecuacion.grasa_g.porcentaje}%</span>
+                            </div>
+                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.cho_g.estado}">
+                                <span>CHO:</span>
+                                <span class="value porcentaje" id="nivel-${index}-cho-pct">${nivel.porcentajes_adecuacion.cho_g.porcentaje}%</span>
+                            </div>
+                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.calcio_mg.estado}">
+                                <span>Calcio:</span>
+                                <span class="value porcentaje" id="nivel-${index}-calcio-pct">${nivel.porcentajes_adecuacion.calcio_mg.porcentaje}%</span>
+                            </div>
+                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.hierro_mg.estado}">
+                                <span>Hierro:</span>
+                                <span class="value porcentaje" id="nivel-${index}-hierro-pct">${nivel.porcentajes_adecuacion.hierro_mg.porcentaje}%</span>
+                            </div>
+                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.sodio_mg.estado}">
+                                <span>Sodio:</span>
+                                <span class="value porcentaje" id="nivel-${index}-sodio-pct">${nivel.porcentajes_adecuacion.sodio_mg.porcentaje}%</span>
                             </div>
                         </div>
                     </div>
@@ -1207,4 +1279,74 @@ function recalcularTotalesNivel(nivelIndex) {
     $(`#nivel-${nivelIndex}-calcio`).text(`${totalCalcio.toFixed(1)} mg`);
     $(`#nivel-${nivelIndex}-hierro`).text(`${totalHierro.toFixed(1)} mg`);
     $(`#nivel-${nivelIndex}-sodio`).text(`${totalSodio.toFixed(1)} mg`);
+    
+    // Recalcular porcentajes de adecuación
+    recalcularPorcentajesAdecuacion(nivelIndex, {
+        calorias_kcal: totalCalorias,
+        proteina_g: totalProteina,
+        grasa_g: totalGrasa,
+        cho_g: totalCho,
+        calcio_mg: totalCalcio,
+        hierro_mg: totalHierro,
+        sodio_mg: totalSodio
+    });
+}
+
+function recalcularPorcentajesAdecuacion(nivelIndex, totales) {
+    // Obtener requerimientos desde los datos almacenados globalmente
+    const requerimientos = window.requerimientosNiveles && window.requerimientosNiveles[nivelIndex];
+    
+    if (!requerimientos) {
+        console.warn(`No se encontraron requerimientos para nivel ${nivelIndex}`);
+        return;
+    }
+    
+    const nutrientes = [
+        { key: 'calorias_kcal', id: 'calorias' },
+        { key: 'proteina_g', id: 'proteina' },
+        { key: 'grasa_g', id: 'grasa' },
+        { key: 'cho_g', id: 'cho' },
+        { key: 'calcio_mg', id: 'calcio' },
+        { key: 'hierro_mg', id: 'hierro' },
+        { key: 'sodio_mg', id: 'sodio' }
+    ];
+    
+    nutrientes.forEach(nutriente => {
+        const total = totales[nutriente.key] || 0;
+        const requerido = requerimientos[nutriente.key] || 1;
+        
+        // Calcular porcentaje limitado entre 0-100%
+        let porcentaje = (total / requerido) * 100;
+        porcentaje = Math.min(Math.max(porcentaje, 0), 100); // Limitar entre 0-100
+        
+        const estado = getEstadoAdecuacion(porcentaje, nutriente.key);
+        
+        // Actualizar porcentaje en la interfaz
+        const elementoPorcentaje = $(`#nivel-${nivelIndex}-${nutriente.id}-pct`);
+        if (elementoPorcentaje.length) {
+            elementoPorcentaje.text(`${porcentaje.toFixed(1)}%`);
+            elementoPorcentaje.closest('.adecuacion-mini').attr('data-estado', estado);
+        }
+        
+        // Actualizar estado de la tarjeta de total
+        const elementoTotal = $(`#nivel-${nivelIndex}-${nutriente.id}`);
+        if (elementoTotal.length) {
+            elementoTotal.closest('.total-mini').attr('data-estado', estado);
+        }
+    });
+}
+
+function getEstadoAdecuacion(porcentaje, nutriente) {
+    // Nuevos rangos: 0-35% verde, 35.1-70% amarillo, >70% rojo
+    // Para sodio, menos es mejor (límites invertidos) - máximo 100%
+    if (nutriente === 'sodio_mg') {
+        if (porcentaje <= 35) return 'optimo';      // 0-35% = verde (muy bajo sodio)
+        if (porcentaje <= 70) return 'aceptable';   // 35.1-70% = amarillo (sodio moderado)
+        return 'alto';                              // >70% = rojo (sodio alto)
+    }
+    
+    // Para otros nutrientes, más cerca del 100% es mejor
+    if (porcentaje <= 35) return 'optimo';          // 0-35% = verde
+    if (porcentaje <= 70) return 'aceptable';       // 35.1-70% = amarillo
+    return 'alto';                                  // >70% = rojo
 }

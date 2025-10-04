@@ -673,6 +673,31 @@ def api_analisis_nutricional_menu(request, id_menu):
     API para obtener análisis nutricional por niveles escolares con ingredientes editables.
     Cada nivel escolar muestra preparaciones con ingredientes y pesos individuales editables.
     """
+    
+    def get_estado_adecuacion(porcentaje, nutriente):
+        """
+        Determina el estado de adecuación según el porcentaje y tipo de nutriente
+        Rango: 0-100% donde 100% es el máximo permitido
+        Colores: 0-35% verde, 35.1-70% amarillo, >70% rojo
+        """
+        # Para sodio, menos es mejor (límites invertidos) - máximo 100%
+        if nutriente == 'sodio_mg':
+            if porcentaje <= 35:
+                return 'optimo'      # 0-35% = verde (muy bajo sodio)
+            elif porcentaje <= 70:
+                return 'aceptable'   # 35.1-70% = amarillo (sodio moderado)
+            else:
+                return 'alto'        # >70% = rojo (sodio alto)
+        
+        # Para otros nutrientes, más cerca del 100% es mejor
+        else:
+            if porcentaje <= 35:
+                return 'optimo'      # 0-35% = verde
+            elif porcentaje <= 70:
+                return 'aceptable'   # 35.1-70% = amarillo
+            else:
+                return 'alto'        # >70% = rojo
+    
     try:
         from decimal import Decimal
         
@@ -820,6 +845,27 @@ def api_analisis_nutricional_menu(request, id_menu):
                         totales_nivel['peso_neto_total'] += ing['peso_neto_base']
                         totales_nivel['peso_bruto_total'] += ing['peso_bruto_base']
             
+            # Calcular porcentajes de adecuación
+            porcentajes_adecuacion = {}
+            for nutriente in ['calorias_kcal', 'proteina_g', 'grasa_g', 'cho_g', 'calcio_mg', 'hierro_mg', 'sodio_mg']:
+                total_actual = totales_nivel[nutriente]
+                requerido = requerimientos_nivel[nutriente]
+                
+                if requerido > 0:
+                    # Calcular porcentaje y limitarlo entre 0-100%
+                    porcentaje = min((total_actual / requerido) * 100, 100.0)
+                    porcentaje = max(porcentaje, 0.0)
+                    
+                    porcentajes_adecuacion[nutriente] = {
+                        'porcentaje': round(porcentaje, 1),
+                        'estado': get_estado_adecuacion(porcentaje, nutriente)
+                    }
+                else:
+                    porcentajes_adecuacion[nutriente] = {
+                        'porcentaje': 0.0,
+                        'estado': 'sin_datos'
+                    }
+            
             analisis_por_nivel.append({
                 'nivel_escolar': {
                     'id': nivel_escolar.id_grado_escolar_uapa,
@@ -829,6 +875,7 @@ def api_analisis_nutricional_menu(request, id_menu):
                 'es_programa_actual': es_programa_actual,
                 'requerimientos': requerimientos_nivel,
                 'totales': totales_nivel,
+                'porcentajes_adecuacion': porcentajes_adecuacion,
                 'preparaciones': preparaciones_data  # Cada nivel tendrá las mismas preparaciones
             })
 

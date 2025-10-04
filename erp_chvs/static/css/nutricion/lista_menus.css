@@ -1506,11 +1506,114 @@
 .nutriente-sodio { color: #34495e; }
 
 /* Estilos mejorados para totales */
-.totales-grid-mini {
+.totales-grid-mini, .requerimientos-grid-mini, .adecuacion-grid-mini {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
     gap: 8px;
     margin-top: 10px;
+}
+
+.total-mini, .requerimiento-mini, .adecuacion-mini {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    background: white;
+    border-radius: 6px;
+    border: 2px solid #e3e6f0;
+    transition: all 0.3s ease;
+}
+
+/* Estados de adecuación - Colores actualizados */
+/* 0-35% = Verde (Óptimo) */
+.total-mini[data-estado="optimo"], .adecuacion-mini[data-estado="optimo"] {
+    border-color: #28a745;
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    color: #155724;
+}
+
+/* 35.1-70% = Amarillo (Aceptable) */
+.total-mini[data-estado="aceptable"], .adecuacion-mini[data-estado="aceptable"] {
+    border-color: #ffc107;
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    color: #856404;
+}
+
+/* >70% = Rojo (Alto) */
+.total-mini[data-estado="alto"], .adecuacion-mini[data-estado="alto"] {
+    border-color: #dc3545;
+    background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+    color: #721c24;
+}
+
+/* Estados no utilizados - mantener por compatibilidad */
+.total-mini[data-estado="moderado"], .adecuacion-mini[data-estado="moderado"] {
+    border-color: #17a2b8;
+    background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+    color: #0c5460;
+}
+
+.total-mini[data-estado="bajo"], .adecuacion-mini[data-estado="bajo"] {
+    border-color: #6c757d;
+    background: linear-gradient(135deg, #e2e3e5, #d6d8db);
+    color: #383d41;
+}
+
+.total-mini[data-estado="excesivo"], .adecuacion-mini[data-estado="excesivo"] {
+    border-color: #6f42c1;
+    background: linear-gradient(135deg, #e2d9f3, #d1b3e3);
+    color: #4a154b;
+}
+
+/* Estilos para requerimientos */
+.requerimiento-mini {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-color: #6c757d;
+    color: #495057;
+}
+
+/* Mejoras tipográficas */
+.total-mini span:first-child, .requerimiento-mini span:first-child, .adecuacion-mini span:first-child {
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+    opacity: 0.8;
+}
+
+.total-mini .value, .requerimiento-mini .value, .adecuacion-mini .value {
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.adecuacion-mini .value.porcentaje {
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+/* Animaciones hover */
+.total-mini:hover, .requerimiento-mini:hover, .adecuacion-mini:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Responsive para nuevas grids */
+@media (max-width: 768px) {
+    .totales-grid-mini, .requerimientos-grid-mini, .adecuacion-grid-mini {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+    
+    .total-mini, .requerimiento-mini, .adecuacion-mini {
+        padding: 6px 4px;
+    }
+    
+    .total-mini span:first-child, .requerimiento-mini span:first-child, .adecuacion-mini span:first-child {
+        font-size: 0.7rem;
+    }
+    
+    .total-mini .value, .requerimiento-mini .value, .adecuacion-mini .value {
+        font-size: 0.75rem;
+    }
 }
 
 /* Responsive para nueva interfaz */
