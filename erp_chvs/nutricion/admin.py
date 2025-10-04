@@ -73,19 +73,15 @@ class TablaPreparacionesAdmin(admin.ModelAdmin):
 @admin.register(TablaIngredientesSiesa)
 class TablaIngredientesSiesaAdmin(admin.ModelAdmin):
     """Administración de ingredientes de inventario."""
-    list_display = ('nombre_ingrediente', 'unidades', 'presentacion', 'fecha_creacion')
-    search_fields = ('nombre_ingrediente',)
-    list_filter = ('unidades', 'fecha_creacion')
-    readonly_fields = ('fecha_creacion',)
+    list_display = ('id_ingrediente_siesa', 'nombre_ingrediente')
+    search_fields = ('id_ingrediente_siesa', 'nombre_ingrediente')
     list_per_page = 25
 
 
 @admin.register(TablaPreparacionIngredientes)
 class TablaPreparacionIngredientesAdmin(admin.ModelAdmin):
     """Administración de la relación preparaciones-ingredientes."""
-    list_display = ('id_preparacion', 'id_ingrediente_siesa', 'cantidad', 'fecha_creacion')
-    list_filter = ('fecha_creacion',)
+    list_display = ('id_preparacion', 'id_ingrediente_siesa', 'cantidad')
     search_fields = ('id_preparacion__preparacion', 'id_ingrediente_siesa__nombre_ingrediente')
-    readonly_fields = ('fecha_creacion',)
     autocomplete_fields = ['id_preparacion', 'id_ingrediente_siesa']
     list_per_page = 25

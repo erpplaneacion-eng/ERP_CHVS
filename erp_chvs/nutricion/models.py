@@ -153,34 +153,18 @@ class TablaIngredientesSiesa(models.Model):
     Modelo para gestionar ingredientes del inventario Siesa.
     Representa los ingredientes disponibles en el sistema de inventario.
     """
-    id_ingrediente_siesa = models.AutoField(
+    id_ingrediente_siesa = models.CharField(
+        max_length=50,
         primary_key=True,
-        verbose_name="ID del Ingrediente"
+        verbose_name="Código del Ingrediente"
     )
     nombre_ingrediente = models.CharField(
         max_length=255,
         verbose_name="Nombre del Ingrediente"
     )
-    unidades = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        verbose_name="Unidad de Medida"
-    )
-    presentacion = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        verbose_name="Presentación"
-    )
-    fecha_creacion = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name="Fecha de Creación"
-    )
 
     def __str__(self):
-        unidad_str = f" ({self.unidades})" if self.unidades else ""
-        return f"{self.nombre_ingrediente}{unidad_str}"
+        return f"{self.id_ingrediente_siesa} - {self.nombre_ingrediente}"
 
     class Meta:
         db_table = 'tabla_ingredientes_siesa'
@@ -212,10 +196,6 @@ class TablaPreparacionIngredientes(models.Model):
         max_digits=10,
         decimal_places=2,
         verbose_name="Cantidad (kg)"
-    )
-    fecha_creacion = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name="Fecha de Creación"
     )
 
     def __str__(self):

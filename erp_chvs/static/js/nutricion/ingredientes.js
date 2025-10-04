@@ -25,7 +25,8 @@ document.addEventListener('DOMContentLoaded', function() {
 function abrirModalNuevo() {
     modalTitle.textContent = 'Nuevo Ingrediente';
     formIngrediente.reset();
-    document.getElementById('ingredienteId').value = '';
+    document.getElementById('ingredienteIdOriginal').value = '';
+    document.getElementById('ingredienteCodigo').disabled = false;
     modal.style.display = 'block';
 }
 
@@ -41,10 +42,10 @@ async function editarIngrediente(id) {
 
         if (response.ok) {
             modalTitle.textContent = 'Editar Ingrediente';
-            document.getElementById('ingredienteId').value = data.id_ingrediente_siesa;
+            document.getElementById('ingredienteIdOriginal').value = data.id_ingrediente_siesa;
+            document.getElementById('ingredienteCodigo').value = data.id_ingrediente_siesa;
+            document.getElementById('ingredienteCodigo').disabled = true; // No permitir cambiar el código al editar
             document.getElementById('ingredienteNombre').value = data.nombre_ingrediente;
-            document.getElementById('ingredienteUnidades').value = data.unidades || '';
-            document.getElementById('ingredientePresentacion').value = data.presentacion || '';
             modal.style.display = 'block';
         } else {
             alert('Error al cargar el ingrediente');
@@ -58,15 +59,14 @@ async function editarIngrediente(id) {
 async function guardarIngrediente(event) {
     event.preventDefault();
 
-    const id = document.getElementById('ingredienteId').value;
+    const idOriginal = document.getElementById('ingredienteIdOriginal').value;
     const data = {
-        nombre_ingrediente: document.getElementById('ingredienteNombre').value,
-        unidades: document.getElementById('ingredienteUnidades').value,
-        presentacion: document.getElementById('ingredientePresentacion').value
+        id_ingrediente_siesa: document.getElementById('ingredienteCodigo').value.trim(),
+        nombre_ingrediente: document.getElementById('ingredienteNombre').value.trim()
     };
 
-    const url = id ? `/nutricion/api/ingredientes/${id}/` : '/nutricion/api/ingredientes/';
-    const method = id ? 'PUT' : 'POST';
+    const url = idOriginal ? `/nutricion/api/ingredientes/${idOriginal}/` : '/nutricion/api/ingredientes/';
+    const method = idOriginal ? 'PUT' : 'POST';
 
     try {
         const response = await fetch(url, {
@@ -81,7 +81,7 @@ async function guardarIngrediente(event) {
         const result = await response.json();
 
         if (result.success) {
-            alert(id ? 'Ingrediente actualizado exitosamente' : 'Ingrediente creado exitosamente');
+            alert(idOriginal ? 'Ingrediente actualizado exitosamente' : 'Ingrediente creado exitosamente');
             cerrarModal();
             location.reload();
         } else {

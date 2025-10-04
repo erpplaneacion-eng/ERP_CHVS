@@ -526,7 +526,7 @@ function agregarFilaIngrediente() {
     tr.id = `fila-ing-${filaIndex}`;
     // Select de ingredientes
     const optionsHTML = '<option value="">Seleccione un ingrediente...</option>' +
-        ingredientesSiesa.map(ing => `<option value="${ing.id_ingrediente}">${ing.nombre_ingrediente}</option>`).join('');
+        ingredientesSiesa.map(ing => `<option value="${ing.id_ingrediente_siesa}">${ing.id_ingrediente_siesa} - ${ing.nombre_ingrediente}</option>`).join('');
     tr.innerHTML = `
         <td>
             <select class="select-ingrediente" id="ingrediente-${filaIndex}" required>

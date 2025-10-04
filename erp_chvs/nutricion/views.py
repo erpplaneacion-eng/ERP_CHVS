@@ -520,7 +520,7 @@ def api_ingredientes(request):
     """API para manejar ingredientes via AJAX"""
     if request.method == 'GET':
         ingredientes = TablaIngredientesSiesa.objects.all().values(
-            'id_ingrediente_siesa', 'nombre_ingrediente', 'unidades', 'presentacion', 'fecha_creacion'
+            'id_ingrediente_siesa', 'nombre_ingrediente'
         )
         return JsonResponse({'ingredientes': list(ingredientes)})
 
@@ -529,18 +529,15 @@ def api_ingredientes(request):
             data = json.loads(request.body)
 
             ingrediente = TablaIngredientesSiesa.objects.create(
-                nombre_ingrediente=data['nombre_ingrediente'],
-                unidades=data.get('unidades', ''),
-                presentacion=data.get('presentacion', '')
+                id_ingrediente_siesa=data['id_ingrediente_siesa'],
+                nombre_ingrediente=data['nombre_ingrediente']
             )
 
             return JsonResponse({
                 'success': True,
                 'ingrediente': {
                     'id_ingrediente_siesa': ingrediente.id_ingrediente_siesa,
-                    'nombre_ingrediente': ingrediente.nombre_ingrediente,
-                    'unidades': ingrediente.unidades,
-                    'presentacion': ingrediente.presentacion
+                    'nombre_ingrediente': ingrediente.nombre_ingrediente
                 }
             })
 
@@ -559,17 +556,13 @@ def api_ingrediente_detail(request, id_ingrediente):
     if request.method == 'GET':
         return JsonResponse({
             'id_ingrediente_siesa': ingrediente.id_ingrediente_siesa,
-            'nombre_ingrediente': ingrediente.nombre_ingrediente,
-            'unidades': ingrediente.unidades,
-            'presentacion': ingrediente.presentacion
+            'nombre_ingrediente': ingrediente.nombre_ingrediente
         })
 
     elif request.method == 'PUT':
         try:
             data = json.loads(request.body)
             ingrediente.nombre_ingrediente = data['nombre_ingrediente']
-            ingrediente.unidades = data.get('unidades', '')
-            ingrediente.presentacion = data.get('presentacion', '')
             ingrediente.save()
             return JsonResponse({'success': True})
         except Exception as e:
