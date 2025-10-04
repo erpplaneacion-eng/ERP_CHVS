@@ -191,27 +191,60 @@ function crearAcordeon(modalidad) {
     return accordionDiv;
 }
 function generarTarjetasMenus(menus) {
-    const tarjetasMenus = menus.map(menu => `
-        <div class="menu-card ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
-             onclick="abrirGestionPreparaciones(${menu.id_menu}, '${menu.menu}')">
-            <div class="menu-numero">${menu.menu}</div>
-            <div class="menu-actions">
-                <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); abrirGestionPreparaciones(${menu.id_menu}, '${menu.menu}')">
-                    <i class="fas fa-utensils"></i> Preparaciones
-                </button>
-            </div>
-        </div>
-    `).join('');
-    // Agregar tarjeta para menú especial
+    const tarjetasMenus = menus.map(menu => {
+        // Detectar si es un menú especial (no es un número del 1-20)
+        const esNumerico = !isNaN(menu.menu) && parseInt(menu.menu) >= 1 && parseInt(menu.menu) <= 20;
+        const esEspecial = !esNumerico;
+        const menuEscaped = String(menu.menu).replace(/'/g, "\\'");
+
+        if (esEspecial) {
+            // Tarjeta para menú especial existente
+            return `
+                <div class="menu-card menu-card-especial ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
+                     onclick="abrirGestionPreparaciones(${menu.id_menu}, '${menuEscaped}')">
+                    <div class="menu-numero-especial" style="font-size: 14px; margin-bottom: 8px;">
+                        ${menu.menu}
+                    </div>
+                    <div class="menu-actions" style="flex-direction: column; gap: 5px;">
+                        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); abrirGestionPreparaciones(${menu.id_menu}, '${menuEscaped}')">
+                            <i class="fas fa-utensils"></i> Preparaciones
+                        </button>
+                        <button class="btn btn-sm btn-warning" onclick="event.stopPropagation(); abrirEditarMenuEspecial(${menu.id_menu}, '${menuEscaped}')">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); eliminarMenuEspecial(${menu.id_menu}, '${menuEscaped}')">
+                            <i class="fas fa-trash"></i> Eliminar
+                        </button>
+                    </div>
+                </div>
+            `;
+        } else {
+            // Tarjeta para menú numérico normal
+            return `
+                <div class="menu-card ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
+                     onclick="abrirGestionPreparaciones(${menu.id_menu}, '${menu.menu}')">
+                    <div class="menu-numero">${menu.menu}</div>
+                    <div class="menu-actions">
+                        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); abrirGestionPreparaciones(${menu.id_menu}, '${menu.menu}')">
+                            <i class="fas fa-utensils"></i> Preparaciones
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    }).join('');
+
+    // Agregar tarjeta para crear nuevo menú especial
     const modalidadId = menus.length > 0 ? menus[0].id_modalidad__id_modalidades : '';
     const tarjetaEspecial = `
         <div class="menu-card menu-card-especial" onclick="abrirModalMenuEspecial('${modalidadId}')">
             <div class="menu-numero-especial">
                 <i class="fas fa-plus-circle"></i>
             </div>
-            <div class="menu-label-especial">Menú Especial</div>
+            <div class="menu-label-especial">Crear Menú Especial</div>
         </div>
     `;
+
     return tarjetasMenus + tarjetaEspecial;
 }
 function toggleAccordion(header) {
@@ -683,4 +716,78 @@ function getCookie(name) {
         }
     }
     return cookieValue;
+}
+
+// =================== FUNCIONES PARA MENÚS ESPECIALES ===================
+
+function abrirEditarMenuEspecial(menuId, nombreActual) {
+    // Guardar ID del menú en un campo oculto
+    document.getElementById('menuIdEditar').value = menuId;
+    document.getElementById('nombreMenuEditado').value = nombreActual;
+    document.getElementById('modalEditarMenuEspecial').style.display = 'block';
+}
+
+async function guardarEdicionMenuEspecial() {
+    const menuId = document.getElementById('menuIdEditar').value;
+    const nuevoNombre = document.getElementById('nombreMenuEditado').value.trim();
+
+    if (!nuevoNombre) {
+        alert('Por favor ingrese un nombre para el menú');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/nutricion/api/menus/${menuId}/`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                menu: nuevoNombre
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`✓ Menú actualizado a "${nuevoNombre}" exitosamente`);
+            document.getElementById('modalEditarMenuEspecial').style.display = 'none';
+            // Recargar modalidades para reflejar el cambio
+            cargarModalidadesPorPrograma(programaActual.id);
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo actualizar el menú'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al actualizar el menú especial');
+    }
+}
+
+async function eliminarMenuEspecial(menuId, nombreMenu) {
+    if (!confirm(`¿Está seguro de eliminar el menú especial "${nombreMenu}"?\n\nEsta acción también eliminará todas las preparaciones asociadas.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/nutricion/api/menus/${menuId}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`✓ Menú especial "${nombreMenu}" eliminado exitosamente`);
+            // Recargar modalidades para reflejar el cambio
+            cargarModalidadesPorPrograma(programaActual.id);
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo eliminar el menú'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al eliminar el menú especial');
+    }
 }

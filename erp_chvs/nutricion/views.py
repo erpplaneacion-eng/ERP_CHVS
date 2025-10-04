@@ -385,9 +385,13 @@ def api_menu_detail(request, id_menu):
     elif request.method == 'PUT':
         try:
             data = json.loads(request.body)
-            menu.menu = data['menu']
-            menu.id_modalidad_id = data['id_modalidad']
-            menu.id_contrato_id = data['id_contrato']
+            # Actualizar solo los campos que se envían
+            if 'menu' in data:
+                menu.menu = data['menu']
+            if 'id_modalidad' in data:
+                menu.id_modalidad_id = data['id_modalidad']
+            if 'id_contrato' in data:
+                menu.id_contrato_id = data['id_contrato']
             menu.save()
             return JsonResponse({'success': True})
         except Exception as e:
