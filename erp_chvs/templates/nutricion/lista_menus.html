@@ -464,6 +464,103 @@
         </form>
     </div>
 </div>
+
+<!-- Modal para agregar ingredientes múltiples -->
+<div id="modalAgregarIngredientes" class="modal">
+    <div class="modal-content" style="max-width: 1000px; max-height: 90vh;">
+        <span class="close">&times;</span>
+        <h2><i class="fas fa-plus-circle"></i> Agregar Ingredientes</h2>
+        <input type="hidden" id="preparacionIdIngredientes">
+
+        <div style="margin-bottom: 20px;">
+            <button type="button" class="btn btn-primary" onclick="agregarFilaIngrediente()">
+                <i class="fas fa-plus"></i> Agregar Fila
+            </button>
+        </div>
+
+        <div style="max-height: 400px; overflow-y: auto;">
+            <table class="data-table" id="tablaIngredientes">
+                <thead>
+                    <tr>
+                        <th style="width: 40%;">Ingrediente</th>
+                        <th style="width: 20%;">Cantidad</th>
+                        <th style="width: 25%;">Unidad de Medida</th>
+                        <th style="width: 15%;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyIngredientes">
+                    <!-- Filas dinámicas -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="form-actions" style="margin-top: 20px;">
+            <button type="button" class="btn btn-success" onclick="guardarIngredientes()">
+                <i class="fas fa-save"></i> Guardar Ingredientes
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="cerrarModalIngredientes()">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .fila-ingrediente {
+        transition: all 0.2s;
+    }
+
+    .fila-ingrediente:hover {
+        background-color: #f8f9fa;
+    }
+
+    .fila-ingrediente td {
+        vertical-align: middle;
+    }
+
+    .select-ingrediente {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .select-ingrediente:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    .input-cantidad {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        text-align: center;
+    }
+
+    .input-cantidad:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    .btn-eliminar-fila {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+    }
+
+    .btn-eliminar-fila:hover {
+        background: #c82333;
+        transform: scale(1.05);
+    }
+</style>
 {% endblock %}
 
 {% block extra_js %}

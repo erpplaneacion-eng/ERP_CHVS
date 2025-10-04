@@ -625,9 +625,161 @@ async function eliminarPreparacion(preparacionId, menuId) {
     }
 }
 
-function abrirAgregarIngrediente(preparacionId) {
-    alert('Funcionalidad de agregar ingrediente en desarrollo. ID Preparación: ' + preparacionId);
-    // TODO: Implementar modal para agregar ingredientes
+let ingredientesSiesa = []; // Cache de ingredientes
+
+async function abrirAgregarIngrediente(preparacionId) {
+    console.log('[DEBUG] Abriendo modal de ingredientes para preparación:', preparacionId);
+
+    document.getElementById('preparacionIdIngredientes').value = preparacionId;
+
+    // Limpiar tabla
+    document.getElementById('tbodyIngredientes').innerHTML = '';
+
+    // Cargar ingredientes disponibles si no están cargados
+    if (ingredientesSiesa.length === 0) {
+        await cargarIngredientesSiesa();
+    }
+
+    // Agregar primera fila
+    agregarFilaIngrediente();
+
+    // Mostrar modal
+    document.getElementById('modalAgregarIngredientes').style.display = 'block';
+}
+
+async function cargarIngredientesSiesa() {
+    try {
+        const response = await fetch('/nutricion/api/ingredientes/');
+        const data = await response.json();
+
+        if (data.ingredientes) {
+            ingredientesSiesa = data.ingredientes;
+            console.log('[DEBUG] Ingredientes SIESA cargados:', ingredientesSiesa.length);
+        }
+    } catch (error) {
+        console.error('[DEBUG] Error al cargar ingredientes SIESA:', error);
+        alert('Error al cargar lista de ingredientes');
+    }
+}
+
+function agregarFilaIngrediente() {
+    const tbody = document.getElementById('tbodyIngredientes');
+    const filaIndex = tbody.children.length;
+
+    const tr = document.createElement('tr');
+    tr.className = 'fila-ingrediente';
+    tr.id = `fila-ing-${filaIndex}`;
+
+    // Select de ingredientes
+    const optionsHTML = '<option value="">Seleccione un ingrediente...</option>' +
+        ingredientesSiesa.map(ing => `<option value="${ing.id_ingrediente}">${ing.nombre_ingrediente}</option>`).join('');
+
+    tr.innerHTML = `
+        <td>
+            <select class="select-ingrediente" id="ingrediente-${filaIndex}" required>
+                ${optionsHTML}
+            </select>
+        </td>
+        <td>
+            <input type="number" class="input-cantidad" id="cantidad-${filaIndex}"
+                   placeholder="0.00" step="0.01" min="0" required>
+        </td>
+        <td>
+            <select class="select-ingrediente" id="unidad-${filaIndex}" required>
+                <option value="">Seleccione...</option>
+                <option value="kg">Kilogramos (kg)</option>
+                <option value="g">Gramos (g)</option>
+                <option value="l">Litros (l)</option>
+                <option value="ml">Mililitros (ml)</option>
+                <option value="unidad">Unidades</option>
+                <option value="lb">Libras (lb)</option>
+                <option value="oz">Onzas (oz)</option>
+            </select>
+        </td>
+        <td style="text-align: center;">
+            <button type="button" class="btn-eliminar-fila" onclick="eliminarFilaIngrediente(${filaIndex})">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    `;
+
+    tbody.appendChild(tr);
+}
+
+function eliminarFilaIngrediente(index) {
+    const fila = document.getElementById(`fila-ing-${index}`);
+    if (fila) {
+        fila.remove();
+    }
+}
+
+async function guardarIngredientes() {
+    const preparacionId = document.getElementById('preparacionIdIngredientes').value;
+    const tbody = document.getElementById('tbodyIngredientes');
+    const filas = tbody.querySelectorAll('.fila-ingrediente');
+
+    if (filas.length === 0) {
+        alert('Agregue al menos un ingrediente');
+        return;
+    }
+
+    const ingredientes = [];
+    let hayErrores = false;
+
+    filas.forEach((fila, index) => {
+        const ingredienteId = document.getElementById(`ingrediente-${index}`)?.value;
+        const cantidad = document.getElementById(`cantidad-${index}`)?.value;
+        const unidad = document.getElementById(`unidad-${index}`)?.value;
+
+        if (!ingredienteId || !cantidad || !unidad) {
+            hayErrores = true;
+            return;
+        }
+
+        ingredientes.push({
+            id_ingrediente: parseInt(ingredienteId),
+            cantidad: parseFloat(cantidad),
+            unidad_medida: unidad
+        });
+    });
+
+    if (hayErrores) {
+        alert('Complete todos los campos de cada fila');
+        return;
+    }
+
+    console.log('[DEBUG] Guardando ingredientes:', ingredientes);
+
+    try {
+        const response = await fetch(`/nutricion/api/preparaciones/${preparacionId}/ingredientes/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                ingredientes: ingredientes
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`✓ ${ingredientes.length} ingrediente(s) agregado(s) exitosamente`);
+            cerrarModalIngredientes();
+            cargarIngredientesPreparacion(preparacionId);
+        } else {
+            alert('Error: ' + (data.error || 'No se pudieron guardar los ingredientes'));
+        }
+    } catch (error) {
+        console.error('[DEBUG] Error:', error);
+        alert('Error al guardar ingredientes');
+    }
+}
+
+function cerrarModalIngredientes() {
+    document.getElementById('modalAgregarIngredientes').style.display = 'none';
+    document.getElementById('tbodyIngredientes').innerHTML = '';
 }
 
 function editarIngrediente(preparacionId, ingredienteId) {
