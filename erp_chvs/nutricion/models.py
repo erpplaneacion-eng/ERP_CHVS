@@ -206,3 +206,67 @@ class TablaPreparacionIngredientes(models.Model):
             models.Index(fields=['id_preparacion']),
             models.Index(fields=['id_ingrediente_siesa']),
         ]
+
+
+class TablaRequerimientosNutricionales(models.Model):
+    """
+    Tabla de requerimientos nutricionales por nivel escolar.
+    Define los límites máximos de macronutrientes y micronutrientes que se deben suministrar.
+    """
+    id_requerimiento_nutricional = models.CharField(
+        max_length=50,
+        primary_key=True,
+        verbose_name="ID Requerimiento"
+    )
+    calorias_kcal = models.DecimalField(
+        max_digits=10,
+        decimal_places=1,
+        verbose_name="Calorías (Kcal)"
+    )
+    proteina_g = models.DecimalField(
+        max_digits=10,
+        decimal_places=1,
+        verbose_name="Proteína (g)"
+    )
+    grasa_g = models.DecimalField(
+        max_digits=10,
+        decimal_places=1,
+        verbose_name="Grasa (g)"
+    )
+    cho_g = models.DecimalField(
+        max_digits=10,
+        decimal_places=1,
+        verbose_name="CHO (g)"
+    )
+    calcio_mg = models.DecimalField(
+        max_digits=10,
+        decimal_places=1,
+        verbose_name="Calcio (mg)"
+    )
+    hierro_mg = models.DecimalField(
+        max_digits=10,
+        decimal_places=1,
+        verbose_name="Hierro (mg)"
+    )
+    sodio_mg = models.DecimalField(
+        max_digits=10,
+        decimal_places=1,
+        verbose_name="Sodio (mg)"
+    )
+    id_nivel_escolar_uapa = models.ForeignKey(
+        'principal.TablaGradosEscolaresUapa',
+        on_delete=models.PROTECT,
+        db_column='id_nivel_escolar_uapa',
+        verbose_name="Nivel Escolar UAPA",
+        related_name='requerimientos_nutricionales'
+    )
+
+    class Meta:
+        db_table = 'tabla_requerimientos_nutricionales'
+        verbose_name = 'Requerimiento Nutricional'
+        verbose_name_plural = 'Requerimientos Nutricionales'
+        ordering = ['id_nivel_escolar_uapa']
+        unique_together = [['id_nivel_escolar_uapa']]
+
+    def __str__(self):
+        return f"{self.id_nivel_escolar_uapa.nivel_escolar_uapa} - {self.calorias_kcal} Kcal"

@@ -5,7 +5,8 @@ from .models import (
     TablaMenus,
     TablaPreparaciones,
     TablaIngredientesSiesa,
-    TablaPreparacionIngredientes
+    TablaPreparacionIngredientes,
+    TablaRequerimientosNutricionales
 )
 
 
@@ -85,3 +86,35 @@ class TablaPreparacionIngredientesAdmin(admin.ModelAdmin):
     search_fields = ('id_preparacion__preparacion', 'id_ingrediente_siesa__nombre_ingrediente')
     autocomplete_fields = ['id_preparacion', 'id_ingrediente_siesa']
     list_per_page = 25
+
+
+@admin.register(TablaRequerimientosNutricionales)
+class TablaRequerimientosNutricionalesAdmin(admin.ModelAdmin):
+    """Administración de requerimientos nutricionales por nivel escolar."""
+    list_display = (
+        'id_requerimiento_nutricional',
+        'id_nivel_escolar_uapa',
+        'calorias_kcal',
+        'proteina_g',
+        'grasa_g',
+        'cho_g',
+        'calcio_mg',
+        'hierro_mg',
+        'sodio_mg'
+    )
+    list_filter = ('id_nivel_escolar_uapa',)
+    search_fields = ('id_nivel_escolar_uapa__nivel_escolar_uapa', 'id_nivel_escolar_uapa__id_grado_escolar_uapa')
+    autocomplete_fields = ['id_nivel_escolar_uapa']
+    list_per_page = 25
+
+    fieldsets = (
+        ('Nivel Escolar', {
+            'fields': ('id_nivel_escolar_uapa',)
+        }),
+        ('Macronutrientes', {
+            'fields': ('calorias_kcal', 'proteina_g', 'grasa_g', 'cho_g')
+        }),
+        ('Micronutrientes', {
+            'fields': ('calcio_mg', 'hierro_mg', 'sodio_mg')
+        }),
+    )
