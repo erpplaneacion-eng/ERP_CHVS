@@ -87,10 +87,6 @@ def lista_menus(request):
         programa__estado='activo'
     ).distinct().order_by('nombre_municipio')
 
-    print(f"[DEBUG VISTA] Total municipios con programas activos: {municipios.count()}")
-    for mun in municipios[:5]:  # Primeros 5
-        print(f"[DEBUG VISTA] - ID: {mun.id}, Código: {mun.codigo_municipio}, Nombre: {mun.nombre_municipio}")
-
     # Obtener filtros
     municipio_id = request.GET.get('municipio')
     programa_id = request.GET.get('programa')
@@ -146,10 +142,8 @@ def api_programas_por_municipio(request):
     """API para obtener programas activos de un municipio"""
     municipio_id = request.GET.get('municipio_id')
 
-    print(f"[DEBUG] municipio_id recibido: {municipio_id}")
-
     if not municipio_id:
-        return JsonResponse({'programas': [], 'debug': 'No se recibió municipio_id'})
+        return JsonResponse({'programas': []})
 
     try:
         programas = Programa.objects.filter(
@@ -157,24 +151,10 @@ def api_programas_por_municipio(request):
             estado='activo'
         ).values('id', 'programa', 'contrato', 'fecha_inicial', 'fecha_final')
 
-        programas_list = list(programas)
-        print(f"[DEBUG] Programas encontrados: {len(programas_list)}")
-
-        return JsonResponse({
-            'programas': programas_list,
-            'debug': f'{len(programas_list)} programas encontrados',
-            'municipio_id': municipio_id
-        })
+        return JsonResponse({'programas': list(programas)})
 
     except Exception as e:
-        print(f"[DEBUG] Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return JsonResponse({
-            'programas': [],
-            'error': str(e),
-            'debug': 'Error en la consulta'
-        })
+        return JsonResponse({'programas': [], 'error': str(e)})
 
 
 @login_required
@@ -201,7 +181,6 @@ def api_modalidades_por_programa(request):
 
         # Si no hay configuración específica, retornar todas las modalidades
         if not modalidades_configuradas.exists():
-            print(f"[DEBUG] No hay modalidades configuradas para {programa.municipio.nombre_municipio}, retornando todas")
             modalidades = ModalidadesDeConsumo.objects.all().values(
                 'id_modalidades', 'modalidad'
             ).order_by('modalidad')
@@ -215,7 +194,6 @@ def api_modalidades_por_programa(request):
                 }
                 for m in modalidades_configuradas
             ]
-            print(f"[DEBUG] Modalidades configuradas para {programa.municipio.nombre_municipio}: {len(modalidades_list)}")
 
         return JsonResponse({
             'modalidades': modalidades_list,
@@ -233,8 +211,6 @@ def api_modalidades_por_programa(request):
 @csrf_exempt
 def api_generar_menus_automaticos(request):
     """API para generar automáticamente los 20 menús de una modalidad"""
-    print(f"[DEBUG GENERAR] Método recibido: {request.method}")
-
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
@@ -243,23 +219,17 @@ def api_generar_menus_automaticos(request):
         programa_id = data.get('programa_id')
         modalidad_id = data.get('modalidad_id')
 
-        print(f"[DEBUG GENERAR] programa_id: {programa_id}, modalidad_id: {modalidad_id}")
-
         if not programa_id or not modalidad_id:
             return JsonResponse({'error': 'Faltan parámetros'}, status=400)
 
         programa = Programa.objects.get(id=programa_id)
         modalidad = ModalidadesDeConsumo.objects.get(id_modalidades=modalidad_id)
 
-        print(f"[DEBUG GENERAR] Programa: {programa.programa}, Modalidad: {modalidad.modalidad}")
-
         # Verificar si ya existen menús
         menus_existentes = TablaMenus.objects.filter(
             id_contrato=programa,
             id_modalidad=modalidad
         ).count()
-
-        print(f"[DEBUG GENERAR] Menús existentes: {menus_existentes}")
 
         if menus_existentes > 0:
             return JsonResponse({
@@ -269,12 +239,11 @@ def api_generar_menus_automaticos(request):
 
         # Crear los 20 menús automáticamente
         menus_creados = []
-        print(f"[DEBUG GENERAR] Iniciando creación de 20 menús...")
 
         with transaction.atomic():
             for i in range(1, 21):
                 menu = TablaMenus.objects.create(
-                    menu=str(i),  # Nombre del menú: 1, 2, 3, ..., 20
+                    menu=str(i),
                     id_modalidad=modalidad,
                     id_contrato=programa
                 )
@@ -283,9 +252,6 @@ def api_generar_menus_automaticos(request):
                     'nombre': menu.menu,
                     'modalidad': modalidad.modalidad
                 })
-                print(f"[DEBUG GENERAR] Menú {i} creado con ID: {menu.id_menu}")
-
-        print(f"[DEBUG GENERAR] ✓ {len(menus_creados)} menús creados exitosamente")
 
         return JsonResponse({
             'success': True,
@@ -294,15 +260,10 @@ def api_generar_menus_automaticos(request):
         })
 
     except Programa.DoesNotExist:
-        print(f"[DEBUG GENERAR] ❌ Programa no encontrado: {programa_id}")
         return JsonResponse({'error': 'Programa no encontrado'}, status=404)
     except ModalidadesDeConsumo.DoesNotExist:
-        print(f"[DEBUG GENERAR] ❌ Modalidad no encontrada: {modalidad_id}")
         return JsonResponse({'error': 'Modalidad no encontrada'}, status=404)
     except Exception as e:
-        print(f"[DEBUG GENERAR] ❌ Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
 
 
@@ -310,8 +271,6 @@ def api_generar_menus_automaticos(request):
 @csrf_exempt
 def api_crear_menu_especial(request):
     """API para crear un menú especial con nombre personalizado"""
-    print(f"[DEBUG MENU ESPECIAL] Método recibido: {request.method}")
-
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
@@ -320,8 +279,6 @@ def api_crear_menu_especial(request):
         programa_id = data.get('programa_id')
         modalidad_id = data.get('modalidad_id')
         nombre_menu = data.get('nombre_menu', '').strip()
-
-        print(f"[DEBUG MENU ESPECIAL] programa_id: {programa_id}, modalidad_id: {modalidad_id}, nombre: {nombre_menu}")
 
         if not programa_id or not modalidad_id or not nombre_menu:
             return JsonResponse({'error': 'Faltan parámetros'}, status=400)
@@ -348,8 +305,6 @@ def api_crear_menu_especial(request):
             id_contrato=programa
         )
 
-        print(f"[DEBUG MENU ESPECIAL] ✓ Menú especial creado con ID: {menu.id_menu}")
-
         return JsonResponse({
             'success': True,
             'menu': {
@@ -360,15 +315,10 @@ def api_crear_menu_especial(request):
         })
 
     except Programa.DoesNotExist:
-        print(f"[DEBUG MENU ESPECIAL] ❌ Programa no encontrado: {programa_id}")
         return JsonResponse({'error': 'Programa no encontrado'}, status=404)
     except ModalidadesDeConsumo.DoesNotExist:
-        print(f"[DEBUG MENU ESPECIAL] ❌ Modalidad no encontrada: {modalidad_id}")
         return JsonResponse({'error': 'Modalidad no encontrada'}, status=404)
     except Exception as e:
-        print(f"[DEBUG MENU ESPECIAL] ❌ Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
 
 
