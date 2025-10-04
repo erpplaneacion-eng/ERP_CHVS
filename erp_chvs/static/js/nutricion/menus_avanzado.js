@@ -447,17 +447,11 @@ async function cargarIngredientesPreparacion(preparacionId) {
                 <div class="ingrediente-item">
                     <div class="ingrediente-info">
                         <div class="ingrediente-nombre">
-                            <i class="fas fa-carrot"></i> ${ing.nombre_ingrediente}
-                        </div>
-                        <div class="ingrediente-cantidad">
-                            <strong>${ing.cantidad || 0}</strong> ${ing.unidad_medida || 'unidades'}
+                            <i class="fas fa-carrot"></i> ${ing.id_ingrediente_siesa__id_ingrediente_siesa} - ${ing.id_ingrediente_siesa__nombre_ingrediente}
                         </div>
                     </div>
                     <div class="ingrediente-acciones">
-                        <button class="btn-icon btn-edit" onclick="editarIngrediente(${preparacionId}, ${ing.id_ingrediente})" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-icon btn-delete" onclick="eliminarIngrediente(${preparacionId}, ${ing.id_ingrediente})" title="Eliminar">
+                        <button class="btn-icon btn-delete" onclick="eliminarIngrediente(${preparacionId}, '${ing.id_ingrediente_siesa__id_ingrediente_siesa}')" title="Eliminar">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -533,22 +527,6 @@ function agregarFilaIngrediente() {
                 ${optionsHTML}
             </select>
         </td>
-        <td>
-            <input type="number" class="input-cantidad" id="cantidad-${filaIndex}"
-                   placeholder="0.00" step="0.01" min="0" required>
-        </td>
-        <td>
-            <select class="select-ingrediente" id="unidad-${filaIndex}" required>
-                <option value="">Seleccione...</option>
-                <option value="kg">Kilogramos (kg)</option>
-                <option value="g">Gramos (g)</option>
-                <option value="l">Litros (l)</option>
-                <option value="ml">Mililitros (ml)</option>
-                <option value="unidad">Unidades</option>
-                <option value="lb">Libras (lb)</option>
-                <option value="oz">Onzas (oz)</option>
-            </select>
-        </td>
         <td style="text-align: center;">
             <button type="button" class="btn-eliminar-fila" onclick="eliminarFilaIngrediente(${filaIndex})">
                 <i class="fas fa-trash"></i>
@@ -567,30 +545,33 @@ async function guardarIngredientes() {
     const preparacionId = document.getElementById('preparacionIdIngredientes').value;
     const tbody = document.getElementById('tbodyIngredientes');
     const filas = tbody.querySelectorAll('.fila-ingrediente');
+
     if (filas.length === 0) {
         alert('Agregue al menos un ingrediente');
         return;
     }
+
     const ingredientes = [];
     let hayErrores = false;
+
     filas.forEach((fila, index) => {
         const ingredienteId = document.getElementById(`ingrediente-${index}`)?.value;
-        const cantidad = document.getElementById(`cantidad-${index}`)?.value;
-        const unidad = document.getElementById(`unidad-${index}`)?.value;
-        if (!ingredienteId || !cantidad || !unidad) {
+
+        if (!ingredienteId) {
             hayErrores = true;
             return;
         }
+
         ingredientes.push({
-            id_ingrediente: parseInt(ingredienteId),
-            cantidad: parseFloat(cantidad),
-            unidad_medida: unidad
+            id_ingrediente_siesa: ingredienteId
         });
     });
+
     if (hayErrores) {
-        alert('Complete todos los campos de cada fila');
+        alert('Seleccione un ingrediente en cada fila');
         return;
     }
+
     try {
         const response = await fetch(`/nutricion/api/preparaciones/${preparacionId}/ingredientes/`, {
             method: 'POST',
@@ -602,7 +583,9 @@ async function guardarIngredientes() {
                 ingredientes: ingredientes
             })
         });
+
         const data = await response.json();
+
         if (data.success) {
             alert(`✓ ${ingredientes.length} ingrediente(s) agregado(s) exitosamente`);
             cerrarModalIngredientes();
@@ -611,16 +594,13 @@ async function guardarIngredientes() {
             alert('Error: ' + (data.error || 'No se pudieron guardar los ingredientes'));
         }
     } catch (error) {
+        console.error('Error:', error);
         alert('Error al guardar ingredientes');
     }
 }
 function cerrarModalIngredientes() {
     document.getElementById('modalAgregarIngredientes').style.display = 'none';
     document.getElementById('tbodyIngredientes').innerHTML = '';
-}
-function editarIngrediente(preparacionId, ingredienteId) {
-    alert(`Editar ingrediente ${ingredienteId} de preparación ${preparacionId}`);
-    // TODO: Implementar modal de edición
 }
 async function eliminarIngrediente(preparacionId, ingredienteId) {
     if (!confirm('¿Está seguro de eliminar este ingrediente?')) {

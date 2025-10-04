@@ -176,7 +176,7 @@ class TablaIngredientesSiesa(models.Model):
 class TablaPreparacionIngredientes(models.Model):
     """
     Modelo para la relación muchos-a-muchos entre preparaciones e ingredientes.
-    Registra qué ingredientes lleva cada preparación y en qué cantidad.
+    Registra qué ingredientes lleva cada preparación.
     """
     id_preparacion = models.ForeignKey(
         TablaPreparaciones,
@@ -192,14 +192,9 @@ class TablaPreparacionIngredientes(models.Model):
         verbose_name="Ingrediente",
         related_name='preparaciones'
     )
-    cantidad = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        verbose_name="Cantidad (kg)"
-    )
 
     def __str__(self):
-        return f"{self.id_preparacion.preparacion} - {self.id_ingrediente_siesa.nombre_ingrediente} ({self.cantidad} kg)"
+        return f"{self.id_preparacion.preparacion} - {self.id_ingrediente_siesa.nombre_ingrediente}"
 
     class Meta:
         db_table = 'tabla_preparacion_ingredientes'

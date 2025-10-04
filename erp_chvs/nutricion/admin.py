@@ -45,7 +45,7 @@ class TablaPreparacionIngredientesInline(admin.TabularInline):
     """Inline para agregar ingredientes a una preparación."""
     model = TablaPreparacionIngredientes
     extra = 1
-    fields = ('id_ingrediente_siesa', 'cantidad')
+    fields = ('id_ingrediente_siesa',)
     autocomplete_fields = ['id_ingrediente_siesa']
 
 
@@ -81,7 +81,7 @@ class TablaIngredientesSiesaAdmin(admin.ModelAdmin):
 @admin.register(TablaPreparacionIngredientes)
 class TablaPreparacionIngredientesAdmin(admin.ModelAdmin):
     """Administración de la relación preparaciones-ingredientes."""
-    list_display = ('id_preparacion', 'id_ingrediente_siesa', 'cantidad')
+    list_display = ('id_preparacion', 'id_ingrediente_siesa')
     search_fields = ('id_preparacion__preparacion', 'id_ingrediente_siesa__nombre_ingrediente')
     autocomplete_fields = ['id_preparacion', 'id_ingrediente_siesa']
     list_per_page = 25

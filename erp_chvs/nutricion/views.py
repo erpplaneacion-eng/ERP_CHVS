@@ -606,8 +606,7 @@ def api_preparacion_ingredientes(request, id_preparacion):
             id_preparacion=preparacion
         ).select_related('id_ingrediente_siesa').values(
             'id_ingrediente_siesa__id_ingrediente_siesa',
-            'id_ingrediente_siesa__nombre_ingrediente',
-            'cantidad'
+            'id_ingrediente_siesa__nombre_ingrediente'
         )
         return JsonResponse({'ingredientes': list(ingredientes)})
 
@@ -615,16 +614,32 @@ def api_preparacion_ingredientes(request, id_preparacion):
         try:
             data = json.loads(request.body)
 
-            ingrediente = TablaPreparacionIngredientes.objects.create(
-                id_preparacion=preparacion,
-                id_ingrediente_siesa_id=data['id_ingrediente_siesa'],
-                cantidad=data['cantidad']
-            )
+            # Soporte para agregar múltiples ingredientes
+            if 'ingredientes' in data:
+                ingredientes_creados = []
+                for ing_data in data['ingredientes']:
+                    ingrediente, created = TablaPreparacionIngredientes.objects.get_or_create(
+                        id_preparacion=preparacion,
+                        id_ingrediente_siesa_id=ing_data['id_ingrediente_siesa']
+                    )
+                    if created:
+                        ingredientes_creados.append(ingrediente.id_ingrediente_siesa.nombre_ingrediente)
 
-            return JsonResponse({
-                'success': True,
-                'mensaje': 'Ingrediente agregado exitosamente'
-            })
+                return JsonResponse({
+                    'success': True,
+                    'mensaje': f'{len(ingredientes_creados)} ingrediente(s) agregado(s) exitosamente'
+                })
+            else:
+                # Soporte para agregar un solo ingrediente
+                ingrediente = TablaPreparacionIngredientes.objects.create(
+                    id_preparacion=preparacion,
+                    id_ingrediente_siesa_id=data['id_ingrediente_siesa']
+                )
+
+                return JsonResponse({
+                    'success': True,
+                    'mensaje': 'Ingrediente agregado exitosamente'
+                })
 
         except IntegrityError:
             return JsonResponse({'success': False, 'error': 'Este ingrediente ya está en la preparación'})
