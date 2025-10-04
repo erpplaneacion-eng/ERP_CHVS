@@ -124,3 +124,28 @@ class NivelGradoEscolar(models.Model):
 
     def __str__(self):
         return f"{self.id_grado_escolar} - {self.nivel_escolar_uapa}"
+
+
+class TablaGradosEscolaresUapa(models.Model):
+    """
+    Tabla para almacenar los grados escolares según UAPA.
+    Solo contiene código y nivel escolar.
+    """
+    id_grado_escolar_uapa = models.CharField(
+        max_length=50,
+        primary_key=True,
+        verbose_name="Código Grado Escolar UAPA"
+    )
+    nivel_escolar_uapa = models.CharField(
+        max_length=100,
+        verbose_name="Nivel Escolar UAPA"
+    )
+
+    class Meta:
+        db_table = 'tabla_grados_escolares_uapa'
+        verbose_name = 'Grado Escolar UAPA'
+        verbose_name_plural = 'Grados Escolares UAPA'
+        ordering = ['id_grado_escolar_uapa']
+
+    def __str__(self):
+        return f"{self.id_grado_escolar_uapa} - {self.nivel_escolar_uapa}"

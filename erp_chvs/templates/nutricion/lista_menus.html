@@ -5,6 +5,8 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/modules/nutricion.css' %}">
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <style>
     .filtros-container {
         background: white;
@@ -183,6 +185,42 @@
 
     .btn-danger:hover {
         background: #c82333;
+    }
+
+    /* Estilos personalizados para Select2 */
+    .select2-container {
+        width: 100% !important;
+    }
+
+    .select2-container--default .select2-selection--single {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        height: 38px;
+        padding: 6px 12px;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 24px;
+        color: #333;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+
+    .select2-dropdown {
+        border: 1px solid #667eea;
+        border-radius: 4px;
+    }
+
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background-color: #667eea;
+    }
+
+    .select2-search--dropdown .select2-search__field {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 6px 12px;
     }
 </style>
 {% endblock %}
@@ -607,6 +645,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     const PROGRAMA_ACTUAL = {{ programa_seleccionado|default:"null" }};
     const MUNICIPIO_ACTUAL = {{ municipio_seleccionado|default:"null" }};

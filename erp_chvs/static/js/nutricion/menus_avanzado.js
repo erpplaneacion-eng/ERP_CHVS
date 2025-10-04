@@ -357,15 +357,31 @@ async function cargarPreparacionesMenu(menuId) {
         const container = document.getElementById('listaPreparacionesAcordeon');
         container.innerHTML = '';
         if (data.preparaciones && data.preparaciones.length > 0) {
-            data.preparaciones.forEach(prep => {
+            // Cargar cada preparación con su cantidad de ingredientes
+            for (const prep of data.preparaciones) {
+                // Obtener cantidad de ingredientes
+                const cantidadIngredientes = await obtenerCantidadIngredientes(prep.id_preparacion);
+                prep.cantidad_ingredientes = cantidadIngredientes;
+
                 const accordion = crearAcordeonPreparacion(prep, menuId);
                 container.appendChild(accordion);
-            });
+            }
         } else {
             container.innerHTML = '<div class="no-ingredientes"><i class="fas fa-info-circle"></i> No hay preparaciones asociadas a este menú</div>';
         }
     } catch (error) {
         console.error('Error:', error);
+    }
+}
+
+async function obtenerCantidadIngredientes(preparacionId) {
+    try {
+        const response = await fetch(`/nutricion/api/preparaciones/${preparacionId}/ingredientes/`);
+        const data = await response.json();
+        return data.ingredientes ? data.ingredientes.length : 0;
+    } catch (error) {
+        console.error('Error al obtener cantidad de ingredientes:', error);
+        return 0;
     }
 }
 function crearAcordeonPreparacion(preparacion, menuId) {
@@ -534,8 +550,26 @@ function agregarFilaIngrediente() {
         </td>
     `;
     tbody.appendChild(tr);
+
+    // Inicializar Select2 en el select recién agregado
+    $(`#ingrediente-${filaIndex}`).select2({
+        placeholder: 'Buscar ingrediente...',
+        allowClear: true,
+        language: {
+            noResults: function() {
+                return "No se encontraron ingredientes";
+            },
+            searching: function() {
+                return "Buscando...";
+            }
+        },
+        dropdownParent: $('#modalAgregarIngredientes')
+    });
 }
 function eliminarFilaIngrediente(index) {
+    // Destruir la instancia de Select2 antes de eliminar la fila
+    $(`#ingrediente-${index}`).select2('destroy');
+
     const fila = document.getElementById(`fila-ing-${index}`);
     if (fila) {
         fila.remove();
@@ -599,6 +633,13 @@ async function guardarIngredientes() {
     }
 }
 function cerrarModalIngredientes() {
+    // Destruir todas las instancias de Select2 antes de limpiar
+    $('.select-ingrediente').each(function() {
+        if ($(this).hasClass('select2-hidden-accessible')) {
+            $(this).select2('destroy');
+        }
+    });
+
     document.getElementById('modalAgregarIngredientes').style.display = 'none';
     document.getElementById('tbodyIngredientes').innerHTML = '';
 }
