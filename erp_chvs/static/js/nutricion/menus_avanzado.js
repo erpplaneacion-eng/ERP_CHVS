@@ -1285,22 +1285,38 @@ function inicializarEventosInputs() {
     });
     
     // Eventos para inputs de porcentaje de adecuación
-    $(document).on('input change', '.porcentaje-input', function() {
+    let timeoutPorcentaje = null;
+
+    $(document).on('change', '.porcentaje-input', function() {
         if (actualizandoPorPeso) return; // Evitar loop
-        
-        actualizandoPorPorcentaje = true;
-        
+
         const input = $(this);
         const nivelIndex = input.data('nivel');
         const nutriente = input.data('nutriente');
         const porcentajeDeseado = parseFloat(input.val()) || 0;
-        
-        console.log('Editando porcentaje:', { nivelIndex, nutriente, porcentajeDeseado });
-        
-        // Calcular desde porcentaje hacia pesos
-        calcularPesosDesdeAdecuacion(nivelIndex, nutriente, porcentajeDeseado);
-        
-        actualizandoPorPorcentaje = false;
+
+        // Validar rango 0-100
+        if (porcentajeDeseado < 0) {
+            input.val(0);
+            return;
+        }
+        if (porcentajeDeseado > 100) {
+            input.val(100);
+            return;
+        }
+
+        // Debounce para evitar múltiples ejecuciones
+        clearTimeout(timeoutPorcentaje);
+        timeoutPorcentaje = setTimeout(() => {
+            actualizandoPorPorcentaje = true;
+
+            console.log('Editando porcentaje:', { nivelIndex, nutriente, porcentajeDeseado });
+
+            // Calcular desde porcentaje hacia pesos
+            calcularPesosDesdeAdecuacion(nivelIndex, nutriente, porcentajeDeseado);
+
+            actualizandoPorPorcentaje = false;
+        }, 300); // Esperar 300ms después del último cambio
     });
     
     // Eventos para accordion de niveles escolares
@@ -1336,7 +1352,7 @@ function inicializarEventosInputs() {
     });
 }
 
-function recalcularTotalesNivel(nivelIndex) {
+function recalcularTotalesNivel(nivelIndex, skipAutoSave = false) {
     let totalCalorias = 0;
     let totalProteina = 0;
     let totalGrasa = 0;
@@ -1344,13 +1360,13 @@ function recalcularTotalesNivel(nivelIndex) {
     let totalCalcio = 0;
     let totalHierro = 0;
     let totalSodio = 0;
-    
+
     // Sumar todos los ingredientes del nivel
     $(`.ingrediente-row[data-nivel="${nivelIndex}"]`).each(function() {
         const fila = $(this);
         const prepIndex = fila.data('prep');
         const ingIndex = fila.data('ing');
-        
+
         const calorias = parseFloat($(`#cal-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
         const proteina = parseFloat($(`#prot-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
         const grasa = parseFloat($(`#grasa-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
@@ -1358,7 +1374,7 @@ function recalcularTotalesNivel(nivelIndex) {
         const calcio = parseFloat($(`#calcio-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
         const hierro = parseFloat($(`#hierro-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
         const sodio = parseFloat($(`#sodio-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
-        
+
         totalCalorias += calorias;
         totalProteina += proteina;
         totalGrasa += grasa;
@@ -1367,7 +1383,7 @@ function recalcularTotalesNivel(nivelIndex) {
         totalHierro += hierro;
         totalSodio += sodio;
     });
-    
+
     // Actualizar totales en la interfaz
     $(`#nivel-${nivelIndex}-calorias`).text(`${totalCalorias.toFixed(1)} Kcal`);
     $(`#nivel-${nivelIndex}-proteina`).text(`${totalProteina.toFixed(1)} g`);
@@ -1376,7 +1392,7 @@ function recalcularTotalesNivel(nivelIndex) {
     $(`#nivel-${nivelIndex}-calcio`).text(`${totalCalcio.toFixed(1)} mg`);
     $(`#nivel-${nivelIndex}-hierro`).text(`${totalHierro.toFixed(1)} mg`);
     $(`#nivel-${nivelIndex}-sodio`).text(`${totalSodio.toFixed(1)} mg`);
-    
+
     // Recalcular porcentajes de adecuación
     recalcularPorcentajesAdecuacion(nivelIndex, {
         calorias_kcal: totalCalorias,
@@ -1387,9 +1403,9 @@ function recalcularTotalesNivel(nivelIndex) {
         hierro_mg: totalHierro,
         sodio_mg: totalSodio
     });
-    
-    // Guardado automático después de los cálculos
-    if (window.menuActual && window.menuActual.id) {
+
+    // Guardado automático después de los cálculos (solo si no se omite)
+    if (!skipAutoSave && window.menuActual && window.menuActual.id) {
         setTimeout(() => {
             guardarAnalisisAutomatico(nivelIndex, window.menuActual.id);
         }, 500); // Pequeño delay para asegurar que todos los cálculos terminen
@@ -1531,13 +1547,37 @@ function calcularPesosDesdeAdecuacion(nivelIndex, nutriente, porcentajeDeseado) 
         console.log(`  - Ingrediente [${ing.prepIndex}-${ing.ingIndex}]: ${ing.pesoActual.toFixed(1)}g → ${pesoFinal.toFixed(1)}g`);
     });
 
-    // Disparar eventos de cambio para recalcular todo
-    // Usamos un pequeño delay para evitar que se disparen todos a la vez
-    ingredientesData.forEach((ing, index) => {
-        setTimeout(() => {
-            ing.pesoInput.trigger('change');
-        }, index * 10);
+    // Recalcular manualmente todos los valores nutricionales sin disparar eventos
+    ingredientesData.forEach(ing => {
+        const pesoNeto = parseFloat(ing.pesoInput.val()) || 0;
+        const parteComestible = parseFloat(ing.pesoInput.data('parte-comestible')) || 100;
+        const factor = pesoNeto / 100;
+
+        // Calcular peso bruto
+        const pesoBruto = parteComestible > 0 ? (pesoNeto * 100) / parteComestible : pesoNeto;
+
+        // Calcular nutrientes
+        const calorias = (parseFloat(ing.pesoInput.data('calorias')) || 0) * factor;
+        const proteina = (parseFloat(ing.pesoInput.data('proteina')) || 0) * factor;
+        const grasa = (parseFloat(ing.pesoInput.data('grasa')) || 0) * factor;
+        const cho = (parseFloat(ing.pesoInput.data('cho')) || 0) * factor;
+        const calcio = (parseFloat(ing.pesoInput.data('calcio')) || 0) * factor;
+        const hierro = (parseFloat(ing.pesoInput.data('hierro')) || 0) * factor;
+        const sodio = (parseFloat(ing.pesoInput.data('sodio')) || 0) * factor;
+
+        // Actualizar UI directamente
+        $(`#bruto-${nivelIndex}-${ing.prepIndex}-${ing.ingIndex}`).text(pesoBruto.toFixed(0));
+        $(`#cal-${nivelIndex}-${ing.prepIndex}-${ing.ingIndex}`).text(calorias.toFixed(1));
+        $(`#prot-${nivelIndex}-${ing.prepIndex}-${ing.ingIndex}`).text(proteina.toFixed(1));
+        $(`#grasa-${nivelIndex}-${ing.prepIndex}-${ing.ingIndex}`).text(grasa.toFixed(1));
+        $(`#cho-${nivelIndex}-${ing.prepIndex}-${ing.ingIndex}`).text(cho.toFixed(1));
+        $(`#calcio-${nivelIndex}-${ing.prepIndex}-${ing.ingIndex}`).text(calcio.toFixed(1));
+        $(`#hierro-${nivelIndex}-${ing.prepIndex}-${ing.ingIndex}`).text(hierro.toFixed(1));
+        $(`#sodio-${nivelIndex}-${ing.prepIndex}-${ing.ingIndex}`).text(sodio.toFixed(1));
     });
+
+    // Recalcular totales una sola vez al final (sin guardado automático)
+    recalcularTotalesNivel(nivelIndex, true); // true = skip auto-save
 
     console.log(`✓ Ajuste proporcional completado para ${nutriente} (factor: ${factorEscala.toFixed(3)})`);
 }

@@ -443,10 +443,23 @@ class AsistenciaPDFGenerator:
                         elif isinstance(fecha_nac, str):
                             try:
                                 # Intentar convertir la cadena a fecha y luego formatear
-                                fecha_obj = datetime.fromisoformat(fecha_nac.replace('.', ''))
+                                fecha_obj = datetime.fromisoformat(fecha_nac.replace('Z', '+00:00').replace('.', ''))
                                 fecha_nac_str = fecha_obj.strftime('%Y-%m-%d')
-                            except ValueError:
-                                fecha_nac_str = fecha_nac.split('T')[0] # Fallback: tomar solo la parte de la fecha
+                            except (ValueError, TypeError):
+                                # Fallback: intentar extraer fecha de diferentes formatos de cadena
+                                fecha_nac_str = str(fecha_nac).split('T')[0].split(' ')[0]
+                                if len(fecha_nac_str) != 10:  # No es formato YYYY-MM-DD
+                                    fecha_nac_str = ""
+                        elif isinstance(fecha_nac, int):
+                            # Manejar timestamp Unix (número entero)
+                            try:
+                                fecha_obj = datetime.fromtimestamp(fecha_nac)
+                                fecha_nac_str = fecha_obj.strftime('%Y-%m-%d')
+                            except (ValueError, OSError):
+                                fecha_nac_str = ""
+                        else:
+                            # Para otros tipos, convertir a string y tomar primera parte
+                            fecha_nac_str = str(fecha_nac).split('T')[0].split(' ')[0]
                     
                     datos_fila = [
                         str(estudiante_index + 1),

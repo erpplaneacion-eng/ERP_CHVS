@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Generador de Menús con IA</h2>
+    <p>Esta herramienta utiliza un modelo de IA generativa para crear nuevos menús basados en los ingredientes existentes en el sistema.</p>
+
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Generar Nuevo Menú</h5>
+            <form id="generar-menu-form">
+                <div class="form-group">
+                    <label for="nombre_menu">Nombre del Menú</label>
+                    <input type="text" class="form-control" id="nombre_menu" name="nombre_menu" required>
+                </div>
+                <div class="form-group">
+                    <label for="id_modalidad">Modalidad</label>
+                    <select class="form-control" id="id_modalidad" name="id_modalidad" required>
+                        {% for modalidad in modalidades %}
+                            <option value="{{ modalidad.id_modalidades }}">{{ modalidad.modalidad }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="id_contrato">Programa/Contrato</label>
+                    <select class="form-control" id="id_contrato" name="id_contrato" required>
+                        {% for programa in programas %}
+                            <option value="{{ programa.id }}">{{ programa.programa }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">Generar Menú</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="resultado-generacion" class="mt-4"></div>
+
+</div>
+
+<script>
+    document.getElementById('generar-menu-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const nombreMenu = document.getElementById('nombre_menu').value;
+        const idModalidad = document.getElementById('id_modalidad').value;
+        const idContrato = document.getElementById('id_contrato').value;
+        const resultadoDiv = document.getElementById('resultado-generacion');
+
+        resultadoDiv.innerHTML = '<div class="alert alert-info">Generando menú...</div>';
+
+        fetch('{% url "iagenerativa:generar_menu" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                nombre_menu: nombreMenu,
+                id_modalidad: idModalidad,
+                id_contrato: idContrato
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                resultadoDiv.innerHTML = '<div class="alert alert-success">Menú generado exitosamente.</div><pre>' + data.respuesta + '</pre>';
+            } else {
+                resultadoDiv.innerHTML = '<div class="alert alert-danger">Error: ' + data.error + '</div>';
+            }
+        })
+        .catch(error => {
+            resultadoDiv.innerHTML = '<div class="alert alert-danger">Error de conexión.</div>';
+        });
+    });
+</script>
+{% endblock %}

@@ -34,6 +34,7 @@ urlpatterns = [
     path('planeacion/', include(('planeacion.urls', 'planeacion'), namespace='planeacion')),
     path('facturacion/', include(('facturacion.urls', 'facturacion'), namespace='facturacion')),
     path('ocr_validation/', include(('ocr_validation.urls', 'ocr_validation'), namespace='ocr_validation')),
+    path('iagenerativa/', include(('iagenerativa.urls', 'iagenerativa'), namespace='iagenerativa')),
 ]
 
 if settings.DEBUG:
