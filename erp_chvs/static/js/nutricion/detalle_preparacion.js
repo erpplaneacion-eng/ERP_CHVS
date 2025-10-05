@@ -15,14 +15,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Cerrar modal al hacer clic fuera
     window.addEventListener('click', function(event) {
-        if (event.target == modal) {
+        if (event.target === modal) {
             cerrarModal();
         }
     });
 });
 
 function abrirModal() {
-    formAgregarIngrediente.reset();
     modal.style.display = 'block';
 }
 
@@ -33,76 +32,60 @@ function cerrarModal() {
 
 async function agregarIngrediente(event) {
     event.preventDefault();
-
+    
+    const preparacionId = document.getElementById('preparacionId').value;
     const data = {
-        id_ingrediente_siesa: document.getElementById('ingredienteSelect').value,
-        cantidad: document.getElementById('ingredienteCantidad').value
+        ingrediente_id: document.getElementById('ingredienteSelect').value,
+        cantidad: document.getElementById('cantidad').value,
+        unidad_medida: document.getElementById('unidadMedida').value
     };
 
     try {
-        const response = await fetch(`/nutricion/api/preparaciones/${PREPARACION_ID}/ingredientes/`, {
+        const response = await fetch(`/nutricion/api/detalle-preparacion/${preparacionId}/agregar/`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
+            headers: NutricionUtils.getDefaultHeaders(),
             body: JSON.stringify(data)
         });
 
         const result = await response.json();
-
-        if (result.success) {
-            alert('Ingrediente agregado exitosamente');
+        
+        if (response.ok) {
+            NutricionUtils.mostrarNotificacion('success', 'Ingrediente agregado exitosamente');
             cerrarModal();
-            location.reload();
+            location.reload(); // Recargar para mostrar el nuevo ingrediente
         } else {
-            alert('Error: ' + (result.error || 'Error desconocido'));
+            NutricionUtils.mostrarNotificacion('error', result.error || 'Error al agregar ingrediente');
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert('Error al agregar el ingrediente');
+        NutricionUtils.manejarError(error, 'Agregar ingrediente');
     }
 }
 
 async function eliminarIngrediente(idIngrediente) {
-    if (!confirm('¿Está seguro de eliminar este ingrediente de la preparación?')) {
-        return;
-    }
+    modalManager.confirmar(
+        '¿Está seguro de que desea eliminar este ingrediente?',
+        async () => {
+            try {
+                const response = await fetch(`/nutricion/api/detalle-preparacion/${idIngrediente}/eliminar/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': NutricionUtils.getCsrfToken()
+                    }
+                });
 
-    try {
-        const response = await fetch(`/nutricion/api/preparaciones/${PREPARACION_ID}/ingredientes/${idIngrediente}/`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken')
-            }
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            alert('Ingrediente eliminado exitosamente');
-            location.reload();
-        } else {
-            alert('Error: ' + (result.error || 'Error al eliminar'));
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error al eliminar el ingrediente');
-    }
-}
-
-// Función auxiliar para obtener el token CSRF
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
+                const result = await response.json();
+                
+                if (response.ok) {
+                    NutricionUtils.mostrarNotificacion('success', 'Ingrediente eliminado exitosamente');
+                    location.reload(); // Recargar para actualizar la lista
+                } else {
+                    NutricionUtils.mostrarNotificacion('error', result.error || 'Error al eliminar');
+                }
+            } catch (error) {
+                NutricionUtils.manejarError(error, 'Eliminar ingrediente');
             }
         }
-    }
-    return cookieValue;
+    );
 }
+
+// Función getCookie ahora disponible desde utils.js

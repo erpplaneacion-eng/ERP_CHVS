@@ -6,6 +6,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/modules/nutricion.css' %}">
 <link rel="stylesheet" href="{% static 'css/nutricion/lista_menus.css' %}">
+<link rel="stylesheet" href="{% static 'css/nutricion/inline_styles.css' %}">
 <!-- Select2 CSS -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 {% endblock %}
@@ -48,7 +49,7 @@
     </div>
 
     <!-- Información del programa seleccionado -->
-    <div id="infoProgramaContainer" style="display: none;">
+    <div id="infoProgramaContainer" class="hidden-initially">
         <div class="info-programa">
             <h3><i class="fas fa-info-circle"></i> Programa Seleccionado</h3>
             <p id="infoProgramaNombre"><strong>Programa:</strong> <span></span></p>
@@ -70,11 +71,11 @@
 
 <!-- Modal para gestionar preparaciones -->
 <div id="modalPreparaciones" class="modal">
-    <div class="modal-content" style="max-width: 1200px; max-height: 90vh; overflow-y: auto;">
+    <div class="modal-content modal-preparaciones">
         <span class="close">&times;</span>
         <h2 id="modalTitlePrep">Gestionar Preparaciones - Menú <span id="menuNumeroModal"></span></h2>
 
-        <div class="form-group" style="display: flex; gap: 10px;">
+        <div class="form-group form-group-inline">
             <button class="btn btn-primary" id="btnAgregarPreparacion">
                 <i class="fas fa-plus"></i> Agregar Preparación
             </button>
@@ -90,8 +91,8 @@
 </div>
 
 <!-- Modal INDEPENDIENTE para Análisis Nutricional -->
-<div id="modalAnalisisNutricional" class="modal" style="z-index: 10001;">
-    <div class="modal-content" style="max-width: 1600px; width: 95%; max-height: 95vh; overflow-y: auto;">
+<div id="modalAnalisisNutricional" class="modal modal-analisis-nutricional">
+    <div class="modal-content modal-analisis-content">
         <span class="close" onclick="cerrarModalAnalisisNutricional()">&times;</span>
         <h2><i class="fas fa-chart-pie"></i> Análisis Nutricional - Menú <span id="menuNombreAnalisis"></span></h2>
 
@@ -139,7 +140,7 @@
                 <label>Nombre del Menú Especial <span class="required">*</span></label>
                 <input type="text" id="nombreMenuEspecial" class="form-control"
                        placeholder="Ej: Menú Navideño, Menú Día del Niño, etc." required>
-                <small style="color: #666; margin-top: 5px; display: block;">
+                <small class="help-text">
                     Este menú aparecerá junto a los 20 menús regulares
                 </small>
             </div>
@@ -184,23 +185,23 @@
 
 <!-- Modal para agregar ingredientes múltiples -->
 <div id="modalAgregarIngredientes" class="modal">
-    <div class="modal-content" style="max-width: 1000px; max-height: 90vh;">
+    <div class="modal-content modal-ingredientes">
         <span class="close">&times;</span>
         <h2><i class="fas fa-plus-circle"></i> Agregar Ingredientes</h2>
         <input type="hidden" id="preparacionIdIngredientes">
 
-        <div style="margin-bottom: 20px;">
+        <div class="button-container">
             <button type="button" class="btn btn-primary" onclick="agregarFilaIngrediente()">
                 <i class="fas fa-plus"></i> Agregar Fila
             </button>
         </div>
 
-        <div style="max-height: 400px; overflow-y: auto;">
+        <div class="table-container">
             <table class="data-table" id="tablaIngredientes">
                 <thead>
                     <tr>
-                        <th style="width: 80%;">Ingrediente</th>
-                        <th style="width: 20%;">Acciones</th>
+                        <th class="table-header-ingredient">Ingrediente</th>
+                        <th class="table-header-actions">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tbodyIngredientes">
@@ -209,7 +210,7 @@
             </table>
         </div>
 
-        <div class="form-actions" style="margin-top: 20px;">
+        <div class="form-actions form-actions-spaced">
             <button type="button" class="btn btn-success" onclick="guardarIngredientes()">
                 <i class="fas fa-save"></i> Guardar Ingredientes
             </button>

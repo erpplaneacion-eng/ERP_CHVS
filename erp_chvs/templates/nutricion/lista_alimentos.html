@@ -1,6 +1,12 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Lista de Alimentos ICBF{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modules/nutricion.css' %}">
+<link rel="stylesheet" href="{% static 'css/nutricion/inline_styles.css' %}">
+{% endblock %}
 
 {% block content %}
     <h1>Lista de Alimentos ICBF 2018</h1>
@@ -110,7 +116,7 @@
 </div>
 
 <!-- MODAL para Añadir/Editar Alimento -->
-<div id="alimento-modal" class="modal-overlay" style="display: none;">
+<div id="alimento-modal" class="modal-overlay hidden-initially">
     <div class="modal-content modal-large">
         <div class="modal-header">
             <h2 id="modal-title">Añadir Alimento</h2>
@@ -119,7 +125,7 @@
         <div class="modal-body">
             <form id="alimento-form" method="POST" action="">
                 {% csrf_token %}
-                <div class="form-scroll-container" style="max-height: 70vh; overflow-y: auto; padding-right: 15px;">
+                <div class="form-scroll-container modal-alimentos-scroll">
                     <div class="form-grid">
                         <!-- Campos básicos -->
                         <div class="form-section">

@@ -36,6 +36,7 @@ function cerrarModal() {
 
 async function editarMenu(id) {
     try {
+        // Cargar datos del menú específico
         const response = await fetch(`/nutricion/api/menus/${id}/`);
         const data = await response.json();
 
@@ -71,10 +72,7 @@ async function guardarMenu(event) {
     try {
         const response = await fetch(url, {
             method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
+            headers: NutricionUtils.getDefaultHeaders(),
             body: JSON.stringify(data)
         });
 
@@ -102,7 +100,7 @@ async function eliminarMenu(id) {
         const response = await fetch(`/nutricion/api/menus/${id}/`, {
             method: 'DELETE',
             headers: {
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': NutricionUtils.getCsrfToken()
             }
         });
 
@@ -121,17 +119,4 @@ async function eliminarMenu(id) {
 }
 
 // Función auxiliar para obtener el token CSRF
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
+// Función getCookie ahora disponible desde utils.js

@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 import json
 
 from .models import (
@@ -945,4 +946,155 @@ def api_analisis_nutricional_menu(request, id_menu):
         return JsonResponse({
             'success': False,
             'error': f'Error al calcular análisis nutricional: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@csrf_exempt
+def guardar_analisis_nutricional(request):
+    """
+    API para guardar automáticamente el análisis nutricional editado por el usuario.
+    
+    Guarda en las tablas:
+    - TablaAnalisisNutricionalMenu: Totales y porcentajes por nivel
+    - TablaIngredientesPorNivel: Pesos configurados de cada ingrediente
+    
+    Datos esperados en POST:
+    {
+        'id_menu': int,
+        'id_nivel_escolar': int,
+        'totales': {
+            'calorias': float, 'proteina': float, ...
+        },
+        'porcentajes': {
+            'calorias': float, 'proteina': float, ...
+        },
+        'ingredientes': [
+            {
+                'id_preparacion': int,
+                'id_ingrediente_siesa': int,
+                'peso_neto': float,
+                'peso_bruto': float,
+                'calorias_calculadas': float,
+                'proteina_calculada': float,
+                ... (otros nutrientes)
+            }
+        ]
+    }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        
+        # Validar datos requeridos
+        required_fields = ['id_menu', 'id_nivel_escolar', 'totales', 'porcentajes', 'ingredientes']
+        for field in required_fields:
+            if field not in data:
+                return JsonResponse({'error': f'Falta el campo: {field}'}, status=400)
+        
+        id_menu = data['id_menu']
+        id_nivel_escolar = data['id_nivel_escolar']
+        totales = data['totales']
+        porcentajes = data['porcentajes']
+        ingredientes = data['ingredientes']
+        
+        # Verificar que el menú existe
+        try:
+            menu = TablaMenus.objects.get(id_menu=id_menu)
+        except TablaMenus.DoesNotExist:
+            return JsonResponse({'error': 'Menú no encontrado'}, status=404)
+        
+        # Verificar que el nivel escolar existe
+        from principal.models import TablaGradosEscolaresUapa
+        try:
+            nivel_escolar = TablaGradosEscolaresUapa.objects.get(id_grado_escolar_uapa=id_nivel_escolar)
+        except TablaGradosEscolaresUapa.DoesNotExist:
+            return JsonResponse({'error': 'Nivel escolar no encontrado'}, status=404)
+        
+        with transaction.atomic():
+            # Buscar o crear el registro de análisis
+            analisis, created = TablaAnalisisNutricionalMenu.objects.get_or_create(
+                id_menu=menu,
+                id_nivel_escolar_uapa=nivel_escolar,
+                defaults={
+                    'fecha_analisis': timezone.now(),
+                    'usuario_analisis': request.user.username if hasattr(request.user, 'username') else 'sistema'
+                }
+            )
+            
+            # Actualizar totales nutricionales
+            analisis.total_calorias = totales.get('calorias', 0)
+            analisis.total_proteina = totales.get('proteina', 0)
+            analisis.total_grasa = totales.get('grasa', 0)
+            analisis.total_cho = totales.get('cho', 0)
+            analisis.total_calcio = totales.get('calcio', 0)
+            analisis.total_hierro = totales.get('hierro', 0)
+            analisis.total_sodio = totales.get('sodio', 0)
+            analisis.total_peso_neto = totales.get('peso_neto', 0)
+            analisis.total_peso_bruto = totales.get('peso_bruto', 0)
+            
+            # Actualizar porcentajes de adecuación
+            analisis.porcentaje_calorias = porcentajes.get('calorias', 0)
+            analisis.porcentaje_proteina = porcentajes.get('proteina', 0)
+            analisis.porcentaje_grasa = porcentajes.get('grasa', 0)
+            analisis.porcentaje_cho = porcentajes.get('cho', 0)
+            analisis.porcentaje_calcio = porcentajes.get('calcio', 0)
+            analisis.porcentaje_hierro = porcentajes.get('hierro', 0)
+            analisis.porcentaje_sodio = porcentajes.get('sodio', 0)
+            
+            # Actualizar fecha de modificación
+            analisis.fecha_modificacion = timezone.now()
+            analisis.save()
+            
+            # Eliminar ingredientes previos para este análisis
+            TablaIngredientesPorNivel.objects.filter(id_analisis=analisis).delete()
+            
+            # Guardar configuración de ingredientes
+            ingredientes_guardados = 0
+            for ing_data in ingredientes:
+                # Verificar que la preparación existe
+                try:
+                    preparacion = TablaPreparaciones.objects.get(id_preparacion=ing_data['id_preparacion'])
+                except TablaPreparaciones.DoesNotExist:
+                    continue
+                    
+                # Verificar que el ingrediente existe
+                try:
+                    ingrediente = TablaIngredientesSiesa.objects.get(id_ingrediente_siesa=ing_data['id_ingrediente_siesa'])
+                except TablaIngredientesSiesa.DoesNotExist:
+                    continue
+                
+                # Crear registro de ingrediente por nivel
+                TablaIngredientesPorNivel.objects.create(
+                    id_analisis=analisis,
+                    id_preparacion=preparacion,
+                    id_ingrediente_siesa=ingrediente,
+                    peso_neto_configurado=ing_data.get('peso_neto', 0),
+                    peso_bruto_calculado=ing_data.get('peso_bruto', 0),
+                    calorias_calculadas=ing_data.get('calorias_calculadas', 0),
+                    proteina_calculada=ing_data.get('proteina_calculada', 0),
+                    grasa_calculada=ing_data.get('grasa_calculada', 0),
+                    cho_calculado=ing_data.get('cho_calculado', 0),
+                    calcio_calculado=ing_data.get('calcio_calculado', 0),
+                    hierro_calculado=ing_data.get('hierro_calculado', 0),
+                    sodio_calculado=ing_data.get('sodio_calculado', 0)
+                )
+                ingredientes_guardados += 1
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Análisis nutricional guardado exitosamente',
+            'analisis_id': analisis.id_analisis,
+            'ingredientes_guardados': ingredientes_guardados,
+            'created': created
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Datos JSON inválidos'}, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al guardar análisis nutricional: {str(e)}'
         }, status=500)

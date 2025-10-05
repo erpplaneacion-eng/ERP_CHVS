@@ -728,20 +728,7 @@ async function crearMenuEspecial() {
         alert('Error al crear menú especial');
     }
 }
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
+// getCookie() ahora disponible desde NutricionUtils.getCookie()
 
 // =================== FUNCIONES PARA MENÚS ESPECIALES ===================
 
@@ -879,6 +866,10 @@ function cerrarModalAnalisisNutricional() {
 }
 
 function renderizarAnalisisNutricional(data) {
+    // Almacenar datos del menú para guardado automático
+    window.menuActual = data.menu;
+    window.datosNutricionales = data;
+    
     const contenidoAnalisis = document.getElementById('contenidoAnalisis');
 
     if (!data.success) {
@@ -1313,15 +1304,16 @@ function inicializarEventosInputs() {
     });
     
     // Eventos para accordion de niveles escolares
-    $(document).on('click', '.nivel-header-btn', function() {
+    $(document).on('click', '.nivel-header-btn', function(e) {
+        e.preventDefault();
         const button = $(this);
         const targetId = button.data('target');
         const target = $(targetId);
         const icon = button.find('.toggle-icon');
-        
+
         if (target.hasClass('show')) {
             // Cerrar este accordion
-            target.removeClass('show').slideUp(300);
+            target.removeClass('show');
             button.attr('aria-expanded', 'false').addClass('collapsed');
             icon.css('transform', 'rotate(0deg)');
         } else {
@@ -1330,14 +1322,14 @@ function inicializarEventosInputs() {
                 const otherCollapse = $(this);
                 const otherButton = $(`[data-target="#${otherCollapse.attr('id')}"]`);
                 const otherIcon = otherButton.find('.toggle-icon');
-                
-                otherCollapse.removeClass('show').slideUp(300);
+
+                otherCollapse.removeClass('show');
                 otherButton.attr('aria-expanded', 'false').addClass('collapsed');
                 otherIcon.css('transform', 'rotate(0deg)');
             });
-            
+
             // Abrir este accordion
-            target.addClass('show').slideDown(300);
+            target.addClass('show');
             button.attr('aria-expanded', 'true').removeClass('collapsed');
             icon.css('transform', 'rotate(180deg)');
         }
@@ -1395,6 +1387,13 @@ function recalcularTotalesNivel(nivelIndex) {
         hierro_mg: totalHierro,
         sodio_mg: totalSodio
     });
+    
+    // Guardado automático después de los cálculos
+    if (window.menuActual && window.menuActual.id) {
+        setTimeout(() => {
+            guardarAnalisisAutomatico(nivelIndex, window.menuActual.id);
+        }, 500); // Pequeño delay para asegurar que todos los cálculos terminen
+    }
 }
 
 /**
@@ -1575,18 +1574,11 @@ function recalcularPorcentajesAdecuacion(nivelIndex, totales) {
         
         const estado = getEstadoAdecuacion(porcentaje, nutriente.key);
         
-        // Actualizar porcentaje en la interfaz
-        const elementoPorcentaje = $(`#nivel-${nivelIndex}-${nutriente.id}-pct`);
-        if (elementoPorcentaje.length) {
-            elementoPorcentaje.text(`${porcentaje.toFixed(1)}%`);
-            elementoPorcentaje.closest('.adecuacion-mini').attr('data-estado', estado);
-        }
-        
         // Actualizar input de porcentaje editable
-        const inputPorcentaje = $(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="${nutriente.id}"]`);
+        const inputPorcentaje = $(`#nivel-${nivelIndex}-${nutriente.id}-pct`);
         if (inputPorcentaje.length) {
             inputPorcentaje.val(porcentaje.toFixed(1));
-            inputPorcentaje.attr('data-estado', estado);
+            inputPorcentaje.closest('.adecuacion-mini').attr('data-estado', estado);
         }
         
         // Actualizar estado de la tarjeta de total
@@ -1625,3 +1617,114 @@ function getEstadoAdecuacion(porcentaje, nutriente) {
         return 'alto';        // >70%: Rojo
     }
 }
+
+// =================== GUARDADO AUTOMÁTICO ===================
+
+/**
+ * Guarda automáticamente el análisis nutricional editado
+ * Se ejecuta después de cada cambio en pesos o porcentajes
+ */
+async function guardarAnalisisAutomatico(nivelIndex, menuId) {
+    try {
+        // Recopilar totales actuales del nivel
+        const totales = {
+            calorias: parseFloat($(`#nivel-${nivelIndex}-calorias`).text().replace(' Kcal', '')) || 0,
+            proteina: parseFloat($(`#nivel-${nivelIndex}-proteina`).text().replace(' g', '')) || 0,
+            grasa: parseFloat($(`#nivel-${nivelIndex}-grasa`).text().replace(' g', '')) || 0,
+            cho: parseFloat($(`#nivel-${nivelIndex}-cho`).text().replace(' g', '')) || 0,
+            calcio: parseFloat($(`#nivel-${nivelIndex}-calcio`).text().replace(' mg', '')) || 0,
+            hierro: parseFloat($(`#nivel-${nivelIndex}-hierro`).text().replace(' mg', '')) || 0,
+            sodio: parseFloat($(`#nivel-${nivelIndex}-sodio`).text().replace(' mg', '')) || 0
+        };
+
+        // Recopilar porcentajes de adecuación
+        const porcentajes = {
+            calorias: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="calorias_kcal"]`).val()) || 0,
+            proteina: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="proteina_g"]`).val()) || 0,
+            grasa: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="grasa_g"]`).val()) || 0,
+            cho: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="cho_g"]`).val()) || 0,
+            calcio: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="calcio_mg"]`).val()) || 0,
+            hierro: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="hierro_mg"]`).val()) || 0,
+            sodio: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="sodio_mg"]`).val()) || 0
+        };
+
+        // Recopilar datos de ingredientes configurados
+        const ingredientes = [];
+        $(`.ingrediente-row[data-nivel="${nivelIndex}"]`).each(function() {
+            const row = $(this);
+            const prepIndex = row.data('prep');
+            const ingIndex = row.data('ing');
+            const pesoInput = row.find('.peso-input');
+
+            const ingrediente = {
+                id_preparacion: prepIndex,
+                id_ingrediente_siesa: ingIndex,
+                peso_neto: parseFloat(pesoInput.val()) || 0,
+                peso_bruto: parseFloat($(`#bruto-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
+                calorias_calculadas: parseFloat($(`#cal-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
+                proteina_calculada: parseFloat($(`#prot-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
+                grasa_calculada: parseFloat($(`#grasa-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
+                cho_calculado: parseFloat($(`#cho-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
+                calcio_calculado: parseFloat($(`#calcio-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
+                hierro_calculado: parseFloat($(`#hierro-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
+                sodio_calculado: parseFloat($(`#sodio-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0
+            };
+
+            ingredientes.push(ingrediente);
+        });
+
+        // Obtener ID del nivel escolar desde los datos almacenados
+        const idNivelEscolar = datosNutricionales && 
+                              datosNutricionales.analisis_por_nivel && 
+                              datosNutricionales.analisis_por_nivel[nivelIndex] && 
+                              datosNutricionales.analisis_por_nivel[nivelIndex].nivel_escolar && 
+                              datosNutricionales.analisis_por_nivel[nivelIndex].nivel_escolar.id;
+
+        if (!idNivelEscolar) {
+            console.warn('No se pudo determinar el ID del nivel escolar para guardado automático');
+            return;
+        }
+
+        // Preparar datos para el guardado
+        const datosGuardado = {
+            id_menu: menuId,
+            id_nivel_escolar: idNivelEscolar,
+            totales: totales,
+            porcentajes: porcentajes,
+            ingredientes: ingredientes
+        };
+
+        // Enviar datos al servidor
+        const response = await fetch('/nutricion/api/guardar-analisis-nutricional/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': NutricionUtils.getCsrfToken()
+            },
+            body: JSON.stringify(datosGuardado)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            console.log('Análisis nutricional guardado automáticamente:', result);
+            
+            // Mostrar indicador visual de guardado exitoso
+            NutricionUtils.mostrarNotificacion('success', 'Cambios guardados automáticamente');
+        } else {
+            console.error('Error al guardar análisis nutricional:', result.error);
+            NutricionUtils.mostrarNotificacion('error', 'Error al guardar cambios');
+        }
+
+    } catch (error) {
+        console.error('Error en guardado automático:', error);
+        NutricionUtils.mostrarNotificacion('error', 'Error de conexión al guardar');
+    }
+}
+
+/**
+ * Muestra una notificación visual del estado del guardado
+ */
+// mostrarNotificacionGuardado() ahora disponible desde NutricionUtils.mostrarNotificacion()
+
+// getCsrfToken() ahora disponible desde NutricionUtils.getCsrfToken()

@@ -1,7 +1,9 @@
 // Gestión de Ingredientes - Módulo de Nutrición
 
-// Elementos del DOM
-let modal, formIngrediente, modalTitle;
+// Elementos de    try {
+        const result = id ? 
+            await nutricionAPI.editarIngrediente(id, data) :
+            await nutricionAPI.crearIngrediente(data);al, formIngrediente, modalTitle;
 
 document.addEventListener('DOMContentLoaded', function() {
     // Inicializar elementos
@@ -37,8 +39,7 @@ function cerrarModal() {
 
 async function editarIngrediente(id) {
     try {
-        const response = await fetch(`/nutricion/api/ingredientes/${id}/`);
-        const data = await response.json();
+        const data = await nutricionAPI.obtenerIngrediente(id);
 
         if (response.ok) {
             modalTitle.textContent = 'Editar Ingrediente';
@@ -99,14 +100,7 @@ async function eliminarIngrediente(id) {
     }
 
     try {
-        const response = await fetch(`/nutricion/api/ingredientes/${id}/`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken')
-            }
-        });
-
-        const result = await response.json();
+        const result = await nutricionAPI.eliminarIngrediente(id);
 
         if (result.success) {
             alert('Ingrediente eliminado exitosamente');
@@ -121,17 +115,4 @@ async function eliminarIngrediente(id) {
 }
 
 // Función auxiliar para obtener el token CSRF
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
+// Función getCookie ahora disponible desde utils.js

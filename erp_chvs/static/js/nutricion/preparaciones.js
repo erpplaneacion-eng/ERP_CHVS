@@ -36,8 +36,7 @@ function cerrarModal() {
 
 async function editarPreparacion(id) {
     try {
-        const response = await fetch(`/nutricion/api/preparaciones/${id}/`);
-        const data = await response.json();
+        const data = await nutricionAPI.obtenerPreparacion(id);
 
         if (response.ok) {
             modalTitle.textContent = 'Editar Preparación';
@@ -63,20 +62,10 @@ async function guardarPreparacion(event) {
         id_menu: document.getElementById('preparacionMenu').value
     };
 
-    const url = id ? `/nutricion/api/preparaciones/${id}/` : '/nutricion/api/preparaciones/';
-    const method = id ? 'PUT' : 'POST';
-
     try {
-        const response = await fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(data)
-        });
-
-        const result = await response.json();
+        const result = id ? 
+            await nutricionAPI.editarPreparacion(id, data) :
+            await nutricionAPI.crearPreparacion(data);
 
         if (result.success) {
             alert(id ? 'Preparación actualizada exitosamente' : 'Preparación creada exitosamente');
@@ -97,14 +86,7 @@ async function eliminarPreparacion(id) {
     }
 
     try {
-        const response = await fetch(`/nutricion/api/preparaciones/${id}/`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken')
-            }
-        });
-
-        const result = await response.json();
+        const result = await nutricionAPI.eliminarPreparacion(id);
 
         if (result.success) {
             alert('Preparación eliminada exitosamente');
@@ -119,17 +101,4 @@ async function eliminarPreparacion(id) {
 }
 
 // Función auxiliar para obtener el token CSRF
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
+// Función getCookie ahora disponible desde utils.js

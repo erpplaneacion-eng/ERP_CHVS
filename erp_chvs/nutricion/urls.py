@@ -35,4 +35,5 @@ urlpatterns = [
 
     # Análisis Nutricional
     path('api/menus/<int:id_menu>/analisis-nutricional/', views.api_analisis_nutricional_menu, name='api_analisis_nutricional_menu'),
+    path('api/guardar-analisis-nutricional/', views.guardar_analisis_nutricional, name='guardar_analisis_nutricional'),
 ]

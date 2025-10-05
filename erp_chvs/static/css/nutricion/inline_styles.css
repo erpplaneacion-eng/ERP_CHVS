@@ -1,0 +1,79 @@
+/* ===================================== */
+/* ESTILOS EXTRAÍDOS DE HTML INLINE     */
+/* ===================================== */
+
+/* Elementos que inicialmente están ocultos */
+.hidden-initially {
+    display: none;
+}
+
+/* Modal de preparaciones */
+.modal-preparaciones {
+    max-width: 1200px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* Grupo de botones inline */
+.form-group-inline {
+    display: flex;
+    gap: 10px;
+}
+
+/* Modal de análisis nutricional */
+.modal-analisis-nutricional {
+    z-index: 10001;
+}
+
+.modal-analisis-content {
+    max-width: 1600px;
+    width: 95%;
+    max-height: 95vh;
+    overflow-y: auto;
+}
+
+/* Modal de agregar ingredientes */
+.modal-ingredientes {
+    max-width: 1000px;
+    max-height: 90vh;
+}
+
+.button-container {
+    margin-bottom: 20px;
+}
+
+.table-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.table-header-ingredient {
+    width: 80%;
+}
+
+.table-header-actions {
+    width: 20%;
+}
+
+.form-actions-spaced {
+    margin-top: 20px;
+}
+
+/* Texto de ayuda */
+.help-text {
+    color: #666;
+    margin-top: 5px;
+    display: block;
+}
+
+/* Modal de alimentos */
+.modal-alimentos-scroll {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 15px;
+}
+
+/* Centrado de texto para celdas vacías */
+.text-center {
+    text-align: center;
+}
