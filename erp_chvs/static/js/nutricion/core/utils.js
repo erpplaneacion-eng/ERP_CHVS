@@ -222,19 +222,70 @@ function crearElemento(tag, atributos = {}, contenido = '') {
  * Manejo centralizado de errores
  * @param {Error} error - Error a manejar
  * @param {string} contexto - Contexto donde ocurrió el error
+ * @param {boolean} mostrarNotificacion - Si mostrar notificación al usuario
  */
-function manejarError(error, contexto = '') {
+function manejarError(error, contexto = '', mostrarNotificacion = true) {
     console.error(`Error en ${contexto}:`, error);
-    
+
+    // Log detallado para debugging
+    if (error.stack) {
+        console.error('Stack trace:', error.stack);
+    }
+
     let mensaje = 'Ha ocurrido un error inesperado';
-    
+
     if (error.message) {
         mensaje = error.message;
     } else if (typeof error === 'string') {
         mensaje = error;
     }
-    
-    mostrarNotificacion('error', `${contexto ? contexto + ': ' : ''}${mensaje}`);
+
+    // Mostrar notificación solo si se solicita
+    if (mostrarNotificacion) {
+        mostrarNotificacion('error', `${contexto ? contexto + ': ' : ''}${mensaje}`);
+    }
+
+    // Enviar error a servidor para logging (si está disponible)
+    try {
+        if (window.NutricionAPI && typeof window.NutricionAPI.logError === 'function') {
+            window.NutricionAPI.logError({
+                contexto: contexto,
+                mensaje: mensaje,
+                stack: error.stack || 'No stack trace available',
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                url: window.location.href
+            });
+        }
+    } catch (logError) {
+        console.warn('No se pudo enviar error al servidor:', logError);
+    }
+}
+
+/**
+ * Wrapper para promesas con manejo de errores automático
+ * @param {Promise} promise - Promesa a manejar
+ * @param {string} contexto - Contexto para el error
+ * @returns {Promise} - Promesa con manejo de errores
+ */
+function manejarPromesa(promise, contexto = '') {
+    return promise.catch(error => {
+        manejarError(error, contexto);
+        throw error; // Re-lanzar para que el caller pueda manejar si es necesario
+    });
+}
+
+/**
+ * Valida el estado de la respuesta HTTP
+ * @param {Response} response - Respuesta HTTP
+ * @returns {Response} - Respuesta si es válida
+ * @throws {Error} - Error si la respuesta no es válida
+ */
+function validarRespuestaHTTP(response) {
+    if (!response.ok) {
+        throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
+    }
+    return response;
 }
 
 /**
@@ -298,6 +349,8 @@ Object.assign(window.NutricionUtils, {
     sanitizarTexto,
     crearElemento,
     manejarError,
+    manejarPromesa,
+    validarRespuestaHTTP,
     LoadingManager
 });
 

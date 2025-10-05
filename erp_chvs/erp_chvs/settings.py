@@ -31,9 +31,23 @@ SECRET_KEY = os.environ.get(
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = []
+# Configuración de hosts permitidos
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
+# Configuración de seguridad adicional
+if not DEBUG:
+    # Configuraciones de seguridad para producción
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Application definition
@@ -90,11 +104,16 @@ WSGI_APPLICATION = 'erp_chvs.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'erp_chvs',
-        'USER': 'postgres',
-        'PASSWORD': 'chvs2025',
-        'HOST': 'localhost',
-        'PORT': '5432',        
+        'NAME': os.environ.get('DB_NAME', 'erp_chvs'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'chvs2025'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+        'OPTIONS': {
+            'connect_timeout': 10,
+        },
+        'CONN_MAX_AGE': 600,  # 10 minutos
+        'CONN_HEALTH_CHECKS': True,
     }
 }
 

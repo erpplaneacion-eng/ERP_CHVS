@@ -847,7 +847,7 @@ def api_analisis_nutricional_menu(request, id_menu):
 
         # Generar análisis por cada nivel escolar
         analisis_por_nivel = []
-        
+
         for requerimiento in todos_requerimientos:
             nivel_escolar = requerimiento.id_nivel_escolar_uapa
             es_programa_actual = (nivel_escolar_programa and 
@@ -975,9 +975,13 @@ def guardar_analisis_nutricional(request):
                 'id_ingrediente_siesa': int,
                 'peso_neto': float,
                 'peso_bruto': float,
-                'calorias_calculadas': float,
-                'proteina_calculada': float,
-                ... (otros nutrientes)
+                'calorias': float,
+                'proteina': float,
+                'grasa': float,
+                'cho': float,
+                'calcio': float,
+                'hierro': float,
+                'sodio': float
             }
         ]
     }
@@ -1019,11 +1023,10 @@ def guardar_analisis_nutricional(request):
                 id_menu=menu,
                 id_nivel_escolar_uapa=nivel_escolar,
                 defaults={
-                    'fecha_analisis': timezone.now(),
-                    'usuario_analisis': request.user.username if hasattr(request.user, 'username') else 'sistema'
+                    'usuario_modificacion': request.user.username if hasattr(request.user, 'username') else 'sistema'
                 }
             )
-            
+
             # Actualizar totales nutricionales
             analisis.total_calorias = totales.get('calorias', 0)
             analisis.total_proteina = totales.get('proteina', 0)
@@ -1034,7 +1037,7 @@ def guardar_analisis_nutricional(request):
             analisis.total_sodio = totales.get('sodio', 0)
             analisis.total_peso_neto = totales.get('peso_neto', 0)
             analisis.total_peso_bruto = totales.get('peso_bruto', 0)
-            
+
             # Actualizar porcentajes de adecuación
             analisis.porcentaje_calorias = porcentajes.get('calorias', 0)
             analisis.porcentaje_proteina = porcentajes.get('proteina', 0)
@@ -1043,9 +1046,9 @@ def guardar_analisis_nutricional(request):
             analisis.porcentaje_calcio = porcentajes.get('calcio', 0)
             analisis.porcentaje_hierro = porcentajes.get('hierro', 0)
             analisis.porcentaje_sodio = porcentajes.get('sodio', 0)
-            
-            # Actualizar fecha de modificación
-            analisis.fecha_modificacion = timezone.now()
+
+            # Actualizar usuario y fecha de modificación (fecha_actualizacion se actualiza automáticamente con auto_now=True)
+            analisis.usuario_modificacion = request.user.username if hasattr(request.user, 'username') else 'sistema'
             analisis.save()
             
             # Eliminar ingredientes previos para este análisis
@@ -1071,15 +1074,15 @@ def guardar_analisis_nutricional(request):
                     id_analisis=analisis,
                     id_preparacion=preparacion,
                     id_ingrediente_siesa=ingrediente,
-                    peso_neto_configurado=ing_data.get('peso_neto', 0),
-                    peso_bruto_calculado=ing_data.get('peso_bruto', 0),
-                    calorias_calculadas=ing_data.get('calorias_calculadas', 0),
-                    proteina_calculada=ing_data.get('proteina_calculada', 0),
-                    grasa_calculada=ing_data.get('grasa_calculada', 0),
-                    cho_calculado=ing_data.get('cho_calculado', 0),
-                    calcio_calculado=ing_data.get('calcio_calculado', 0),
-                    hierro_calculado=ing_data.get('hierro_calculado', 0),
-                    sodio_calculado=ing_data.get('sodio_calculado', 0)
+                    peso_neto=ing_data.get('peso_neto', 0),
+                    peso_bruto=ing_data.get('peso_bruto', 0),
+                    calorias=ing_data.get('calorias', 0),
+                    proteina=ing_data.get('proteina', 0),
+                    grasa=ing_data.get('grasa', 0),
+                    cho=ing_data.get('cho', 0),
+                    calcio=ing_data.get('calcio', 0),
+                    hierro=ing_data.get('hierro', 0),
+                    sodio=ing_data.get('sodio', 0)
                 )
                 ingredientes_guardados += 1
         

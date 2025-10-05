@@ -131,7 +131,7 @@
         {% if 'alimentos' in request.path %}
             <script src="{% static 'js/nutricion/alimentos.js' %}"></script>
         {% else %}
-            <script src="{% static 'js/nutricion/beneficiarios.js' %}"></script>
+            <script src="{% static 'js/nutricion/main.js' %}"></script>
         {% endif %}
     {% elif request.resolver_match.app_name == 'planeacion' %}
         {% if 'programas' in request.path %}

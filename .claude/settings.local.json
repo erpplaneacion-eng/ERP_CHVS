@@ -6,7 +6,11 @@
       "Bash(do echo \"=== $file ===\")",
       "Bash(python manage.py:*)",
       "Bash(cat:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(python.exe manage.py shell:*)",
+      "Bash(where python)",
+      "Bash(C:UsersUserAppDataLocalProgramsPythonPython313python.exe manage.py shell)",
+      "Bash(\"/c/Users/User/AppData/Local/Programs/Python/Python313/python.exe\" manage.py dbshell)"
     ],
     "deny": [],
     "ask": []

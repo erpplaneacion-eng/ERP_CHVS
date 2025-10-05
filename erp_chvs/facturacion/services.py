@@ -5,6 +5,7 @@ Capa de servicios para orquestación de procesos complejos.
 import pandas as pd
 from typing import Dict, List, Any, Optional
 from django.core.files.uploadedfile import UploadedFile
+import base64
 
 from .excel_utils import ExcelProcessor
 from .data_processors import DataTransformer

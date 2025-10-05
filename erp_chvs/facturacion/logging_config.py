@@ -68,12 +68,27 @@ class FacturacionLogger:
 
 def configurar_logging():
     """Configura el logging para el módulo de facturación."""
-    # Crear handler para archivo de log
-    file_handler = logging.FileHandler('facturacion.log')
-    file_handler.setLevel(logging.INFO)
+    from logging.handlers import RotatingFileHandler
+    import os
 
-    # Crear formatter
-    formatter = logging.Formatter(ProcesamientoConfig.LOG_FORMAT)
+    # Crear directorio de logs si no existe
+    log_dir = 'logs'
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+    # Crear handler para archivo de log con rotación
+    log_file = os.path.join(log_dir, 'facturacion.log')
+    file_handler = RotatingFileHandler(
+        log_file,
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=5
+    )
+    file_handler.setLevel(getattr(logging, ProcesamientoConfig.LOG_LEVEL))
+
+    # Crear formatter mejorado
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - [%(funcName)s:%(lineno)d] - %(message)s'
+    )
     file_handler.setFormatter(formatter)
 
     # Configurar logger
@@ -82,3 +97,6 @@ def configurar_logging():
 
     # Evitar duplicación de logs
     logger.propagate = False
+
+    # Log de inicialización
+    logger.info("Sistema de logging de facturación inicializado correctamente")

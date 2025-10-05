@@ -1153,7 +1153,11 @@ function crearPreparacion(preparacion, nivelIndex, prepIndex) {
                         </tr>
                     </thead>
                     <tbody>
-                        ${preparacion.ingredientes.map((ing, ingIndex) => crearFilaIngrediente(ing, nivelIndex, prepIndex, ingIndex)).join('')}
+                        ${preparacion.ingredientes.map((ing, ingIndex) => {
+                            // Agregar id_preparacion_real al ingrediente para poder recuperarlo después
+                            ing.id_preparacion_real = preparacion.id_preparacion;
+                            return crearFilaIngrediente(ing, nivelIndex, prepIndex, ingIndex);
+                        }).join('')}
                     </tbody>
                 </table>
             </div>
@@ -1164,16 +1168,21 @@ function crearPreparacion(preparacion, nivelIndex, prepIndex) {
 function crearFilaIngrediente(ingrediente, nivelIndex, prepIndex, ingIndex) {
     const inputId = `peso-${nivelIndex}-${prepIndex}-${ingIndex}`;
     const valores = ingrediente.valores_por_100g;
-    
+
     return `
-        <tr class="ingrediente-row" data-nivel="${nivelIndex}" data-prep="${prepIndex}" data-ing="${ingIndex}">
+        <tr class="ingrediente-row"
+            data-nivel="${nivelIndex}"
+            data-prep="${prepIndex}"
+            data-ing="${ingIndex}"
+            data-prep-id="${ingrediente.id_preparacion_real || prepIndex}"
+            data-ing-id="${ingrediente.id_ingrediente || ingrediente.id_ingrediente_siesa || ingIndex}">
             <td class="ingrediente-nombre">${ingrediente.nombre}</td>
             <td>
-                <input type="number" 
-                       class="form-control form-control-sm peso-input" 
+                <input type="number"
+                       class="form-control form-control-sm peso-input"
                        id="${inputId}"
-                       value="${ingrediente.peso_neto_base.toFixed(0)}" 
-                       min="0" 
+                       value="${ingrediente.peso_neto_base.toFixed(0)}"
+                       min="0"
                        step="1"
                        data-base="${ingrediente.peso_neto_base}"
                        data-parte-comestible="${ingrediente.parte_comestible}"
@@ -1183,7 +1192,9 @@ function crearFilaIngrediente(ingrediente, nivelIndex, prepIndex, ingIndex) {
                        data-cho="${valores.cho_g}"
                        data-calcio="${valores.calcio_mg}"
                        data-hierro="${valores.hierro_mg}"
-                       data-sodio="${valores.sodio_mg}">
+                       data-sodio="${valores.sodio_mg}"
+                       data-prep-id="${ingrediente.id_preparacion_real || prepIndex}"
+                       data-ing-id="${ingrediente.id_ingrediente || ingrediente.id_ingrediente_siesa || ingIndex}">
             </td>
             <td class="peso-bruto-calc" id="bruto-${nivelIndex}-${prepIndex}-${ingIndex}">
                 ${ingrediente.peso_bruto_base.toFixed(0)}
@@ -1696,32 +1707,47 @@ async function guardarAnalisisAutomatico(nivelIndex, menuId) {
             const ingIndex = row.data('ing');
             const pesoInput = row.find('.peso-input');
 
+            // Obtener IDs reales desde data attributes
+            const prepIdReal = row.data('prep-id') || pesoInput.data('prep-id');
+            const ingIdReal = row.data('ing-id') || pesoInput.data('ing-id');
+
+            console.log(`[DEBUG] Guardando ingrediente - Índices: prep=${prepIndex}, ing=${ingIndex}, IDs reales: prepId=${prepIdReal}, ingId=${ingIdReal}`);
+
             const ingrediente = {
-                id_preparacion: prepIndex,
-                id_ingrediente_siesa: ingIndex,
+                id_preparacion: prepIdReal,
+                id_ingrediente_siesa: ingIdReal,
                 peso_neto: parseFloat(pesoInput.val()) || 0,
                 peso_bruto: parseFloat($(`#bruto-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
-                calorias_calculadas: parseFloat($(`#cal-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
-                proteina_calculada: parseFloat($(`#prot-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
-                grasa_calculada: parseFloat($(`#grasa-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
-                cho_calculado: parseFloat($(`#cho-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
-                calcio_calculado: parseFloat($(`#calcio-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
-                hierro_calculado: parseFloat($(`#hierro-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
-                sodio_calculado: parseFloat($(`#sodio-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0
+                calorias: parseFloat($(`#cal-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
+                proteina: parseFloat($(`#prot-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
+                grasa: parseFloat($(`#grasa-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
+                cho: parseFloat($(`#cho-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
+                calcio: parseFloat($(`#calcio-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
+                hierro: parseFloat($(`#hierro-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
+                sodio: parseFloat($(`#sodio-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0
             };
 
             ingredientes.push(ingrediente);
         });
 
         // Obtener ID del nivel escolar desde los datos almacenados
-        const idNivelEscolar = datosNutricionales && 
-                              datosNutricionales.analisis_por_nivel && 
-                              datosNutricionales.analisis_por_nivel[nivelIndex] && 
-                              datosNutricionales.analisis_por_nivel[nivelIndex].nivel_escolar && 
+        const idNivelEscolar = datosNutricionales &&
+                              datosNutricionales.analisis_por_nivel &&
+                              datosNutricionales.analisis_por_nivel[nivelIndex] &&
+                              datosNutricionales.analisis_por_nivel[nivelIndex].nivel_escolar &&
                               datosNutricionales.analisis_por_nivel[nivelIndex].nivel_escolar.id;
 
-        if (!idNivelEscolar) {
-            console.warn('No se pudo determinar el ID del nivel escolar para guardado automático');
+        console.log('[DEBUG] ID Nivel Escolar obtenido:', {
+            nivelIndex,
+            idNivelEscolar,
+            nivel_escolar_completo: datosNutricionales?.analisis_por_nivel?.[nivelIndex]?.nivel_escolar,
+            existe_datos: !!datosNutricionales
+        });
+
+        if (!idNivelEscolar || idNivelEscolar === '-1' || idNivelEscolar === -1) {
+            console.error('ID de nivel escolar inválido:', idNivelEscolar);
+            console.error('Datos completos:', datosNutricionales?.analisis_por_nivel?.[nivelIndex]);
+            NutricionUtils.mostrarNotificacion('error', 'No se puede guardar: nivel escolar inválido');
             return;
         }
 
@@ -1734,6 +1760,13 @@ async function guardarAnalisisAutomatico(nivelIndex, menuId) {
             ingredientes: ingredientes
         };
 
+        console.log('[GUARDADO AUTOMÁTICO] Datos a enviar:', {
+            menuId,
+            idNivelEscolar,
+            totalIngredientes: ingredientes.length,
+            datosCompletos: datosGuardado
+        });
+
         // Enviar datos al servidor
         const response = await fetch('/nutricion/api/guardar-analisis-nutricional/', {
             method: 'POST',
@@ -1744,21 +1777,28 @@ async function guardarAnalisisAutomatico(nivelIndex, menuId) {
             body: JSON.stringify(datosGuardado)
         });
 
+        console.log('[GUARDADO AUTOMÁTICO] Response status:', response.status);
+
         const result = await response.json();
+        console.log('[GUARDADO AUTOMÁTICO] Response data:', result);
 
         if (result.success) {
-            console.log('Análisis nutricional guardado automáticamente:', result);
-            
+            console.log('✓ Análisis nutricional guardado automáticamente:', {
+                analisisId: result.analisis_id,
+                ingredientesGuardados: result.ingredientes_guardados,
+                created: result.created
+            });
+
             // Mostrar indicador visual de guardado exitoso
-            NutricionUtils.mostrarNotificacion('success', 'Cambios guardados automáticamente');
+            NutricionUtils.mostrarNotificacion('success', `Guardado: ${result.ingredientes_guardados} ingredientes`);
         } else {
-            console.error('Error al guardar análisis nutricional:', result.error);
-            NutricionUtils.mostrarNotificacion('error', 'Error al guardar cambios');
+            console.error('✗ Error al guardar análisis nutricional:', result.error);
+            NutricionUtils.mostrarNotificacion('error', `Error: ${result.error || 'Desconocido'}`);
         }
 
     } catch (error) {
-        console.error('Error en guardado automático:', error);
-        NutricionUtils.mostrarNotificacion('error', 'Error de conexión al guardar');
+        console.error('✗ Error en guardado automático:', error);
+        NutricionUtils.mostrarNotificacion('error', `Error: ${error.message || 'Conexión fallida'}`);
     }
 }
 
