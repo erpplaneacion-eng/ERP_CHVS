@@ -668,315 +668,33 @@ def api_preparacion_ingrediente_delete(request, id_preparacion, id_ingrediente):
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
 
 
+
+
 # =================== ANÁLISIS NUTRICIONAL ===================
 
 @login_required
 def api_analisis_nutricional_menu(request, id_menu):
     """
     API para obtener análisis nutricional completo de un menú por niveles escolares.
-
-    Retorna información detallada de:
-    - Preparaciones e ingredientes del menú
-    - Valores nutricionales por 100g de cada ingrediente
-    - Pesos neto y bruto calculados
-    - Totales nutricionales por nivel escolar
-    - Porcentajes de adecuación nutricional (limitados a 100%)
-    - Estados de adecuación (óptimo/aceptable/alto)
-
-    CÁLCULOS PRINCIPALES:
-    1. Peso Bruto = (Peso Neto × 100) / Parte Comestible
-    2. Nutriente = (Valor por 100g × Peso Neto) / 100
-    3. % Adecuación = min((Total / Requerimiento) × 100, 100)
-
-    Args:
-        request: HttpRequest object
-        id_menu: ID del menú a analizar
-
-    Returns:
-        JsonResponse con estructura:
-        {
-            'success': True,
-            'menu': {...},
-            'analisis_por_nivel': [
-                {
-                    'nivel_escolar': {...},
-                    'es_programa_actual': bool,
-                    'requerimientos': {...},
-                    'totales': {...},
-                    'porcentajes_adecuacion': {...},
-                    'preparaciones': [...]
-                }
-            ]
-        }
+    ✨ REFACTORIZADO: Usa AnalisisNutricionalService para lógica de negocio.
     """
-    
-    def get_estado_adecuacion(porcentaje, nutriente):
-        """
-        Determina el estado de adecuación nutricional según el porcentaje alcanzado.
+    from .services import AnalisisNutricionalService
 
-        RANGOS DE EVALUACIÓN (válidos para todos los nutrientes):
-        - 0-35%: ÓPTIMO (verde) - Aporte bajo pero seguro
-        - 35.1-70%: ACEPTABLE (amarillo) - Aporte moderado
-        - >70%: ALTO (rojo) - Aporte elevado, cerca del límite máximo
-
-        NOTA IMPORTANTE:
-        - El 100% representa el MÁXIMO permitido según ICBF 2018
-        - Para sodio, valores bajos son mejores (pero el rango de colores es el mismo)
-        - Para otros nutrientes, alcanzar valores altos es aceptable pero no debe exceder 100%
-
-        Args:
-            porcentaje (float): Porcentaje de adecuación (0-100)
-            nutriente (str): Nombre del nutriente evaluado
-
-        Returns:
-            str: Estado ('optimo', 'aceptable', 'alto')
-        """
-        # Validar entrada
-        porcentaje = max(0, min(100, porcentaje))  # Limitar entre 0-100
-
-        # Rangos uniformes para todos los nutrientes
-        # (La interpretación nutricional varía, pero los rangos son consistentes)
-        if porcentaje <= 35:
-            return 'optimo'      # 0-35%: Verde
-        elif porcentaje <= 70:
-            return 'aceptable'   # 35.1-70%: Amarillo
-        else:
-            return 'alto'        # >70%: Rojo
-    
     try:
-        from decimal import Decimal
-        
-        # Obtener el menú
-        menu = get_object_or_404(TablaMenus, id_menu=id_menu)
-        
-        # Obtener el programa y su nivel escolar asociado
-        programa = menu.id_contrato
+        # Delegar toda la lógica al servicio
+        resultado = AnalisisNutricionalService.obtener_analisis_completo(id_menu)
+        return JsonResponse(resultado)
 
-        # Obtener todas las preparaciones del menú con sus ingredientes
-        preparaciones = TablaPreparaciones.objects.filter(id_menu=menu).prefetch_related(
-            'ingredientes__id_ingrediente_siesa'
-        )
-
-        # Estructurar datos de preparaciones e ingredientes
-        preparaciones_data = []
-        
-        for preparacion in preparaciones:
-            ingredientes_prep = TablaPreparacionIngredientes.objects.filter(
-                id_preparacion=preparacion
-            ).select_related('id_ingrediente_siesa')
-            
-            ingredientes_data = []
-            
-            for ing_prep in ingredientes_prep:
-                ingrediente = ing_prep.id_ingrediente_siesa
-                
-                # Buscar el ingrediente en la tabla de alimentos ICBF
-                alimento = TablaAlimentos2018Icbf.objects.filter(
-                    codigo=ingrediente.id_ingrediente_siesa
-                ).first()
-                
-                if not alimento:
-                    alimento = TablaAlimentos2018Icbf.objects.filter(
-                        nombre_del_alimento__icontains=ingrediente.nombre_ingrediente
-                    ).first()
-                
-                if alimento:
-                    # Peso neto base por defecto (100g)
-                    peso_neto_base = 100
-
-                    # Calcular peso bruto usando parte_comestible_field
-                    # Fórmula: Peso Bruto = (Peso Neto × 100) / % Parte Comestible
-                    # Ejemplo: 100g neto con 85% comestible = (100 × 100) / 85 = 117.6g bruto
-                    parte_comestible = float(alimento.parte_comestible_field) if alimento.parte_comestible_field else 100.0
-
-                    # Validar que parte_comestible esté en rango válido (1-100%)
-                    parte_comestible = max(1.0, min(100.0, parte_comestible))
-
-                    # Calcular peso bruto
-                    peso_bruto_base = (peso_neto_base * 100) / parte_comestible
-                    
-                    # Valores nutricionales por 100g
-                    valores_por_100g = {
-                        'calorias_kcal': float(alimento.energia_kcal or 0),
-                        'proteina_g': float(alimento.proteina_g or 0),
-                        'grasa_g': float(alimento.lipidos_g or 0),
-                        'cho_g': float(alimento.carbohidratos_totales_g or 0),
-                        'calcio_mg': float(alimento.calcio_mg or 0),
-                        'hierro_mg': float(alimento.hierro_mg or 0),
-                        'sodio_mg': float(alimento.sodio_mg or 0)
-                    }
-                    
-                    ingredientes_data.append({
-                        'id_ingrediente': ingrediente.id_ingrediente_siesa,
-                        'nombre': ingrediente.nombre_ingrediente,
-                        'codigo_icbf': alimento.codigo,
-                        'peso_neto_base': peso_neto_base,
-                        'peso_bruto_base': round(peso_bruto_base, 1),
-                        'parte_comestible': float(parte_comestible),
-                        'valores_por_100g': valores_por_100g,
-                        'alimento_encontrado': True
-                    })
-                else:
-                    ingredientes_data.append({
-                        'id_ingrediente': ingrediente.id_ingrediente_siesa,
-                        'nombre': ingrediente.nombre_ingrediente,
-                        'peso_neto_base': 100,
-                        'peso_bruto_base': 100,
-                        'parte_comestible': 100,
-                        'valores_por_100g': {
-                            'calorias_kcal': 0, 'proteina_g': 0, 'grasa_g': 0, 'cho_g': 0,
-                            'calcio_mg': 0, 'hierro_mg': 0, 'sodio_mg': 0
-                        },
-                        'alimento_encontrado': False,
-                        'mensaje': 'No se encontró en TABLA_ALIMENTOS_2018_ICBF'
-                    })
-            
-            preparaciones_data.append({
-                'id_preparacion': preparacion.id_preparacion,
-                'nombre': preparacion.preparacion,
-                'ingredientes': ingredientes_data
-            })
-
-        # Obtener TODOS los requerimientos nutricionales disponibles
-        todos_requerimientos = TablaRequerimientosNutricionales.objects.select_related(
-            'id_nivel_escolar_uapa'
-        ).all()
-
-        # Obtener el nivel escolar del programa actual
-        nivel_escolar_programa = programa.get_nivel_escolar_uapa()
-
-        # Pre-cargar datos guardados de análisis por nivel (si existen)
-        analisis_guardados = {}
-        for req in todos_requerimientos:
-            analisis = TablaAnalisisNutricionalMenu.objects.filter(
-                id_menu=menu,
-                id_nivel_escolar_uapa=req.id_nivel_escolar_uapa
-            ).first()
-            if analisis:
-                analisis_guardados[req.id_nivel_escolar_uapa.id_grado_escolar_uapa] = analisis
-
-        # Generar análisis por cada nivel escolar
-        analisis_por_nivel = []
-
-        for requerimiento in todos_requerimientos:
-            nivel_escolar = requerimiento.id_nivel_escolar_uapa
-            es_programa_actual = (nivel_escolar_programa and 
-                                nivel_escolar.id_grado_escolar_uapa == nivel_escolar_programa.id_grado_escolar_uapa)
-            
-            # Requerimientos nutricionales para este nivel
-            requerimientos_nivel = {
-                'calorias_kcal': float(requerimiento.calorias_kcal),
-                'proteina_g': float(requerimiento.proteina_g),
-                'grasa_g': float(requerimiento.grasa_g),
-                'cho_g': float(requerimiento.cho_g),
-                'calcio_mg': float(requerimiento.calcio_mg),
-                'hierro_mg': float(requerimiento.hierro_mg),
-                'sodio_mg': float(requerimiento.sodio_mg)
-            }
-            
-            # Calcular totales del nivel sumando todos los ingredientes
-            totales_nivel = {
-                'calorias_kcal': 0,
-                'proteina_g': 0,
-                'grasa_g': 0,
-                'cho_g': 0,
-                'calcio_mg': 0,
-                'hierro_mg': 0,
-                'sodio_mg': 0,
-                'peso_neto_total': 0,
-                'peso_bruto_total': 0
-            }
-            
-            # Obtener análisis guardado para este nivel (si existe)
-            analisis_nivel = analisis_guardados.get(nivel_escolar.id_grado_escolar_uapa)
-
-            # Crear copia de preparaciones con pesos específicos para este nivel
-            import copy
-            preparaciones_nivel = copy.deepcopy(preparaciones_data)
-
-            # Sumar valores de todos los ingredientes de todas las preparaciones
-            for prep in preparaciones_nivel:
-                for ing in prep['ingredientes']:
-                    if ing['alimento_encontrado']:
-                        # Intentar cargar peso guardado para este ingrediente
-                        if analisis_nivel:
-                            ingrediente_guardado = TablaIngredientesPorNivel.objects.filter(
-                                id_analisis=analisis_nivel,
-                                id_preparacion__id_preparacion=prep['id_preparacion'],
-                                id_ingrediente_siesa__id_ingrediente_siesa=ing['id_ingrediente']
-                            ).first()
-
-                            if ingrediente_guardado:
-                                # Usar pesos guardados
-                                ing['peso_neto_base'] = float(ingrediente_guardado.peso_neto)
-                                ing['peso_bruto_base'] = float(ingrediente_guardado.peso_bruto)
-
-                        # Calcular nutrientes con el peso configurado
-                        valores = ing['valores_por_100g']
-                        factor = ing['peso_neto_base'] / 100
-
-                        totales_nivel['calorias_kcal'] += valores['calorias_kcal'] * factor
-                        totales_nivel['proteina_g'] += valores['proteina_g'] * factor
-                        totales_nivel['grasa_g'] += valores['grasa_g'] * factor
-                        totales_nivel['cho_g'] += valores['cho_g'] * factor
-                        totales_nivel['calcio_mg'] += valores['calcio_mg'] * factor
-                        totales_nivel['hierro_mg'] += valores['hierro_mg'] * factor
-                        totales_nivel['sodio_mg'] += valores['sodio_mg'] * factor
-                        totales_nivel['peso_neto_total'] += ing['peso_neto_base']
-                        totales_nivel['peso_bruto_total'] += ing['peso_bruto_base']
-            
-            # Calcular porcentajes de adecuación
-            porcentajes_adecuacion = {}
-            for nutriente in ['calorias_kcal', 'proteina_g', 'grasa_g', 'cho_g', 'calcio_mg', 'hierro_mg', 'sodio_mg']:
-                total_actual = totales_nivel[nutriente]
-                requerido = requerimientos_nivel[nutriente]
-                
-                if requerido > 0:
-                    # Calcular porcentaje y limitarlo entre 0-100%
-                    porcentaje = min((total_actual / requerido) * 100, 100.0)
-                    porcentaje = max(porcentaje, 0.0)
-                    
-                    porcentajes_adecuacion[nutriente] = {
-                        'porcentaje': round(porcentaje, 1),
-                        'estado': get_estado_adecuacion(porcentaje, nutriente)
-                    }
-                else:
-                    porcentajes_adecuacion[nutriente] = {
-                        'porcentaje': 0.0,
-                        'estado': 'sin_datos'
-                    }
-            
-            analisis_por_nivel.append({
-                'nivel_escolar': {
-                    'id': nivel_escolar.id_grado_escolar_uapa,
-                    'nombre': nivel_escolar.nivel_escolar_uapa,
-                    'rango_edades': getattr(nivel_escolar, 'rango_edades', '')
-                },
-                'es_programa_actual': es_programa_actual,
-                'requerimientos': requerimientos_nivel,
-                'totales': totales_nivel,
-                'porcentajes_adecuacion': porcentajes_adecuacion,
-                'preparaciones': preparaciones_nivel  # Cada nivel tiene sus pesos específicos
-            })
-
-        # Preparar respuesta
-        response_data = {
-            'success': True,
-            'menu': {
-                'id': menu.id_menu,
-                'nombre': menu.menu,
-                'modalidad': menu.id_modalidad.modalidad,
-                'programa': programa.programa
-            },
-            'analisis_por_nivel': analisis_por_nivel
-        }
-
-        return JsonResponse(response_data)
+    except TablaMenus.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Menú no encontrado'
+        }, status=404)
 
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'error': f'Error al calcular análisis nutricional: {str(e)}'
+            'error': f'Error al obtener análisis: {str(e)}'
         }, status=500)
 
 
@@ -985,150 +703,48 @@ def api_analisis_nutricional_menu(request, id_menu):
 def guardar_analisis_nutricional(request):
     """
     API para guardar automáticamente el análisis nutricional editado por el usuario.
-    
-    Guarda en las tablas:
-    - TablaAnalisisNutricionalMenu: Totales y porcentajes por nivel
-    - TablaIngredientesPorNivel: Pesos configurados de cada ingrediente
-    
-    Datos esperados en POST:
-    {
-        'id_menu': int,
-        'id_nivel_escolar': int,
-        'totales': {
-            'calorias': float, 'proteina': float, ...
-        },
-        'porcentajes': {
-            'calorias': float, 'proteina': float, ...
-        },
-        'ingredientes': [
-            {
-                'id_preparacion': int,
-                'id_ingrediente_siesa': int,
-                'peso_neto': float,
-                'peso_bruto': float,
-                'calorias': float,
-                'proteina': float,
-                'grasa': float,
-                'cho': float,
-                'calcio': float,
-                'hierro': float,
-                'sodio': float
-            }
-        ]
-    }
+    ✨ REFACTORIZADO: Usa AnalisisNutricionalService.guardar_analisis()
     """
+    from .services import AnalisisNutricionalService
+
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
-    
+
     try:
         data = json.loads(request.body)
-        
-        # Validar datos requeridos
-        required_fields = ['id_menu', 'id_nivel_escolar', 'totales', 'porcentajes', 'ingredientes']
-        for field in required_fields:
-            if field not in data:
-                return JsonResponse({'error': f'Falta el campo: {field}'}, status=400)
-        
-        id_menu = data['id_menu']
-        id_nivel_escolar = data['id_nivel_escolar']
-        totales = data['totales']
-        porcentajes = data['porcentajes']
-        ingredientes = data['ingredientes']
-        
-        # Verificar que el menú existe
-        try:
-            menu = TablaMenus.objects.get(id_menu=id_menu)
-        except TablaMenus.DoesNotExist:
-            return JsonResponse({'error': 'Menú no encontrado'}, status=404)
-        
-        # Verificar que el nivel escolar existe
-        from principal.models import TablaGradosEscolaresUapa
-        try:
-            nivel_escolar = TablaGradosEscolaresUapa.objects.get(id_grado_escolar_uapa=id_nivel_escolar)
-        except TablaGradosEscolaresUapa.DoesNotExist:
-            return JsonResponse({'error': 'Nivel escolar no encontrado'}, status=404)
-        
-        with transaction.atomic():
-            # Buscar o crear el registro de análisis
-            analisis, created = TablaAnalisisNutricionalMenu.objects.get_or_create(
-                id_menu=menu,
-                id_nivel_escolar_uapa=nivel_escolar,
-                defaults={
-                    'usuario_modificacion': request.user.username if hasattr(request.user, 'username') else 'sistema'
-                }
-            )
 
-            # Actualizar totales nutricionales
-            analisis.total_calorias = totales.get('calorias', 0)
-            analisis.total_proteina = totales.get('proteina', 0)
-            analisis.total_grasa = totales.get('grasa', 0)
-            analisis.total_cho = totales.get('cho', 0)
-            analisis.total_calcio = totales.get('calcio', 0)
-            analisis.total_hierro = totales.get('hierro', 0)
-            analisis.total_sodio = totales.get('sodio', 0)
-            analisis.total_peso_neto = totales.get('peso_neto', 0)
-            analisis.total_peso_bruto = totales.get('peso_bruto', 0)
+        # Delegar al servicio
+        resultado = AnalisisNutricionalService.guardar_analisis(
+            id_menu=data['id_menu'],
+            id_nivel_escolar=data['id_nivel_escolar'],
+            totales=data['totales'],
+            porcentajes=data['porcentajes'],
+            ingredientes=data['ingredientes'],
+            usuario=request.user.username if hasattr(request.user, 'username') else 'sistema'
+        )
 
-            # Actualizar porcentajes de adecuación
-            analisis.porcentaje_calorias = porcentajes.get('calorias', 0)
-            analisis.porcentaje_proteina = porcentajes.get('proteina', 0)
-            analisis.porcentaje_grasa = porcentajes.get('grasa', 0)
-            analisis.porcentaje_cho = porcentajes.get('cho', 0)
-            analisis.porcentaje_calcio = porcentajes.get('calcio', 0)
-            analisis.porcentaje_hierro = porcentajes.get('hierro', 0)
-            analisis.porcentaje_sodio = porcentajes.get('sodio', 0)
+        return JsonResponse(resultado)
 
-            # Actualizar usuario y fecha de modificación (fecha_actualizacion se actualiza automáticamente con auto_now=True)
-            analisis.usuario_modificacion = request.user.username if hasattr(request.user, 'username') else 'sistema'
-            analisis.save()
-            
-            # Eliminar ingredientes previos para este análisis
-            TablaIngredientesPorNivel.objects.filter(id_analisis=analisis).delete()
-            
-            # Guardar configuración de ingredientes
-            ingredientes_guardados = 0
-            for ing_data in ingredientes:
-                # Verificar que la preparación existe
-                try:
-                    preparacion = TablaPreparaciones.objects.get(id_preparacion=ing_data['id_preparacion'])
-                except TablaPreparaciones.DoesNotExist:
-                    continue
-                    
-                # Verificar que el ingrediente existe
-                try:
-                    ingrediente = TablaIngredientesSiesa.objects.get(id_ingrediente_siesa=ing_data['id_ingrediente_siesa'])
-                except TablaIngredientesSiesa.DoesNotExist:
-                    continue
-                
-                # Crear registro de ingrediente por nivel
-                TablaIngredientesPorNivel.objects.create(
-                    id_analisis=analisis,
-                    id_preparacion=preparacion,
-                    id_ingrediente_siesa=ingrediente,
-                    peso_neto=ing_data.get('peso_neto', 0),
-                    peso_bruto=ing_data.get('peso_bruto', 0),
-                    calorias=ing_data.get('calorias', 0),
-                    proteina=ing_data.get('proteina', 0),
-                    grasa=ing_data.get('grasa', 0),
-                    cho=ing_data.get('cho', 0),
-                    calcio=ing_data.get('calcio', 0),
-                    hierro=ing_data.get('hierro', 0),
-                    sodio=ing_data.get('sodio', 0)
-                )
-                ingredientes_guardados += 1
-        
+    except KeyError as e:
         return JsonResponse({
-            'success': True,
-            'message': 'Análisis nutricional guardado exitosamente',
-            'analisis_id': analisis.id_analisis,
-            'ingredientes_guardados': ingredientes_guardados,
-            'created': created
-        })
-        
+            'success': False,
+            'error': f'Falta el campo: {str(e)}'
+        }, status=400)
+
     except json.JSONDecodeError:
-        return JsonResponse({'error': 'Datos JSON inválidos'}, status=400)
+        return JsonResponse({
+            'success': False,
+            'error': 'Datos JSON inválidos'
+        }, status=400)
+
+    except TablaMenus.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Menú no encontrado'
+        }, status=404)
+
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'error': f'Error al guardar análisis nutricional: {str(e)}'
+            'error': f'Error al guardar: {str(e)}'
         }, status=500)
