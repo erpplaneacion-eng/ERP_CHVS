@@ -845,6 +845,16 @@ def api_analisis_nutricional_menu(request, id_menu):
         # Obtener el nivel escolar del programa actual
         nivel_escolar_programa = programa.get_nivel_escolar_uapa()
 
+        # Pre-cargar datos guardados de análisis por nivel (si existen)
+        analisis_guardados = {}
+        for req in todos_requerimientos:
+            analisis = TablaAnalisisNutricionalMenu.objects.filter(
+                id_menu=menu,
+                id_nivel_escolar_uapa=req.id_nivel_escolar_uapa
+            ).first()
+            if analisis:
+                analisis_guardados[req.id_nivel_escolar_uapa.id_grado_escolar_uapa] = analisis
+
         # Generar análisis por cada nivel escolar
         analisis_por_nivel = []
 
@@ -877,13 +887,34 @@ def api_analisis_nutricional_menu(request, id_menu):
                 'peso_bruto_total': 0
             }
             
+            # Obtener análisis guardado para este nivel (si existe)
+            analisis_nivel = analisis_guardados.get(nivel_escolar.id_grado_escolar_uapa)
+
+            # Crear copia de preparaciones con pesos específicos para este nivel
+            import copy
+            preparaciones_nivel = copy.deepcopy(preparaciones_data)
+
             # Sumar valores de todos los ingredientes de todas las preparaciones
-            for prep in preparaciones_data:
+            for prep in preparaciones_nivel:
                 for ing in prep['ingredientes']:
                     if ing['alimento_encontrado']:
+                        # Intentar cargar peso guardado para este ingrediente
+                        if analisis_nivel:
+                            ingrediente_guardado = TablaIngredientesPorNivel.objects.filter(
+                                id_analisis=analisis_nivel,
+                                id_preparacion__id_preparacion=prep['id_preparacion'],
+                                id_ingrediente_siesa__id_ingrediente_siesa=ing['id_ingrediente']
+                            ).first()
+
+                            if ingrediente_guardado:
+                                # Usar pesos guardados
+                                ing['peso_neto_base'] = float(ingrediente_guardado.peso_neto)
+                                ing['peso_bruto_base'] = float(ingrediente_guardado.peso_bruto)
+
+                        # Calcular nutrientes con el peso configurado
                         valores = ing['valores_por_100g']
                         factor = ing['peso_neto_base'] / 100
-                        
+
                         totales_nivel['calorias_kcal'] += valores['calorias_kcal'] * factor
                         totales_nivel['proteina_g'] += valores['proteina_g'] * factor
                         totales_nivel['grasa_g'] += valores['grasa_g'] * factor
@@ -925,7 +956,7 @@ def api_analisis_nutricional_menu(request, id_menu):
                 'requerimientos': requerimientos_nivel,
                 'totales': totales_nivel,
                 'porcentajes_adecuacion': porcentajes_adecuacion,
-                'preparaciones': preparaciones_data  # Cada nivel tendrá las mismas preparaciones
+                'preparaciones': preparaciones_nivel  # Cada nivel tiene sus pesos específicos
             })
 
         # Preparar respuesta
