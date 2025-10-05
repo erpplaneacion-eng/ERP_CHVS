@@ -759,7 +759,11 @@
     border-radius: 20px;
     font-size: 1.2em;
     font-weight: bold;
+    /* Fallback for browsers without backdrop-filter support */
+    background: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px); /* Safari support */
 }
 
 .slider-container {
