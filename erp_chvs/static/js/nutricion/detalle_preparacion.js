@@ -1,38 +1,71 @@
-// Gestión de Ingredientes de Preparación - Módulo de Nutrición
+/**
+ * Gestión de Ingredientes de Preparación - Módulo de Nutrición
+ * ✨ REFACTORIZADO: Usa módulos core (ModalManager, ApiClient)
+ */
 
-// Elementos del DOM
-let modal, formAgregarIngrediente;
+// Configuración del módulo
+const DETALLE_PREPARACION_CONFIG = {
+    modalId: 'modalIngrediente',
+    formId: 'formAgregarIngrediente',
+    apiEndpoint: '/nutricion/api/detalle-preparacion/'
+};
 
+// Inicialización
 document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar elementos
-    modal = document.getElementById('modalIngrediente');
-    formAgregarIngrediente = document.getElementById('formAgregarIngrediente');
-
-    // Event listeners
-    document.getElementById('btnAgregarIngrediente').addEventListener('click', abrirModal);
-    document.querySelector('.close').addEventListener('click', cerrarModal);
-    formAgregarIngrediente.addEventListener('submit', agregarIngrediente);
-
-    // Cerrar modal al hacer clic fuera
-    window.addEventListener('click', function(event) {
-        if (event.target === modal) {
-            cerrarModal();
-        }
-    });
+    inicializarEventos();
 });
 
+function inicializarEventos() {
+    // Botón agregar ingrediente
+    const btnAgregar = document.getElementById('btnAgregarIngrediente');
+    if (btnAgregar) {
+        btnAgregar.addEventListener('click', () => abrirModal());
+    }
+
+    // Formulario
+    const form = document.getElementById(DETALLE_PREPARACION_CONFIG.formId);
+    if (form) {
+        form.addEventListener('submit', agregarIngrediente);
+    }
+
+    // Cerrar modal con X
+    const closeBtn = document.querySelector(`#${DETALLE_PREPARACION_CONFIG.modalId} .close`);
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => cerrarModal());
+    }
+
+    // Cerrar modal al hacer clic fuera
+    const modal = document.getElementById(DETALLE_PREPARACION_CONFIG.modalId);
+    if (modal) {
+        window.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                cerrarModal();
+            }
+        });
+    }
+}
+
+// =================== FUNCIONES DE MODAL ===================
+
 function abrirModal() {
-    modal.style.display = 'block';
+    const form = document.getElementById(DETALLE_PREPARACION_CONFIG.formId);
+    if (form) form.reset();
+
+    ModalManager.abrir(DETALLE_PREPARACION_CONFIG.modalId);
 }
 
 function cerrarModal() {
-    modal.style.display = 'none';
-    formAgregarIngrediente.reset();
+    const form = document.getElementById(DETALLE_PREPARACION_CONFIG.formId);
+    if (form) form.reset();
+
+    ModalManager.cerrar(DETALLE_PREPARACION_CONFIG.modalId);
 }
+
+// =================== FUNCIONES CRUD ===================
 
 async function agregarIngrediente(event) {
     event.preventDefault();
-    
+
     const preparacionId = document.getElementById('preparacionId').value;
     const data = {
         ingrediente_id: document.getElementById('ingredienteSelect').value,
@@ -41,51 +74,50 @@ async function agregarIngrediente(event) {
     };
 
     try {
-        const response = await fetch(`/nutricion/api/detalle-preparacion/${preparacionId}/agregar/`, {
-            method: 'POST',
-            headers: NutricionUtils.getDefaultHeaders(),
-            body: JSON.stringify(data)
-        });
+        const result = await ApiClient.post(
+            `${DETALLE_PREPARACION_CONFIG.apiEndpoint}${preparacionId}/agregar/`,
+            data
+        );
 
-        const result = await response.json();
-        
-        if (response.ok) {
+        if (result.success) {
             NutricionUtils.mostrarNotificacion('success', 'Ingrediente agregado exitosamente');
             cerrarModal();
-            location.reload(); // Recargar para mostrar el nuevo ingrediente
+            setTimeout(() => location.reload(), 1000);
         } else {
             NutricionUtils.mostrarNotificacion('error', result.error || 'Error al agregar ingrediente');
         }
+
     } catch (error) {
-        NutricionUtils.manejarError(error, 'Agregar ingrediente');
+        NutricionUtils.mostrarNotificacion('error', 'Error al agregar el ingrediente');
+        console.error('Error:', error);
     }
 }
 
 async function eliminarIngrediente(idIngrediente) {
-    modalManager.confirmar(
-        '¿Está seguro de que desea eliminar este ingrediente?',
-        async () => {
-            try {
-                const response = await fetch(`/nutricion/api/detalle-preparacion/${idIngrediente}/eliminar/`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': NutricionUtils.getCsrfToken()
-                    }
-                });
-
-                const result = await response.json();
-                
-                if (response.ok) {
-                    NutricionUtils.mostrarNotificacion('success', 'Ingrediente eliminado exitosamente');
-                    location.reload(); // Recargar para actualizar la lista
-                } else {
-                    NutricionUtils.mostrarNotificacion('error', result.error || 'Error al eliminar');
-                }
-            } catch (error) {
-                NutricionUtils.manejarError(error, 'Eliminar ingrediente');
-            }
-        }
+    const confirmado = await ModalManager.confirmar(
+        '¿Está seguro de eliminar este ingrediente de la preparación?',
+        'Esta acción no se puede deshacer.'
     );
+
+    if (!confirmado) return;
+
+    try {
+        const result = await ApiClient.delete(
+            `${DETALLE_PREPARACION_CONFIG.apiEndpoint}${idIngrediente}/eliminar/`
+        );
+
+        if (result.success) {
+            NutricionUtils.mostrarNotificacion('success', 'Ingrediente eliminado exitosamente');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            NutricionUtils.mostrarNotificacion('error', result.error || 'Error al eliminar');
+        }
+
+    } catch (error) {
+        NutricionUtils.mostrarNotificacion('error', 'Error al eliminar el ingrediente');
+        console.error('Error:', error);
+    }
 }
 
-// Función getCookie ahora disponible desde utils.js
+// Exponer funciones globales necesarias
+window.eliminarIngrediente = eliminarIngrediente;

@@ -12,6 +12,7 @@ from ..models import (
     TablaMenus,
     TablaPreparaciones,
     TablaAlimentos2018Icbf,
+    TablaIngredientesSiesa,
     TablaPreparacionIngredientes,
     TablaRequerimientosNutricionales,
     TablaAnalisisNutricionalMenu,

@@ -21,7 +21,8 @@
       "Bash(done)",
       "Bash(\"C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\" -m py_compile c:/Users/User/OneDrive/Desktop/CHVS/ERP_CHVS/erp_chvs/nutricion/validators/nutricion_validator.py)",
       "Bash(\"C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\" -m py_compile c:/Users/User/OneDrive/Desktop/CHVS/ERP_CHVS/erp_chvs/nutricion/utils/nutricion_utils.py)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(while read file)"
     ],
     "deny": [],
     "ask": []

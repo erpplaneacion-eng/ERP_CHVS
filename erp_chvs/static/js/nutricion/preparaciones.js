@@ -1,57 +1,89 @@
-// Gestión de Preparaciones - Módulo de Nutrición
+/**
+ * Gestión de Preparaciones - Módulo de Nutrición
+ * ✨ REFACTORIZADO: Usa módulos core (ModalManager, ApiClient)
+ */
 
-// Elementos del DOM
-let modal, formPreparacion, modalTitle;
+// Configuración del módulo
+const PREPARACION_CONFIG = {
+    modalId: 'modalPreparacion',
+    formId: 'formPreparacion',
+    apiEndpoint: '/nutricion/api/preparaciones/'
+};
 
+// Inicialización
 document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar elementos
-    modal = document.getElementById('modalPreparacion');
-    formPreparacion = document.getElementById('formPreparacion');
-    modalTitle = document.getElementById('modalTitle');
-
-    // Event listeners
-    document.getElementById('btnNuevaPreparacion').addEventListener('click', abrirModalNuevo);
-    document.querySelector('.close').addEventListener('click', cerrarModal);
-    formPreparacion.addEventListener('submit', guardarPreparacion);
-
-    // Cerrar modal al hacer clic fuera
-    window.addEventListener('click', function(event) {
-        if (event.target == modal) {
-            cerrarModal();
-        }
-    });
+    inicializarEventos();
 });
 
+function inicializarEventos() {
+    // Botón nueva preparación
+    const btnNuevo = document.getElementById('btnNuevaPreparacion');
+    if (btnNuevo) {
+        btnNuevo.addEventListener('click', () => abrirModalNuevo());
+    }
+
+    // Formulario
+    const form = document.getElementById(PREPARACION_CONFIG.formId);
+    if (form) {
+        form.addEventListener('submit', guardarPreparacion);
+    }
+
+    // Cerrar modal con X
+    const closeBtn = document.querySelector(`#${PREPARACION_CONFIG.modalId} .close`);
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => cerrarModal());
+    }
+
+    // Cerrar modal al hacer clic fuera
+    const modal = document.getElementById(PREPARACION_CONFIG.modalId);
+    if (modal) {
+        window.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                cerrarModal();
+            }
+        });
+    }
+}
+
+// =================== FUNCIONES DE MODAL ===================
+
 function abrirModalNuevo() {
-    modalTitle.textContent = 'Nueva Preparación';
-    formPreparacion.reset();
+    const modalTitle = document.getElementById('modalTitle');
+    const form = document.getElementById(PREPARACION_CONFIG.formId);
+
+    if (modalTitle) modalTitle.textContent = 'Nueva Preparación';
+    if (form) form.reset();
+
     document.getElementById('preparacionId').value = '';
-    modal.style.display = 'block';
+    ModalManager.abrir(PREPARACION_CONFIG.modalId);
 }
 
 function cerrarModal() {
-    modal.style.display = 'none';
-    formPreparacion.reset();
+    const form = document.getElementById(PREPARACION_CONFIG.formId);
+    if (form) form.reset();
+
+    ModalManager.cerrar(PREPARACION_CONFIG.modalId);
 }
 
 async function editarPreparacion(id) {
     try {
-        const data = await nutricionAPI.obtenerPreparacion(id);
+        const data = await ApiClient.get(`${PREPARACION_CONFIG.apiEndpoint}${id}/`);
 
-        if (response.ok) {
-            modalTitle.textContent = 'Editar Preparación';
-            document.getElementById('preparacionId').value = data.id_preparacion;
-            document.getElementById('preparacionNombre').value = data.preparacion;
-            document.getElementById('preparacionMenu').value = data.id_menu;
-            modal.style.display = 'block';
-        } else {
-            alert('Error al cargar la preparación');
-        }
+        // Llenar formulario
+        document.getElementById('modalTitle').textContent = 'Editar Preparación';
+        document.getElementById('preparacionId').value = data.id_preparacion;
+        document.getElementById('preparacionNombre').value = data.preparacion;
+        document.getElementById('preparacionMenu').value = data.id_menu;
+
+        ModalManager.abrir(PREPARACION_CONFIG.modalId);
+
     } catch (error) {
+        NutricionUtils.mostrarNotificacion('error', 'Error al cargar la preparación');
         console.error('Error:', error);
-        alert('Error al cargar la preparación');
     }
 }
+
+// =================== FUNCIONES CRUD ===================
 
 async function guardarPreparacion(event) {
     event.preventDefault();
@@ -63,42 +95,57 @@ async function guardarPreparacion(event) {
     };
 
     try {
-        const result = id ? 
-            await nutricionAPI.editarPreparacion(id, data) :
-            await nutricionAPI.crearPreparacion(data);
+        let result;
+
+        if (id) {
+            // Actualizar
+            result = await ApiClient.put(`${PREPARACION_CONFIG.apiEndpoint}${id}/`, data);
+        } else {
+            // Crear
+            result = await ApiClient.post(PREPARACION_CONFIG.apiEndpoint, data);
+        }
 
         if (result.success) {
-            alert(id ? 'Preparación actualizada exitosamente' : 'Preparación creada exitosamente');
+            NutricionUtils.mostrarNotificacion(
+                'success',
+                id ? 'Preparación actualizada exitosamente' : 'Preparación creada exitosamente'
+            );
             cerrarModal();
-            location.reload();
+            setTimeout(() => location.reload(), 1000);
         } else {
-            alert('Error: ' + (result.error || 'Error desconocido'));
+            NutricionUtils.mostrarNotificacion('error', result.error || 'Error al guardar');
         }
+
     } catch (error) {
+        NutricionUtils.mostrarNotificacion('error', 'Error al guardar la preparación');
         console.error('Error:', error);
-        alert('Error al guardar la preparación');
     }
 }
 
 async function eliminarPreparacion(id) {
-    if (!confirm('¿Está seguro de eliminar esta preparación? Se eliminarán también todos sus ingredientes asociados.')) {
-        return;
-    }
+    const confirmado = await ModalManager.confirmar(
+        '¿Está seguro de eliminar esta preparación?',
+        'Se eliminarán también todos sus ingredientes asociados.'
+    );
+
+    if (!confirmado) return;
 
     try {
-        const result = await nutricionAPI.eliminarPreparacion(id);
+        const result = await ApiClient.delete(`${PREPARACION_CONFIG.apiEndpoint}${id}/`);
 
         if (result.success) {
-            alert('Preparación eliminada exitosamente');
-            location.reload();
+            NutricionUtils.mostrarNotificacion('success', 'Preparación eliminada exitosamente');
+            setTimeout(() => location.reload(), 1000);
         } else {
-            alert('Error: ' + (result.error || 'Error al eliminar'));
+            NutricionUtils.mostrarNotificacion('error', result.error || 'Error al eliminar');
         }
+
     } catch (error) {
+        NutricionUtils.mostrarNotificacion('error', 'Error al eliminar la preparación');
         console.error('Error:', error);
-        alert('Error al eliminar la preparación');
     }
 }
 
-// Función auxiliar para obtener el token CSRF
-// Función getCookie ahora disponible desde utils.js
+// Exponer funciones globales necesarias
+window.editarPreparacion = editarPreparacion;
+window.eliminarPreparacion = eliminarPreparacion;

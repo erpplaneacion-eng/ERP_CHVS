@@ -1,61 +1,93 @@
-// Gestión de Ingredientes - Módulo de Nutrición
+/**
+ * Gestión de Ingredientes - Módulo de Nutrición
+ * ✨ REFACTORIZADO: Usa módulos core (ModalManager, ApiClient)
+ */
 
-// Elementos de    try {
-        const result = id ? 
-            await nutricionAPI.editarIngrediente(id, data) :
-            await nutricionAPI.crearIngrediente(data);al, formIngrediente, modalTitle;
+// Configuración del módulo
+const INGREDIENTE_CONFIG = {
+    modalId: 'modalIngrediente',
+    formId: 'formIngrediente',
+    apiEndpoint: '/nutricion/api/ingredientes/'
+};
 
+// Inicialización
 document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar elementos
-    modal = document.getElementById('modalIngrediente');
-    formIngrediente = document.getElementById('formIngrediente');
-    modalTitle = document.getElementById('modalTitle');
-
-    // Event listeners
-    document.getElementById('btnNuevoIngrediente').addEventListener('click', abrirModalNuevo);
-    document.querySelector('.close').addEventListener('click', cerrarModal);
-    formIngrediente.addEventListener('submit', guardarIngrediente);
-
-    // Cerrar modal al hacer clic fuera
-    window.addEventListener('click', function(event) {
-        if (event.target == modal) {
-            cerrarModal();
-        }
-    });
+    inicializarEventos();
 });
 
+function inicializarEventos() {
+    // Botón nuevo ingrediente
+    const btnNuevo = document.getElementById('btnNuevoIngrediente');
+    if (btnNuevo) {
+        btnNuevo.addEventListener('click', () => abrirModalNuevo());
+    }
+
+    // Formulario
+    const form = document.getElementById(INGREDIENTE_CONFIG.formId);
+    if (form) {
+        form.addEventListener('submit', guardarIngrediente);
+    }
+
+    // Cerrar modal con X
+    const closeBtn = document.querySelector(`#${INGREDIENTE_CONFIG.modalId} .close`);
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => cerrarModal());
+    }
+
+    // Cerrar modal al hacer clic fuera
+    const modal = document.getElementById(INGREDIENTE_CONFIG.modalId);
+    if (modal) {
+        window.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                cerrarModal();
+            }
+        });
+    }
+}
+
+// =================== FUNCIONES DE MODAL ===================
+
 function abrirModalNuevo() {
-    modalTitle.textContent = 'Nuevo Ingrediente';
-    formIngrediente.reset();
+    const modalTitle = document.getElementById('modalTitle');
+    const form = document.getElementById(INGREDIENTE_CONFIG.formId);
+    const codigoInput = document.getElementById('ingredienteCodigo');
+
+    if (modalTitle) modalTitle.textContent = 'Nuevo Ingrediente';
+    if (form) form.reset();
+
     document.getElementById('ingredienteIdOriginal').value = '';
-    document.getElementById('ingredienteCodigo').disabled = false;
-    modal.style.display = 'block';
+    if (codigoInput) codigoInput.disabled = false;
+
+    ModalManager.abrir(INGREDIENTE_CONFIG.modalId);
 }
 
 function cerrarModal() {
-    modal.style.display = 'none';
-    formIngrediente.reset();
+    const form = document.getElementById(INGREDIENTE_CONFIG.formId);
+    if (form) form.reset();
+
+    ModalManager.cerrar(INGREDIENTE_CONFIG.modalId);
 }
 
 async function editarIngrediente(id) {
     try {
-        const data = await nutricionAPI.obtenerIngrediente(id);
+        const data = await ApiClient.get(`${INGREDIENTE_CONFIG.apiEndpoint}${id}/`);
 
-        if (response.ok) {
-            modalTitle.textContent = 'Editar Ingrediente';
-            document.getElementById('ingredienteIdOriginal').value = data.id_ingrediente_siesa;
-            document.getElementById('ingredienteCodigo').value = data.id_ingrediente_siesa;
-            document.getElementById('ingredienteCodigo').disabled = true; // No permitir cambiar el código al editar
-            document.getElementById('ingredienteNombre').value = data.nombre_ingrediente;
-            modal.style.display = 'block';
-        } else {
-            alert('Error al cargar el ingrediente');
-        }
+        // Llenar formulario
+        document.getElementById('modalTitle').textContent = 'Editar Ingrediente';
+        document.getElementById('ingredienteIdOriginal').value = data.id_ingrediente_siesa;
+        document.getElementById('ingredienteCodigo').value = data.id_ingrediente_siesa;
+        document.getElementById('ingredienteCodigo').disabled = true; // No permitir cambiar código
+        document.getElementById('ingredienteNombre').value = data.nombre_ingrediente;
+
+        ModalManager.abrir(INGREDIENTE_CONFIG.modalId);
+
     } catch (error) {
+        NutricionUtils.mostrarNotificacion('error', 'Error al cargar el ingrediente');
         console.error('Error:', error);
-        alert('Error al cargar el ingrediente');
     }
 }
+
+// =================== FUNCIONES CRUD ===================
 
 async function guardarIngrediente(event) {
     event.preventDefault();
@@ -66,53 +98,58 @@ async function guardarIngrediente(event) {
         nombre_ingrediente: document.getElementById('ingredienteNombre').value.trim()
     };
 
-    const url = idOriginal ? `/nutricion/api/ingredientes/${idOriginal}/` : '/nutricion/api/ingredientes/';
-    const method = idOriginal ? 'PUT' : 'POST';
-
     try {
-        const response = await fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(data)
-        });
+        let result;
 
-        const result = await response.json();
+        if (idOriginal) {
+            // Actualizar
+            result = await ApiClient.put(`${INGREDIENTE_CONFIG.apiEndpoint}${idOriginal}/`, data);
+        } else {
+            // Crear
+            result = await ApiClient.post(INGREDIENTE_CONFIG.apiEndpoint, data);
+        }
 
         if (result.success) {
-            alert(idOriginal ? 'Ingrediente actualizado exitosamente' : 'Ingrediente creado exitosamente');
+            NutricionUtils.mostrarNotificacion(
+                'success',
+                idOriginal ? 'Ingrediente actualizado exitosamente' : 'Ingrediente creado exitosamente'
+            );
             cerrarModal();
-            location.reload();
+            setTimeout(() => location.reload(), 1000);
         } else {
-            alert('Error: ' + (result.error || 'Error desconocido'));
+            NutricionUtils.mostrarNotificacion('error', result.error || 'Error al guardar');
         }
+
     } catch (error) {
+        NutricionUtils.mostrarNotificacion('error', 'Error al guardar el ingrediente');
         console.error('Error:', error);
-        alert('Error al guardar el ingrediente');
     }
 }
 
 async function eliminarIngrediente(id) {
-    if (!confirm('¿Está seguro de eliminar este ingrediente?')) {
-        return;
-    }
+    const confirmado = await ModalManager.confirmar(
+        '¿Está seguro de eliminar este ingrediente?',
+        'Esta acción no se puede deshacer.'
+    );
+
+    if (!confirmado) return;
 
     try {
-        const result = await nutricionAPI.eliminarIngrediente(id);
+        const result = await ApiClient.delete(`${INGREDIENTE_CONFIG.apiEndpoint}${id}/`);
 
         if (result.success) {
-            alert('Ingrediente eliminado exitosamente');
-            location.reload();
+            NutricionUtils.mostrarNotificacion('success', 'Ingrediente eliminado exitosamente');
+            setTimeout(() => location.reload(), 1000);
         } else {
-            alert('Error: ' + (result.error || 'Error al eliminar'));
+            NutricionUtils.mostrarNotificacion('error', result.error || 'Error al eliminar');
         }
+
     } catch (error) {
+        NutricionUtils.mostrarNotificacion('error', 'Error al eliminar el ingrediente');
         console.error('Error:', error);
-        alert('Error al eliminar el ingrediente');
     }
 }
 
-// Función auxiliar para obtener el token CSRF
-// Función getCookie ahora disponible desde utils.js
+// Exponer funciones globales necesarias
+window.editarIngrediente = editarIngrediente;
+window.eliminarIngrediente = eliminarIngrediente;

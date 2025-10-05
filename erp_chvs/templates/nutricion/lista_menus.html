@@ -230,6 +230,9 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <!-- Utilidades de Nutrición -->
 <script src="{% static 'js/nutricion/core/utils.js' %}"></script>
+<!-- Módulos de Análisis Nutricional -->
+<script src="{% static 'js/nutricion/modules/calculos.js' %}"></script>
+<script src="{% static 'js/nutricion/modules/guardado-automatico.js' %}"></script>
 <script>
     const PROGRAMA_ACTUAL = {{ programa_seleccionado|default:"null" }};
     const MUNICIPIO_ACTUAL = {{ municipio_seleccionado|default:"null" }};
