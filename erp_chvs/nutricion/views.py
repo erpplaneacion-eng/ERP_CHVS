@@ -13,7 +13,9 @@ from .models import (
     TablaPreparaciones,
     TablaIngredientesSiesa,
     TablaPreparacionIngredientes,
-    TablaRequerimientosNutricionales
+    TablaRequerimientosNutricionales,
+    TablaAnalisisNutricionalMenu,
+    TablaIngredientesPorNivel
 )
 from .forms import AlimentoForm
 from principal.models import ModalidadesDeConsumo

@@ -3,7 +3,10 @@
     "allow": [
       "Read(//c/**)",
       "Bash(for file in lista_alimentos.html lista_ingredientes.html lista_preparaciones.html detalle_preparacion.html index.html)",
-      "Bash(do echo \"=== $file ===\")"
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(python manage.py:*)",
+      "Bash(cat:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

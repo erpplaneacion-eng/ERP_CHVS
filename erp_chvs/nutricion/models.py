@@ -276,3 +276,333 @@ class TablaRequerimientosNutricionales(models.Model):
 
     def __str__(self):
         return f"{self.id_nivel_escolar_uapa.nivel_escolar_uapa} - {self.calorias_kcal} Kcal"
+
+
+class TablaAnalisisNutricionalMenu(models.Model):
+    """
+    Tabla para guardar los análisis nutricionales de menús por nivel escolar.
+    Almacena los pesos configurados y valores calculados para cada nivel.
+
+    Esta tabla permite:
+    - Guardar configuraciones de pesos para cada nivel escolar
+    - Restaurar análisis previos
+    - Hacer seguimiento histórico de cambios
+    - Comparar diferentes configuraciones
+    """
+    id_analisis = models.AutoField(
+        primary_key=True,
+        verbose_name="ID Análisis"
+    )
+    id_menu = models.ForeignKey(
+        TablaMenus,
+        on_delete=models.CASCADE,
+        db_column='id_menu',
+        verbose_name="Menú",
+        related_name='analisis_nutricionales'
+    )
+    id_nivel_escolar_uapa = models.ForeignKey(
+        'principal.TablaGradosEscolaresUapa',
+        on_delete=models.PROTECT,
+        db_column='id_nivel_escolar_uapa',
+        verbose_name="Nivel Escolar UAPA",
+        related_name='analisis_nutricionales'
+    )
+
+    # ========== TOTALES CALCULADOS ==========
+    total_calorias = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Total Calorías (kcal)"
+    )
+    total_proteina = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Total Proteína (g)"
+    )
+    total_grasa = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Total Grasa (g)"
+    )
+    total_cho = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Total CHO (g)"
+    )
+    total_calcio = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Total Calcio (mg)"
+    )
+    total_hierro = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Total Hierro (mg)"
+    )
+    total_sodio = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Total Sodio (mg)"
+    )
+    total_peso_neto = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Total Peso Neto (g)"
+    )
+    total_peso_bruto = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Total Peso Bruto (g)"
+    )
+
+    # ========== PORCENTAJES DE ADECUACIÓN ==========
+    porcentaje_calorias = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name="% Adecuación Calorías"
+    )
+    porcentaje_proteina = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name="% Adecuación Proteína"
+    )
+    porcentaje_grasa = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name="% Adecuación Grasa"
+    )
+    porcentaje_cho = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name="% Adecuación CHO"
+    )
+    porcentaje_calcio = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name="% Adecuación Calcio"
+    )
+    porcentaje_hierro = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name="% Adecuación Hierro"
+    )
+    porcentaje_sodio = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name="% Adecuación Sodio"
+    )
+
+    # ========== ESTADOS DE ADECUACIÓN ==========
+    # Valores: 'optimo', 'aceptable', 'alto'
+    estado_calorias = models.CharField(
+        max_length=20,
+        default='optimo',
+        verbose_name="Estado Calorías"
+    )
+    estado_proteina = models.CharField(
+        max_length=20,
+        default='optimo',
+        verbose_name="Estado Proteína"
+    )
+    estado_grasa = models.CharField(
+        max_length=20,
+        default='optimo',
+        verbose_name="Estado Grasa"
+    )
+    estado_cho = models.CharField(
+        max_length=20,
+        default='optimo',
+        verbose_name="Estado CHO"
+    )
+    estado_calcio = models.CharField(
+        max_length=20,
+        default='optimo',
+        verbose_name="Estado Calcio"
+    )
+    estado_hierro = models.CharField(
+        max_length=20,
+        default='optimo',
+        verbose_name="Estado Hierro"
+    )
+    estado_sodio = models.CharField(
+        max_length=20,
+        default='optimo',
+        verbose_name="Estado Sodio"
+    )
+
+    # ========== METADATOS ==========
+    fecha_creacion = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Fecha de Creación"
+    )
+    fecha_actualizacion = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Fecha de Actualización"
+    )
+    usuario_modificacion = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="Usuario que Modificó"
+    )
+    notas = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Notas u Observaciones"
+    )
+
+    class Meta:
+        db_table = 'tabla_analisis_nutricional_menu'
+        verbose_name = 'Análisis Nutricional de Menú'
+        verbose_name_plural = 'Análisis Nutricionales de Menús'
+        ordering = ['-fecha_actualizacion']
+        unique_together = [['id_menu', 'id_nivel_escolar_uapa']]
+        indexes = [
+            models.Index(fields=['id_menu']),
+            models.Index(fields=['id_nivel_escolar_uapa']),
+            models.Index(fields=['fecha_actualizacion']),
+        ]
+
+    def __str__(self):
+        return f"Análisis {self.id_menu.menu} - {self.id_nivel_escolar_uapa.nivel_escolar_uapa}"
+
+
+class TablaIngredientesPorNivel(models.Model):
+    """
+    Tabla para guardar los pesos configurados de cada ingrediente por nivel escolar.
+
+    Esta tabla almacena:
+    - Peso neto y bruto de cada ingrediente
+    - Valores nutricionales calculados para ese peso
+    - Relación con el análisis nutricional del menú
+
+    Permite restaurar configuraciones exactas y hacer seguimiento de cambios.
+    """
+    id_ingrediente_nivel = models.AutoField(
+        primary_key=True,
+        verbose_name="ID Ingrediente Nivel"
+    )
+    id_analisis = models.ForeignKey(
+        TablaAnalisisNutricionalMenu,
+        on_delete=models.CASCADE,
+        db_column='id_analisis',
+        verbose_name="Análisis Nutricional",
+        related_name='ingredientes_configurados'
+    )
+    id_preparacion = models.ForeignKey(
+        TablaPreparaciones,
+        on_delete=models.CASCADE,
+        db_column='id_preparacion',
+        verbose_name="Preparación",
+        related_name='ingredientes_por_nivel'
+    )
+    id_ingrediente_siesa = models.ForeignKey(
+        TablaIngredientesSiesa,
+        on_delete=models.CASCADE,
+        db_column='id_ingrediente_siesa',
+        verbose_name="Ingrediente",
+        related_name='configuraciones_por_nivel'
+    )
+
+    # ========== PESOS CONFIGURADOS ==========
+    peso_neto = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=100,
+        verbose_name="Peso Neto (g)"
+    )
+    peso_bruto = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=100,
+        verbose_name="Peso Bruto (g)"
+    )
+    parte_comestible = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=100,
+        verbose_name="% Parte Comestible"
+    )
+
+    # ========== VALORES NUTRICIONALES CALCULADOS ==========
+    # Para este peso específico
+    calorias = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Calorías (kcal)"
+    )
+    proteina = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Proteína (g)"
+    )
+    grasa = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Grasa (g)"
+    )
+    cho = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="CHO (g)"
+    )
+    calcio = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Calcio (mg)"
+    )
+    hierro = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Hierro (mg)"
+    )
+    sodio = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Sodio (mg)"
+    )
+
+    # ========== REFERENCIA AL ALIMENTO ICBF ==========
+    codigo_icbf = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        verbose_name="Código ICBF"
+    )
+
+    class Meta:
+        db_table = 'tabla_ingredientes_por_nivel'
+        verbose_name = 'Ingrediente Configurado por Nivel'
+        verbose_name_plural = 'Ingredientes Configurados por Nivel'
+        ordering = ['id_preparacion', 'id_ingrediente_siesa']
+        unique_together = [['id_analisis', 'id_preparacion', 'id_ingrediente_siesa']]
+        indexes = [
+            models.Index(fields=['id_analisis']),
+            models.Index(fields=['id_preparacion']),
+        ]
+
+    def __str__(self):
+        return f"{self.id_ingrediente_siesa.nombre_ingrediente} - {self.peso_neto}g"
