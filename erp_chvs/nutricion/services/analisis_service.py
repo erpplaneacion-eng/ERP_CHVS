@@ -342,6 +342,11 @@ class AnalisisNutricionalService:
                 defaults={'usuario_modificacion': usuario}
             )
 
+            print(f"[DEBUG] Guardando análisis - Menu ID: {id_menu}, Nivel: {id_nivel_escolar}, Created: {created}")
+            print(f"[DEBUG] Totales recibidos: {totales}")
+            print(f"[DEBUG] Porcentajes recibidos: {porcentajes}")
+            print(f"[DEBUG] Total ingredientes: {len(ingredientes)}")
+
             # Actualizar totales
             analisis.total_calorias = totales.get('calorias', 0)
             analisis.total_proteina = totales.get('proteina', 0)
