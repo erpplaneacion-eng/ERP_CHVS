@@ -1371,6 +1371,8 @@ function recalcularTotalesNivel(nivelIndex, skipAutoSave = false) {
     let totalCalcio = 0;
     let totalHierro = 0;
     let totalSodio = 0;
+    let totalPesoNeto = 0;
+    let totalPesoBruto = 0;
 
     // Sumar todos los ingredientes del nivel
     $(`.ingrediente-row[data-nivel="${nivelIndex}"]`).each(function() {
@@ -1385,6 +1387,8 @@ function recalcularTotalesNivel(nivelIndex, skipAutoSave = false) {
         const calcio = parseFloat($(`#calcio-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
         const hierro = parseFloat($(`#hierro-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
         const sodio = parseFloat($(`#sodio-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
+        const pesoNeto = parseFloat(fila.find('.peso-input').val()) || 0;
+        const pesoBruto = parseFloat($(`#bruto-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
 
         totalCalorias += calorias;
         totalProteina += proteina;
@@ -1393,9 +1397,11 @@ function recalcularTotalesNivel(nivelIndex, skipAutoSave = false) {
         totalCalcio += calcio;
         totalHierro += hierro;
         totalSodio += sodio;
+        totalPesoNeto += pesoNeto;
+        totalPesoBruto += pesoBruto;
     });
 
-    // Actualizar totales en la interfaz
+    // Actualizar totales en la interfaz (dentro del card-body)
     $(`#nivel-${nivelIndex}-calorias`).text(`${totalCalorias.toFixed(1)} Kcal`);
     $(`#nivel-${nivelIndex}-proteina`).text(`${totalProteina.toFixed(1)} g`);
     $(`#nivel-${nivelIndex}-grasa`).text(`${totalGrasa.toFixed(1)} g`);
@@ -1403,6 +1409,15 @@ function recalcularTotalesNivel(nivelIndex, skipAutoSave = false) {
     $(`#nivel-${nivelIndex}-calcio`).text(`${totalCalcio.toFixed(1)} mg`);
     $(`#nivel-${nivelIndex}-hierro`).text(`${totalHierro.toFixed(1)} mg`);
     $(`#nivel-${nivelIndex}-sodio`).text(`${totalSodio.toFixed(1)} mg`);
+
+    // Actualizar badges en el header del acordeón
+    const headerButton = $(`#heading-${nivelIndex}`).find('.nivel-header-btn');
+    const badges = headerButton.find('.nivel-summary');
+    badges.html(`
+        <span class="badge badge-primary">${totalCalorias.toFixed(0)} Kcal</span>
+        <span class="badge badge-success">${totalPesoNeto.toFixed(0)}g neto</span>
+        <span class="badge badge-warning">${totalPesoBruto.toFixed(0)}g bruto</span>
+    `);
 
     // Recalcular porcentajes de adecuación
     recalcularPorcentajesAdecuacion(nivelIndex, {
@@ -1685,7 +1700,9 @@ async function guardarAnalisisAutomatico(nivelIndex, menuId) {
             cho: parseFloat($(`#nivel-${nivelIndex}-cho`).text().replace(' g', '')) || 0,
             calcio: parseFloat($(`#nivel-${nivelIndex}-calcio`).text().replace(' mg', '')) || 0,
             hierro: parseFloat($(`#nivel-${nivelIndex}-hierro`).text().replace(' mg', '')) || 0,
-            sodio: parseFloat($(`#nivel-${nivelIndex}-sodio`).text().replace(' mg', '')) || 0
+            sodio: parseFloat($(`#nivel-${nivelIndex}-sodio`).text().replace(' mg', '')) || 0,
+            peso_neto: 0,  // Se calculará sumando ingredientes
+            peso_bruto: 0  // Se calculará sumando ingredientes
         };
 
         // Recopilar porcentajes de adecuación
@@ -1713,11 +1730,14 @@ async function guardarAnalisisAutomatico(nivelIndex, menuId) {
 
             console.log(`[DEBUG] Guardando ingrediente - Índices: prep=${prepIndex}, ing=${ingIndex}, IDs reales: prepId=${prepIdReal}, ingId=${ingIdReal}`);
 
+            const pesoNeto = parseFloat(pesoInput.val()) || 0;
+            const pesoBruto = parseFloat($(`#bruto-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
+
             const ingrediente = {
                 id_preparacion: prepIdReal,
                 id_ingrediente_siesa: ingIdReal,
-                peso_neto: parseFloat(pesoInput.val()) || 0,
-                peso_bruto: parseFloat($(`#bruto-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
+                peso_neto: pesoNeto,
+                peso_bruto: pesoBruto,
                 calorias: parseFloat($(`#cal-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
                 proteina: parseFloat($(`#prot-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
                 grasa: parseFloat($(`#grasa-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
@@ -1726,6 +1746,10 @@ async function guardarAnalisisAutomatico(nivelIndex, menuId) {
                 hierro: parseFloat($(`#hierro-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
                 sodio: parseFloat($(`#sodio-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0
             };
+
+            // Acumular pesos totales
+            totales.peso_neto += pesoNeto;
+            totales.peso_bruto += pesoBruto;
 
             ingredientes.push(ingrediente);
         });
