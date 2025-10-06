@@ -269,15 +269,16 @@ class OCRConfiguration(models.Model):
     Modelo para configuración de parámetros OCR y validación.
     """
 
-    # Configuración OCR
-    tesseract_config = models.TextField(
-        default='--oem 3 --psm 6',
-        verbose_name="Configuración Tesseract"
+    # Configuración LandingAI
+    modelo_landingai = models.CharField(
+        max_length=50,
+        default='dpt-2-latest',
+        verbose_name="Modelo LandingAI"
     )
 
     confianza_minima = models.FloatField(
-        default=60.0,
-        verbose_name="Confianza Mínima OCR (%)"
+        default=90.0,
+        verbose_name="Confianza Mínima Extracción (%)"
     )
 
     # Configuración de detección de campos

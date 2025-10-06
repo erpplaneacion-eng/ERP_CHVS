@@ -46,12 +46,12 @@ class ValidationErrorAdmin(admin.ModelAdmin):
 
 @admin.register(OCRConfiguration)
 class OCRConfigurationAdmin(admin.ModelAdmin):
-    list_display = ('confianza_minima', 'detectar_firmas', 'procesar_imagenes', 'fecha_actualizacion')
+    list_display = ('modelo_landingai', 'confianza_minima', 'detectar_firmas', 'procesar_imagenes', 'fecha_actualizacion')
     readonly_fields = ('fecha_actualizacion',)
 
     fieldsets = (
-        ('Configuración OCR', {
-            'fields': ('tesseract_config', 'confianza_minima')
+        ('Configuración LandingAI', {
+            'fields': ('modelo_landingai', 'confianza_minima')
         }),
         ('Configuración de Detección', {
             'fields': ('tolerancia_posicion_x', 'tolerancia_posicion_y', 'permitir_texto_parcial')

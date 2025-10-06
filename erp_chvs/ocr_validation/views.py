@@ -14,8 +14,7 @@ import os
 import tempfile
 
 from .models import PDFValidation, ValidationError, OCRConfiguration
-from .services import OCROrchestrator
-from .ocr_orchestrator import OCROrchestrator as AdvancedOCROrchestrator
+from .ocr_orchestrator import OCROrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +30,7 @@ def ocr_validation_index(request):
 @login_required
 @require_http_methods(["POST"])
 def procesar_pdf_ocr(request):
+    """Vista unificada para procesar PDF con extracción a DataFrames."""
     try:
         if 'archivo_pdf' not in request.FILES:
             return JsonResponse({'success': False, 'error': 'No se proporcionó archivo PDF'})
@@ -43,26 +43,45 @@ def procesar_pdf_ocr(request):
         if archivo_pdf.size > 10 * 1024 * 1024:
             return JsonResponse({'success': False, 'error': 'Archivo demasiado grande (máx 10MB)'})
 
-        orchestrator = OCROrchestrator()
-        resultado = orchestrator.process_pdf(archivo_pdf, request.user)
+        # Guardar archivo temporalmente
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
+            for chunk in archivo_pdf.chunks():
+                temp_file.write(chunk)
+            temp_path = temp_file.name
 
-        if resultado['success']:
-            validacion = PDFValidation.objects.get(id=resultado['validacion_id'])
-            return JsonResponse({
-                'success': True,
-                'validacion_id': resultado['validacion_id'],
-                'mensaje': 'PDF procesado exitosamente con LandingAI ADE',
-                'total_errores': resultado['total_errores'],
-                'errores_criticos': validacion.errores_criticos,
-                'errores_advertencia': validacion.errores_advertencia,
-                'tiempo_procesamiento': resultado['tiempo_procesamiento'],
-                'redirect_url': f"/ocr_validation/resultados/{resultado['validacion_id']}/"
-            })
-        else:
-            return JsonResponse({'success': False, 'error': resultado['error']})
+        try:
+            # Procesar con orquestador unificado
+            orchestrator = OCROrchestrator()
+            resultado = orchestrator.process_pdf_complete(
+                pdf_path=temp_path,
+                save_to_db=True,
+                usuario=request.user
+            )
+
+            if resultado['success']:
+                resumen = resultado.get('resumen', {})
+                return JsonResponse({
+                    'success': True,
+                    'validacion_id': resultado['pdf_validation_id'],
+                    'mensaje': 'PDF procesado exitosamente con LandingAI ADE',
+                    'total_estudiantes': resumen.get('total_estudiantes', 0),
+                    'total_raciones': resumen.get('total_raciones', 0),
+                    'calidad_extraccion': resumen.get('calidad_extraccion', 'desconocida'),
+                    'tiempo_procesamiento': resultado.get('tiempo_procesamiento', 0),
+                    'redirect_url': f"/ocr_validation/dataframe/{resultado['pdf_validation_id']}/"
+                })
+            else:
+                error_msg = resultado.get('error', 'Error desconocido')
+                logger.error(f"Error en procesamiento: {error_msg}")
+                return JsonResponse({'success': False, 'error': error_msg})
+
+        finally:
+            # Limpiar archivo temporal
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
 
     except Exception as e:
-        logger.exception(f"Error: {e}")
+        logger.exception(f"Error procesando PDF: {e}")
         return JsonResponse({'success': False, 'error': str(e)})
 
 
@@ -175,61 +194,8 @@ def descargar_reporte_errores(request, validacion_id):
 
 
 # ============================================
-# NUEVAS VISTAS PARA DATAFRAMES
+# VISTAS PARA DATAFRAMES
 # ============================================
-
-@login_required
-@require_http_methods(["POST"])
-def procesar_pdf_dataframe(request):
-    """Vista para procesar PDF con extracción estructurada a DataFrames."""
-    try:
-        if 'archivo_pdf' not in request.FILES:
-            return JsonResponse({'success': False, 'error': 'No se proporcionó archivo PDF'})
-
-        archivo_pdf = request.FILES['archivo_pdf']
-
-        if not archivo_pdf.name.lower().endswith('.pdf'):
-            return JsonResponse({'success': False, 'error': 'El archivo debe ser un PDF válido'})
-
-        if archivo_pdf.size > 10 * 1024 * 1024:
-            return JsonResponse({'success': False, 'error': 'Archivo demasiado grande (máx 10MB)'})
-
-        # Guardar archivo temporalmente
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
-            for chunk in archivo_pdf.chunks():
-                temp_file.write(chunk)
-            temp_path = temp_file.name
-
-        try:
-            # Procesar con orquestador avanzado
-            orchestrator = AdvancedOCROrchestrator()
-            resultado = orchestrator.process_pdf_complete(
-                pdf_path=temp_path,
-                save_to_db=True,
-                usuario=request.user
-            )
-
-            if resultado['success']:
-                return JsonResponse({
-                    'success': True,
-                    'validacion_id': resultado['pdf_validation_id'],
-                    'mensaje': 'PDF procesado exitosamente con extracción estructurada',
-                    'total_estudiantes': resultado['resumen']['total_estudiantes'],
-                    'total_raciones': resultado['resumen']['total_raciones'],
-                    'calidad_extraccion': resultado['resumen']['calidad_extraccion'],
-                    'redirect_url': f"/ocr_validation/dataframe/{resultado['pdf_validation_id']}/"
-                })
-            else:
-                return JsonResponse({'success': False, 'error': resultado['error']})
-
-        finally:
-            # Limpiar archivo temporal
-            if os.path.exists(temp_path):
-                os.unlink(temp_path)
-
-    except Exception as e:
-        logger.exception(f"Error procesando PDF con DataFrames: {e}")
-        return JsonResponse({'success': False, 'error': str(e)})
 
 
 @login_required
@@ -237,9 +203,9 @@ def ver_dataframe(request, validacion_id):
     """Vista para mostrar los DataFrames extraídos de forma interactiva."""
     try:
         validacion = get_object_or_404(PDFValidation, id=validacion_id)
-        
+
         # Recuperar resultados del orquestador
-        orchestrator = AdvancedOCROrchestrator()
+        orchestrator = OCROrchestrator()
         resultado = orchestrator.get_processing_results(validacion_id)
         
         if not resultado['success']:
@@ -294,9 +260,9 @@ def exportar_dataframe(request, validacion_id):
     try:
         formato = request.GET.get('formato', 'csv')
         tipo = request.GET.get('tipo', 'estudiantes')  # estudiantes o encabezado
-        
+
         # Recuperar datos
-        orchestrator = AdvancedOCROrchestrator()
+        orchestrator = OCROrchestrator()
         resultado = orchestrator.get_processing_results(validacion_id)
         
         if not resultado['success']:
@@ -349,9 +315,9 @@ def api_dataframe_data(request, validacion_id):
         start = int(request.GET.get('start', 0))
         length = int(request.GET.get('length', 10))
         search_value = request.GET.get('search[value]', '')
-        
+
         # Recuperar datos
-        orchestrator = AdvancedOCROrchestrator()
+        orchestrator = OCROrchestrator()
         resultado = orchestrator.get_processing_results(validacion_id)
         
         if not resultado['success']:

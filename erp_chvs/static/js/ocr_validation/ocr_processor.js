@@ -109,7 +109,7 @@ class OCRProcessor {
             this.showProcessingSection();
 
             // Actualizar progreso
-            this.updateProgress(10, 'Iniciando procesamiento...');
+            this.updateProgress(10, 'Iniciando extracción con IA...');
 
             console.log('🌐 Enviando petición a: /ocr_validation/procesar/');
 
@@ -140,8 +140,19 @@ class OCRProcessor {
 
             if (result.success) {
                 console.log('🎉 Procesamiento exitoso');
-                this.updateProgress(100, 'Procesamiento completado');
-                this.showResultsSection(result);
+                this.updateProgress(100, 'Extracción completada con éxito');
+
+                // Redirigir a la vista de DataFrame
+                if (result.redirect_url) {
+                    console.log('🔀 Redirigiendo a:', result.redirect_url);
+
+                    // Pequeño delay para que el usuario vea el mensaje de éxito
+                    setTimeout(() => {
+                        window.location.href = result.redirect_url;
+                    }, 500);
+                } else {
+                    this.showResultsSection(result);
+                }
             } else {
                 console.error('❌ Error en procesamiento:', result.error);
                 this.showErrorSection(result.error);
@@ -214,23 +225,26 @@ class OCRProcessor {
         const summaryTiempo = document.getElementById('summary-tiempo');
         const summaryIconErrores = document.getElementById('summary-icon-errores');
 
-        if (summaryArchivo) {
+        if (summaryArchivo && this.fileInput && this.fileInput.files[0]) {
             summaryArchivo.textContent = this.fileInput.files[0].name;
         }
 
         if (summaryErrores) {
-            const erroresText = result.total_errores > 0 ?
-                `${result.total_errores} errores encontrados` :
+            const totalErrores = result.total_errores || 0;
+            const erroresText = totalErrores > 0 ?
+                `${totalErrores} errores encontrados` :
                 'Sin errores detectados';
             summaryErrores.textContent = erroresText;
         }
 
         if (summaryTiempo) {
-            summaryTiempo.textContent = `${result.tiempo_procesamiento.toFixed(2)} segundos`;
+            const tiempo = result.tiempo_procesamiento || 0;
+            summaryTiempo.textContent = `${tiempo.toFixed(2)} segundos`;
         }
 
         if (summaryIconErrores) {
-            if (result.total_errores > 0) {
+            const totalErrores = result.total_errores || 0;
+            if (totalErrores > 0) {
                 summaryIconErrores.className = 'summary-icon error';
                 summaryIconErrores.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
             } else {

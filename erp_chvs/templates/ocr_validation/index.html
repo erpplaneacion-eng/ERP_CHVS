@@ -15,7 +15,7 @@
                 <i class="fas fa-arrow-left"></i> Volver a Facturación
             </a>
             <a href="{% url 'ocr_validation:dashboard_dataframes' %}" class="btn btn-success">
-                <i class="fas fa-chart-line"></i> 📊 Dashboard DataFrames
+                <i class="fas fa-chart-line"></i> Dashboard
             </a>
             <a href="{% url 'ocr_validation:listado' %}" class="btn btn-info">
                 <i class="fas fa-list"></i> Ver Historial
@@ -61,49 +61,30 @@
         </div>
     </div>
 
-    <!-- Opciones de Procesamiento -->
+    <!-- Información del Procesamiento -->
     <div class="processing-options">
         <div class="options-header">
-            <h3><i class="fas fa-route"></i> Opciones de Procesamiento</h3>
-            <p>Elige el tipo de análisis que necesitas para tu PDF</p>
+            <h3><i class="fas fa-robot"></i> Extracción Inteligente de Datos</h3>
+            <p>Sistema automático con IA de última generación</p>
         </div>
         <div class="options-grid">
-            <div class="option-card">
-                <div class="option-header">
-                    <i class="fas fa-search-plus"></i>
-                    <h4>Validación Tradicional</h4>
-                </div>
-                <div class="option-content">
-                    <p>Análisis de errores y validación de campos diligenciados manualmente.</p>
-                    <ul>
-                        <li>✅ Detección de campos vacíos</li>
-                        <li>✅ Validación de firmas</li>
-                        <li>✅ Control de raciones</li>
-                        <li>✅ Reportes de errores</li>
-                    </ul>
-                    <div class="option-action">
-                        <p><strong>👇 Usa el formulario de abajo</strong></p>
-                    </div>
-                </div>
-            </div>
             <div class="option-card featured">
                 <div class="option-header">
                     <i class="fas fa-chart-line"></i>
-                    <h4>Extracción a DataFrames</h4>
-                    <span class="badge-new">🆕 NUEVO</span>
+                    <h4>Procesamiento con LandingAI ADE</h4>
                 </div>
                 <div class="option-content">
-                    <p>Extrae datos estructurados y convierte a tablas interactivas.</p>
+                    <p>Extrae datos estructurados del PDF y convierte a tablas interactivas.</p>
                     <ul>
-                        <li>🤖 IA Avanzada (LandingAI)</li>
-                        <li>📊 Tablas interactivas</li>
-                        <li>📁 Exportación CSV/Excel</li>
-                        <li>📈 Dashboard con estadísticas</li>
+                        <li>🤖 IA Avanzada de Última Generación</li>
+                        <li>📊 Tablas Interactivas con Filtros</li>
+                        <li>📁 Exportación a CSV/Excel/JSON</li>
+                        <li>📈 Dashboard con Estadísticas en Tiempo Real</li>
+                        <li>✅ Validación Automática de Campos</li>
+                        <li>🎯 Alta Precisión en Extracción</li>
                     </ul>
                     <div class="option-action">
-                        <a href="{% url 'ocr_validation:dashboard_dataframes' %}" class="btn btn-success btn-lg">
-                            <i class="fas fa-rocket"></i> Ir a Dashboard DataFrames
-                        </a>
+                        <p><strong>👇 Sube tu PDF usando el formulario de abajo</strong></p>
                     </div>
                 </div>
             </div>
@@ -155,7 +136,7 @@
 
                 <div class="upload-actions">
                     <button type="submit" class="btn btn-primary btn-lg" id="procesarBtn">
-                        <i class="fas fa-cogs"></i> Procesar con OCR
+                        <i class="fas fa-robot"></i> Extraer Datos con IA
                     </button>
                     <button type="button" class="btn btn-secondary" onclick="limpiarFormulario()">
                         <i class="fas fa-trash"></i> Limpiar

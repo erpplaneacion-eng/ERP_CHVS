@@ -43,15 +43,18 @@ class OCROrchestrator:
     ) -> Dict[str, Any]:
         """
         Procesa un PDF completamente con extracción estructurada.
-        
+
         Args:
             pdf_path: Ruta al archivo PDF
             model: Modelo de LandingAI a usar
             save_to_db: Si guardar en base de datos
-            
+
         Returns:
             Dict con todos los resultados del procesamiento
         """
+        import time
+        inicio = time.time()
+
         try:
             # 1. Validar archivo
             if not os.path.exists(pdf_path):
@@ -93,6 +96,8 @@ class OCROrchestrator:
                     usuario=usuario
                 )
             
+            tiempo_procesamiento = time.time() - inicio
+
             return {
                 'success': True,
                 'pdf_validation_id': pdf_validation_id,
@@ -103,14 +108,17 @@ class OCROrchestrator:
                 'texto_completo': texto_completo,
                 'validaciones': validaciones,
                 'resumen': resumen,
+                'tiempo_procesamiento': tiempo_procesamiento,
                 'archivo_procesado': pdf_path
             }
-            
+
         except Exception as e:
+            tiempo_procesamiento = time.time() - inicio
             return {
                 'success': False,
                 'error': str(e),
-                'archivo_procesado': pdf_path
+                'archivo_procesado': pdf_path,
+                'tiempo_procesamiento': tiempo_procesamiento
             }
     
     def _validar_datos_extraidos(

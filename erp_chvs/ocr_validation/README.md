@@ -134,18 +134,16 @@ La aplicación **OCR Validation** es un sistema automático de validación de do
 ### Dependencias Requeridas
 
 ```bash
-# Para OCR con Tesseract
-sudo apt-get install landingai-ocr
-sudo apt-get install landingai-ocr-spa  # Español colombiano
+# LandingAI ADE (Extracción avanzada con IA)
+pip install landingai-ade
 
-# Para procesamiento de imágenes
-pip install opencv-python
-pip install pillow
-pip install pylandingai
+# Procesamiento de datos
+pip install pandas
+pip install openpyxl  # Para exportación Excel
+pip install pydantic  # Para schemas de datos
 
-# Para procesamiento de PDFs
-pip install pdf2image
-sudo apt-get install poppler-utils
+# Variables de entorno requeridas
+export VISION_AGENT_API_KEY="tu_api_key_de_landingai"
 ```
 
 ### Configuración Inicial
@@ -190,20 +188,25 @@ sudo apt-get install poppler-utils
 | `/ocr_validation/estadisticas/` | `estadisticas` | Métricas del sistema |
 | `/ocr_validation/configuracion/` | `configuracion` | Configuración OCR |
 
-## Configuración OCR
+## Configuración LandingAI
 
 ### Parámetros Principales
 
-- **Confianza mínima**: 60% (texto con menos confianza se marca como ilegible)
-- **Tolerancia de posición**: 5 puntos (para detectar "X" fuera de celdas)
-- **Detección de firmas**: Activada por defecto
-- **Procesamiento de imágenes**: Activado para mejorar calidad
+- **Modelo**: dpt-2-latest (modelo de última generación)
+- **Confianza mínima**: 90% (alta precisión en extracción)
+- **Formato de salida**: DataFrames estructurados con Pandas
+- **Exportación**: CSV, Excel, JSON
 
-### Configuración Tesseract
+### Configuración Avanzada
 
 ```python
-# Ejemplo de configuración óptima
-landingai_config = '--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789Xxfirma'
+# Configurar en settings.py
+VISION_AGENT_API_KEY = os.environ.get('VISION_AGENT_API_KEY')
+
+# Modelos disponibles
+LANDINGAI_MODELS = [
+    'dpt-2-latest',  # Recomendado
+]
 ```
 
 ## Desarrollo y Mantenimiento
@@ -286,11 +289,12 @@ El sistema genera logs detallados en:
 
 ### Problemas Comunes
 
-#### **Error de Tesseract no encontrado**
+#### **Error de API Key no configurada**
 ```bash
 # Solución:
-sudo apt-get install landingai-ocr
-pip install pylandingai
+export VISION_AGENT_API_KEY="tu_api_key"
+# O agregar a .env
+echo 'VISION_AGENT_API_KEY=tu_api_key' >> .env
 ```
 
 #### **Archivos PDF muy grandes**

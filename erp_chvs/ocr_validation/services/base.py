@@ -36,15 +36,17 @@ class BaseOCRService:
         config, created = OCRConfiguration.objects.get_or_create(
             pk=1,
             defaults={
-                'tesseract_config': '--oem 3 --psm 6',
-                'confianza_minima': 60.0,
+                'modelo_landingai': 'dpt-2-latest',
+                'confianza_minima': 90.0,
+                'detectar_firmas': True,
+                'procesar_imagenes': True,
             }
         )
 
         if created:
             self.logger.info("✅ Configuración OCR creada con valores por defecto")
         else:
-            self.logger.debug(f"📝 Configuración OCR cargada: {config.tesseract_config}")
+            self.logger.debug(f"📝 Configuración OCR cargada: {config.modelo_landingai}")
 
         return config
 
