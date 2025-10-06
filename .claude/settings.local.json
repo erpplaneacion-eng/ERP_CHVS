@@ -1,28 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Read(//c/**)",
-      "Bash(for file in lista_alimentos.html lista_ingredientes.html lista_preparaciones.html detalle_preparacion.html index.html)",
-      "Bash(do echo \"=== $file ===\")",
-      "Bash(python manage.py:*)",
-      "Bash(cat:*)",
-      "Bash(python:*)",
-      "Bash(python.exe manage.py shell:*)",
-      "Bash(where python)",
-      "Bash(C:UsersUserAppDataLocalProgramsPythonPython313python.exe manage.py shell)",
-      "Bash(\"/c/Users/User/AppData/Local/Programs/Python/Python313/python.exe\" manage.py dbshell)",
-      "Bash(awk:*)",
-      "Bash(\"C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\" -m py_compile nutricion/views.py)",
-      "Bash(\"C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\" -m py_compile c:/Users/User/OneDrive/Desktop/CHVS/ERP_CHVS/erp_chvs/nutricion/views.py)",
-      "Bash(git -C c:/Users/User/OneDrive/Desktop/CHVS/ERP_CHVS checkout HEAD -- erp_chvs/nutricion/views.py)",
-      "Bash(\"C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\" manage.py check nutricion)",
-      "Bash(for:*)",
-      "Bash(do \"C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\" -m py_compile \"$file\")",
-      "Bash(done)",
-      "Bash(\"C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\" -m py_compile c:/Users/User/OneDrive/Desktop/CHVS/ERP_CHVS/erp_chvs/nutricion/validators/nutricion_validator.py)",
-      "Bash(\"C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\" -m py_compile c:/Users/User/OneDrive/Desktop/CHVS/ERP_CHVS/erp_chvs/nutricion/utils/nutricion_utils.py)",
-      "Bash(find:*)",
-      "Bash(while read file)"
+      "Bash(\"C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\" manage.py makemigrations ocr_validation)",
+      "Bash(\"C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\" manage.py migrate ocr_validation)"
     ],
     "deny": [],
     "ask": []

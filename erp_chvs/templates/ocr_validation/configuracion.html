@@ -38,8 +38,8 @@
                         <span class="config-value">{{ configuracion.confianza_minima }}%</span>
                     </div>
                     <div class="config-item">
-                        <span class="config-label">Configuración Tesseract:</span>
-                        <span class="config-value">{{ configuracion.tesseract_config }}</span>
+                        <span class="config-label">Modelo LandingAI:</span>
+                        <span class="config-value">{{ configuracion.landingai_model }}</span>
                     </div>
                     <div class="config-item">
                         <span class="config-label">Detección de Firmas:</span>
@@ -79,12 +79,12 @@
                     <h5><i class="fas fa-robot"></i> Configuración OCR</h5>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="tesseract_config">Configuración Tesseract:</label>
-                            <input type="text" class="form-control" name="tesseract_config" id="tesseract_config"
-                                   value="{% if configuracion %}{{ configuracion.tesseract_config }}{% else %}--oem 3 --psm 6{% endif %}"
-                                   placeholder="--oem 3 --psm 6">
+                            <label for="landingai_model">Modelo LandingAI:</label>
+                            <input type="text" class="form-control" name="landingai_model" id="landingai_model"
+                                   value="{% if configuracion %}{{ configuracion.landingai_model }}{% else %}dpt-2-latest{% endif %}"
+                                   placeholder="dpt-2-latest">
                             <small class="form-text text-muted">
-                                Parámetros avanzados para Tesseract OCR. Usa valores estándar si no estás seguro.
+                                Parámetros avanzados para LandingAI ADE. Usa valores estándar si no estás seguro.
                             </small>
                         </div>
                         <div class="form-group">
@@ -205,7 +205,7 @@
                     </div>
                     <div class="help-text">
                         <h6>Confianza Mínima</h6>
-                        <p>Controla qué tan seguro debe estar Tesseract del texto reconocido. Valores más altos = mayor precisión pero puede rechazar texto válido.</p>
+                        <p>Controla el nivel de confianza mínima del texto reconocido. Valores más altos = mayor precisión pero puede rechazar texto válido.</p>
                         <p><strong>Recomendado:</strong> 60-80% para documentos de buena calidad</p>
                     </div>
                 </div>
@@ -264,7 +264,7 @@
 function restaurarDefault() {
     if (confirm('¿Está seguro de que desea restaurar la configuración por defecto?')) {
         // Restaurar valores por defecto
-        document.getElementById('tesseract_config').value = '--oem 3 --psm 6';
+        document.getElementById('landingai_model').value = 'dpt-2-latest';
         document.getElementById('confianza_minima').value = '60.0';
         document.getElementById('tolerancia_posicion_x').value = '5.0';
         document.getElementById('tolerancia_posicion_y').value = '5.0';
@@ -283,7 +283,7 @@ function probarConfiguracion() {
 
 function exportarConfiguracion() {
     const configData = {
-        tesseract_config: document.getElementById('tesseract_config').value,
+        landingai_model: document.getElementById('landingai_model').value,
         confianza_minima: document.getElementById('confianza_minima').value,
         tolerancia_posicion_x: document.getElementById('tolerancia_posicion_x').value,
         tolerancia_posicion_y: document.getElementById('tolerancia_posicion_y').value,

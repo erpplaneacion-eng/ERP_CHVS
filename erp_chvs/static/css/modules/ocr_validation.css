@@ -49,6 +49,151 @@
     font-size: 18px;
 }
 
+/* Opciones de procesamiento */
+.processing-options {
+    margin-bottom: 40px;
+}
+
+.options-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.options-header h3 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+    font-size: 24px;
+}
+
+.options-header p {
+    color: #7f8c8d;
+    font-size: 16px;
+}
+
+.options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.option-card {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.option-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    border-color: #007bff;
+}
+
+.option-card.featured {
+    border-color: #28a745;
+    background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);
+}
+
+.option-card.featured:hover {
+    border-color: #20c997;
+}
+
+.option-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.option-header i {
+    font-size: 28px;
+    color: #007bff;
+}
+
+.option-card.featured .option-header i {
+    color: #28a745;
+}
+
+.option-header h4 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 20px;
+}
+
+.badge-new {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: linear-gradient(45deg, #ff6b6b, #ffa500);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 11px;
+    font-weight: bold;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.option-content p {
+    color: #6c757d;
+    margin-bottom: 15px;
+    line-height: 1.6;
+}
+
+.option-content ul {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 25px;
+}
+
+.option-content li {
+    padding: 5px 0;
+    color: #495057;
+}
+
+.option-action {
+    text-align: center;
+}
+
+.option-action p {
+    color: #007bff;
+    font-weight: 600;
+    margin: 0;
+}
+
+.btn-lg {
+    padding: 12px 30px;
+    font-size: 16px;
+    border-radius: 8px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .options-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .option-card {
+        padding: 20px;
+    }
+    
+    .badge-new {
+        position: static;
+        display: inline-block;
+        margin-left: 10px;
+    }
+}
+
 .info-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));

@@ -1,15 +1,17 @@
 """
-Servicios de procesamiento OCR.
+Servicios de procesamiento OCR con LandingAI ADE.
 
 Esta carpeta contiene servicios modulares para el procesamiento de PDFs con OCR:
-- PDFConverterService: Conversión de PDF a imágenes
-- ImageProcessorService: Preprocesamiento de imágenes para OCR
-- TextExtractorService: Extracción de texto mediante Tesseract
+- LandingAIAdapter: Adaptador para LandingAI ADE API
+- OCROrchestrator: Orquestador principal que utiliza LandingAI ADE
 - HeaderValidatorService: Validación del encabezado del PDF
 - FieldValidatorService: Validación de campos diligenciados
-- OCROrchestrator: Orquestador principal que coordina todos los servicios
 """
 
 from .ocr_orchestrator import OCROrchestrator
+from .landingai_adapter import LandingAIAdapter
 
-__all__ = ['OCROrchestrator']
+__all__ = [
+    "OCROrchestrator",
+    "LandingAIAdapter"
+]

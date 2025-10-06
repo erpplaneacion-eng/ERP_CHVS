@@ -99,6 +99,39 @@ class PDFValidation(models.Model):
         verbose_name="Tiempo de Procesamiento (segundos)"
     )
 
+    # Método OCR utilizado
+    METODO_OCR = [('landingai', 'LandingAI ADE')]
+
+    metodo_ocr = models.CharField(
+        max_length=20,
+        choices=METODO_OCR,
+        default="landingai",
+        verbose_name="Método OCR"
+    )
+
+    # Datos estructurados extraídos (JSON)
+    datos_estructurados = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name="Datos Estructurados JSON",
+        help_text="Datos tabulares extraídos del PDF en formato JSON"
+    )
+
+    # Metadatos de extracción
+    metadatos_extraccion = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name="Metadatos de Extracción",
+        help_text="Información sobre el proceso de extracción"
+    )
+
+    # Texto completo extraído
+    texto_completo = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Texto Completo Extraído"
+    )
+
     # Información adicional
     observaciones = models.TextField(
         blank=True,

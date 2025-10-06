@@ -2,12 +2,12 @@
 
 ## Descripción
 
-La aplicación **OCR Validation** es un sistema automático de validación de documentos PDF diligenciados manualmente para el **Programa de Alimentación Escolar (PAE)**. Utiliza **Tesseract OCR** para extraer texto de PDFs escaneados y validar automáticamente los campos que deben ser completados manualmente.
+La aplicación **OCR Validation** es un sistema automático de validación de documentos PDF diligenciados manualmente para el **Programa de Alimentación Escolar (PAE)**. Utiliza **LandingAI ADE** para extraer texto de PDFs escaneados y validar automáticamente los campos que deben ser completados manualmente.
 
 ## Funcionalidades Principales
 
 ### ✅ Procesamiento OCR Automático
-- **Extracción de texto** de PDFs usando Tesseract OCR
+- **Extracción de texto** de PDFs usando LandingAI ADE
 - **Procesamiento por páginas** con análisis individual
 - **Detección de confianza** del reconocimiento óptico
 - **Preprocesamiento de imágenes** para mejorar resultados
@@ -105,7 +105,7 @@ La aplicación **OCR Validation** es un sistema automático de validación de do
 
 2. **Procesamiento OCR**
    - Conversión de páginas PDF a imágenes
-   - Aplicación de Tesseract OCR
+   - Aplicación de LandingAI ADE
    - Extracción de texto por página
 
 3. **Validación Automática**
@@ -135,13 +135,13 @@ La aplicación **OCR Validation** es un sistema automático de validación de do
 
 ```bash
 # Para OCR con Tesseract
-sudo apt-get install tesseract-ocr
-sudo apt-get install tesseract-ocr-spa  # Español colombiano
+sudo apt-get install landingai-ocr
+sudo apt-get install landingai-ocr-spa  # Español colombiano
 
 # Para procesamiento de imágenes
 pip install opencv-python
 pip install pillow
-pip install pytesseract
+pip install pylandingai
 
 # Para procesamiento de PDFs
 pip install pdf2image
@@ -203,7 +203,7 @@ sudo apt-get install poppler-utils
 
 ```python
 # Ejemplo de configuración óptima
-tesseract_config = '--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789Xxfirma'
+landingai_config = '--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789Xxfirma'
 ```
 
 ## Desarrollo y Mantenimiento
@@ -289,8 +289,8 @@ El sistema genera logs detallados en:
 #### **Error de Tesseract no encontrado**
 ```bash
 # Solución:
-sudo apt-get install tesseract-ocr
-pip install pytesseract
+sudo apt-get install landingai-ocr
+pip install pylandingai
 ```
 
 #### **Archivos PDF muy grandes**

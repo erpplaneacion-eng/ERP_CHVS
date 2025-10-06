@@ -37,7 +37,7 @@ El flujo completo de procesamiento OCR sigue estos pasos:
    → Preprocesa cada imagen (upscaling, contraste, nitidez)
    ↓
 4. TextExtractorService.extract_text()
-   → Extrae texto usando Tesseract OCR (español)
+   → Extrae texto usando LandingAI ADE (español)
    ↓
 5. HeaderValidatorService.extract_header()
    → Extrae información del encabezado
@@ -121,7 +121,7 @@ processed_image = processor.process_image("/path/to/image.png")
 
 **Archivo**: `text_extractor.py`
 
-**Propósito**: Extrae texto de imágenes usando Tesseract OCR.
+**Propósito**: Extrae texto de imágenes usando LandingAI ADE.
 
 **Configuración**:
 - Idioma: Español ('spa') con fallback a inglés
@@ -332,12 +332,12 @@ from ocr_validation.models import OCRConfiguration
 config = OCRConfiguration.objects.first()
 config.dpi = 400
 config.confianza_minima = 70.0
-config.tesseract_config = '--psm 1 --oem 3'
+config.landingai_config = '--psm 1 --oem 3'
 config.save()
 ```
 
 **Parámetros configurables**:
-- `tesseract_config`: Configuración de Tesseract (PSM, OEM)
+- `landingai_config`: Configuración de Tesseract (PSM, OEM)
 - `confianza_minima`: Confianza mínima del OCR (0-100)
 - `tolerancia_posicion_x/y`: Tolerancia para validación de posiciones
 - `permitir_texto_parcial`: Permitir texto parcialmente reconocido

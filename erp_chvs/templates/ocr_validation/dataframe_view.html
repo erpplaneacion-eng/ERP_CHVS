@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load ocr_filters %}
+
+{% block title %}DataFrame Extraído - Validación OCR{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+<style>
+    .dataframe-container {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+        padding: 20px;
+    }
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .stats-item {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    .stats-number {
+        font-size: 2rem;
+        font-weight: bold;
+        display: block;
+    }
+    .stats-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    .export-buttons {
+        margin-bottom: 15px;
+    }
+    .table-wrapper {
+        overflow-x: auto;
+    }
+    .info-badge {
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        margin-right: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">📊 DataFrame Extraído</h1>
+                    <p class="text-muted">Datos estructurados extraídos del PDF con LandingAI ADE</p>
+                </div>
+                <div>
+                    <a href="{% url 'ocr_validation:dashboard_dataframes' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Volver al Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información del archivo -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="dataframe-container">
+                <h5><i class="fas fa-file-pdf"></i> Información del Archivo</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Archivo:</strong> {{ validacion.archivo_pdf.name|default:"Sin nombre" }}</p>
+                        <p><strong>Procesado:</strong> {{ validacion.fecha_procesamiento|date:"d/m/Y H:i" }}</p>
+                        <p><strong>Estado:</strong> 
+                            <span class="badge bg-success">{{ validacion.estado_validacion|title }}</span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-badge">
+                            <i class="fas fa-robot"></i> Método: {{ validacion.metodo_ocr|upper }}
+                        </div>
+                        {% if metadatos.texto_original_length %}
+                        <div class="info-badge">
+                            <i class="fas fa-text-width"></i> {{ metadatos.texto_original_length|floatformat:0 }} caracteres
+                        </div>
+                        {% endif %}
+                        {% if metadatos.chunks_procesados %}
+                        <div class="info-badge">
+                            <i class="fas fa-puzzle-piece"></i> {{ metadatos.chunks_procesados }} chunks procesados
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas -->
+    {% if estadisticas %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="stats-card">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="stats-item">
+                            <span class="stats-number">{{ estadisticas.total_estudiantes|default:0 }}</span>
+                            <span class="stats-label">Total Estudiantes</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-item">
+                            <span class="stats-number">{{ estadisticas.total_raciones|default:0 }}</span>
+                            <span class="stats-label">Total Raciones</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-item">
+                            <span class="stats-number">{{ estadisticas.estudiantes_con_firma|default:0 }}</span>
+                            <span class="stats-label">Con Firma</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-item">
+                            <span class="stats-number">{{ estadisticas.campos_detectados|default:0 }}</span>
+                            <span class="stats-label">Campos Detectados</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Tabla de Estudiantes -->
+    {% if estudiantes.data %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="dataframe-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5><i class="fas fa-users"></i> Datos de Estudiantes ({{ estudiantes.count }})</h5>
+                    <div class="export-buttons">
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'ocr_validation:exportar_dataframe' validacion.id %}?tipo=estudiantes&formato=csv" 
+                               class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-file-csv"></i> CSV
+                            </a>
+                            <a href="{% url 'ocr_validation:exportar_dataframe' validacion.id %}?tipo=estudiantes&formato=excel" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-file-excel"></i> Excel
+                            </a>
+                            <a href="{% url 'ocr_validation:exportar_dataframe' validacion.id %}?tipo=estudiantes&formato=json" 
+                               class="btn btn-outline-warning btn-sm">
+                                <i class="fas fa-file-code"></i> JSON
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-wrapper">
+                    <table id="estudiantes-table" class="table table-striped table-hover" style="width:100%">
+                        <thead>
+                            <tr>
+                                {% for column in estudiantes.columns %}
+                                <th>{{ column|title }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in estudiantes.data %}
+                            <tr>
+                                {% for column in estudiantes.columns %}
+                                <td>{{ row|lookup:column|default:"-" }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Información del Encabezado -->
+    {% if encabezado.data %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="dataframe-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5><i class="fas fa-info-circle"></i> Información del Encabezado</h5>
+                    <div class="export-buttons">
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'ocr_validation:exportar_dataframe' validacion.id %}?tipo=encabezado&formato=csv" 
+                               class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-file-csv"></i> CSV
+                            </a>
+                            <a href="{% url 'ocr_validation:exportar_dataframe' validacion.id %}?tipo=encabezado&formato=excel" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-file-excel"></i> Excel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                {% for row in encabezado.data %}
+                <div class="row">
+                    {% for column in encabezado.columns %}
+                    {% if row|lookup:column %}
+                    <div class="col-md-6 col-lg-4 mb-2">
+                        <strong>{{ column|title }}:</strong> {{ row|lookup:column }}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Datos JSON Raw (Colapsible) -->
+    {% if validacion.datos_estructurados %}
+    <div class="row">
+        <div class="col-12">
+            <div class="dataframe-container">
+                <h5>
+                    <a class="text-decoration-none" data-bs-toggle="collapse" href="#datos-json" role="button">
+                        <i class="fas fa-code"></i> Datos JSON Raw 
+                        <i class="fas fa-chevron-down"></i>
+                    </a>
+                </h5>
+                <div class="collapse" id="datos-json">
+                    <pre class="bg-light p-3 rounded"><code>{{ validacion.datos_estructurados|pprint }}</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Inicializar DataTable para estudiantes
+    if ($('#estudiantes-table').length) {
+        $('#estudiantes-table').DataTable({
+            pageLength: 25,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+            },
+            responsive: true,
+            scrollX: true,
+            columnDefs: [
+                { targets: '_all', className: 'text-center' }
+            ]
+        });
+    }
+    
+    // Mostrar mensajes de éxito
+    {% if messages %}
+        {% for message in messages %}
+            if ('{{ message.tags }}' === 'success') {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Éxito!',
+                    text: '{{ message }}',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            }
+        {% endfor %}
+    {% endif %}
+});
+</script>
+{% endblock %}

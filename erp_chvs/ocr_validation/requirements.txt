@@ -1,7 +1,6 @@
 # Dependencias para la aplicación de Validación OCR
 
 # OCR y procesamiento de imágenes
-pytesseract>=0.3.10
 Pillow>=9.0.0
 opencv-python>=4.7.0
 
@@ -21,10 +20,7 @@ pytest-django>=4.5.0
 # Nota: También se requieren las siguientes dependencias del sistema:
 #
 # WINDOWS:
-# - Tesseract OCR: https://github.com/UB-Mannheim/tesseract/wiki
 # - Poppler: https://github.com/oschwartz10612/poppler-windows/releases
 #
 # LINUX:
-# sudo apt-get install tesseract-ocr
-# sudo apt-get install tesseract-ocr-spa
 # sudo apt-get install poppler-utils

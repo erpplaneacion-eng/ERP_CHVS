@@ -1,506 +1,449 @@
 """
-Vistas para el módulo de validación OCR de PDFs.
+Vistas para el módulo de validación OCR con LandingAI ADE.
 """
-
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
-from django.core.files.uploadedfile import UploadedFile
 from django.core.paginator import Paginator
-from django.core.exceptions import PermissionDenied
+import logging
+import csv
 import json
+import pandas as pd
 import os
-from datetime import datetime
-from typing import Dict, List, Any
+import tempfile
 
 from .models import PDFValidation, ValidationError, OCRConfiguration
-from django.db import models
 from .services import OCROrchestrator
-from .exceptions import OCRProcessingException
+from .ocr_orchestrator import OCROrchestrator as AdvancedOCROrchestrator
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
 def ocr_validation_index(request):
-    """
-    Vista principal para validación OCR de PDFs.
-    """
-    context = {
-        'titulo_pagina': 'Validación OCR de PDFs',
-        'descripcion': 'Sistema de validación automática de PDFs diligenciados manualmente',
-        'configuracion_ocr': OCRConfiguration.objects.first(),
-    }
-
-    return render(request, 'ocr_validation/index.html', context)
+    return render(request, 'ocr_validation/index.html', {
+        'titulo_pagina': 'Validación OCR con LandingAI ADE',
+        'descripcion': 'Sistema de validación automática con IA avanzada'
+    })
 
 
 @login_required
 @require_http_methods(["POST"])
 def procesar_pdf_ocr(request):
-    """
-    Vista para procesar un PDF con OCR y validación.
-    """
-    import logging
-    logger = logging.getLogger(__name__)
-
     try:
-        logger.info(f"🔄 Iniciando procesamiento OCR para usuario: {request.user}")
-        print(f"🔄 Iniciando procesamiento OCR para usuario: {request.user}")
-
-        # Verificar método
-        logger.info(f"📨 Método: {request.method}")
-        print(f"📨 Método: {request.method}")
-
-        # Verificar archivos recibidos
-        logger.info(f"📁 Archivos en request.FILES: {list(request.FILES.keys())}")
-        print(f"📁 Archivos en request.FILES: {list(request.FILES.keys())}")
-
         if 'archivo_pdf' not in request.FILES:
-            logger.error("❌ No se encontró archivo PDF en request.FILES")
-            print("❌ No se encontró archivo PDF en request.FILES")
-            return JsonResponse({
-                'success': False,
-                'error': 'No se proporcionó archivo PDF'
-            })
+            return JsonResponse({'success': False, 'error': 'No se proporcionó archivo PDF'})
 
         archivo_pdf = request.FILES['archivo_pdf']
-        logger.info(f"📄 Archivo recibido: {archivo_pdf.name}, tamaño: {archivo_pdf.size}")
-        print(f"📄 Archivo recibido: {archivo_pdf.name}, tamaño: {archivo_pdf.size}")
 
-        # Validar que sea un PDF
         if not archivo_pdf.name.lower().endswith('.pdf'):
-            logger.error(f"❌ Archivo no es PDF: {archivo_pdf.name}")
-            print(f"❌ Archivo no es PDF: {archivo_pdf.name}")
-            return JsonResponse({
-                'success': False,
-                'error': 'El archivo debe ser un PDF válido'
-            })
+            return JsonResponse({'success': False, 'error': 'El archivo debe ser un PDF válido'})
 
-        # Validar tamaño (máximo 10MB)
         if archivo_pdf.size > 10 * 1024 * 1024:
-            logger.error(f"❌ Archivo demasiado grande: {archivo_pdf.size}")
-            print(f"❌ Archivo demasiado grande: {archivo_pdf.size}")
-            return JsonResponse({
-                'success': False,
-                'error': 'El archivo es demasiado grande (máximo 10MB)'
-            })
+            return JsonResponse({'success': False, 'error': 'Archivo demasiado grande (máx 10MB)'})
 
-        logger.info("🔧 Iniciando procesamiento OCR...")
-        print("🔧 Iniciando procesamiento OCR...")
-
-        # Procesar PDF con OCR usando la nueva arquitectura
         orchestrator = OCROrchestrator()
         resultado = orchestrator.process_pdf(archivo_pdf, request.user)
 
-        logger.info(f"✅ Resultado del procesamiento: success={resultado.get('success')}")
-        print(f"✅ Resultado del procesamiento: success={resultado.get('success')}")
-
         if resultado['success']:
-            # Obtener datos de la validación creada
             validacion = PDFValidation.objects.get(id=resultado['validacion_id'])
-            errores = ValidationError.objects.filter(validacion=validacion)
-
-            response_data = {
+            return JsonResponse({
                 'success': True,
                 'validacion_id': resultado['validacion_id'],
-                'mensaje': 'PDF procesado exitosamente',
+                'mensaje': 'PDF procesado exitosamente con LandingAI ADE',
                 'total_errores': resultado['total_errores'],
                 'errores_criticos': validacion.errores_criticos,
                 'errores_advertencia': validacion.errores_advertencia,
                 'tiempo_procesamiento': resultado['tiempo_procesamiento'],
                 'redirect_url': f"/ocr_validation/resultados/{resultado['validacion_id']}/"
-            }
-
-            logger.info(f"✅ Respuesta exitosa: {response_data}")
-            print(f"✅ Respuesta exitosa: {response_data}")
-
-            return JsonResponse(response_data)
+            })
         else:
-            error_response = {
-                'success': False,
-                'error': resultado['error']
-            }
-            logger.error(f"❌ Error en procesamiento: {error_response}")
-            print(f"❌ Error en procesamiento: {error_response}")
-            return JsonResponse(error_response)
+            return JsonResponse({'success': False, 'error': resultado['error']})
 
     except Exception as e:
-        error_msg = f'Error interno del servidor: {str(e)}'
-        logger.exception(f"💥 Excepción capturada: {error_msg}")
-        print(f"💥 Excepción capturada: {error_msg}")
-        import traceback
-        traceback.print_exc()
-        return JsonResponse({
-            'success': False,
-            'error': error_msg
-        })
+        logger.exception(f"Error: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
 
 
 @login_required
 def resultados_validacion(request, validacion_id):
-    """
-    Vista para mostrar resultados detallados de una validación.
-    """
-    try:
-        validacion = get_object_or_404(PDFValidation, id=validacion_id)
+    validacion = get_object_or_404(PDFValidation, id=validacion_id)
+    errores = ValidationError.objects.filter(validacion=validacion)
 
-        # Verificar permisos (usuario debe ser el creador o superusuario)
-        if validacion.usuario_creador != request.user and not request.user.is_superuser:
-            raise PermissionDenied("No tienes permisos para ver esta validación")
-
-        # Obtener errores agrupados por severidad
-        errores = ValidationError.objects.filter(validacion=validacion)
-
-        errores_criticos = errores.filter(severidad='critico')
-        errores_advertencia = errores.filter(severidad='advertencia')
-        errores_info = errores.filter(severidad='info')
-
-        # Agrupar errores por página
-        errores_por_pagina = {}
-        for error in errores:
-            pagina = error.pagina
-            if pagina not in errores_por_pagina:
-                errores_por_pagina[pagina] = []
-            errores_por_pagina[pagina].append(error)
-
-        context = {
-            'validacion': validacion,
-            'errores_criticos': errores_criticos,
-            'errores_advertencia': errores_advertencia,
-            'errores_info': errores_info,
-            'errores_por_pagina': errores_por_pagina,
-            'total_errores': errores.count(),
-        }
-
-        return render(request, 'ocr_validation/resultados.html', context)
-
-    except Exception as e:
-        context = {
-            'error': f'Error al cargar resultados: {str(e)}',
-            'validacion_id': validacion_id
-        }
-        return render(request, 'ocr_validation/error.html', context)
+    return render(request, 'ocr_validation/resultados.html', {
+        'validacion': validacion,
+        'errores_criticos': errores.filter(severidad='critico'),
+        'errores_advertencia': errores.filter(severidad='advertencia'),
+        'errores_info': errores.filter(severidad='info'),
+        'total_errores': errores.count()
+    })
 
 
 @login_required
 def listado_validaciones(request):
-    """
-    Vista para listar todas las validaciones realizadas.
-    """
-    try:
-        # Filtros
-        sede_filter = request.GET.get('sede', '').strip()
-        mes_filter = request.GET.get('mes', '').strip()
-        estado_filter = request.GET.get('estado', '').strip()
+    validaciones = PDFValidation.objects.all().order_by('-fecha_procesamiento')
+    paginator = Paginator(validaciones, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
 
-        # Query base
-        validaciones = PDFValidation.objects.all().order_by('-fecha_procesamiento')
+    return render(request, 'ocr_validation/listado.html', {
+        'validaciones': page_obj,
+        'validaciones_completadas': PDFValidation.objects.filter(estado='completado').count(),
+        'validaciones_con_errores': PDFValidation.objects.filter(total_errores__gt=0).count()
+    })
 
-        # Aplicar filtros
-        if sede_filter:
-            validaciones = validaciones.filter(sede_educativa__icontains=sede_filter)
 
-        if mes_filter:
-            validaciones = validaciones.filter(mes_atencion__icontains=mes_filter)
-
-        if estado_filter:
-            validaciones = validaciones.filter(estado=estado_filter)
-
-        # Paginación
-        paginator = Paginator(validaciones, 20)
-        page_number = request.GET.get('page')
-        page_obj = paginator.get_page(page_number)
-
-        # Obtener valores únicos para filtros
-        sedes_unicas = PDFValidation.objects.values_list('sede_educativa', flat=True).distinct().order_by('sede_educativa')
-        meses_unicos = PDFValidation.objects.values_list('mes_atencion', flat=True).distinct().order_by('mes_atencion')
-
-        # Estadísticas básicas para la plantilla
-        validaciones_completadas = PDFValidation.objects.filter(estado='completado').count()
-        validaciones_con_errores = PDFValidation.objects.filter(total_errores__gt=0).count()
-        validaciones_con_error = PDFValidation.objects.filter(estado='error').count()
-
-        context = {
-            'validaciones': page_obj,
-            'validaciones_completadas': validaciones_completadas,
-            'validaciones_con_errores': validaciones_con_errores,
-            'validaciones_con_error': validaciones_con_error,
-            'filtros_aplicados': {
-                'sede': sede_filter,
-                'mes': mes_filter,
-                'estado': estado_filter,
-            },
-            'sedes_unicas': sedes_unicas,
-            'meses_unicos': meses_unicos,
-            'estados_disponibles': [
-                ('procesando', 'Procesando'),
-                ('completado', 'Completado'),
-                ('error', 'Error'),
-            ],
-        }
-
-        return render(request, 'ocr_validation/listado.html', context)
-
-    except Exception as e:
-        context = {
-            'error': f'Error al cargar listado: {str(e)}'
-        }
-        return render(request, 'ocr_validation/error.html', context)
+@login_required
+def estadisticas_ocr(request):
+    return render(request, 'ocr_validation/estadisticas.html', {
+        'total_validaciones': PDFValidation.objects.count(),
+        'validaciones_completadas': PDFValidation.objects.filter(estado='completado').count()
+    })
 
 
 @login_required
 @require_http_methods(["POST"])
 def reintentar_validacion(request, validacion_id):
-    """
-    Vista para reintentar el procesamiento de una validación fallida.
-    """
     try:
         validacion = get_object_or_404(PDFValidation, id=validacion_id)
+        if not validacion.archivo_path:
+            return JsonResponse({'success': False, 'error': 'Archivo no encontrado'})
 
-        # Verificar permisos
-        if validacion.usuario_creador != request.user and not request.user.is_superuser:
-            return JsonResponse({
-                'success': False,
-                'error': 'No tienes permisos para esta acción'
-            })
+        orchestrator = OCROrchestrator()
+        resultado = orchestrator.process_pdf(validacion.archivo_path, request.user)
 
-        # Aquí iría la lógica para reintentar el procesamiento
-        # Por ahora, solo cambiamos el estado
-        validacion.estado = 'procesando'
-        validacion.observaciones = 'Reintento de procesamiento iniciado'
-        validacion.save()
-
-        return JsonResponse({
-            'success': True,
-            'mensaje': 'Procesamiento reintentado exitosamente'
-        })
-
+        if resultado['success']:
+            return JsonResponse({'success': True, 'mensaje': 'PDF reprocesado', 'validacion_id': resultado['validacion_id']})
+        else:
+            return JsonResponse({'success': False, 'error': resultado['error']})
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Error al reintentar: {str(e)}'
-        })
+        logger.exception(f"Error: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
 
 
 @login_required
 @require_http_methods(["POST"])
 def marcar_error_resuelto(request, error_id):
-    """
-    Vista para marcar un error específico como resuelto.
-    """
     try:
         error = get_object_or_404(ValidationError, id=error_id)
-
-        # Verificar permisos
-        if error.validacion.usuario_creador != request.user and not request.user.is_superuser:
-            return JsonResponse({
-                'success': False,
-                'error': 'No tienes permisos para esta acción'
-            })
-
         error.resuelto = True
         error.save()
-
-        # Recalcular totales de la validación
-        validacion = error.validacion
-        errores_pendientes = ValidationError.objects.filter(
-            validacion=validacion,
-            resuelto=False
-        )
-
-        validacion.total_errores = errores_pendientes.count()
-        validacion.errores_criticos = errores_pendientes.filter(severidad='critico').count()
-        validacion.errores_advertencia = errores_pendientes.filter(severidad='advertencia').count()
-
-        if validacion.total_errores == 0:
-            validacion.observaciones = 'Todos los errores han sido resueltos'
-        else:
-            validacion.observaciones = f'Quedan {validacion.total_errores} errores por resolver'
-
-        validacion.save()
-
-        return JsonResponse({
-            'success': True,
-            'mensaje': 'Error marcado como resuelto',
-            'errores_restantes': validacion.total_errores
-        })
-
+        return JsonResponse({'success': True, 'mensaje': 'Error resuelto'})
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Error al marcar como resuelto: {str(e)}'
-        })
-
-
-@login_required
-def estadisticas_ocr(request):
-    """
-    Vista para mostrar estadísticas generales del sistema OCR.
-    """
-    try:
-        # Estadísticas generales
-        total_validaciones = PDFValidation.objects.count()
-        validaciones_completadas = PDFValidation.objects.filter(estado='completado').count()
-        validaciones_con_errores = PDFValidation.objects.filter(total_errores__gt=0).count()
-
-        # Estadísticas por severidad
-        errores_criticos_total = ValidationError.objects.filter(severidad='critico').count()
-        errores_advertencia_total = ValidationError.objects.filter(severidad='advertencia').count()
-        errores_info_total = ValidationError.objects.filter(severidad='info').count()
-
-        # Estadísticas por tipo de error
-        errores_por_tipo = ValidationError.objects.values('tipo_error').annotate(
-            total=models.Count('id')
-        ).order_by('-total')
-
-        # Estadísticas por sede
-        errores_por_sede = PDFValidation.objects.values('sede_educativa').annotate(
-            total_errores=models.Sum('total_errores'),
-            errores_criticos=models.Sum('errores_criticos')
-        ).order_by('-total_errores')[:10]
-
-        context = {
-            'estadisticas_generales': {
-                'total_validaciones': total_validaciones,
-                'validaciones_completadas': validaciones_completadas,
-                'validaciones_con_errores': validaciones_con_errores,
-                'tasa_exito': (validaciones_completadas / total_validaciones * 100) if total_validaciones > 0 else 0,
-            },
-            'estadisticas_errores': {
-                'errores_criticos': errores_criticos_total,
-                'errores_advertencia': errores_advertencia_total,
-                'errores_info': errores_info_total,
-                'total_errores': errores_criticos_total + errores_advertencia_total + errores_info_total,
-            },
-            'errores_por_tipo': errores_por_tipo,
-            'errores_por_sede': errores_por_sede,
-        }
-
-        return render(request, 'ocr_validation/estadisticas.html', context)
-
-    except Exception as e:
-        context = {
-            'error': f'Error al cargar estadísticas: {str(e)}'
-        }
-        return render(request, 'ocr_validation/error.html', context)
+        logger.exception(f"Error: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
 
 
 @login_required
 def configuracion_ocr(request):
-    """
-    Vista para configurar parámetros del sistema OCR.
-    """
     try:
         configuracion = OCRConfiguration.objects.first()
-
         if request.method == 'POST':
-            # Actualizar configuración
             if configuracion:
-                configuracion.tesseract_config = request.POST.get('tesseract_config', configuracion.tesseract_config)
-                configuracion.confianza_minima = float(request.POST.get('confianza_minima', configuracion.confianza_minima))
-                configuracion.tolerancia_posicion_x = float(request.POST.get('tolerancia_posicion_x', configuracion.tolerancia_posicion_x))
-                configuracion.tolerancia_posicion_y = float(request.POST.get('tolerancia_posicion_y', configuracion.tolerancia_posicion_y))
-                configuracion.permitir_texto_parcial = request.POST.get('permitir_texto_parcial') == 'on'
+                configuracion.confianza_minima = float(request.POST.get('confianza_minima', 60))
                 configuracion.detectar_firmas = request.POST.get('detectar_firmas') == 'on'
-                configuracion.procesar_imagenes = request.POST.get('procesar_imagenes') == 'on'
-                configuracion.guardar_imagenes_temporales = request.POST.get('guardar_imagenes_temporales') == 'on'
                 configuracion.save()
-
-                context = {
-                    'configuracion': configuracion,
-                    'mensaje_exito': 'Configuración actualizada exitosamente'
-                }
             else:
-                context = {
-                    'error': 'No se pudo actualizar la configuración'
-                }
-        else:
-            context = {
-                'configuracion': configuracion
-            }
-
-        return render(request, 'ocr_validation/configuracion.html', context)
-
+                configuracion = OCRConfiguration.objects.create(
+                    confianza_minima=float(request.POST.get('confianza_minima', 60)),
+                    detectar_firmas=request.POST.get('detectar_firmas') == 'on'
+                )
+            return JsonResponse({'success': True, 'mensaje': 'Configuración actualizada'})
+        return render(request, 'ocr_validation/configuracion.html', {'configuracion': configuracion})
     except Exception as e:
-        context = {
-            'error': f'Error al cargar configuración: {str(e)}'
-        }
-        return render(request, 'ocr_validation/error.html', context)
+        logger.exception(f"Error: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
 
 
 @login_required
 def descargar_reporte_errores(request, validacion_id):
-    """
-    Vista para descargar reporte de errores en formato Excel.
-    """
     try:
         validacion = get_object_or_404(PDFValidation, id=validacion_id)
         errores = ValidationError.objects.filter(validacion=validacion)
 
-        # Crear DataFrame con errores
-        datos_errores = []
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="errores_{validacion_id}.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow(['Tipo', 'Descripción', 'Página', 'Severidad', 'Resuelto'])
         for error in errores:
-            datos_errores.append({
-                'Tipo Error': error.tipo_error,
-                'Descripción': error.descripcion,
-                'Página': error.pagina,
-                'Fila Estudiante': error.fila_estudiante or '',
-                'Campo': error.columna_campo or '',
-                'Severidad': error.severidad,
-                'Resuelto': 'Sí' if error.resuelto else 'No',
-                'Fecha Creación': error.fecha_creacion.strftime('%Y-%m-%d %H:%M:%S')
-            })
+            writer.writerow([error.tipo_error, error.descripcion, error.pagina, error.severidad, 'Sí' if error.resuelto else 'No'])
+        return response
+    except Exception as e:
+        logger.exception(f"Error: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
 
-        # Verificar si pandas está disponible
+
+# ============================================
+# NUEVAS VISTAS PARA DATAFRAMES
+# ============================================
+
+@login_required
+@require_http_methods(["POST"])
+def procesar_pdf_dataframe(request):
+    """Vista para procesar PDF con extracción estructurada a DataFrames."""
+    try:
+        if 'archivo_pdf' not in request.FILES:
+            return JsonResponse({'success': False, 'error': 'No se proporcionó archivo PDF'})
+
+        archivo_pdf = request.FILES['archivo_pdf']
+
+        if not archivo_pdf.name.lower().endswith('.pdf'):
+            return JsonResponse({'success': False, 'error': 'El archivo debe ser un PDF válido'})
+
+        if archivo_pdf.size > 10 * 1024 * 1024:
+            return JsonResponse({'success': False, 'error': 'Archivo demasiado grande (máx 10MB)'})
+
+        # Guardar archivo temporalmente
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
+            for chunk in archivo_pdf.chunks():
+                temp_file.write(chunk)
+            temp_path = temp_file.name
+
         try:
-            import pandas as pd
-            from io import BytesIO
-
-            df = pd.DataFrame(datos_errores)
-
-            # Crear buffer para Excel
-            excel_buffer = BytesIO()
-            df.to_excel(excel_buffer, index=False, engine='openpyxl')
-            excel_buffer.seek(0)
-
-            # Crear respuesta HTTP
-            response = HttpResponse(
-                excel_buffer.read(),
-                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            # Procesar con orquestador avanzado
+            orchestrator = AdvancedOCROrchestrator()
+            resultado = orchestrator.process_pdf_complete(
+                pdf_path=temp_path,
+                save_to_db=True,
+                usuario=request.user
             )
 
-            filename = f"errores_validacion_{validacion.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            if resultado['success']:
+                return JsonResponse({
+                    'success': True,
+                    'validacion_id': resultado['pdf_validation_id'],
+                    'mensaje': 'PDF procesado exitosamente con extracción estructurada',
+                    'total_estudiantes': resultado['resumen']['total_estudiantes'],
+                    'total_raciones': resultado['resumen']['total_raciones'],
+                    'calidad_extraccion': resultado['resumen']['calidad_extraccion'],
+                    'redirect_url': f"/ocr_validation/dataframe/{resultado['pdf_validation_id']}/"
+                })
+            else:
+                return JsonResponse({'success': False, 'error': resultado['error']})
 
-            return response
-
-        except ImportError:
-            # Si pandas no está disponible, crear CSV simple
-            import csv
-            from io import StringIO
-
-            csv_buffer = StringIO()
-            if datos_errores:
-                writer = csv.DictWriter(csv_buffer, fieldnames=datos_errores[0].keys())
-                writer.writeheader()
-                writer.writerows(datos_errores)
-
-            response = HttpResponse(csv_buffer.getvalue(), content_type='text/csv')
-            filename = f"errores_validacion_{validacion.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-            response['Content-Disposition'] = f'attachment; filename="{filename}"'
-
-            return response
+        finally:
+            # Limpiar archivo temporal
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
 
     except Exception as e:
-        return HttpResponse(f'Error generando reporte: {str(e)}', status=500)
+        logger.exception(f"Error procesando PDF con DataFrames: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
 
 
-# Funciones auxiliares para compatibilidad
-def validar_pdf_ocr(archivo_pdf: UploadedFile, usuario=None) -> Dict[str, Any]:
-    """
-    Función de compatibilidad para validar PDF con OCR.
-    Utiliza la nueva arquitectura de servicios.
-    """
-    orchestrator = OCROrchestrator()
-    return orchestrator.process_pdf(archivo_pdf, usuario)
+@login_required
+def ver_dataframe(request, validacion_id):
+    """Vista para mostrar los DataFrames extraídos de forma interactiva."""
+    try:
+        validacion = get_object_or_404(PDFValidation, id=validacion_id)
+        
+        # Recuperar resultados del orquestador
+        orchestrator = AdvancedOCROrchestrator()
+        resultado = orchestrator.get_processing_results(validacion_id)
+        
+        if not resultado['success']:
+            return render(request, 'ocr_validation/error.html', {
+                'error': resultado['error']
+            })
+        
+        df_estudiantes = resultado['df_estudiantes']
+        df_encabezado = resultado['df_encabezado']
+        
+        # Convertir DataFrames a formato para el template
+        estudiantes_data = {
+            'columns': list(df_estudiantes.columns) if not df_estudiantes.empty else [],
+            'data': df_estudiantes.to_dict('records') if not df_estudiantes.empty else [],
+            'count': len(df_estudiantes)
+        }
+        
+        encabezado_data = {
+            'columns': list(df_encabezado.columns) if not df_encabezado.empty else [],
+            'data': df_encabezado.to_dict('records') if not df_encabezado.empty else [],
+            'count': len(df_encabezado)
+        }
+        
+        # Estadísticas
+        estadisticas = {}
+        if not df_estudiantes.empty:
+            estadisticas = {
+                'total_estudiantes': len(df_estudiantes),
+                'total_raciones': df_estudiantes['raciones_entregadas'].sum() if 'raciones_entregadas' in df_estudiantes.columns else 0,
+                'estudiantes_con_firma': df_estudiantes['firma_presente'].sum() if 'firma_presente' in df_estudiantes.columns else 0,
+                'campos_detectados': len([col for col in df_estudiantes.columns if not df_estudiantes[col].isna().all()])
+            }
+        
+        return render(request, 'ocr_validation/dataframe_view.html', {
+            'validacion': validacion,
+            'estudiantes': estudiantes_data,
+            'encabezado': encabezado_data,
+            'estadisticas': estadisticas,
+            'metadatos': resultado['metadatos']
+        })
+        
+    except Exception as e:
+        logger.exception(f"Error mostrando DataFrame: {e}")
+        return render(request, 'ocr_validation/error.html', {
+            'error': str(e)
+        })
+
+
+@login_required
+def exportar_dataframe(request, validacion_id):
+    """Vista para exportar DataFrames a diferentes formatos."""
+    try:
+        formato = request.GET.get('formato', 'csv')
+        tipo = request.GET.get('tipo', 'estudiantes')  # estudiantes o encabezado
+        
+        # Recuperar datos
+        orchestrator = AdvancedOCROrchestrator()
+        resultado = orchestrator.get_processing_results(validacion_id)
+        
+        if not resultado['success']:
+            return JsonResponse({'success': False, 'error': resultado['error']})
+        
+        # Seleccionar DataFrame
+        if tipo == 'estudiantes':
+            df = resultado['df_estudiantes']
+            filename_base = f"estudiantes_{validacion_id}"
+        else:
+            df = resultado['df_encabezado']
+            filename_base = f"encabezado_{validacion_id}"
+        
+        if df.empty:
+            return JsonResponse({'success': False, 'error': 'No hay datos para exportar'})
+        
+        # Exportar según formato
+        if formato == 'csv':
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename="{filename_base}.csv"'
+            df.to_csv(response, index=False, encoding='utf-8-sig')
+            return response
+            
+        elif formato == 'excel':
+            response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = f'attachment; filename="{filename_base}.xlsx"'
+            with pd.ExcelWriter(response, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False)
+            return response
+            
+        elif formato == 'json':
+            response = HttpResponse(content_type='application/json')
+            response['Content-Disposition'] = f'attachment; filename="{filename_base}.json"'
+            df.to_json(response, orient='records', force_ascii=False, indent=2)
+            return response
+            
+        else:
+            return JsonResponse({'success': False, 'error': 'Formato no soportado'})
+            
+    except Exception as e:
+        logger.exception(f"Error exportando DataFrame: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def api_dataframe_data(request, validacion_id):
+    """API para obtener datos del DataFrame en formato JSON para tablas interactivas."""
+    try:
+        tipo = request.GET.get('tipo', 'estudiantes')
+        start = int(request.GET.get('start', 0))
+        length = int(request.GET.get('length', 10))
+        search_value = request.GET.get('search[value]', '')
+        
+        # Recuperar datos
+        orchestrator = AdvancedOCROrchestrator()
+        resultado = orchestrator.get_processing_results(validacion_id)
+        
+        if not resultado['success']:
+            return JsonResponse({'error': resultado['error']})
+        
+        # Seleccionar DataFrame
+        if tipo == 'estudiantes':
+            df = resultado['df_estudiantes']
+        else:
+            df = resultado['df_encabezado']
+        
+        if df.empty:
+            return JsonResponse({
+                'draw': request.GET.get('draw', 1),
+                'recordsTotal': 0,
+                'recordsFiltered': 0,
+                'data': []
+            })
+        
+        # Aplicar filtro de búsqueda
+        df_filtered = df
+        if search_value:
+            # Buscar en todas las columnas de texto
+            mask = df.astype(str).apply(
+                lambda x: x.str.contains(search_value, case=False, na=False)
+            ).any(axis=1)
+            df_filtered = df[mask]
+        
+        # Paginación
+        total_records = len(df)
+        filtered_records = len(df_filtered)
+        df_page = df_filtered.iloc[start:start + length]
+        
+        # Convertir a formato DataTables
+        data = []
+        for _, row in df_page.iterrows():
+            data.append(list(row.astype(str)))
+        
+        return JsonResponse({
+            'draw': request.GET.get('draw', 1),
+            'recordsTotal': total_records,
+            'recordsFiltered': filtered_records,
+            'data': data
+        })
+        
+    except Exception as e:
+        logger.exception(f"Error en API DataFrame: {e}")
+        return JsonResponse({'error': str(e)})
+
+
+@login_required
+def dashboard_dataframes(request):
+    """Dashboard principal para gestión de DataFrames extraídos."""
+    try:
+        # Obtener estadísticas generales
+        total_validaciones = PDFValidation.objects.filter(
+            metodo_ocr='landingai',
+            datos_estructurados__isnull=False
+        ).count()
+        
+        validaciones_recientes = PDFValidation.objects.filter(
+            metodo_ocr='landingai',
+            datos_estructurados__isnull=False
+        ).order_by('-fecha_procesamiento')[:10]
+        
+        # Calcular estadísticas de calidad
+        estadisticas_calidad = {
+            'buena': 0,
+            'regular': 0,
+            'mala': 0
+        }
+        
+        total_estudiantes = 0
+        total_raciones = 0
+        
+        for validacion in validaciones_recientes:
+            if validacion.metadatos_extraccion:
+                metadatos = validacion.metadatos_extraccion
+                if isinstance(metadatos, dict):
+                    total_estudiantes += metadatos.get('total_estudiantes', 0)
+                    total_raciones += metadatos.get('total_raciones', 0)
+        
+        return render(request, 'ocr_validation/dashboard_dataframes_simple.html', {
+            'total_validaciones': total_validaciones,
+            'validaciones_recientes': validaciones_recientes,
+            'estadisticas_calidad': estadisticas_calidad,
+            'total_estudiantes': total_estudiantes,
+            'total_raciones': total_raciones
+        })
+        
+    except Exception as e:
+        logger.exception(f"Error en dashboard: {e}")
+        return render(request, 'ocr_validation/error.html', {
+            'error': str(e)
+        })
