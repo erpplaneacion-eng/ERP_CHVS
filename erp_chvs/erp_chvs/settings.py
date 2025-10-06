@@ -30,6 +30,10 @@ SECRET_KEY = os.environ.get(
 
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 
+# LandingAI Configuration
+LANDINGAI_API_KEY = os.environ.get('VISION_AGENT_API_KEY', '')
+VISION_AGENT_API_KEY = LANDINGAI_API_KEY  # Alias para compatibilidad
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 

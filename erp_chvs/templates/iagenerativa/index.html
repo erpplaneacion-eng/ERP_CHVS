@@ -64,13 +64,44 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                resultadoDiv.innerHTML = '<div class="alert alert-success">Menú generado exitosamente.</div><pre>' + data.respuesta + '</pre>';
+                resultadoDiv.innerHTML = '<div class="alert alert-success">✅ Menú generado exitosamente.</div><pre class="bg-light p-3 rounded">' + data.respuesta + '</pre>';
             } else {
-                resultadoDiv.innerHTML = '<div class="alert alert-danger">Error: ' + data.error + '</div>';
+                // Mostrar mensaje específico según el tipo de error
+                let mensajeError = '';
+                if (data.tipo_error === 'configuracion') {
+                    mensajeError = `
+                        <div class="alert alert-warning">
+                            <h5>⚙️ Configuración Requerida</h5>
+                            <p>${data.error}</p>
+                            <hr>
+                            <p class="mb-0">
+                                <strong>Para usar esta funcionalidad:</strong><br>
+                                1. Obtén una API Key en: <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a><br>
+                                2. Agrégala a tu archivo <code>.env</code>: <code>GEMINI_API_KEY=tu_api_key_aqui</code><br>
+                                3. Reinicia el servidor Django
+                            </p>
+                        </div>
+                    `;
+                } else if (data.tipo_error === 'dependencia') {
+                    mensajeError = `
+                        <div class="alert alert-warning">
+                            <h5>📦 Dependencia Faltante</h5>
+                            <p>${data.error}</p>
+                            <hr>
+                            <p class="mb-0">
+                                <strong>Instala la librería:</strong><br>
+                                <code>pip install google-generativeai</code>
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    mensajeError = `<div class="alert alert-danger">❌ Error: ${data.error}</div>`;
+                }
+                resultadoDiv.innerHTML = mensajeError;
             }
         })
         .catch(error => {
-            resultadoDiv.innerHTML = '<div class="alert alert-danger">Error de conexión.</div>';
+            resultadoDiv.innerHTML = '<div class="alert alert-danger">❌ Error de conexión: ' + error.message + '</div>';
         });
     });
 </script>

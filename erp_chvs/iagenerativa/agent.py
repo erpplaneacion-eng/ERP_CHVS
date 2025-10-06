@@ -1,4 +1,3 @@
-import google.generativeai as genai
 from django.conf import settings
 from nutricion.models import TablaIngredientesSiesa, TablaMenus, TablaPreparaciones, TablaPreparacionIngredientes
 
@@ -6,6 +5,22 @@ def generar_menu_con_ingredientes(nombre_menu, id_modalidad, id_contrato):
     """
     Genera un menú con ingredientes usando un modelo de IA generativa.
     """
+    # Import lazy para evitar error si no se usa
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        raise ImportError(
+            "google-generativeai no está instalado. "
+            "Instala con: pip install google-generativeai"
+        )
+
+    # Verificar que la API Key esté configurada
+    if not settings.GEMINI_API_KEY:
+        raise ValueError(
+            "GEMINI_API_KEY no está configurada. "
+            "Agrega GEMINI_API_KEY a tu archivo .env para usar esta funcionalidad."
+        )
+
     genai.configure(api_key=settings.GEMINI_API_KEY)
 
     # Obtener todos los ingredientes de la base de datos

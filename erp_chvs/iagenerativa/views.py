@@ -37,7 +37,28 @@ def generar_menu(request):
 
             return JsonResponse({'success': True, 'respuesta': respuesta_generada})
 
+        except ValueError as e:
+            # Error de configuración (GEMINI_API_KEY no configurada)
+            return JsonResponse({
+                'success': False,
+                'error': str(e),
+                'tipo_error': 'configuracion'
+            }, status=400)
+
+        except ImportError as e:
+            # Error de dependencia (google-generativeai no instalado)
+            return JsonResponse({
+                'success': False,
+                'error': str(e),
+                'tipo_error': 'dependencia'
+            }, status=400)
+
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            # Cualquier otro error
+            return JsonResponse({
+                'success': False,
+                'error': f'Error al generar el menú: {str(e)}',
+                'tipo_error': 'general'
+            }, status=500)
 
     return JsonResponse({'error': 'Método no permitido'}, status=405)
