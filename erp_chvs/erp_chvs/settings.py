@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_extensions',
     'principal', # aplicación principal, cuando se ejecuta el servidor
     'dashboard',
     'nutricion',
