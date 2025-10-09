@@ -195,6 +195,25 @@ Guarda los pesos configurados de cada ingrediente por nivel escolar para un aná
 | `sodio`                  | `DecimalField(10, 2)`| Sodio calculado para el peso.                    |
 | `codigo_icbf`            | `CharField(20)`      | Código del alimento en la tabla ICBF.            |
 
+### Tabla: `grupos_alimentos` (`GruposAlimentos`)
+
+Catálogo de grupos de alimentos según la clasificación nutricional.
+
+| Columna              | Tipo de Dato     | Descripción                    |
+| -------------------- | ---------------- | ------------------------------ |
+| `id_grupo_alimentos` (PK) | `CharField(10)`  | ID único del grupo de alimentos. |
+| `grupo_alimentos`    | `CharField(100)` | Nombre del grupo de alimentos. |
+
+### Tabla: `componentes_alimentos` (`ComponentesAlimentos`)
+
+Catálogo de componentes o tipos de platos que conforman un menú.
+
+| Columna                | Tipo de Dato     | Descripción                             |
+| ---------------------- | ---------------- | --------------------------------------- |
+| `id_componente` (PK)   | `CharField(10)`  | ID único del componente.                |
+| `componente`           | `CharField(100)` | Nombre del componente.                  |
+| `id_grupo_alimentos` (FK) | `ForeignKey`     | Referencia a `GruposAlimentos`.         |
+
 ---
 
 ## Módulo: `ocr_validation`

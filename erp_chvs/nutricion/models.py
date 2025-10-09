@@ -1,6 +1,63 @@
 from django.db import models
-from principal.models import ModalidadesDeConsumo
+from principal.models import ModalidadesDeConsumo, TablaGradosEscolaresUapa
 from planeacion.models import Programa
+
+
+class GruposAlimentos(models.Model):
+    """
+    Catálogo de grupos de alimentos según la clasificación nutricional.
+    Ej: Cereales, Frutas, Lácteos, etc.
+    """
+    id_grupo_alimentos = models.CharField(
+        primary_key=True, 
+        max_length=10,
+        verbose_name="ID Grupo Alimentos"
+    )
+    grupo_alimentos = models.CharField(
+        max_length=100,
+        verbose_name="Grupo de Alimentos"
+    )
+
+    def __str__(self):
+        return self.grupo_alimentos
+
+    class Meta:
+        db_table = 'grupos_alimentos'
+        verbose_name = "Grupo de Alimento"
+        verbose_name_plural = "Grupos de Alimentos"
+        ordering = ['id_grupo_alimentos']
+
+
+class ComponentesAlimentos(models.Model):
+    """
+    Catálogo de componentes o tipos de platos que conforman un menú.
+    Ej: Bebida con leche, Alimento proteico, Cereal acompañante, etc.
+    """
+    id_componente = models.CharField(
+        primary_key=True, 
+        max_length=10,
+        verbose_name="ID Componente"
+    )
+    componente = models.CharField(
+        max_length=100,
+        verbose_name="Componente"
+    )
+    id_grupo_alimentos = models.ForeignKey(
+        GruposAlimentos, 
+        on_delete=models.PROTECT,
+        db_column='id_grupo_alimentos',
+        verbose_name="Grupo de Alimentos",
+        related_name='componentes'
+    )
+
+    def __str__(self):
+        return self.componente
+
+    class Meta:
+        db_table = 'componentes_alimentos'
+        verbose_name = "Componente de Alimento"
+        verbose_name_plural = "Componentes de Alimentos"
+        ordering = ['componente']
 
 
 class PermisosNutricion(models.Model):
@@ -116,7 +173,7 @@ class TablaMenus(models.Model):
 class TablaPreparaciones(models.Model):
     """
     Modelo para gestionar preparaciones/recetas asociadas a un menú.
-    Cada preparación pertenece a un menú específico.
+    Cada preparación pertenece a un menú específico y a un componente de alimento.
     """
     id_preparacion = models.AutoField(
         primary_key=True,
@@ -132,6 +189,15 @@ class TablaPreparaciones(models.Model):
         db_column='id_menu',
         verbose_name="Menú",
         related_name='preparaciones'
+    )
+    id_componente = models.ForeignKey(
+        ComponentesAlimentos,
+        on_delete=models.PROTECT,
+        db_column='id_componente',
+        verbose_name="Componente de Alimento",
+        related_name='preparaciones',
+        null=True,
+        blank=True
     )
     fecha_creacion = models.DateTimeField(
         auto_now_add=True,

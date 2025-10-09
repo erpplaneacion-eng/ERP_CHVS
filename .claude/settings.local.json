@@ -6,7 +6,9 @@
       "Bash(python3 erp_chvs/manage.py makemigrations ocr_validation)",
       "Bash(chmod:*)",
       "Bash(python manage.py:*)",
-      "Bash(python3 manage.py showmigrations:*)"
+      "Bash(python3 manage.py showmigrations:*)",
+      "Bash(python3 manage.py makemigrations:*)",
+      "Bash(\"C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\" manage.py makemigrations nutricion)"
     ],
     "deny": [],
     "ask": []
