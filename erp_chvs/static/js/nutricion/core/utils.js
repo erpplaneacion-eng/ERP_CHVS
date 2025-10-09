@@ -291,13 +291,13 @@ function validarRespuestaHTTP(response) {
 /**
  * Loading spinner global
  */
-const LoadingManager = {
+const LoadingManager = window.LoadingManager || {
     elemento: null,
     contador: 0,
-    
+
     mostrar(mensaje = 'Cargando...') {
         this.contador++;
-        
+
         if (!this.elemento) {
             this.elemento = crearElemento('div', {
                 id: 'loading-global',
@@ -327,10 +327,10 @@ const LoadingManager = {
             this.elemento.style.display = 'flex';
         }
     },
-    
+
     ocultar() {
         this.contador = Math.max(0, this.contador - 1);
-        
+
         if (this.contador === 0 && this.elemento) {
             this.elemento.style.display = 'none';
         }

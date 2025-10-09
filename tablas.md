@@ -99,6 +99,7 @@ Gestiona las preparaciones o recetas asociadas a un menú.
 | `id_preparacion` (PK) | `AutoField`       | ID único de la preparación.             |
 | `preparacion`    | `CharField(255)`  | Nombre de la preparación.               |
 | `id_menu` (FK)   | `ForeignKey`      | Referencia a `TablaMenus`.              |
+| `id_componente` (FK) | `ForeignKey`      | Referencia a `ComponentesAlimentos`. Nullable. |
 | `fecha_creacion` | `DateTimeField`   | Fecha de creación del registro.         |
 
 ### Tabla: `tabla_ingredientes_siesa` (`TablaIngredientesSiesa`)

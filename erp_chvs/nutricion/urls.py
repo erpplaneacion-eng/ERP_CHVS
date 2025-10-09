@@ -29,6 +29,9 @@ urlpatterns = [
     path('api/ingredientes/', views.api_ingredientes, name='api_ingredientes'),
     path('api/ingredientes/<int:id_ingrediente>/', views.api_ingrediente_detail, name='api_ingrediente_detail'),
 
+    # Componentes de Alimentos
+    path('api/componentes-alimentos/', views.api_componentes_alimentos, name='api_componentes_alimentos'),
+
     # Preparación - Ingredientes
     path('api/preparaciones/<int:id_preparacion>/ingredientes/', views.api_preparacion_ingredientes, name='api_preparacion_ingredientes'),
     path('api/preparaciones/<int:id_preparacion>/ingredientes/<int:id_ingrediente>/', views.api_preparacion_ingrediente_delete, name='api_preparacion_ingrediente_delete'),

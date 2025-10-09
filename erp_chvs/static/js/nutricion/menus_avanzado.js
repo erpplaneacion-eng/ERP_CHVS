@@ -289,6 +289,8 @@ async function generarMenusAutomaticos(modalidadId, modalidadNombre) {
     }
 }
 let menuActualId = null;
+let componentesAlimentos = []; // Cache de componentes
+
 function abrirGestionPreparaciones(menuId, menuNumero) {
     menuActualId = menuId; // Guardar el ID del menú actual
     menuActualAnalisis = menuId; // Guardar para el análisis nutricional
@@ -308,10 +310,41 @@ function abrirGestionPreparaciones(menuId, menuNumero) {
     // Cargar preparaciones del menú
     cargarPreparacionesMenu(menuId);
 }
-function abrirModalNuevaPreparacion(menuId) {
+
+async function abrirModalNuevaPreparacion(menuId) {
     document.getElementById('menuIdPrep').value = menuId;
     document.getElementById('nombrePreparacion').value = '';
+
+    // Cargar componentes si no están cargados
+    if (componentesAlimentos.length === 0) {
+        await cargarComponentesAlimentos();
+    }
+
+    // Llenar el select de componentes
+    const selectComponente = document.getElementById('componenteAlimento');
+    selectComponente.innerHTML = '<option value="">Seleccione un componente...</option>';
+
+    componentesAlimentos.forEach(comp => {
+        const option = document.createElement('option');
+        option.value = comp.id_componente;
+        option.textContent = `${comp.componente} (${comp.id_grupo_alimentos__grupo_alimentos})`;
+        selectComponente.appendChild(option);
+    });
+
     document.getElementById('modalNuevaPreparacion').style.display = 'block';
+}
+
+async function cargarComponentesAlimentos() {
+    try {
+        const response = await fetch('/nutricion/api/componentes-alimentos/');
+        const data = await response.json();
+        if (data.componentes) {
+            componentesAlimentos = data.componentes;
+        }
+    } catch (error) {
+        console.error('Error al cargar componentes:', error);
+        alert('Error al cargar componentes de alimentos');
+    }
 }
 // Configurar el formulario de nueva preparación
 document.addEventListener('DOMContentLoaded', function() {
@@ -321,10 +354,18 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const menuId = document.getElementById('menuIdPrep').value;
             const nombrePrep = document.getElementById('nombrePreparacion').value.trim();
+            const componenteId = document.getElementById('componenteAlimento').value;
+
             if (!nombrePrep) {
                 alert('Por favor ingrese un nombre para la preparación');
                 return;
             }
+
+            if (!componenteId) {
+                alert('Por favor seleccione un componente de alimento');
+                return;
+            }
+
             try {
                 const response = await fetch('/nutricion/api/preparaciones/', {
                     method: 'POST',
@@ -334,7 +375,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     body: JSON.stringify({
                         id_menu: menuId,
-                        preparacion: nombrePrep
+                        preparacion: nombrePrep,
+                        id_componente: componenteId
                     })
                 });
                 const data = await response.json();

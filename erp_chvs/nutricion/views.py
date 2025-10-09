@@ -451,9 +451,13 @@ def api_preparaciones(request):
         try:
             data = json.loads(request.body)
 
+            # Obtener el componente si se proporciona
+            id_componente = data.get('id_componente')
+
             preparacion = TablaPreparaciones.objects.create(
                 preparacion=data['preparacion'],
-                id_menu_id=data['id_menu']
+                id_menu_id=data['id_menu'],
+                id_componente_id=id_componente if id_componente else None
             )
 
             return JsonResponse({
@@ -461,7 +465,8 @@ def api_preparaciones(request):
                 'preparacion': {
                     'id_preparacion': preparacion.id_preparacion,
                     'preparacion': preparacion.preparacion,
-                    'menu': preparacion.id_menu.menu
+                    'menu': preparacion.id_menu.menu,
+                    'componente': preparacion.id_componente.componente if preparacion.id_componente else None
                 }
             })
 
@@ -578,6 +583,26 @@ def api_ingrediente_detail(request, id_ingrediente):
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
+
+
+# =================== COMPONENTES DE ALIMENTOS ===================
+
+@login_required
+def api_componentes_alimentos(request):
+    """API para obtener componentes de alimentos"""
+    if request.method == 'GET':
+        from .models import ComponentesAlimentos
+
+        componentes = ComponentesAlimentos.objects.select_related('id_grupo_alimentos').all().values(
+            'id_componente',
+            'componente',
+            'id_grupo_alimentos__id_grupo_alimentos',
+            'id_grupo_alimentos__grupo_alimentos'
+        ).order_by('componente')
+
+        return JsonResponse({'componentes': list(componentes)})
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 
 # =================== PREPARACIÓN - INGREDIENTES ===================
