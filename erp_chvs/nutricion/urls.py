@@ -42,4 +42,9 @@ urlpatterns = [
     # Análisis Nutricional
     path('api/menus/<int:id_menu>/analisis-nutricional/', views.api_analisis_nutricional_menu, name='api_analisis_nutricional_menu'),
     path('api/guardar-analisis-nutricional/', views.guardar_analisis_nutricional, name='guardar_analisis_nutricional'),
+
+    # Exportación Excel
+    path('exportar-excel/<int:menu_id>/', views.download_menu_excel, name='exportar_menu_excel'),
+    path('exportar-excel/<int:menu_id>/nivel/<str:nivel_escolar_id>/', views.download_menu_excel_with_nivel, name='exportar_menu_excel_con_nivel'),
+    path('exportar-excel-servicio/<int:menu_id>/', views.download_menu_excel_service, name='exportar_menu_excel_servicio'),
 ]

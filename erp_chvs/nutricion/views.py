@@ -8,7 +8,12 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 import json
 
-from .excel_generator import generate_menu_excel
+from .excel_generator import (
+    generate_menu_excel,
+    generate_menu_excel_real_data,
+    generate_advanced_nutritional_excel,
+    generate_excel_from_service
+)
 from .models import (
     TablaAlimentos2018Icbf,
     TablaMenus,
@@ -778,15 +783,57 @@ def guardar_analisis_nutricional(request):
 @login_required
 def download_menu_excel(request, menu_id):
     """
-    View to download an Excel file for a specific menu.
+    View to download an Excel file for a specific menu with advanced data integration.
     """
-    excel_stream = generate_menu_excel(menu_id)
-    if excel_stream is None:
-        return HttpResponse("Menu not found.", status=404)
+    try:
+        # Usar el generador avanzado que detecta automáticamente datos reales vs guardados
+        excel_stream = generate_advanced_nutritional_excel(menu_id, use_saved_analysis=True)
 
-    response = HttpResponse(
-        excel_stream,
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-    response['Content-Disposition'] = f'attachment; filename="menu_{menu_id}_analisis.xlsx"'
-    return response
+        response = HttpResponse(
+            excel_stream,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="menu_{menu_id}_analisis_nutricional.xlsx"'
+        return response
+
+    except Exception as e:
+        return HttpResponse(f"Error generando Excel: {str(e)}", status=500)
+
+
+@login_required
+def download_menu_excel_service(request, menu_id):
+    """
+    View to download an Excel file using the nutritional analysis service directly.
+    """
+    try:
+        excel_stream = generate_excel_from_service(menu_id)
+
+        response = HttpResponse(
+            excel_stream,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="menu_{menu_id}_servicio_analisis.xlsx"'
+        return response
+
+    except Exception as e:
+        return HttpResponse(f"Error generando Excel desde servicio: {str(e)}", status=500)
+
+
+@login_required
+def download_menu_excel_with_nivel(request, menu_id, nivel_escolar_id):
+    """
+    View to download an Excel file for a specific menu and school level with advanced data integration.
+    """
+    try:
+        # Usar el generador avanzado con nivel específico
+        excel_stream = generate_advanced_nutritional_excel(menu_id, nivel_escolar_id, use_saved_analysis=True)
+
+        response = HttpResponse(
+            excel_stream,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="menu_{menu_id}_nivel_{nivel_escolar_id}_analisis.xlsx"'
+        return response
+
+    except Exception as e:
+        return HttpResponse(f"Error generando Excel: {str(e)}", status=500)
