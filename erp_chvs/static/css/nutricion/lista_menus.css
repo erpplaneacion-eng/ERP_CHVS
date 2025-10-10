@@ -1390,140 +1390,6 @@
     padding: 8px;
     background: white;
     border-radius: 6px;
-    border: 1px solid #e3e6f0;
-}
-
-.total-mini span:first-child {
-    font-size: 0.8rem;
-    color: #6c757d;
-    margin-bottom: 4px;
-}
-
-.total-mini .value {
-    font-weight: 600;
-    color: #2c3e50;
-    font-size: 0.9rem;
-}
-
-/* Preparaciones e Ingredientes */
-.preparaciones-container {
-    margin-top: 20px;
-}
-
-.preparacion-item {
-    margin-bottom: 25px;
-    border: 1px solid #e3e6f0;
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.preparacion-titulo {
-    background: linear-gradient(135deg, #3490dc, #2779bd);
-    color: white;
-    margin: 0;
-    padding: 12px 20px;
-    font-size: 1rem;
-    font-weight: 600;
-}
-
-.preparacion-titulo i {
-    margin-right: 8px;
-}
-
-.ingredientes-table {
-    padding: 15px;
-}
-
-.ingredientes-table table {
-    margin-bottom: 0;
-}
-
-.ingredientes-table th {
-    background: #f8f9fa;
-    border-top: none;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #495057;
-    padding: 10px 8px;
-}
-
-.ingrediente-row td {
-    padding: 8px;
-    font-size: 0.9rem;
-    vertical-align: middle;
-}
-
-.ingrediente-nombre {
-    font-weight: 500;
-    color: #2c3e50;
-    max-width: 150px;
-}
-
-/* Inputs de Peso */
-.peso-input {
-    width: 80px;
-    text-align: center;
-    border: 2px solid #e3e6f0;
-    border-radius: 6px;
-    padding: 6px 8px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
-
-.peso-input:focus {
-    border-color: #3490dc;
-    box-shadow: 0 0 0 0.2rem rgba(52, 144, 220, 0.25);
-    outline: none;
-}
-
-.peso-input:hover {
-    border-color: #a2b3c7;
-}
-
-/* Columnas de nutrientes */
-.peso-bruto-calc {
-    font-weight: 600;
-    color: #e67e22;
-    text-align: center;
-}
-
-.parte-comestible {
-    text-align: center;
-    color: #27ae60;
-    font-weight: 500;
-}
-
-.nutriente-cal, .nutriente-prot, .nutriente-grasa, .nutriente-cho,
-.nutriente-calcio, .nutriente-hierro, .nutriente-sodio {
-    text-align: center;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    font-size: 0.85rem;
-}
-
-.nutriente-cal { color: #e74c3c; }
-.nutriente-prot { color: #2980b9; }
-.nutriente-grasa { color: #f39c12; }
-.nutriente-cho { color: #27ae60; }
-.nutriente-calcio { color: #9b59b6; }
-.nutriente-hierro { color: #e74c3c; }
-.nutriente-sodio { color: #34495e; }
-
-/* Estilos mejorados para totales */
-.totales-grid-mini, .requerimientos-grid-mini, .adecuacion-grid-mini {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.total-mini, .requerimiento-mini, .adecuacion-mini {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 8px;
-    background: white;
-    border-radius: 6px;
     border: 2px solid #e3e6f0;
     transition: all 0.3s ease;
 }
@@ -1677,4 +1543,18 @@
         font-size: 0.8rem;
         padding: 4px 6px;
     }
+}
+
+.btn-download-excel {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    color: #1D6F42; /* Excel green */
+    font-size: 1.2rem;
+    text-decoration: none;
+    z-index: 10;
+}
+
+.btn-download-excel:hover {
+    color: #104524;
 }

@@ -2,12 +2,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 import json
 
+from .excel_generator import generate_menu_excel
 from .models import (
     TablaAlimentos2018Icbf,
     TablaMenus,
@@ -773,3 +774,19 @@ def guardar_analisis_nutricional(request):
             'success': False,
             'error': f'Error al guardar: {str(e)}'
         }, status=500)
+
+@login_required
+def download_menu_excel(request, menu_id):
+    """
+    View to download an Excel file for a specific menu.
+    """
+    excel_stream = generate_menu_excel(menu_id)
+    if excel_stream is None:
+        return HttpResponse("Menu not found.", status=404)
+
+    response = HttpResponse(
+        excel_stream,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="menu_{menu_id}_analisis.xlsx"'
+    return response

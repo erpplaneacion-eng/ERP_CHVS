@@ -192,16 +192,18 @@ function crearAcordeon(modalidad) {
 }
 function generarTarjetasMenus(menus) {
     const tarjetasMenus = menus.map(menu => {
-        // Detectar si es un menú especial (no es un número del 1-20)
         const esNumerico = !isNaN(menu.menu) && parseInt(menu.menu) >= 1 && parseInt(menu.menu) <= 20;
         const esEspecial = !esNumerico;
-        const menuEscaped = String(menu.menu).replace(/'/g, "\\'");
+        const menuEscaped = String(menu.menu).replace(/'/g, "\'");
+        const downloadUrl = `/nutricion/exportar-excel/${menu.id_menu}/`;
 
         if (esEspecial) {
-            // Tarjeta para menú especial existente
             return `
                 <div class="menu-card menu-card-especial ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
                      onclick="abrirGestionPreparaciones(${menu.id_menu}, '${menuEscaped}')">
+                    <a href="${downloadUrl}" class="btn-download-excel" onclick="event.stopPropagation();" title="Descargar Excel">
+                        <i class="fas fa-file-excel"></i>
+                    </a>
                     <div class="menu-numero-especial" style="font-size: 14px; margin-bottom: 8px;">
                         ${menu.menu}
                     </div>
@@ -219,10 +221,12 @@ function generarTarjetasMenus(menus) {
                 </div>
             `;
         } else {
-            // Tarjeta para menú numérico normal
             return `
                 <div class="menu-card ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
                      onclick="abrirGestionPreparaciones(${menu.id_menu}, '${menu.menu}')">
+                    <a href="${downloadUrl}" class="btn-download-excel" onclick="event.stopPropagation();" title="Descargar Excel">
+                        <i class="fas fa-file-excel"></i>
+                    </a>
                     <div class="menu-numero">${menu.menu}</div>
                     <div class="menu-actions">
                         <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); abrirGestionPreparaciones(${menu.id_menu}, '${menu.menu}')">
@@ -234,7 +238,6 @@ function generarTarjetasMenus(menus) {
         }
     }).join('');
 
-    // Agregar tarjeta para crear nuevo menú especial
     const modalidadId = menus.length > 0 ? menus[0].id_modalidad__id_modalidades : '';
     const tarjetaEspecial = `
         <div class="menu-card menu-card-especial" onclick="abrirModalMenuEspecial('${modalidadId}')">
@@ -250,10 +253,8 @@ function generarTarjetasMenus(menus) {
 function toggleAccordion(header) {
     const content = header.nextElementSibling;
     const isActive = content.classList.contains('active');
-    // Cerrar todos los acordeones
     document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('active'));
-    // Abrir el actual si estaba cerrado
     if (!isActive) {
         content.classList.add('active');
         header.classList.add('active');
@@ -278,7 +279,6 @@ async function generarMenusAutomaticos(modalidadId, modalidadNombre) {
         const data = await response.json();
         if (data.success) {
             alert(`✓ Se generaron ${data.menus_creados} menús exitosamente`);
-            // Recargar la vista
             cargarModalidadesPorPrograma(programaActual.id);
         } else {
             alert('Error: ' + (data.error || 'No se pudieron generar los menús'));
@@ -289,25 +289,22 @@ async function generarMenusAutomaticos(modalidadId, modalidadNombre) {
     }
 }
 let menuActualId = null;
-let componentesAlimentos = []; // Cache de componentes
+let componentesAlimentos = [];
 
 function abrirGestionPreparaciones(menuId, menuNumero) {
-    menuActualId = menuId; // Guardar el ID del menú actual
-    menuActualAnalisis = menuId; // Guardar para el análisis nutricional
+    menuActualId = menuId;
+    menuActualAnalisis = menuId;
     document.getElementById('menuNumeroModal').textContent = menuNumero;
     document.getElementById('modalPreparaciones').style.display = 'block';
 
-    // Configurar el botón de agregar preparación
     const btnAgregar = document.getElementById('btnAgregarPreparacion');
     if (btnAgregar) {
-        // Remover listeners anteriores
         btnAgregar.replaceWith(btnAgregar.cloneNode(true));
         const nuevoBtn = document.getElementById('btnAgregarPreparacion');
         nuevoBtn.addEventListener('click', function() {
             abrirModalNuevaPreparacion(menuId);
         });
     }
-    // Cargar preparaciones del menú
     cargarPreparacionesMenu(menuId);
 }
 
@@ -315,12 +312,10 @@ async function abrirModalNuevaPreparacion(menuId) {
     document.getElementById('menuIdPrep').value = menuId;
     document.getElementById('nombrePreparacion').value = '';
 
-    // Cargar componentes si no están cargados
     if (componentesAlimentos.length === 0) {
         await cargarComponentesAlimentos();
     }
 
-    // Llenar el select de componentes
     const selectComponente = document.getElementById('componenteAlimento');
     selectComponente.innerHTML = '<option value="">Seleccione un componente...</option>';
 
@@ -346,7 +341,6 @@ async function cargarComponentesAlimentos() {
         alert('Error al cargar componentes de alimentos');
     }
 }
-// Configurar el formulario de nueva preparación
 document.addEventListener('DOMContentLoaded', function() {
     const formNuevaPrep = document.getElementById('formNuevaPreparacion');
     if (formNuevaPrep) {
@@ -383,7 +377,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success || data.id_preparacion) {
                     alert(`✓ Preparación "${nombrePrep}" creada exitosamente`);
                     document.getElementById('modalNuevaPreparacion').style.display = 'none';
-                    // Recargar la tabla de preparaciones
                     cargarPreparacionesMenu(menuId);
                 } else {
                     alert('Error: ' + (data.error || 'No se pudo crear la preparación'));
@@ -401,9 +394,7 @@ async function cargarPreparacionesMenu(menuId) {
         const container = document.getElementById('listaPreparacionesAcordeon');
         container.innerHTML = '';
         if (data.preparaciones && data.preparaciones.length > 0) {
-            // Cargar cada preparación con su cantidad de ingredientes
             for (const prep of data.preparaciones) {
-                // Obtener cantidad de ingredientes
                 const cantidadIngredientes = await obtenerCantidadIngredientes(prep.id_preparacion);
                 prep.cantidad_ingredientes = cantidadIngredientes;
 
@@ -431,7 +422,6 @@ async function obtenerCantidadIngredientes(preparacionId) {
 function crearAcordeonPreparacion(preparacion, menuId) {
     const accordionDiv = document.createElement('div');
     accordionDiv.className = 'preparacion-accordion';
-    // Header del acordeón
     const header = document.createElement('div');
     header.className = 'preparacion-accordion-header';
     header.innerHTML = `
@@ -448,19 +438,16 @@ function crearAcordeonPreparacion(preparacion, menuId) {
             <i class="fas fa-chevron-down"></i>
         </div>
     `;
-    // Event para toggle
     header.addEventListener('click', function(e) {
         if (!e.target.closest('.btn-delete')) {
             togglePreparacionAccordion(this);
         }
     });
-    // Event para eliminar
     const btnDelete = header.querySelector('.btn-delete');
     btnDelete.addEventListener('click', function(e) {
         e.stopPropagation();
         eliminarPreparacion(preparacion.id_preparacion, menuId);
     });
-    // Content del acordeón
     const content = document.createElement('div');
     content.className = 'preparacion-accordion-content';
     content.id = `prep-content-${preparacion.id_preparacion}`;
@@ -482,14 +469,11 @@ function crearAcordeonPreparacion(preparacion, menuId) {
 function togglePreparacionAccordion(header) {
     const content = header.nextElementSibling;
     const isActive = content.classList.contains('active');
-    // Cerrar todos los acordeones
     document.querySelectorAll('.preparacion-accordion-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.preparacion-accordion-header').forEach(h => h.classList.remove('active'));
-    // Abrir el actual si estaba cerrado
     if (!isActive) {
         content.classList.add('active');
         header.classList.add('active');
-        // Cargar ingredientes si no están cargados
         const prepId = content.id.replace('prep-content-', '');
         const ingredientesDiv = document.getElementById(`ingredientes-${prepId}`);
         if (ingredientesDiv && ingredientesDiv.querySelector('.no-ingredientes')) {
@@ -547,18 +531,14 @@ async function eliminarPreparacion(preparacionId, menuId) {
         alert('Error al eliminar la preparación');
     }
 }
-let ingredientesSiesa = []; // Cache de ingredientes
+let ingredientesSiesa = [];
 async function abrirAgregarIngrediente(preparacionId) {
     document.getElementById('preparacionIdIngredientes').value = preparacionId;
-    // Limpiar tabla
     document.getElementById('tbodyIngredientes').innerHTML = '';
-    // Cargar ingredientes disponibles si no están cargados
     if (ingredientesSiesa.length === 0) {
         await cargarIngredientesSiesa();
     }
-    // Agregar primera fila
     agregarFilaIngrediente();
-    // Mostrar modal
     document.getElementById('modalAgregarIngredientes').style.display = 'block';
 }
 async function cargarIngredientesSiesa() {
@@ -578,7 +558,6 @@ function agregarFilaIngrediente() {
     const tr = document.createElement('tr');
     tr.className = 'fila-ingrediente';
     tr.id = `fila-ing-${filaIndex}`;
-    // Select de ingredientes
     const optionsHTML = '<option value="">Seleccione un ingrediente...</option>' +
         ingredientesSiesa.map(ing => `<option value="${ing.id_ingrediente_siesa}">${ing.id_ingrediente_siesa} - ${ing.nombre_ingrediente}</option>`).join('');
     tr.innerHTML = `
@@ -595,9 +574,8 @@ function agregarFilaIngrediente() {
     `;
     tbody.appendChild(tr);
 
-    // Inicializar Select2 en el select recién agregado
     $(`#ingrediente-${filaIndex}`).select2({
-        placeholder: 'Buscar ingrediente...',
+        placeholder: 'Buscar ingrediente...', 
         allowClear: true,
         language: {
             noResults: function() {
@@ -611,7 +589,6 @@ function agregarFilaIngrediente() {
     });
 }
 function eliminarFilaIngrediente(index) {
-    // Destruir la instancia de Select2 antes de eliminar la fila
     $(`#ingrediente-${index}`).select2('destroy');
 
     const fila = document.getElementById(`fila-ing-${index}`);
@@ -677,7 +654,6 @@ async function guardarIngredientes() {
     }
 }
 function cerrarModalIngredientes() {
-    // Destruir todas las instancias de Select2 antes de limpiar
     $('.select-ingrediente').each(function() {
         if ($(this).hasClass('select2-hidden-accessible')) {
             $(this).select2('destroy');
@@ -718,21 +694,16 @@ function resetearFiltros() {
     document.getElementById('modalidadesContainer').innerHTML = '';
     document.getElementById('mensajeInicial').style.display = 'block';
 }
-// Cerrar modales
-// Manejador de cierre de modales con delegación de eventos
 document.addEventListener('click', function(event) {
-    // Cerrar modal al hacer click en la X
     if (event.target.classList.contains('close') && event.target.closest('.modal')) {
         event.target.closest('.modal').style.display = 'none';
     }
 
-    // Cerrar modal al hacer click fuera del contenido
     if (event.target.classList.contains('modal')) {
         event.target.style.display = 'none';
     }
 });
 function abrirModalMenuEspecial(modalidadId) {
-    // Guardar modalidad actual en variable global o en el modal
     document.getElementById('modalidadIdEspecial').value = modalidadId;
     document.getElementById('nombreMenuEspecial').value = '';
     document.getElementById('modalMenuEspecial').style.display = 'block';
@@ -761,7 +732,6 @@ async function crearMenuEspecial() {
         if (data.success) {
             alert(`✓ Menú especial "${nombreMenu}" creado exitosamente`);
             document.getElementById('modalMenuEspecial').style.display = 'none';
-            // Recargar modalidades para mostrar el nuevo menú
             cargarModalidadesPorPrograma(programaActual.id);
         } else {
             alert('Error: ' + (data.error || 'No se pudo crear el menú especial'));
@@ -770,12 +740,7 @@ async function crearMenuEspecial() {
         alert('Error al crear menú especial');
     }
 }
-// getCookie() ahora disponible desde NutricionUtils.getCookie()
-
-// =================== FUNCIONES PARA MENÚS ESPECIALES ===================
-
 function abrirEditarMenuEspecial(menuId, nombreActual) {
-    // Guardar ID del menú en un campo oculto
     document.getElementById('menuIdEditar').value = menuId;
     document.getElementById('nombreMenuEditado').value = nombreActual;
     document.getElementById('modalEditarMenuEspecial').style.display = 'block';
@@ -807,7 +772,6 @@ async function guardarEdicionMenuEspecial() {
         if (data.success) {
             alert(`✓ Menú actualizado a "${nuevoNombre}" exitosamente`);
             document.getElementById('modalEditarMenuEspecial').style.display = 'none';
-            // Recargar modalidades para reflejar el cambio
             cargarModalidadesPorPrograma(programaActual.id);
         } else {
             alert('Error: ' + (data.error || 'No se pudo actualizar el menú'));
@@ -835,7 +799,6 @@ async function eliminarMenuEspecial(menuId, nombreMenu) {
 
         if (data.success) {
             alert(`✓ Menú especial "${nombreMenu}" eliminado exitosamente`);
-            // Recargar modalidades para reflejar el cambio
             cargarModalidadesPorPrograma(programaActual.id);
         } else {
             alert('Error: ' + (data.error || 'No se pudo eliminar el menú'));
@@ -846,11 +809,8 @@ async function eliminarMenuEspecial(menuId, nombreMenu) {
     }
 }
 
-// =================== ANÁLISIS NUTRICIONAL ===================
-
 let menuActualAnalisis = null;
 
-// Inicializar evento del botón de análisis nutricional
 document.addEventListener('DOMContentLoaded', function() {
     const btnAnalisis = document.getElementById('btnAnalisisNutricional');
     if (btnAnalisis) {
@@ -863,15 +823,12 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function abrirModalAnalisisNutricional(menuId) {
-    // Abrir el modal independiente
     const modal = document.getElementById('modalAnalisisNutricional');
     modal.style.display = 'block';
 
-    // Actualizar el título con el nombre del menú
     const menuNumero = document.getElementById('menuNumeroModal').textContent;
     document.getElementById('menuNombreAnalisis').textContent = menuNumero;
 
-    // Cargar el análisis
     cargarAnalisisNutricional(menuId);
 }
 
@@ -879,10 +836,8 @@ async function cargarAnalisisNutricional(menuId) {
     try {
         const contenidoAnalisis = document.getElementById('contenidoAnalisis');
 
-        // Mostrar mensaje de carga
         contenidoAnalisis.innerHTML = '<div style="text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin fa-3x"></i><p>Calculando análisis nutricional...</p></div>';
 
-        // Llamar a la API
         const response = await fetch(`/nutricion/api/menus/${menuId}/analisis-nutricional/`);
         const data = await response.json();
 
@@ -890,7 +845,6 @@ async function cargarAnalisisNutricional(menuId) {
             throw new Error(data.error || 'Error al cargar análisis');
         }
 
-        // Renderizar el análisis
         renderizarAnalisisNutricional(data);
 
     } catch (error) {
@@ -908,7 +862,6 @@ function cerrarModalAnalisisNutricional() {
 }
 
 function renderizarAnalisisNutricional(data) {
-    // Almacenar datos del menú para guardado automático
     window.menuActual = data.menu;
     window.datosNutricionales = data;
     
@@ -926,14 +879,12 @@ function renderizarAnalisisNutricional(data) {
 
     const { menu, analisis_por_nivel } = data;
     
-    // Almacenar requerimientos globalmente para recálculos
     window.requerimientosNiveles = {};
     analisis_por_nivel.forEach((nivel, index) => {
         window.requerimientosNiveles[index] = nivel.requerimientos;
     });
 
     contenidoAnalisis.innerHTML = `
-        <!-- Información del Menú -->
         <div class="menu-info-header">
             <h4><i class="fas fa-utensils"></i> ${menu.nombre}</h4>
             <div class="menu-details">
@@ -942,7 +893,6 @@ function renderizarAnalisisNutricional(data) {
             </div>
         </div>
         
-        <!-- Análisis por Niveles Escolares -->
         <div class="analisis-niveles-container">
             <h5><i class="fas fa-graduation-cap"></i> Análisis por Nivel Escolar</h5>
             <div class="niveles-accordion" id="nivelesAccordion">
@@ -951,7 +901,6 @@ function renderizarAnalisisNutricional(data) {
         </div>
     `;
     
-    // Inicializar eventos para inputs dinámicos
     inicializarEventosInputs();
 }
 
@@ -968,8 +917,6 @@ function toggleIngredientes(prepId) {
         boton.innerHTML = `<i class="fas fa-chevron-down"></i> Ver Ingredientes (${numIngredientes})`;
     }
 }
-
-// =================== FUNCIONES PARA ANÁLISIS DINÁMICO ===================
 
 function crearAccordionNivelEscolar(nivel, index) {
     const cardId = `collapse-${index}`;
@@ -996,7 +943,6 @@ function crearAccordionNivelEscolar(nivel, index) {
             <div id="${cardId}" class="collapse ${index === 0 ? 'show' : ''}" 
                  aria-labelledby="heading-${index}" data-parent="#nivelesAccordion">
                 <div class="card-body">
-                    <!-- Totales del Nivel -->
                     <div class="nivel-totales mb-3">
                         <h6><i class="fas fa-calculator"></i> Totales del Nivel</h6>
                         <div class="totales-grid-mini">
@@ -1030,7 +976,6 @@ function crearAccordionNivelEscolar(nivel, index) {
                             </div>
                         </div>
                         
-                        <!-- Requerimientos del Nivel -->
                         <h6 class="mt-3"><i class="fas fa-target"></i> Requerimientos</h6>
                         <div class="requerimientos-grid-mini">
                             <div class="requerimiento-mini">
@@ -1063,7 +1008,6 @@ function crearAccordionNivelEscolar(nivel, index) {
                             </div>
                         </div>
                         
-                        <!-- Porcentajes de Adecuación -->
                         <h6 class="mt-3"><i class="fas fa-percentage"></i> % de Adecuación (Editable)</h6>
                         <div class="adecuacion-grid-mini">
                             <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.calorias_kcal.estado}">
@@ -1160,7 +1104,6 @@ function crearAccordionNivelEscolar(nivel, index) {
                         </div>
                     </div>
                     
-                    <!-- Preparaciones e Ingredientes -->
                     <div class="preparaciones-container">
                         <h6><i class="fas fa-list-ul"></i> Preparaciones e Ingredientes</h6>
                         ${nivel.preparaciones.map((prep, prepIndex) => crearPreparacion(prep, index, prepIndex)).join('')}
@@ -1196,7 +1139,6 @@ function crearPreparacion(preparacion, nivelIndex, prepIndex) {
                     </thead>
                     <tbody>
                         ${preparacion.ingredientes.map((ing, ingIndex) => {
-                            // Agregar id_preparacion_real al ingrediente para poder recuperarlo después
                             ing.id_preparacion_real = preparacion.id_preparacion;
                             return crearFilaIngrediente(ing, nivelIndex, prepIndex, ingIndex);
                         }).join('')}
@@ -1268,21 +1210,11 @@ function crearFilaIngrediente(ingrediente, nivelIndex, prepIndex, ingIndex) {
 }
 
 function inicializarEventosInputs() {
-    // Variable para evitar loops infinitos durante sincronización
     let actualizandoPorPeso = false;
     let actualizandoPorPorcentaje = false;
     
-    /**
-     * Evento para cambios en inputs de peso neto.
-     * FLUJO: Peso Neto → Peso Bruto → Valores Nutricionales → Totales → % Adecuación
-     *
-     * FÓRMULAS:
-     * - Peso Bruto = (Peso Neto × 100) / Parte Comestible
-     * - Nutriente = (Nutriente por 100g × Peso Neto) / 100
-     * - % Adecuación = (Total Nutriente / Requerimiento) × 100
-     */
     $(document).on('input change', '.peso-input', function() {
-        if (actualizandoPorPorcentaje) return; // Evitar loop infinito
+        if (actualizandoPorPorcentaje) return;
 
         actualizandoPorPeso = true;
 
@@ -1291,8 +1223,7 @@ function inicializarEventosInputs() {
         const prepIndex = input.closest('.ingrediente-row').data('prep');
         const ingIndex = input.closest('.ingrediente-row').data('ing');
 
-        // Obtener valores del input y data attributes
-        const pesoNeto = Math.max(0, parseFloat(input.val()) || 0); // Validar >= 0
+        const pesoNeto = Math.max(0, parseFloat(input.val()) || 0);
         const parteComestible = parseFloat(input.data('parte-comestible')) || 100;
         const caloriasPor100g = parseFloat(input.data('calorias')) || 0;
         const proteinaPor100g = parseFloat(input.data('proteina')) || 0;
@@ -1302,14 +1233,8 @@ function inicializarEventosInputs() {
         const hierroPor100g = parseFloat(input.data('hierro')) || 0;
         const sodioPor100g = parseFloat(input.data('sodio')) || 0;
 
-        // CÁLCULO 1: Peso Bruto desde Peso Neto
-        // Fórmula: Peso Bruto = (Peso Neto × 100) / % Parte Comestible
-        // Ejemplo: 80g neto con 85% comestible = (80 × 100) / 85 = 94.1g bruto
         const pesoBruto = parteComestible > 0 ? (pesoNeto * 100) / parteComestible : pesoNeto;
 
-        // CÁLCULO 2: Valores nutricionales
-        // Fórmula: Nutriente = (Nutriente por 100g × Peso Neto) / 100
-        // Ejemplo: 50 kcal/100g en 80g neto = (50 × 80) / 100 = 40 kcal
         const factor = pesoNeto / 100;
         const calorias = caloriasPor100g * factor;
         const proteina = proteinaPor100g * factor;
@@ -1319,10 +1244,8 @@ function inicializarEventosInputs() {
         const hierro = hierroPor100g * factor;
         const sodio = sodioPor100g * factor;
 
-        // Actualizar peso bruto en la interfaz
         $(`#bruto-${nivelIndex}-${prepIndex}-${ingIndex}`).text(pesoBruto.toFixed(0));
 
-        // Actualizar nutrientes en la interfaz
         $(`#cal-${nivelIndex}-${prepIndex}-${ingIndex}`).text(calorias.toFixed(1));
         $(`#prot-${nivelIndex}-${prepIndex}-${ingIndex}`).text(proteina.toFixed(1));
         $(`#grasa-${nivelIndex}-${prepIndex}-${ingIndex}`).text(grasa.toFixed(1));
@@ -1331,24 +1254,21 @@ function inicializarEventosInputs() {
         $(`#hierro-${nivelIndex}-${prepIndex}-${ingIndex}`).text(hierro.toFixed(1));
         $(`#sodio-${nivelIndex}-${prepIndex}-${ingIndex}`).text(sodio.toFixed(1));
 
-        // CÁLCULO 3: Recalcular totales del nivel y porcentajes de adecuación
         recalcularTotalesNivel(nivelIndex);
 
         actualizandoPorPeso = false;
     });
     
-    // Eventos para inputs de porcentaje de adecuación
     let timeoutPorcentaje = null;
 
     $(document).on('change', '.porcentaje-input', function() {
-        if (actualizandoPorPeso) return; // Evitar loop
+        if (actualizandoPorPeso) return;
 
         const input = $(this);
         const nivelIndex = input.data('nivel');
         const nutriente = input.data('nutriente');
         const porcentajeDeseado = parseFloat(input.val()) || 0;
 
-        // Validar rango 0-100
         if (porcentajeDeseado < 0) {
             input.val(0);
             return;
@@ -1358,21 +1278,18 @@ function inicializarEventosInputs() {
             return;
         }
 
-        // Debounce para evitar múltiples ejecuciones
         clearTimeout(timeoutPorcentaje);
         timeoutPorcentaje = setTimeout(() => {
             actualizandoPorPorcentaje = true;
 
             console.log('Editando porcentaje:', { nivelIndex, nutriente, porcentajeDeseado });
 
-            // Calcular desde porcentaje hacia pesos
             calcularPesosDesdeAdecuacion(nivelIndex, nutriente, porcentajeDeseado);
 
             actualizandoPorPorcentaje = false;
-        }, 300); // Esperar 300ms después del último cambio
+        }, 300);
     });
     
-    // Eventos para accordion de niveles escolares
     $(document).on('click', '.nivel-header-btn', function(e) {
         e.preventDefault();
         const button = $(this);
@@ -1381,12 +1298,10 @@ function inicializarEventosInputs() {
         const icon = button.find('.toggle-icon');
 
         if (target.hasClass('show')) {
-            // Cerrar este accordion
             target.removeClass('show');
             button.attr('aria-expanded', 'false').addClass('collapsed');
             icon.css('transform', 'rotate(0deg)');
         } else {
-            // Cerrar todos los otros accordions
             $('.nivel-card .collapse.show').each(function() {
                 const otherCollapse = $(this);
                 const otherButton = $(`[data-target="#${otherCollapse.attr('id')}"]`);
@@ -1397,7 +1312,6 @@ function inicializarEventosInputs() {
                 otherIcon.css('transform', 'rotate(0deg)');
             });
 
-            // Abrir este accordion
             target.addClass('show');
             button.attr('aria-expanded', 'true').removeClass('collapsed');
             icon.css('transform', 'rotate(180deg)');
@@ -1406,7 +1320,6 @@ function inicializarEventosInputs() {
 }
 
 // =================== FUNCIONES DE CÁLCULO Y GUARDADO ===================
-// Ahora disponibles en modules/calculos.js y modules/guardado-automatico.js
 
 // Las siguientes funciones están expuestas globalmente desde los módulos:
 // - recalcularTotalesNivel()
