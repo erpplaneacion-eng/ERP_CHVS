@@ -18,7 +18,6 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from django.conf import settings
 
-
 from .models import (
     TablaMenus,
     TablaPreparaciones,
@@ -29,7 +28,6 @@ from .models import (
     TablaIngredientesPorNivel
 )
 from .services.analisis_service import AnalisisNutricionalService
-
 
 # =====================================================================
 # CONSTANTES DE CONFIGURACIÓN
@@ -203,6 +201,9 @@ class NutritionalAnalysisExcelGenerator:
             # Formateo final
             self._apply_formatting(ws)
 
+            # Combinar celdas AL FINAL (después de todo el formateo)
+            self._merge_cells(ws)
+
             return self._save_to_stream(wb)
 
         except Exception as e:
@@ -265,6 +266,9 @@ class NutritionalAnalysisExcelGenerator:
             # Formateo
             self._apply_formatting(ws)
 
+            # Combinar celdas AL FINAL (después de todo el formateo)
+            self._merge_cells(ws)
+
             return self._save_to_stream(wb)
 
         except TablaMenus.DoesNotExist:
@@ -289,11 +293,14 @@ class NutritionalAnalysisExcelGenerator:
 
     def _populate_title(self, ws: Worksheet) -> None:
         """Poblar título principal"""
-        ws.merge_cells(self.layout.TITLE_RANGE)
+        # Asignar valor sin combinar celdas (temporalmente deshabilitado)
         title_cell = ws['A1']
         title_cell.value = "ANÁLISIS NUTRICIONAL"
         title_cell.font = Font(bold=True, size=16)
         title_cell.alignment = Alignment(horizontal='center', vertical='center')
+
+        # MERGE DESHABILITADO para debug
+        # ws.merge_cells(self.layout.TITLE_RANGE)
 
     def _populate_administrative_section(
         self,
@@ -338,18 +345,21 @@ class NutritionalAnalysisExcelGenerator:
         ws: Worksheet,
         admin_data: List[Tuple[str, str]]
     ) -> None:
-        """Poblar filas administrativas"""
+        """Poblar filas administrativas sin combinar celdas (temporalmente)"""
         for row, (label, value) in enumerate(admin_data, start=self.layout.ADMIN_START_ROW):
-            # Label (columnas A-C)
-            label_cell = ws.cell(row=row, column=1)  # A = 1
+            # Asignar valor y estilos sin combinar
+            label_cell = ws[f'A{row}']
             label_cell.value = label
             label_cell.font = Font(bold=True)
             label_cell.alignment = Alignment(horizontal='right', vertical='center')
 
-            # Value (columnas D-N)
-            value_cell = ws.cell(row=row, column=4)  # D = 4
+            # Value (columnas D)
+            value_cell = ws[f'D{row}']
             value_cell.value = value
             value_cell.alignment = Alignment(horizontal='left', vertical='center')
+
+            # MERGE DESHABILITADO para debug
+            # ws.merge_cells(f'A{row}:C{row}')
 
     def _populate_headers(self, ws: Worksheet) -> None:
         """Poblar encabezados de columnas"""
@@ -381,6 +391,7 @@ class NutritionalAnalysisExcelGenerator:
 
         for preparacion in nivel_data.get('preparaciones', []):
             componente = preparacion.get('componente', 'SIN COMPONENTE')
+            grupo_alimentos = preparacion.get('grupo_alimentos', 'SIN GRUPO')
 
             for ingrediente in preparacion.get('ingredientes', []):
                 if not ingrediente.get('alimento_encontrado'):
@@ -388,8 +399,7 @@ class NutritionalAnalysisExcelGenerator:
 
                 # Datos básicos
                 ws.cell(current_row, self.layout.COL_COMPONENTE).value = componente
-                ws.cell(current_row, self.layout.COL_GRUPO).value = \
-                    ingrediente.get('grupo_alimentos', '')
+                ws.cell(current_row, self.layout.COL_GRUPO).value = grupo_alimentos
                 ws.cell(current_row, self.layout.COL_PREPARACION).value = \
                     preparacion.get('nombre', '')
                 ws.cell(current_row, self.layout.COL_INGREDIENTE).value = \
@@ -669,19 +679,44 @@ class NutritionalAnalysisExcelGenerator:
 
     def _apply_formatting(self, ws: Worksheet) -> None:
         """Aplicar formateo profesional"""
-        # Ajustar ancho de columnas
+        # Ajustar ancho de columnas solamente
         for col, width in ColumnWidths.WIDTHS.items():
             ws.column_dimensions[col].width = width
 
-        # Aplicar bordes y alineación
-        for row in ws.iter_rows():
-            for cell in row:
-                if cell.value is not None:
-                    cell.border = self.border
-                    cell.alignment = Alignment(
-                        vertical='center',
-                        wrap_text=True
-                    )
+        # Bordes y alineación deshabilitados temporalmente para debug
+        # TODO: Re-habilitar cuando se resuelva el problema de MergedCell
+
+    def _merge_cells(self, ws: Worksheet) -> None:
+        """
+        Combinar celdas necesarias.
+
+        Este método se ejecuta AL FINAL del proceso de generación,
+        después de que todos los valores y estilos han sido asignados.
+        Esto evita el error 'MergedCell' object attribute 'value' is read-only.
+        """
+        # Combinar celda del título (A1:N1)
+        ws.merge_cells(self.layout.TITLE_RANGE)
+
+        # Combinar celdas de etiquetas administrativas (A:C para cada fila)
+        # ENTIDAD TERRITORIAL (fila 2)
+        ws.merge_cells('A2:C2')
+
+        # MINUTA CON ENFOQUE ETNICO (fila 3)
+        ws.merge_cells('A3:C3')
+
+        # GRUPO ÉTNICO (fila 4)
+        ws.merge_cells('A4:C4')
+
+        # MODALIDAD DE ATENCIÓN (fila 5)
+        ws.merge_cells('A5:C5')
+
+        # TIPO DE COMPLEMENTO (fila 6)
+        ws.merge_cells('A6:C6')
+
+        # NIVEL (fila 7)
+        ws.merge_cells('A7:C7')
+
+        # MENÚ No. (fila 8) - SIN COMBINAR
 
     # =================================================================
     # MÉTODOS AUXILIARES
@@ -816,9 +851,12 @@ class NutritionalAnalysisExcelGenerator:
         ws = wb.active
         ws.title = "Error"
 
-        ws.merge_cells('A1:N1')
+        # Asignar valor y estilos sin combinar
         ws['A1'] = f"Error: {error_message}"
         ws['A1'].font = Font(bold=True, color="FF0000")
+
+        # MERGE DESHABILITADO para debug
+        # ws.merge_cells('A1:N1')
 
         return self._save_to_stream(wb)
 

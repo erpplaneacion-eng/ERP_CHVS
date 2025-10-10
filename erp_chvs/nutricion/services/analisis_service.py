@@ -102,6 +102,9 @@ class AnalisisNutricionalService:
         """
         preparaciones = TablaPreparaciones.objects.filter(
             id_menu=menu
+        ).select_related(
+            'id_componente',
+            'id_componente__id_grupo_alimentos'
         ).prefetch_related('ingredientes__id_ingrediente_siesa')
 
         preparaciones_data = []
@@ -173,9 +176,19 @@ class AnalisisNutricionalService:
                         'alimento_encontrado': False
                     })
 
+            # Obtener componente y grupo de alimentos
+            componente = preparacion.id_componente.componente if preparacion.id_componente else 'SIN COMPONENTE'
+            grupo_alimentos = (
+                preparacion.id_componente.id_grupo_alimentos.grupo_alimentos
+                if preparacion.id_componente and preparacion.id_componente.id_grupo_alimentos
+                else 'SIN GRUPO'
+            )
+
             preparaciones_data.append({
                 'id_preparacion': preparacion.id_preparacion,
                 'nombre': preparacion.preparacion,
+                'componente': componente,
+                'grupo_alimentos': grupo_alimentos,
                 'ingredientes': ingredientes_data
             })
 
