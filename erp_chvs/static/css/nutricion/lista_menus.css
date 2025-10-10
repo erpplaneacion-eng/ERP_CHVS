@@ -1376,14 +1376,14 @@
     border: 1px solid #dee2e6;
 }
 
-.totales-grid-mini {
+.totales-grid-mini, .requerimientos-grid-mini, .adecuacion-grid-mini {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 10px;
     margin-top: 10px;
 }
 
-.total-mini {
+.total-mini, .requerimiento-mini, .adecuacion-mini {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1464,10 +1464,35 @@
     color: #4a154b;
 }
 
-/* Estilos para requerimientos */
+/* Estilos especiales para requerimientos (mantener fondo gris) */
 .requerimiento-mini {
     background: linear-gradient(135deg, #f8f9fa, #e9ecef);
     border-color: #6c757d;
+    color: #495057;
+}
+
+/* Estilo especial para items de adecuación con input */
+.adecuacion-mini {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.adecuacion-mini span:first-child {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+}
+
+.adecuacion-mini .porcentaje-input {
+    flex: 1;
+    min-width: 60px;
+    max-width: 70px;
+}
+
+.adecuacion-mini .porcentaje-symbol {
+    flex: 0 0 auto;
+    font-weight: 700;
     color: #495057;
 }
 
@@ -1479,14 +1504,9 @@
     opacity: 0.8;
 }
 
-.total-mini .value, .requerimiento-mini .value, .adecuacion-mini .value {
+.total-mini .value, .requerimiento-mini .value {
     font-weight: 700;
     font-size: 0.85rem;
-}
-
-.adecuacion-mini .value.porcentaje {
-    font-size: 0.9rem;
-    font-weight: 800;
 }
 
 /* Animaciones hover */

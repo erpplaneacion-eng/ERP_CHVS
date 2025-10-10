@@ -290,52 +290,55 @@ function validarRespuestaHTTP(response) {
 
 /**
  * Loading spinner global
+ * Usar asignación en lugar de const para evitar errores de redeclaración
  */
-const LoadingManager = window.LoadingManager || {
-    elemento: null,
-    contador: 0,
+if (!window.LoadingManager) {
+    window.LoadingManager = {
+        elemento: null,
+        contador: 0,
 
-    mostrar(mensaje = 'Cargando...') {
-        this.contador++;
+        mostrar(mensaje = 'Cargando...') {
+            this.contador++;
 
-        if (!this.elemento) {
-            this.elemento = crearElemento('div', {
-                id: 'loading-global',
-                style: {
-                    position: 'fixed',
-                    top: '0',
-                    left: '0',
-                    width: '100%',
-                    height: '100%',
-                    backgroundColor: 'rgba(0,0,0,0.5)',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    zIndex: '9999'
-                }
-            }, `
-                <div style="background: white; padding: 20px; border-radius: 8px; text-align: center;">
-                    <div style="margin-bottom: 10px;">
-                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+            if (!this.elemento) {
+                this.elemento = crearElemento('div', {
+                    id: 'loading-global',
+                    style: {
+                        position: 'fixed',
+                        top: '0',
+                        left: '0',
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: 'rgba(0,0,0,0.5)',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        zIndex: '9999'
+                    }
+                }, `
+                    <div style="background: white; padding: 20px; border-radius: 8px; text-align: center;">
+                        <div style="margin-bottom: 10px;">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        </div>
+                        <div id="loading-mensaje">${mensaje}</div>
                     </div>
-                    <div id="loading-mensaje">${mensaje}</div>
-                </div>
-            `);
-            document.body.appendChild(this.elemento);
-        } else {
-            document.getElementById('loading-mensaje').textContent = mensaje;
-            this.elemento.style.display = 'flex';
-        }
-    },
+                `);
+                document.body.appendChild(this.elemento);
+            } else {
+                document.getElementById('loading-mensaje').textContent = mensaje;
+                this.elemento.style.display = 'flex';
+            }
+        },
 
-    ocultar() {
-        this.contador = Math.max(0, this.contador - 1);
+        ocultar() {
+            this.contador = Math.max(0, this.contador - 1);
 
-        if (this.contador === 0 && this.elemento) {
-            this.elemento.style.display = 'none';
+            if (this.contador === 0 && this.elemento) {
+                this.elemento.style.display = 'none';
+            }
         }
-    }
-};
+    };
+}
 
 // Exportar utilidades al namespace global
 Object.assign(window.NutricionUtils, {

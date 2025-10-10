@@ -214,15 +214,15 @@ class NutritionalAnalysisExcelGenerator:
 
                     # Valores nutricionales
                     valores = ingrediente.get('valores_por_100g', {})
-                    factor = ingrediente.get('peso_neto_base', 100) / 100
+                    factor = float(ingrediente.get('peso_neto_base', 100)) / 100.0
 
-                    worksheet.cell(current_row, 10).value = valores.get('calorias_kcal', 0) * factor
-                    worksheet.cell(current_row, 11).value = valores.get('proteina_g', 0) * factor
-                    worksheet.cell(current_row, 12).value = valores.get('grasa_g', 0) * factor
-                    worksheet.cell(current_row, 13).value = valores.get('cho_g', 0) * factor
-                    worksheet.cell(current_row, 14).value = valores.get('calcio_mg', 0) * factor
-                    worksheet.cell(current_row, 15).value = valores.get('hierro_mg', 0) * factor
-                    worksheet.cell(current_row, 16).value = valores.get('sodio_mg', 0) * factor
+                    worksheet.cell(current_row, 10).value = float(valores.get('calorias_kcal', 0)) * factor
+                    worksheet.cell(current_row, 11).value = float(valores.get('proteina_g', 0)) * factor
+                    worksheet.cell(current_row, 12).value = float(valores.get('grasa_g', 0)) * factor
+                    worksheet.cell(current_row, 13).value = float(valores.get('cho_g', 0)) * factor
+                    worksheet.cell(current_row, 14).value = float(valores.get('calcio_mg', 0)) * factor
+                    worksheet.cell(current_row, 15).value = float(valores.get('hierro_mg', 0)) * factor
+                    worksheet.cell(current_row, 16).value = float(valores.get('sodio_mg', 0)) * factor
 
                     current_row += 1
 
@@ -440,8 +440,8 @@ class NutritionalAnalysisExcelGenerator:
 
                 if alimento_icbf:
                     # Calcular valores reales usando el servicio existente
-                    peso_neto_base = nivel_data.get('peso_neto_base', 100)
-                    factor = peso_neto_base / 100
+                    peso_neto_base = float(nivel_data.get('peso_neto_base', 100))
+                    factor = peso_neto_base / 100.0
 
                     valores_100g = {
                         'calorias_kcal': float(alimento_icbf.energia_kcal or 0),
@@ -464,17 +464,17 @@ class NutritionalAnalysisExcelGenerator:
                     parte_comestible = float(alimento_icbf.parte_comestible_field or 100)
                     peso_bruto = self._calculo_service.calcular_peso_bruto(peso_neto_base, parte_comestible)
 
-                    worksheet.cell(current_row, 8).value = round(peso_bruto, 1)
+                    worksheet.cell(current_row, 8).value = round(float(peso_bruto), 1)
                     worksheet.cell(current_row, 9).value = peso_neto_base
 
                     # Valores nutricionales calculados
-                    worksheet.cell(current_row, 10).value = valores_100g['calorias_kcal'] * factor
-                    worksheet.cell(current_row, 11).value = valores_100g['proteina_g'] * factor
-                    worksheet.cell(current_row, 12).value = valores_100g['grasa_g'] * factor
-                    worksheet.cell(current_row, 13).value = valores_100g['cho_g'] * factor
-                    worksheet.cell(current_row, 14).value = valores_100g['calcio_mg'] * factor
-                    worksheet.cell(current_row, 15).value = valores_100g['hierro_mg'] * factor
-                    worksheet.cell(current_row, 16).value = valores_100g['sodio_mg'] * factor
+                    worksheet.cell(current_row, 10).value = float(valores_100g['calorias_kcal']) * factor
+                    worksheet.cell(current_row, 11).value = float(valores_100g['proteina_g']) * factor
+                    worksheet.cell(current_row, 12).value = float(valores_100g['grasa_g']) * factor
+                    worksheet.cell(current_row, 13).value = float(valores_100g['cho_g']) * factor
+                    worksheet.cell(current_row, 14).value = float(valores_100g['calcio_mg']) * factor
+                    worksheet.cell(current_row, 15).value = float(valores_100g['hierro_mg']) * factor
+                    worksheet.cell(current_row, 16).value = float(valores_100g['sodio_mg']) * factor
 
                     current_row += 1
 
@@ -601,7 +601,7 @@ class NutritionalAnalysisExcelGenerator:
                             peso_bruto = ingrediente_guardado.peso_bruto
 
                     # Calcular valores nutricionales
-                    factor = peso_neto / 100
+                    factor = float(peso_neto) / 100.0
                     valores_100g = {
                         'calorias_kcal': float(alimento_icbf.energia_kcal or 0),
                         'proteina_g': float(alimento_icbf.proteina_g or 0),
@@ -649,15 +649,15 @@ class NutritionalAnalysisExcelGenerator:
         worksheet.cell(row, 5).value = preparacion
         worksheet.cell(row, 6).value = ingrediente
         worksheet.cell(row, 7).value = codigo
-        worksheet.cell(row, 8).value = round(peso_bruto, 1)
-        worksheet.cell(row, 9).value = round(peso_neto, 1)
-        worksheet.cell(row, 10).value = round(valores_100g['calorias_kcal'] * factor, 1)
-        worksheet.cell(row, 11).value = round(valores_100g['proteina_g'] * factor, 1)
-        worksheet.cell(row, 12).value = round(valores_100g['grasa_g'] * factor, 1)
-        worksheet.cell(row, 13).value = round(valores_100g['cho_g'] * factor, 1)
-        worksheet.cell(row, 14).value = round(valores_100g['calcio_mg'] * factor, 1)
-        worksheet.cell(row, 15).value = round(valores_100g['hierro_mg'] * factor, 1)
-        worksheet.cell(row, 16).value = round(valores_100g['sodio_mg'] * factor, 1)
+        worksheet.cell(row, 8).value = round(float(peso_bruto), 1)
+        worksheet.cell(row, 9).value = round(float(peso_neto), 1)
+        worksheet.cell(row, 10).value = round(float(valores_100g['calorias_kcal']) * float(factor), 1)
+        worksheet.cell(row, 11).value = round(float(valores_100g['proteina_g']) * float(factor), 1)
+        worksheet.cell(row, 12).value = round(float(valores_100g['grasa_g']) * float(factor), 1)
+        worksheet.cell(row, 13).value = round(float(valores_100g['cho_g']) * float(factor), 1)
+        worksheet.cell(row, 14).value = round(float(valores_100g['calcio_mg']) * float(factor), 1)
+        worksheet.cell(row, 15).value = round(float(valores_100g['hierro_mg']) * float(factor), 1)
+        worksheet.cell(row, 16).value = round(float(valores_100g['sodio_mg']) * float(factor), 1)
 
     def add_nutritional_calculations(self, worksheet, start_row: int, end_row: int):
         """Agregar fórmulas de cálculo nutricional automático"""
