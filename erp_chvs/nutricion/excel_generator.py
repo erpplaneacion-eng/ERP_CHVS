@@ -1,10 +1,23 @@
+"""
+Generador de análisis nutricional en formato Excel.
+
+Este módulo genera archivos Excel con análisis nutricional completo
+siguiendo el formato estándar del ICBF.
+"""
+
 import io
 import os
-from typing import Dict, List, Optional
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple
+from decimal import Decimal
+
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.worksheet import Worksheet
+
 from django.conf import settings
+
 
 from .models import (
     TablaMenus,
@@ -12,562 +25,429 @@ from .models import (
     TablaIngredientesSiesa,
     TablaPreparacionIngredientes,
     TablaAlimentos2018Icbf,
-    ComponentesAlimentos,
-    GruposAlimentos, 
     TablaAnalisisNutricionalMenu,
     TablaIngredientesPorNivel
 )
 from .services.analisis_service import AnalisisNutricionalService
 
 
+# =====================================================================
+# CONSTANTES DE CONFIGURACIÓN
+# =====================================================================
+
+@dataclass(frozen=True)
+class ExcelLayout:
+    """Constantes de diseño del Excel"""
+    # Filas
+    TITLE_ROW = 1
+    ADMIN_START_ROW = 2
+    ADMIN_END_ROW = 8
+    HEADER_START_ROW = 8
+    HEADER_END_ROW = 11
+    DATA_START_ROW = 12
+
+    # Columnas
+    COL_COMPONENTE = 1
+    COL_GRUPO = 2
+    COL_PREPARACION = 3
+    COL_INGREDIENTE = 4
+    COL_CODIGO = 5
+    COL_PESO_BRUTO = 6
+    COL_PESO_NETO = 7
+    COL_CALORIAS = 8
+    COL_PROTEINA = 9
+    COL_GRASA = 10
+    COL_CHO = 11
+    COL_CALCIO = 12
+    COL_HIERRO = 13
+    COL_SODIO = 14
+
+    # Rangos
+    TITLE_RANGE = 'A1:N1'
+    TOTAL_LABEL_COLS = 3  # A:C
+
+
+@dataclass(frozen=True)
+class ExcelStyles:
+    """Estilos predefinidos para el Excel"""
+    HEADER_COLOR = "B8D4F0"
+    TOTAL_COLOR = "E6F3FF"
+
+    @staticmethod
+    def get_header_fill() -> PatternFill:
+        return PatternFill(
+            start_color=ExcelStyles.HEADER_COLOR,
+            end_color=ExcelStyles.HEADER_COLOR,
+            fill_type="solid"
+        )
+
+    @staticmethod
+    def get_total_fill() -> PatternFill:
+        return PatternFill(
+            start_color=ExcelStyles.TOTAL_COLOR,
+            end_color=ExcelStyles.TOTAL_COLOR,
+            fill_type="solid"
+        )
+
+    @staticmethod
+    def get_border() -> Border:
+        side = Side(style='thin')
+        return Border(left=side, right=side, top=side, bottom=side)
+
+
+@dataclass(frozen=True)
+class ColumnWidths:
+    """Anchos de columnas"""
+    WIDTHS = {
+        'A': 25, 'B': 15, 'C': 15, 'D': 20, 'E': 25, 'F': 30,
+        'G': 15, 'H': 12, 'I': 12, 'J': 12, 'K': 10, 'L': 10,
+        'M': 10, 'N': 10, 'O': 12, 'P': 12
+    }
+
+
+NUTRITIONAL_HEADERS = [
+    "COMPONENTE",
+    "GRUPO DE ALIMENTOS",
+    "NOMBRE DE LA PREPARACION",
+    "NOMBRE DEL ALIMENTO (Ingredientes)",
+    "CÓDIGO DEL ALIMENTO",
+    "PESO BRUTO (g)",
+    "PESO NETO (g)",
+    "CALORÍAS (Kcal)",
+    "PROTEÍNA (g)",
+    "GRASA (g)",
+    "CHO (g)",
+    "CALCIO (mg)",
+    "HIERRO (mg)",
+    "SODIO (mg)"
+]
+
+NUTRIENT_KEYS = [
+    'calorias_kcal', 'proteina_g', 'grasa_g', 'cho_g',
+    'calcio_mg', 'hierro_mg', 'sodio_mg'
+]
+
+
+# =====================================================================
+# CLASE PRINCIPAL
+# =====================================================================
+
 class NutritionalAnalysisExcelGenerator:
     """
-    Generador avanzado de análisis nutricional en Excel.
+    Generador de análisis nutricional en Excel.
 
-    Utiliza el formato estándar del ICBF como plantilla y lo popula
-    automáticamente con datos reales del menú.
+    Genera archivos Excel con el análisis nutricional completo de menús,
+    siguiendo el formato estándar del ICBF.
     """
 
     def __init__(self):
-        # Colores para formateo
-        self.header_fill = PatternFill(start_color="B8D4F0", end_color="B8D4F0", fill_type="solid")
-        self.total_fill = PatternFill(start_color="E6F3FF", end_color="E6F3FF", fill_type="solid")
-        self.border = Border(
-            left=Side(style='thin'),
-            right=Side(style='thin'),
-            top=Side(style='thin'),
-            bottom=Side(style='thin')
-        )
+        self.layout = ExcelLayout()
+        self.styles = ExcelStyles()
+        self.header_fill = self.styles.get_header_fill()
+        self.total_fill = self.styles.get_total_fill()
+        self.border = self.styles.get_border()
 
-    def generate_nutritional_analysis_excel(self, menu_id: int, nivel_escolar_id: str = None) -> io.BytesIO:
+    # =================================================================
+    # MÉTODOS PÚBLICOS - GENERACIÓN DE EXCEL
+    # =================================================================
+
+    def generate_from_analysis_service(
+        self,
+        menu_id: int,
+        nivel_escolar_id: Optional[str] = None
+    ) -> io.BytesIO:
         """
-        Genera el análisis nutricional completo en formato Excel.
+        Genera Excel usando el servicio de análisis nutricional.
 
-        Args:
-            menu_id: ID del menú a analizar
-            nivel_escolar_id: ID específico del nivel escolar (opcional)
-
-        Returns:
-            BytesIO con el archivo Excel generado
-        """
-        try:
-            # 1. Obtener datos del menú usando el servicio existente
-            analisis_data = AnalisisNutricionalService.obtener_analisis_completo(menu_id)
-
-            if not analisis_data.get('success'):
-                raise ValueError("No se pudo obtener el análisis del menú")
-
-            # 2. Crear workbook basado en plantilla o desde cero
-            wb = self._create_workbook_from_template()
-
-            # 3. Poblar información administrativa
-            self._populate_administrative_data(wb.active, analisis_data)
-
-            # 4. Poblar datos nutricionales
-            if nivel_escolar_id:
-                # Si se especifica un nivel, usar solo ese
-                nivel_data = self._find_nivel_data(analisis_data, nivel_escolar_id)
-                if nivel_data:
-                    self._populate_nutritional_data(wb.active, nivel_data)
-            else:
-                # Si no se especifica, usar el nivel del programa actual
-                for nivel_data in analisis_data['analisis_por_nivel']:
-                    if nivel_data.get('es_programa_actual'):
-                        self._populate_nutritional_data(wb.active, nivel_data)
-                        break
-
-            # 5. Aplicar formateo profesional
-            self._apply_formatting(wb.active)
-
-            # 6. Generar archivo
-            return self._save_to_stream(wb)
-
-        except Exception as e:
-            # En caso de error, generar Excel básico con mensaje de error
-            return self._generate_error_excel(str(e))
-
-    def _create_workbook_from_template(self) -> Workbook:
-        """Crear workbook desde plantilla o desde cero"""
-        template_path = os.path.join(
-            settings.BASE_DIR,
-            'archivos excel',
-            'nutricion excel',
-            'formatonutricional.xlsx'
-        )
-
-        if os.path.exists(template_path):
-            try:
-                wb = load_workbook(template_path)
-                # Usar la primera hoja o crear nueva si no existe
-                if len(wb.sheetnames) > 0:
-                    ws = wb[wb.sheetnames[0]]
-                else:
-                    ws = wb.active
-                    ws.title = "Análisis Nutricional"
-            except Exception:
-                # Si falla la carga de plantilla, crear desde cero
-                wb = Workbook()
-                ws = wb.active
-                ws.title = "Análisis Nutricional"
-        else:
-            # Crear desde cero
-            wb = Workbook()
-            ws = wb.active
-            ws.title = "Análisis Nutricional"
-
-        return wb
-
-    def _populate_administrative_data(self, worksheet, analisis_data: Dict):
-        """Poblar información administrativa del menú"""
-        menu_info = analisis_data.get('menu', {})
-
-        # Título principal (celdas combinadas A1:N1)
-        worksheet.merge_cells('A1:N1')
-        title_cell = worksheet['A1']
-        title_cell.value = "ANÁLISIS NUTRICIONAL"
-        title_cell.font = Font(bold=True, size=16)
-        title_cell.alignment = Alignment(horizontal='center', vertical='center')
-
-        # Información administrativa (filas 2-7)
-        admin_data = [
-            ("ENTIDAD TERRITORIAL:", menu_info.get('programa', 'N/A')),
-            ("MINUTA CON ENFOQUE ETNICO:", "No"),
-            ("GRUPO ÉTNICO", "Sin Pertenencia Étnica"),
-            ("MODALIDAD DE ATENCIÓN", menu_info.get('modalidad', 'N/A')),
-            ("TIPO DE COMPLEMENTO", "Almuerzo"),
-            ("NIVEL", "Preescolar"),
-            ("MENÚ No.", menu_info.get('nombre', 'N/A'))
-        ]
-
-        for row, (label, value) in enumerate(admin_data, start=2):
-            # Label (columnas A-C)
-            worksheet.merge_cells(f'A{row}:C{row}')
-            label_cell = worksheet[f'A{row}']
-            label_cell.value = label
-            label_cell.font = Font(bold=True)
-            label_cell.alignment = Alignment(horizontal='right', vertical='center')
-
-            # Value (columnas D-N)
-            worksheet.merge_cells(f'D{row}:N{row}')
-            value_cell = worksheet[f'D{row}']
-            value_cell.value = value
-            value_cell.alignment = Alignment(horizontal='left', vertical='center')
-
-    def _populate_nutritional_data(self, worksheet, nivel_data: Dict):
-        """Poblar datos nutricionales del nivel escolar"""
-        start_row = 12  # Fila donde comienzan los ingredientes
-
-        # Encabezados de columnas (filas 8-11)
-        headers = [
-            "COMPONENTE",
-            "GRUPO DE ALIMENTOS",
-            "NOMBRE DE LA PREPARACION",
-            "NOMBRE DEL ALIMENTO (Ingredientes)",
-            "CÓDIGO DEL ALIMENTO",
-            "PESO BRUTO (g)",
-            "PESO NETO (g)",
-            "CALORÍAS (Kcal)",
-            "PROTEÍNA (g)",
-            "GRASA (g)",
-            "CHO (g)",
-            "CALCIO (mg)",
-            "HIERRO (mg)",
-            "SODIO (mg)"
-        ]
-
-        # Crear encabezados combinados
-        col = 1
-        for header in headers:
-            cell = worksheet.cell(row=8, column=col)
-            cell.value = header
-            cell.font = Font(bold=True)
-            cell.fill = self.header_fill
-            cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-            cell.border = self.border
-            col += 1
-
-        # Combinar celdas de encabezado para componentes
-        worksheet.merge_cells('A8:C11')  # COMPONENTE
-        worksheet.merge_cells('D8:D11')  # GRUPO DE ALIMENTOS
-        worksheet.merge_cells('E8:E11')  # NOMBRE DE LA PREPARACION
-        worksheet.merge_cells('F8:F11')  # NOMBRE DEL ALIMENTO
-        worksheet.merge_cells('G8:G11')  # CÓDIGO DEL ALIMENTO
-        worksheet.merge_cells('H8:H11')  # PESO BRUTO
-        worksheet.merge_cells('I8:I11')  # PESO NETO
-        worksheet.merge_cells('J8:N8')  # CALORIAS Y NUTRIENTES
-
-        # Poblar ingredientes
-        current_row = start_row
-        for preparacion in nivel_data.get('preparaciones', []):
-            for ingrediente in preparacion.get('ingredientes', []):
-                if ingrediente.get('alimento_encontrado'):
-                    # Componente y grupo
-                    worksheet.cell(current_row, 1).value = "ALIMENTO PROTEICO"  # Ejemplo
-                    worksheet.cell(current_row, 4).value = ingrediente.get('grupo_alimentos', '')
-                    worksheet.cell(current_row, 5).value = preparacion.get('nombre', '')
-                    worksheet.cell(current_row, 6).value = ingrediente.get('nombre', '')
-                    worksheet.cell(current_row, 7).value = ingrediente.get('codigo_icbf', '')
-
-                    # Pesos
-                    worksheet.cell(current_row, 8).value = ingrediente.get('peso_bruto_base', 0)
-                    worksheet.cell(current_row, 9).value = ingrediente.get('peso_neto_base', 0)
-
-                    # Valores nutricionales
-                    valores = ingrediente.get('valores_por_100g', {})
-                    factor = float(ingrediente.get('peso_neto_base', 100)) / 100.0
-
-                    worksheet.cell(current_row, 10).value = float(valores.get('calorias_kcal', 0)) * factor
-                    worksheet.cell(current_row, 11).value = float(valores.get('proteina_g', 0)) * factor
-                    worksheet.cell(current_row, 12).value = float(valores.get('grasa_g', 0)) * factor
-                    worksheet.cell(current_row, 13).value = float(valores.get('cho_g', 0)) * factor
-                    worksheet.cell(current_row, 14).value = float(valores.get('calcio_mg', 0)) * factor
-                    worksheet.cell(current_row, 15).value = float(valores.get('hierro_mg', 0)) * factor
-                    worksheet.cell(current_row, 16).value = float(valores.get('sodio_mg', 0)) * factor
-
-                    current_row += 1
-
-        # Agregar filas para otros componentes (ejemplo)
-        self._add_example_components(worksheet, current_row)
-
-        # Totales (fila dinámica)
-        total_row = current_row + 2
-        self._add_totals_section(worksheet, total_row, nivel_data)
-
-        # Recomendaciones
-        req_row = total_row + 2
-        self._add_recommendations_section(worksheet, req_row, nivel_data)
-
-        # Firmas
-        signature_row = req_row + 4
-        self._add_signature_section(worksheet, signature_row)
-
-    def _add_example_components(self, worksheet, start_row: int):
-        """Agregar componentes de ejemplo (bebida, cereal, etc.)"""
-        components = [
-            ("CEREAL ACOMPAÑANTE", "Grupo I", "ARROZ CON PIMENTON", "Arroz", "001", 25, 25, 87, 2, 0.3, 19, 3, 0.1, 2),
-            ("TUBERCULOS, RAICES, PLATANOS Y DERIVADOS DE CEREAL", "Grupo I", "PAPA CRIOLLA DORADA", "Papa", "002", 50, 50, 77, 2, 0.1, 17, 8, 0.3, 5),
-            ("LECHE Y PRODUCTOS LACTEOS", "Grupo III", "SORBETE DE GUAYABA", "Sorbete", "003", 100, 100, 65, 0.5, 0, 17, 15, 0.1, 5),
-        ]
-
-        for row, (componente, grupo, preparacion, alimento, codigo, peso_bruto, peso_neto, cal, prot, grasa, cho, calcio, hierro, sodio) in enumerate(components, start=start_row):
-            worksheet.cell(row, 1).value = componente
-            worksheet.cell(row, 4).value = grupo
-            worksheet.cell(row, 5).value = preparacion
-            worksheet.cell(row, 6).value = alimento
-            worksheet.cell(row, 7).value = codigo
-            worksheet.cell(row, 8).value = peso_bruto
-            worksheet.cell(row, 9).value = peso_neto
-            worksheet.cell(row, 10).value = cal
-            worksheet.cell(row, 11).value = prot
-            worksheet.cell(row, 12).value = grasa
-            worksheet.cell(row, 13).value = cho
-            worksheet.cell(row, 14).value = calcio
-            worksheet.cell(row, 15).value = hierro
-            worksheet.cell(row, 16).value = sodio
-
-    def _add_totals_section(self, worksheet, row: int, nivel_data: Dict):
-        """Agregar sección de totales"""
-        # Títulos
-        worksheet.merge_cells(f'A{row}:C{row}')
-        worksheet.cell(row, 1).value = "TOTAL MENÚ"
-        worksheet.cell(row, 1).font = Font(bold=True)
-        worksheet.cell(row, 1).fill = self.total_fill
-
-        # Valores totales
-        totales = nivel_data.get('totales', {})
-        valores = [
-            totales.get('calorias_kcal', 0),
-            totales.get('proteina_g', 0),
-            totales.get('grasa_g', 0),
-            totales.get('cho_g', 0),
-            totales.get('calcio_mg', 0),
-            totales.get('hierro_mg', 0),
-            totales.get('sodio_mg', 0)
-        ]
-
-        for col, valor in enumerate(valores, start=10):
-            cell = worksheet.cell(row, col)
-            cell.value = valor
-            cell.fill = self.total_fill
-            cell.border = self.border
-
-    def _add_recommendations_section(self, worksheet, row: int, nivel_data: Dict):
-        """Agregar sección de recomendaciones"""
-        # Títulos
-        worksheet.merge_cells(f'A{row}:C{row}')
-        worksheet.cell(row, 1).value = "RECOMENDACIÓN"
-        worksheet.cell(row, 1).font = Font(bold=True)
-        worksheet.cell(row, 1).fill = self.header_fill
-
-        # Valores recomendados
-        requerimientos = nivel_data.get('requerimientos', {})
-        recomendaciones = [
-            1300,  # calorías
-            requerimientos.get('proteina_g', 45.5),
-            requerimientos.get('grasa_g', 43.3),
-            requerimientos.get('cho_g', 182),
-            requerimientos.get('calcio_mg', 700),
-            requerimientos.get('hierro_mg', 5.6),
-            requerimientos.get('sodio_mg', 1133)
-        ]
-
-        for col, valor in enumerate(recomendaciones, start=10):
-            cell = worksheet.cell(row, col)
-            cell.value = valor
-            cell.fill = self.header_fill
-            cell.border = self.border
-
-    def _add_signature_section(self, worksheet, row: int):
-        """Agregar sección de firmas"""
-        # Nutricionista que elabora
-        worksheet.merge_cells(f'A{row}:C{row}')
-        worksheet.cell(row, 1).value = "NOMBRE NUTRICIONISTA - DIETISTA QUE ELABORA EL ANÁLISIS"
-        worksheet.cell(row, 1).font = Font(bold=True)
-
-        worksheet.merge_cells(f'D{row}:N{row}')
-        worksheet.cell(row, 4).value = "SARA ISABEL DIAZ MARQUEZ"
-
-        # Matrícula profesional
-        row += 1
-        worksheet.merge_cells(f'A{row}:C{row}')
-        worksheet.cell(row, 1).value = "FIRMA"
-        worksheet.cell(row, 1).font = Font(bold=True)
-
-        worksheet.merge_cells(f'D{row}:F{row}')
-        worksheet.cell(row, 4).value = "MATRÍCULA PROFESIONAL"
-        worksheet.merge_cells(f'G{row}:N{row}')
-        worksheet.cell(row, 7).value = "1107089938"
-
-        # Nutricionista que revisa
-        row += 2
-        worksheet.merge_cells(f'A{row}:C{row}')
-        worksheet.cell(row, 1).value = "NOMBRE NUTRICIONISTA - DIETISTA QUE REVISA Y APRUBA EL ANALISIS POR PARTE DE LA SEM"
-        worksheet.cell(row, 1).font = Font(bold=True)
-
-        worksheet.merge_cells(f'D{row}:N{row}')
-        worksheet.cell(row, 4).value = "GABRIELA GIRALDO MARTINEZ"
-
-        # Matrícula profesional (revisa)
-        row += 1
-        worksheet.merge_cells(f'A{row}:C{row}')
-        worksheet.cell(row, 1).value = "FIRMA"
-        worksheet.cell(row, 1).font = Font(bold=True)
-
-        worksheet.merge_cells(f'D{row}:F{row}')
-        worksheet.cell(row, 4).value = "MATRÍCULA PROFESIONAL"
-        worksheet.merge_cells(f'G{row}:N{row}')
-        worksheet.cell(row, 7).value = "1005964870"
-
-    def _apply_formatting(self, worksheet):
-        """Aplicar formateo profesional a toda la hoja"""
-        # Ajustar ancho de columnas
-        column_widths = {
-            'A': 25, 'B': 15, 'C': 15, 'D': 20, 'E': 25, 'F': 30,
-            'G': 15, 'H': 12, 'I': 12, 'J': 12, 'K': 10, 'L': 10,
-            'M': 10, 'N': 10, 'O': 12, 'P': 12
-        }
-
-        for col, width in column_widths.items():
-            worksheet.column_dimensions[col].width = width
-
-        # Aplicar bordes a todas las celdas con contenido
-        for row in worksheet.iter_rows():
-            for cell in row:
-                if cell.value is not None:
-                    cell.border = self.border
-                    cell.alignment = Alignment(vertical='center', wrap_text=True)
-
-    def _find_nivel_data(self, analisis_data: Dict, nivel_escolar_id: str) -> Optional[Dict]:
-        """Encontrar datos de un nivel escolar específico"""
-        for nivel_data in analisis_data.get('analisis_por_nivel', []):
-            nivel_info = nivel_data.get('nivel_escolar', {})
-            if str(nivel_info.get('id')) == str(nivel_escolar_id):
-                return nivel_data
-        return None
-
-    def _save_to_stream(self, workbook) -> io.BytesIO:
-        """Guardar workbook en stream de bytes"""
-        stream = io.BytesIO()
-        workbook.save(stream)
-        stream.seek(0)
-        return stream
-
-    def _generate_error_excel(self, error_message: str) -> io.BytesIO:
-        """Generar Excel básico con mensaje de error"""
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Error"
-
-        ws.merge_cells('A1:N1')
-        ws['A1'] = f"Error generando análisis nutricional: {error_message}"
-        ws['A1'].font = Font(bold=True, color="FF0000")
-
-        return self._save_to_stream(wb)
-
-
-    def _populate_real_nutritional_data(self, worksheet, nivel_data: Dict, menu_id: int):
-        """Poblar datos nutricionales reales desde la base de datos"""
-        start_row = 12
-
-        # Obtener preparaciones reales del menú
-        preparaciones = TablaPreparaciones.objects.filter(id_menu_id=menu_id).prefetch_related(
-            'ingredientes__id_ingrediente_siesa'
-        )
-
-        current_row = start_row
-
-        for preparacion in preparaciones:
-            # Obtener componente
-            componente = preparacion.id_componente.componente if preparacion.id_componente else "SIN COMPONENTE"
-            grupo_alimentos = preparacion.id_componente.id_grupo_alimentos.grupo_alimentos if preparacion.id_componente else "SIN GRUPO"
-
-            ingredientes = TablaPreparacionIngredientes.objects.filter(
-                id_preparacion=preparacion
-            ).select_related('id_ingrediente_siesa')
-
-            for ing_prep in ingredientes:
-                ingrediente = ing_prep.id_ingrediente_siesa
-
-                # Buscar información nutricional del ICBF
-                alimento_icbf = TablaAlimentos2018Icbf.objects.filter(
-                    codigo=ingrediente.id_ingrediente_siesa
-                ).first()
-
-                if not alimento_icbf:
-                    alimento_icbf = TablaAlimentos2018Icbf.objects.filter(
-                        nombre_del_alimento__icontains=ingrediente.nombre_ingrediente[:50]
-                    ).first()
-
-                if alimento_icbf:
-                    # Calcular valores reales usando el servicio existente
-                    peso_neto_base = float(nivel_data.get('peso_neto_base', 100))
-                    factor = peso_neto_base / 100.0
-
-                    valores_100g = {
-                        'calorias_kcal': float(alimento_icbf.energia_kcal or 0),
-                        'proteina_g': float(alimento_icbf.proteina_g or 0),
-                        'grasa_g': float(alimento_icbf.lipidos_g or 0),
-                        'cho_g': float(alimento_icbf.carbohidratos_totales_g or 0),
-                        'calcio_mg': float(alimento_icbf.calcio_mg or 0),
-                        'hierro_mg': float(alimento_icbf.hierro_mg or 0),
-                        'sodio_mg': float(alimento_icbf.sodio_mg or 0)
-                    }
-
-                    # Poblar fila con datos reales
-                    worksheet.cell(current_row, 1).value = componente
-                    worksheet.cell(current_row, 4).value = grupo_alimentos
-                    worksheet.cell(current_row, 5).value = preparacion.preparacion
-                    worksheet.cell(current_row, 6).value = ingrediente.nombre_ingrediente
-                    worksheet.cell(current_row, 7).value = alimento_icbf.codigo
-
-                    # Calcular peso bruto usando la lógica del servicio
-                    parte_comestible = float(alimento_icbf.parte_comestible_field or 100)
-                    peso_bruto = self._calculo_service.calcular_peso_bruto(peso_neto_base, parte_comestible)
-
-                    worksheet.cell(current_row, 8).value = round(float(peso_bruto), 1)
-                    worksheet.cell(current_row, 9).value = peso_neto_base
-
-                    # Valores nutricionales calculados
-                    worksheet.cell(current_row, 10).value = float(valores_100g['calorias_kcal']) * factor
-                    worksheet.cell(current_row, 11).value = float(valores_100g['proteina_g']) * factor
-                    worksheet.cell(current_row, 12).value = float(valores_100g['grasa_g']) * factor
-                    worksheet.cell(current_row, 13).value = float(valores_100g['cho_g']) * factor
-                    worksheet.cell(current_row, 14).value = float(valores_100g['calcio_mg']) * factor
-                    worksheet.cell(current_row, 15).value = float(valores_100g['hierro_mg']) * factor
-                    worksheet.cell(current_row, 16).value = float(valores_100g['sodio_mg']) * factor
-
-                    current_row += 1
-
-        # Si no hay ingredientes reales, usar datos de ejemplo
-        if current_row == start_row:
-            self._add_example_components(worksheet, start_row)
-
-        return current_row
-
-    def generate_excel_with_nivel_escolar(self, menu_id: int, nivel_escolar_id: str) -> io.BytesIO:
-        """
-        Genera Excel para un menú y nivel escolar específico.
-
-        Args:
-            menu_id: ID del menú
-            nivel_escolar_id: ID del nivel escolar
-
-        Returns:
-            BytesIO con el archivo Excel generado
-        """
-        generator = NutritionalAnalysisExcelGenerator()
-        return generator.generate_nutritional_analysis_excel(menu_id, nivel_escolar_id)
-
-    def generate_excel_from_real_data(self, menu_id: int, nivel_escolar_id: str = None) -> io.BytesIO:
-        """
-        Genera Excel usando datos reales de ingredientes desde la base de datos.
+        Este es el método principal y recomendado para generar Excel.
 
         Args:
             menu_id: ID del menú
             nivel_escolar_id: ID del nivel escolar (opcional)
 
         Returns:
-            BytesIO con el archivo Excel generado
+            BytesIO con el archivo Excel
+        """
+        try:
+            # Obtener análisis completo
+            analisis_data = AnalisisNutricionalService.obtener_analisis_completo(menu_id)
+
+            if not analisis_data.get('success'):
+                raise ValueError("No se pudo obtener el análisis del menú")
+
+            # Crear workbook
+            wb = self._create_workbook()
+            ws = wb.active
+
+            # Poblar secciones
+            self._populate_title(ws)
+            self._populate_administrative_section(ws, analisis_data)
+
+            # Obtener datos del nivel específico
+            nivel_data = self._get_nivel_data(analisis_data, nivel_escolar_id)
+            if not nivel_data:
+                raise ValueError("No se encontró información del nivel escolar")
+
+            # Poblar encabezados
+            self._populate_headers(ws)
+
+            # Poblar ingredientes
+            current_row = self._populate_ingredients_from_analysis(ws, nivel_data)
+
+            # Agregar cálculos
+            self._add_calculations_section(ws, current_row, nivel_data)
+
+            # Firmas
+            self._add_signatures(ws, current_row + 10)
+
+            # Formateo final
+            self._apply_formatting(ws)
+
+            return self._save_to_stream(wb)
+
+        except Exception as e:
+            return self._generate_error_excel(f"Error generando Excel: {str(e)}")
+
+    def generate_from_database(
+        self,
+        menu_id: int,
+        nivel_escolar_id: Optional[str] = None
+    ) -> io.BytesIO:
+        """
+        Genera Excel consultando directamente la base de datos.
+
+        Método alternativo que consulta directamente las tablas.
+        Útil cuando el servicio de análisis no está disponible.
+
+        Args:
+            menu_id: ID del menú
+            nivel_escolar_id: ID del nivel escolar (opcional)
+
+        Returns:
+            BytesIO con el archivo Excel
         """
         try:
             # Obtener menú
             menu = TablaMenus.objects.select_related('id_contrato').get(id_menu=menu_id)
 
             # Crear workbook
-            wb = self._create_workbook_from_template()
+            wb = self._create_workbook()
+            ws = wb.active
 
-            # Poblar información administrativa
-            self._populate_administrative_data(wb.active, {
-                'menu': {
-                    'id': menu.id_menu,
-                    'nombre': menu.menu,
-                    'modalidad': menu.id_modalidad.modalidad if menu.id_modalidad else 'N/A',
-                    'programa': menu.id_contrato.programa if menu.id_contrato else 'N/A'
-                }
-            })
+            # Poblar título
+            self._populate_title(ws)
 
-            # Obtener preparaciones con ingredientes reales
-            preparaciones = TablaPreparaciones.objects.filter(id_menu=menu).prefetch_related(
+            # Poblar información administrativa básica
+            self._populate_admin_from_menu(ws, menu)
+
+            # Poblar encabezados
+            self._populate_headers(ws)
+
+            # Obtener preparaciones
+            preparaciones = TablaPreparaciones.objects.filter(
+                id_menu=menu
+            ).prefetch_related(
                 'ingredientes__id_ingrediente_siesa',
                 'id_componente__id_grupo_alimentos'
             )
 
-            # Poblar datos nutricionales reales
-            current_row = self._populate_real_ingredients_data(wb.active, preparaciones, 12)
-
-            # Agregar componentes adicionales de ejemplo si es necesario
-            if current_row == 12:  # No se agregaron ingredientes reales
-                self._add_example_components(wb.active, current_row)
-                current_row += 3
-
-            # Agregar cálculos automáticos usando las nuevas funciones
-            total_row, req_row, pct_row = self.add_nutritional_calculations(
-                wb.active, 12, current_row - 1
+            # Poblar ingredientes
+            current_row = self._populate_ingredients_from_database(
+                ws, preparaciones, menu_id
             )
 
-            # Firmas
-            signature_row = pct_row + 4
-            self._add_signature_section(wb.active, signature_row)
+            # Agregar cálculos con fórmulas
+            self._add_formula_calculations(ws, current_row)
 
-            # Aplicar formateo
-            self._apply_formatting(wb.active)
+            # Firmas
+            self._add_signatures(ws, current_row + 10)
+
+            # Formateo
+            self._apply_formatting(ws)
 
             return self._save_to_stream(wb)
 
         except TablaMenus.DoesNotExist:
             return self._generate_error_excel("Menú no encontrado")
         except Exception as e:
-            return self._generate_error_excel(f"Error generando Excel: {str(e)}")
+            return self._generate_error_excel(f"Error: {str(e)}")
 
-    def _populate_real_ingredients_data(self, worksheet, preparaciones, start_row: int) -> int:
-        """Poblar datos reales de ingredientes desde la base de datos"""
-        current_row = start_row
+    # =================================================================
+    # MÉTODOS PRIVADOS - CREACIÓN Y CONFIGURACIÓN
+    # =================================================================
+
+    def _create_workbook(self) -> Workbook:
+        """Crea un nuevo workbook (siempre desde cero para evitar problemas con plantillas)"""
+        # Siempre crear desde cero para evitar conflictos con celdas combinadas
+        wb = Workbook()
+        wb.active.title = "Análisis Nutricional"
+        return wb
+
+    # =================================================================
+    # MÉTODOS PRIVADOS - POBLACIÓN DE SECCIONES
+    # =================================================================
+
+    def _populate_title(self, ws: Worksheet) -> None:
+        """Poblar título principal"""
+        ws.merge_cells(self.layout.TITLE_RANGE)
+        title_cell = ws['A1']
+        title_cell.value = "ANÁLISIS NUTRICIONAL"
+        title_cell.font = Font(bold=True, size=16)
+        title_cell.alignment = Alignment(horizontal='center', vertical='center')
+
+    def _populate_administrative_section(
+        self,
+        ws: Worksheet,
+        analisis_data: Dict
+    ) -> None:
+        """Poblar información administrativa del menú"""
+        menu_info = analisis_data.get('menu', {})
+
+        # Obtener nivel escolar
+        nivel_escolar = self._extract_nivel_escolar(analisis_data)
+
+        # Datos administrativos
+        admin_data = [
+            ("ENTIDAD TERRITORIAL:", menu_info.get('programa', 'N/A')),
+            ("MINUTA CON ENFOQUE ETNICO:", "No"),
+            ("GRUPO ÉTNICO", "Sin Pertenencia Étnica"),
+            ("MODALIDAD DE ATENCIÓN", menu_info.get('modalidad', 'N/A')),
+            ("TIPO DE COMPLEMENTO", "Almuerzo"),
+            ("NIVEL", nivel_escolar),
+            ("MENÚ No.", menu_info.get('nombre', 'N/A'))
+        ]
+
+        self._populate_admin_rows(ws, admin_data)
+
+    def _populate_admin_from_menu(self, ws: Worksheet, menu: TablaMenus) -> None:
+        """Poblar información administrativa desde modelo de menú"""
+        admin_data = [
+            ("ENTIDAD TERRITORIAL:", menu.id_contrato.programa if menu.id_contrato else 'N/A'),
+            ("MINUTA CON ENFOQUE ETNICO:", "No"),
+            ("GRUPO ÉTNICO", "Sin Pertenencia Étnica"),
+            ("MODALIDAD DE ATENCIÓN", menu.id_modalidad.modalidad if menu.id_modalidad else 'N/A'),
+            ("TIPO DE COMPLEMENTO", "Almuerzo"),
+            ("NIVEL", "N/A"),  # Se determina por análisis
+            ("MENÚ No.", menu.menu)
+        ]
+
+        self._populate_admin_rows(ws, admin_data)
+
+    def _populate_admin_rows(
+        self,
+        ws: Worksheet,
+        admin_data: List[Tuple[str, str]]
+    ) -> None:
+        """Poblar filas administrativas"""
+        for row, (label, value) in enumerate(admin_data, start=self.layout.ADMIN_START_ROW):
+            # Label (columnas A-C)
+            label_cell = ws.cell(row=row, column=1)  # A = 1
+            label_cell.value = label
+            label_cell.font = Font(bold=True)
+            label_cell.alignment = Alignment(horizontal='right', vertical='center')
+
+            # Value (columnas D-N)
+            value_cell = ws.cell(row=row, column=4)  # D = 4
+            value_cell.value = value
+            value_cell.alignment = Alignment(horizontal='left', vertical='center')
+
+    def _populate_headers(self, ws: Worksheet) -> None:
+        """Poblar encabezados de columnas"""
+        # Crear encabezados sin filas vacías
+        for col, header in enumerate(NUTRITIONAL_HEADERS, start=1):
+            cell = ws.cell(row=self.layout.HEADER_START_ROW, column=col)
+            cell.value = header
+            cell.font = Font(bold=True)
+            cell.fill = self.header_fill
+            cell.alignment = Alignment(
+                horizontal='center',
+                vertical='center',
+                wrap_text=True
+            )
+            cell.border = self.border
+
+    def _populate_ingredients_from_analysis(
+        self,
+        ws: Worksheet,
+        nivel_data: Dict
+    ) -> int:
+        """
+        Poblar ingredientes desde datos de análisis.
+
+        Returns:
+            Última fila usada
+        """
+        current_row = self.layout.DATA_START_ROW
+
+        for preparacion in nivel_data.get('preparaciones', []):
+            componente = preparacion.get('componente', 'SIN COMPONENTE')
+
+            for ingrediente in preparacion.get('ingredientes', []):
+                if not ingrediente.get('alimento_encontrado'):
+                    continue
+
+                # Datos básicos
+                ws.cell(current_row, self.layout.COL_COMPONENTE).value = componente
+                ws.cell(current_row, self.layout.COL_GRUPO).value = \
+                    ingrediente.get('grupo_alimentos', '')
+                ws.cell(current_row, self.layout.COL_PREPARACION).value = \
+                    preparacion.get('nombre', '')
+                ws.cell(current_row, self.layout.COL_INGREDIENTE).value = \
+                    ingrediente.get('nombre', '')
+                ws.cell(current_row, self.layout.COL_CODIGO).value = \
+                    ingrediente.get('codigo_icbf', '')
+
+                # Pesos
+                ws.cell(current_row, self.layout.COL_PESO_BRUTO).value = \
+                    ingrediente.get('peso_bruto_base', 0)
+                ws.cell(current_row, self.layout.COL_PESO_NETO).value = \
+                    ingrediente.get('peso_neto_base', 0)
+
+                # Valores nutricionales
+                valores = ingrediente.get('valores_por_100g', {})
+                factor = self._to_float(ingrediente.get('peso_neto_base', 100)) / 100.0
+
+                ws.cell(current_row, self.layout.COL_CALORIAS).value = \
+                    self._to_float(valores.get('calorias_kcal', 0)) * factor
+                ws.cell(current_row, self.layout.COL_PROTEINA).value = \
+                    self._to_float(valores.get('proteina_g', 0)) * factor
+                ws.cell(current_row, self.layout.COL_GRASA).value = \
+                    self._to_float(valores.get('grasa_g', 0)) * factor
+                ws.cell(current_row, self.layout.COL_CHO).value = \
+                    self._to_float(valores.get('cho_g', 0)) * factor
+                ws.cell(current_row, self.layout.COL_CALCIO).value = \
+                    self._to_float(valores.get('calcio_mg', 0)) * factor
+                ws.cell(current_row, self.layout.COL_HIERRO).value = \
+                    self._to_float(valores.get('hierro_mg', 0)) * factor
+                ws.cell(current_row, self.layout.COL_SODIO).value = \
+                    self._to_float(valores.get('sodio_mg', 0)) * factor
+
+                current_row += 1
+
+        return current_row - 1  # Última fila con datos
+
+    def _populate_ingredients_from_database(
+        self,
+        ws: Worksheet,
+        preparaciones,
+        menu_id: int
+    ) -> int:
+        """
+        Poblar ingredientes consultando la base de datos.
+
+        Returns:
+            Última fila usada
+        """
+        current_row = self.layout.DATA_START_ROW
 
         for preparacion in preparaciones:
-            componente = preparacion.id_componente.componente if preparacion.id_componente else "SIN COMPONENTE"
-            grupo_alimentos = (preparacion.id_componente.id_grupo_alimentos.grupo_alimentos
-                             if preparacion.id_componente and preparacion.id_componente.id_grupo_alimentos
-                             else "SIN GRUPO")
+            componente = preparacion.id_componente.componente \
+                if preparacion.id_componente else "SIN COMPONENTE"
+            grupo_alimentos = (
+                preparacion.id_componente.id_grupo_alimentos.grupo_alimentos
+                if preparacion.id_componente and preparacion.id_componente.id_grupo_alimentos
+                else "SIN GRUPO"
+            )
 
             ingredientes = TablaPreparacionIngredientes.objects.filter(
                 id_preparacion=preparacion
@@ -576,56 +456,283 @@ class NutritionalAnalysisExcelGenerator:
             for ing_prep in ingredientes:
                 ingrediente = ing_prep.id_ingrediente_siesa
 
-                # Buscar datos nutricionales del ICBF
+                # Buscar información nutricional ICBF
                 alimento_icbf = self._find_alimento_icbf(ingrediente)
 
-                if alimento_icbf:
-                    # Usar valores por defecto o de análisis guardado
-                    peso_neto = 100  # Valor por defecto
-                    peso_bruto = 100
+                if not alimento_icbf:
+                    continue
 
-                    # Buscar análisis guardado para obtener pesos reales
-                    analisis_guardado = TablaAnalisisNutricionalMenu.objects.filter(
-                        id_menu=preparacion.id_menu
-                    ).first()
+                # Obtener pesos del análisis guardado si existe
+                peso_neto, peso_bruto = self._get_saved_weights(
+                    menu_id, preparacion, ingrediente
+                )
 
-                    if analisis_guardado:
-                        ingrediente_guardado = TablaIngredientesPorNivel.objects.filter(
-                            id_analisis=analisis_guardado,
-                            id_preparacion=preparacion,
-                            id_ingrediente_siesa=ingrediente
-                        ).first()
+                # Calcular valores nutricionales
+                factor = self._to_float(peso_neto) / 100.0
+                valores_100g = self._extract_nutritional_values(alimento_icbf)
 
-                        if ingrediente_guardado:
-                            peso_neto = ingrediente_guardado.peso_neto
-                            peso_bruto = ingrediente_guardado.peso_bruto
+                # Poblar fila
+                self._populate_ingredient_row(
+                    ws, current_row, componente, grupo_alimentos,
+                    preparacion.preparacion, ingrediente.nombre_ingrediente,
+                    alimento_icbf.codigo, peso_bruto, peso_neto,
+                    valores_100g, factor
+                )
 
-                    # Calcular valores nutricionales
-                    factor = float(peso_neto) / 100.0
-                    valores_100g = {
-                        'calorias_kcal': float(alimento_icbf.energia_kcal or 0),
-                        'proteina_g': float(alimento_icbf.proteina_g or 0),
-                        'grasa_g': float(alimento_icbf.lipidos_g or 0),
-                        'cho_g': float(alimento_icbf.carbohidratos_totales_g or 0),
-                        'calcio_mg': float(alimento_icbf.calcio_mg or 0),
-                        'hierro_mg': float(alimento_icbf.hierro_mg or 0),
-                        'sodio_mg': float(alimento_icbf.sodio_mg or 0)
-                    }
+                current_row += 1
 
-                    # Poblar fila
-                    self._populate_ingredient_row(
-                        worksheet, current_row, componente, grupo_alimentos,
-                        preparacion.preparacion, ingrediente.nombre_ingrediente,
-                        alimento_icbf.codigo, peso_bruto, peso_neto,
-                        valores_100g, factor
+        return current_row - 1
+
+    def _populate_ingredient_row(
+        self,
+        ws: Worksheet,
+        row: int,
+        componente: str,
+        grupo: str,
+        preparacion: str,
+        ingrediente: str,
+        codigo: str,
+        peso_bruto: float,
+        peso_neto: float,
+        valores_100g: Dict[str, float],
+        factor: float
+    ) -> None:
+        """Poblar una fila completa de ingrediente"""
+        ws.cell(row, self.layout.COL_COMPONENTE).value = componente
+        ws.cell(row, self.layout.COL_GRUPO).value = grupo
+        ws.cell(row, self.layout.COL_PREPARACION).value = preparacion
+        ws.cell(row, self.layout.COL_INGREDIENTE).value = ingrediente
+        ws.cell(row, self.layout.COL_CODIGO).value = codigo
+        ws.cell(row, self.layout.COL_PESO_BRUTO).value = round(peso_bruto, 1)
+        ws.cell(row, self.layout.COL_PESO_NETO).value = round(peso_neto, 1)
+
+        # Valores nutricionales
+        ws.cell(row, self.layout.COL_CALORIAS).value = \
+            round(valores_100g['calorias_kcal'] * factor, 1)
+        ws.cell(row, self.layout.COL_PROTEINA).value = \
+            round(valores_100g['proteina_g'] * factor, 1)
+        ws.cell(row, self.layout.COL_GRASA).value = \
+            round(valores_100g['grasa_g'] * factor, 1)
+        ws.cell(row, self.layout.COL_CHO).value = \
+            round(valores_100g['cho_g'] * factor, 1)
+        ws.cell(row, self.layout.COL_CALCIO).value = \
+            round(valores_100g['calcio_mg'] * factor, 1)
+        ws.cell(row, self.layout.COL_HIERRO).value = \
+            round(valores_100g['hierro_mg'] * factor, 1)
+        ws.cell(row, self.layout.COL_SODIO).value = \
+            round(valores_100g['sodio_mg'] * factor, 1)
+
+    def _add_calculations_section(
+        self,
+        ws: Worksheet,
+        last_data_row: int,
+        nivel_data: Dict
+    ) -> None:
+        """Agregar sección de totales, recomendaciones y adecuación"""
+        total_row = last_data_row + 2
+
+        # Totales
+        self._add_totals_row(ws, total_row, nivel_data)
+
+        # Recomendaciones
+        req_row = total_row + 2
+        self._add_recommendations_row(ws, req_row, nivel_data)
+
+        # % Adecuación (calculado automáticamente)
+        pct_row = req_row + 1
+        self._add_adequacy_row(ws, pct_row, total_row, req_row)
+
+    def _add_totals_row(
+        self,
+        ws: Worksheet,
+        row: int,
+        nivel_data: Dict
+    ) -> None:
+        """Agregar fila de totales"""
+        ws.cell(row, 1).value = "TOTAL MENÚ"
+        ws.cell(row, 1).font = Font(bold=True)
+        ws.cell(row, 1).fill = self.total_fill
+
+        # Valores totales
+        totales = nivel_data.get('totales', {})
+        for i, key in enumerate(NUTRIENT_KEYS, start=self.layout.COL_CALORIAS):
+            cell = ws.cell(row, i)
+            cell.value = totales.get(key, 0)
+            cell.fill = self.total_fill
+            cell.border = self.border
+
+    def _add_recommendations_row(
+        self,
+        ws: Worksheet,
+        row: int,
+        nivel_data: Dict
+    ) -> None:
+        """Agregar fila de recomendaciones"""
+        ws.cell(row, 1).value = "RECOMENDACIÓN"
+        ws.cell(row, 1).font = Font(bold=True)
+        ws.cell(row, 1).fill = self.header_fill
+
+        # Valores recomendados
+        requerimientos = nivel_data.get('requerimientos', {})
+        for i, key in enumerate(NUTRIENT_KEYS, start=self.layout.COL_CALORIAS):
+            cell = ws.cell(row, i)
+            # Valores por defecto como fallback
+            default_values = [1300, 45.5, 43.3, 182, 700, 5.6, 1133]
+            cell.value = requerimientos.get(key, default_values[i - self.layout.COL_CALORIAS])
+            cell.fill = self.header_fill
+            cell.border = self.border
+
+    def _add_adequacy_row(
+        self,
+        ws: Worksheet,
+        row: int,
+        total_row: int,
+        req_row: int
+    ) -> None:
+        """Agregar fila de % adecuación con fórmulas"""
+        ws.cell(row, 1).value = "% ADECUACIÓN"
+        ws.cell(row, 1).font = Font(bold=True)
+
+        for col in range(self.layout.COL_CALORIAS, self.layout.COL_SODIO + 1):
+            col_letter = get_column_letter(col)
+            formula = f"=IF({col_letter}{req_row}=0,0,{col_letter}{total_row}/{col_letter}{req_row}*100)"
+            cell = ws.cell(row, col)
+            cell.value = formula
+            cell.border = self.border
+            cell.number_format = '0.00"%"'
+
+    def _add_formula_calculations(
+        self,
+        ws: Worksheet,
+        last_data_row: int
+    ) -> None:
+        """Agregar cálculos con fórmulas de Excel"""
+        total_row = last_data_row + 2
+
+        # Totales con fórmulas SUM
+        ws.cell(total_row, 1).value = "TOTAL MENÚ"
+        ws.cell(total_row, 1).font = Font(bold=True)
+        ws.cell(total_row, 1).fill = self.total_fill
+
+        for col in range(self.layout.COL_CALORIAS, self.layout.COL_SODIO + 1):
+            col_letter = get_column_letter(col)
+            formula = f"=SUM({col_letter}{self.layout.DATA_START_ROW}:{col_letter}{last_data_row})"
+            cell = ws.cell(total_row, col)
+            cell.value = formula
+            cell.fill = self.total_fill
+            cell.border = self.border
+
+        # Recomendaciones (valores hardcoded como placeholder)
+        req_row = total_row + 2
+        ws.cell(req_row, 1).value = "RECOMENDACIÓN"
+        ws.cell(req_row, 1).font = Font(bold=True)
+        ws.cell(req_row, 1).fill = self.header_fill
+
+        default_recommendations = [1300, 45.5, 43.3, 182, 700, 5.6, 1133]
+        for i, valor in enumerate(default_recommendations, start=self.layout.COL_CALORIAS):
+            cell = ws.cell(req_row, i)
+            cell.value = valor
+            cell.fill = self.header_fill
+            cell.border = self.border
+
+        # % Adecuación
+        self._add_adequacy_row(ws, req_row + 1, total_row, req_row)
+
+    def _add_signatures(self, ws: Worksheet, start_row: int) -> None:
+        """Agregar sección de firmas"""
+        row = start_row
+
+        # Nutricionista que elabora
+        ws.cell(row=row, column=1).value = "NOMBRE NUTRICIONISTA - DIETISTA QUE ELABORA EL ANÁLISIS"
+        ws.cell(row=row, column=1).font = Font(bold=True)
+        ws.cell(row=row, column=4).value = "SARA ISABEL DIAZ MARQUEZ"
+
+        # Matrícula profesional
+        row += 1
+        ws.cell(row=row, column=1).value = "FIRMA"
+        ws.cell(row=row, column=1).font = Font(bold=True)
+        ws.cell(row=row, column=4).value = "MATRÍCULA PROFESIONAL"
+        ws.cell(row=row, column=7).value = "1107089938"
+
+        # Nutricionista que revisa
+        row += 2
+        ws.cell(row=row, column=1).value = "NOMBRE NUTRICIONISTA - DIETISTA QUE REVISA Y APRUEBA EL ANÁLISIS POR PARTE DE LA SEM"
+        ws.cell(row=row, column=1).font = Font(bold=True)
+        ws.cell(row=row, column=4).value = "GABRIELA GIRALDO MARTINEZ"
+
+        # Matrícula profesional (revisa)
+        row += 1
+        ws.cell(row=row, column=1).value = "FIRMA"
+        ws.cell(row=row, column=1).font = Font(bold=True)
+        ws.cell(row=row, column=4).value = "MATRÍCULA PROFESIONAL"
+        ws.cell(row=row, column=7).value = "1005964870"
+
+    def _apply_formatting(self, ws: Worksheet) -> None:
+        """Aplicar formateo profesional"""
+        # Ajustar ancho de columnas
+        for col, width in ColumnWidths.WIDTHS.items():
+            ws.column_dimensions[col].width = width
+
+        # Aplicar bordes y alineación
+        for row in ws.iter_rows():
+            for cell in row:
+                if cell.value is not None:
+                    cell.border = self.border
+                    cell.alignment = Alignment(
+                        vertical='center',
+                        wrap_text=True
                     )
 
-                    current_row += 1
+    # =================================================================
+    # MÉTODOS AUXILIARES
+    # =================================================================
 
-        return current_row
+    def _get_nivel_data(
+        self,
+        analisis_data: Dict,
+        nivel_escolar_id: Optional[str]
+    ) -> Optional[Dict]:
+        """Obtener datos del nivel escolar"""
+        analisis_por_nivel = analisis_data.get('analisis_por_nivel', [])
 
-    def _find_alimento_icbf(self, ingrediente_siesa):
-        """Buscar información nutricional del ICBF para un ingrediente"""
+        if not analisis_por_nivel:
+            return None
+
+        # Si se especifica un nivel, buscarlo
+        if nivel_escolar_id:
+            for nivel_data in analisis_por_nivel:
+                nivel_info = nivel_data.get('nivel_escolar', {})
+                if str(nivel_info.get('id')) == str(nivel_escolar_id):
+                    return nivel_data
+
+        # Si no, buscar el nivel del programa actual
+        for nivel_data in analisis_por_nivel:
+            if nivel_data.get('es_programa_actual'):
+                return nivel_data
+
+        # Fallback: primer nivel disponible
+        return analisis_por_nivel[0] if analisis_por_nivel else None
+
+    def _extract_nivel_escolar(self, analisis_data: Dict) -> str:
+        """Extraer nombre del nivel escolar"""
+        analisis_por_nivel = analisis_data.get('analisis_por_nivel', [])
+
+        if not analisis_por_nivel:
+            return "N/A"
+
+        # Buscar nivel del programa actual
+        for nivel_data in analisis_por_nivel:
+            if nivel_data.get('es_programa_actual'):
+                return nivel_data.get('nivel_escolar', {}).get('nombre', 'N/A')
+
+        # Fallback: primer nivel
+        return analisis_por_nivel[0].get('nivel_escolar', {}).get('nombre', 'N/A')
+
+    def _find_alimento_icbf(
+        self,
+        ingrediente_siesa: TablaIngredientesSiesa
+    ) -> Optional[TablaAlimentos2018Icbf]:
+        """Buscar información nutricional del ICBF"""
         # Buscar por código exacto
         alimento = TablaAlimentos2018Icbf.objects.filter(
             codigo=ingrediente_siesa.id_ingrediente_siesa
@@ -639,177 +746,186 @@ class NutritionalAnalysisExcelGenerator:
 
         return alimento
 
-    def _populate_ingredient_row(self, worksheet, row: int, componente: str, grupo: str,
-                               preparacion: str, ingrediente: str, codigo: str,
-                               peso_bruto: float, peso_neto: float,
-                               valores_100g: dict, factor: float):
-        """Poblar una fila completa de ingrediente"""
-        worksheet.cell(row, 1).value = componente
-        worksheet.cell(row, 4).value = grupo
-        worksheet.cell(row, 5).value = preparacion
-        worksheet.cell(row, 6).value = ingrediente
-        worksheet.cell(row, 7).value = codigo
-        worksheet.cell(row, 8).value = round(float(peso_bruto), 1)
-        worksheet.cell(row, 9).value = round(float(peso_neto), 1)
-        worksheet.cell(row, 10).value = round(float(valores_100g['calorias_kcal']) * float(factor), 1)
-        worksheet.cell(row, 11).value = round(float(valores_100g['proteina_g']) * float(factor), 1)
-        worksheet.cell(row, 12).value = round(float(valores_100g['grasa_g']) * float(factor), 1)
-        worksheet.cell(row, 13).value = round(float(valores_100g['cho_g']) * float(factor), 1)
-        worksheet.cell(row, 14).value = round(float(valores_100g['calcio_mg']) * float(factor), 1)
-        worksheet.cell(row, 15).value = round(float(valores_100g['hierro_mg']) * float(factor), 1)
-        worksheet.cell(row, 16).value = round(float(valores_100g['sodio_mg']) * float(factor), 1)
+    def _get_saved_weights(
+        self,
+        menu_id: int,
+        preparacion: TablaPreparaciones,
+        ingrediente: TablaIngredientesSiesa
+    ) -> Tuple[float, float]:
+        """Obtener pesos guardados del análisis previo"""
+        peso_neto = 100.0  # Default
+        peso_bruto = 100.0  # Default
 
-    def add_nutritional_calculations(self, worksheet, start_row: int, end_row: int):
-        """Agregar fórmulas de cálculo nutricional automático"""
-        # Fila de totales
-        total_row = end_row + 1
+        # Buscar análisis guardado
+        analisis_guardado = TablaAnalisisNutricionalMenu.objects.filter(
+            id_menu_id=menu_id
+        ).first()
 
-        # Título de totales
-        worksheet.merge_cells(f'A{total_row}:C{total_row}')
-        worksheet.cell(total_row, 1).value = "TOTAL MENÚ"
-        worksheet.cell(total_row, 1).font = Font(bold=True)
-        worksheet.cell(total_row, 1).fill = self.total_fill
+        if analisis_guardado:
+            ingrediente_guardado = TablaIngredientesPorNivel.objects.filter(
+                id_analisis=analisis_guardado,
+                id_preparacion=preparacion,
+                id_ingrediente_siesa=ingrediente
+            ).first()
 
-        # Fórmulas de suma para cada columna nutricional
-        for col in range(10, 17):  # Columnas J-P (10-16)
-            col_letter = get_column_letter(col)
-            formula = f"=SUM({col_letter}{start_row}:{col_letter}{end_row})"
-            worksheet.cell(total_row, col).value = formula
-            worksheet.cell(total_row, col).fill = self.total_fill
-            worksheet.cell(total_row, col).border = self.border
+            if ingrediente_guardado:
+                peso_neto = float(ingrediente_guardado.peso_neto)
+                peso_bruto = float(ingrediente_guardado.peso_bruto)
 
-        # Fila de recomendaciones
-        req_row = total_row + 2
-        worksheet.merge_cells(f'A{req_row}:C{req_row}')
-        worksheet.cell(req_row, 1).value = "RECOMENDACIÓN"
-        worksheet.cell(req_row, 1).font = Font(bold=True)
-        worksheet.cell(req_row, 1).fill = self.header_fill
+        return peso_neto, peso_bruto
 
-        # Valores recomendados por defecto (pueden ser parametrizados)
-        recomendaciones = [1300, 45.5, 43.3, 182, 700, 5.6, 1133]
-        for col, valor in enumerate(recomendaciones, start=10):
-            worksheet.cell(req_row, col).value = valor
-            worksheet.cell(req_row, col).fill = self.header_fill
-            worksheet.cell(req_row, col).border = self.border
+    def _extract_nutritional_values(
+        self,
+        alimento_icbf: TablaAlimentos2018Icbf
+    ) -> Dict[str, float]:
+        """Extraer valores nutricionales del alimento ICBF"""
+        return {
+            'calorias_kcal': self._to_float(alimento_icbf.energia_kcal),
+            'proteina_g': self._to_float(alimento_icbf.proteina_g),
+            'grasa_g': self._to_float(alimento_icbf.lipidos_g),
+            'cho_g': self._to_float(alimento_icbf.carbohidratos_totales_g),
+            'calcio_mg': self._to_float(alimento_icbf.calcio_mg),
+            'hierro_mg': self._to_float(alimento_icbf.hierro_mg),
+            'sodio_mg': self._to_float(alimento_icbf.sodio_mg)
+        }
 
-        # Fila de porcentajes de adecuación
-        pct_row = req_row + 1
-        worksheet.merge_cells(f'A{pct_row}:C{pct_row}')
-        worksheet.cell(pct_row, 1).value = "% ADECUACIÓN"
-        worksheet.cell(pct_row, 1).font = Font(bold=True)
+    @staticmethod
+    def _to_float(value) -> float:
+        """Convertir valor a float de forma segura"""
+        if value is None:
+            return 0.0
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, Decimal):
+            return float(value)
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return 0.0
 
-        for col in range(10, 17):
-            col_letter = get_column_letter(col)
-            total_cell = f"{col_letter}{total_row}"
-            req_cell = f"{col_letter}{req_row}"
-            formula = f"=IF({req_cell}=0,0,{total_cell}/{req_cell}*100)"
-            worksheet.cell(pct_row, col).value = formula
-            worksheet.cell(pct_row, col).border = self.border
-            worksheet.cell(pct_row, col).number_format = '0.00"%"'
+    def _save_to_stream(self, workbook: Workbook) -> io.BytesIO:
+        """Guardar workbook en stream de bytes"""
+        stream = io.BytesIO()
+        workbook.save(stream)
+        stream.seek(0)
+        return stream
 
-        return total_row, req_row, pct_row
+    def _generate_error_excel(self, error_message: str) -> io.BytesIO:
+        """Generar Excel con mensaje de error"""
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Error"
+
+        ws.merge_cells('A1:N1')
+        ws['A1'] = f"Error: {error_message}"
+        ws['A1'].font = Font(bold=True, color="FF0000")
+
+        return self._save_to_stream(wb)
 
 
-# Función de compatibilidad con el código existente
+# =====================================================================
+# FUNCIONES DE COMPATIBILIDAD
+# =====================================================================
+
 def generate_menu_excel(menu_id: int) -> io.BytesIO:
     """
-    Función de compatibilidad que genera análisis nutricional completo.
+    Genera análisis nutricional completo.
 
     Args:
-        menu_id: ID del menú a generar
+        menu_id: ID del menú
 
     Returns:
-        BytesIO con el archivo Excel generado
+        BytesIO con el archivo Excel
     """
     generator = NutritionalAnalysisExcelGenerator()
-    return generator.generate_nutritional_analysis_excel(menu_id)
+    return generator.generate_from_analysis_service(menu_id)
 
 
-# Nueva función para generar con nivel específico
-def generate_menu_excel_with_nivel(menu_id: int, nivel_escolar_id: str) -> io.BytesIO:
+def generate_menu_excel_with_nivel(
+    menu_id: int,
+    nivel_escolar_id: str
+) -> io.BytesIO:
     """
-    Genera análisis nutricional para un menú y nivel escolar específico.
+    Genera análisis nutricional para un nivel escolar específico.
 
     Args:
         menu_id: ID del menú
         nivel_escolar_id: ID del nivel escolar
 
     Returns:
-        BytesIO con el archivo Excel generado
+        BytesIO con el archivo Excel
     """
     generator = NutritionalAnalysisExcelGenerator()
-    return generator.generate_excel_from_real_data(menu_id, nivel_escolar_id)
+    return generator.generate_from_analysis_service(menu_id, nivel_escolar_id)
 
 
-# Función mejorada que usa datos reales
+def generate_menu_excel_from_database(menu_id: int) -> io.BytesIO:
+    """
+    Genera análisis nutricional consultando directamente la base de datos.
+
+    Args:
+        menu_id: ID del menú
+
+    Returns:
+        BytesIO con el archivo Excel
+    """
+    generator = NutritionalAnalysisExcelGenerator()
+    return generator.generate_from_database(menu_id)
+
+
 def generate_menu_excel_real_data(menu_id: int) -> io.BytesIO:
     """
-    Genera análisis nutricional usando datos reales de ingredientes.
+    Genera análisis nutricional usando datos reales.
+
+    Función de compatibilidad - usa el servicio de análisis.
 
     Args:
         menu_id: ID del menú
 
     Returns:
-        BytesIO con el archivo Excel generado
+        BytesIO con el archivo Excel
     """
     generator = NutritionalAnalysisExcelGenerator()
-    return generator.generate_excel_from_real_data(menu_id)
+    return generator.generate_from_analysis_service(menu_id)
 
 
-# Nueva función para generar desde análisis guardado
-def generate_excel_from_saved_analysis(menu_id: int, nivel_escolar_id: str) -> io.BytesIO:
+def generate_advanced_nutritional_excel(
+    menu_id: int,
+    nivel_escolar_id: Optional[str] = None,
+    use_saved_analysis: bool = True
+) -> io.BytesIO:
     """
-    Genera Excel usando datos reales de análisis nutricional guardado.
+    Genera Excel nutricional avanzado.
 
-    Args:
-        menu_id: ID del menú
-        nivel_escolar_id: ID del nivel escolar
-
-    Returns:
-        BytesIO con el archivo Excel generado
-    """
-    generator = NutritionalAnalysisExcelGenerator()
-    return generator.generate_excel_from_saved_analysis(menu_id, nivel_escolar_id)
-
-
-# Función avanzada que detecta automáticamente si usar datos reales o guardados
-def generate_advanced_nutritional_excel(menu_id: int, nivel_escolar_id: str = None, use_saved_analysis: bool = True) -> io.BytesIO:
-    """
-    Genera Excel nutricional avanzado con detección automática de datos.
+    Función de compatibilidad - usa el servicio de análisis.
 
     Args:
         menu_id: ID del menú
         nivel_escolar_id: ID del nivel escolar (opcional)
-        use_saved_analysis: Si True, intenta usar análisis guardado primero
+        use_saved_analysis: Ignorado, siempre usa servicio de análisis
 
     Returns:
-        BytesIO con el archivo Excel generado
+        BytesIO con el archivo Excel
     """
     generator = NutritionalAnalysisExcelGenerator()
-
-    if use_saved_analysis and nivel_escolar_id:
-        # Intentar generar desde análisis guardado
-        try:
-            return generator.generate_excel_from_saved_analysis(menu_id, nivel_escolar_id)
-        except Exception:
-            # Si falla, usar datos reales
-            pass
-
-    # Usar datos reales como fallback
-    return generator.generate_excel_from_real_data(menu_id, nivel_escolar_id)
+    return generator.generate_from_analysis_service(menu_id, nivel_escolar_id)
 
 
-# Función para generar Excel usando directamente el servicio de análisis
-def generate_excel_from_service(menu_id: int, nivel_escolar_id: str = None) -> io.BytesIO:
+def generate_excel_from_service(
+    menu_id: int,
+    nivel_escolar_id: Optional[str] = None
+) -> io.BytesIO:
     """
-    Genera Excel usando directamente el servicio de análisis nutricional existente.
+    Genera Excel usando el servicio de análisis nutricional.
+
+    Función de compatibilidad.
 
     Args:
         menu_id: ID del menú
         nivel_escolar_id: ID del nivel escolar (opcional)
 
     Returns:
-        BytesIO con el archivo Excel generado
+        BytesIO con el archivo Excel
     """
     generator = NutritionalAnalysisExcelGenerator()
-    return generator.generate_excel_from_service_analysis(menu_id, nivel_escolar_id)
+    return generator.generate_from_analysis_service(menu_id, nivel_escolar_id)
