@@ -718,6 +718,33 @@ class NutritionalAnalysisExcelGenerator:
 
         # MENÚ No. (fila 8) - SIN COMBINAR
 
+        # Combinar filas adicionales (A:G)
+        # Fila 19
+        ws.merge_cells('A19:G19')
+
+        # Fila 21
+        ws.merge_cells('A21:G21')
+
+        # Fila 22
+        ws.merge_cells('A22:G22')
+
+        # Combinar filas con dos rangos (A:C y D:F)
+        # Fila 27
+        ws.merge_cells('A27:C27')
+        ws.merge_cells('D27:F27')
+
+        # Fila 28
+        ws.merge_cells('A28:C28')
+        ws.merge_cells('D28:F28')
+
+        # Fila 30
+        ws.merge_cells('A30:C30')
+        ws.merge_cells('D30:F30')
+
+        # Fila 31
+        ws.merge_cells('A31:C31')
+        ws.merge_cells('D31:F31')
+
     # =================================================================
     # MÉTODOS AUXILIARES
     # =================================================================
