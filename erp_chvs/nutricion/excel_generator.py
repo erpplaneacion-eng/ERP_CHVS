@@ -40,9 +40,9 @@ class ExcelLayout:
     TITLE_ROW = 1
     ADMIN_START_ROW = 2
     ADMIN_END_ROW = 8
-    HEADER_START_ROW = 8
-    HEADER_END_ROW = 11
-    DATA_START_ROW = 12
+    HEADER_START_ROW = 10
+    HEADER_END_ROW = 10
+    DATA_START_ROW = 11
 
     # Columnas
     COL_COMPONENTE = 1
@@ -196,7 +196,7 @@ class NutritionalAnalysisExcelGenerator:
             self._add_calculations_section(ws, current_row, nivel_data)
 
             # Firmas
-            self._add_signatures(ws, current_row + 10)
+            self._add_signatures(ws, current_row + 6)
 
             # Formateo final
             self._apply_formatting(ws)
@@ -414,23 +414,16 @@ class NutritionalAnalysisExcelGenerator:
                     ingrediente.get('peso_neto_base', 0)
 
                 # Valores nutricionales
-                valores = ingrediente.get('valores_por_100g', {})
-                factor = self._to_float(ingrediente.get('peso_neto_base', 100)) / 100.0
-
-                ws.cell(current_row, self.layout.COL_CALORIAS).value = \
-                    self._to_float(valores.get('calorias_kcal', 0)) * factor
-                ws.cell(current_row, self.layout.COL_PROTEINA).value = \
-                    self._to_float(valores.get('proteina_g', 0)) * factor
-                ws.cell(current_row, self.layout.COL_GRASA).value = \
-                    self._to_float(valores.get('grasa_g', 0)) * factor
-                ws.cell(current_row, self.layout.COL_CHO).value = \
-                    self._to_float(valores.get('cho_g', 0)) * factor
-                ws.cell(current_row, self.layout.COL_CALCIO).value = \
-                    self._to_float(valores.get('calcio_mg', 0)) * factor
-                ws.cell(current_row, self.layout.COL_HIERRO).value = \
-                    self._to_float(valores.get('hierro_mg', 0)) * factor
-                ws.cell(current_row, self.layout.COL_SODIO).value = \
-                    self._to_float(valores.get('sodio_mg', 0)) * factor
+                if 'valores_finales_guardados' in ingrediente:
+                    # Usar los valores finales que ya fueron calculados y guardados
+                    valores_finales = ingrediente['valores_finales_guardados']
+                    ws.cell(current_row, self.layout.COL_CALORIAS).value = valores_finales.get('calorias', 0)
+                    ws.cell(current_row, self.layout.COL_PROTEINA).value = valores_finales.get('proteina', 0)
+                    ws.cell(current_row, self.layout.COL_GRASA).value = valores_finales.get('grasa', 0)
+                    ws.cell(current_row, self.layout.COL_CHO).value = valores_finales.get('cho', 0)
+                    ws.cell(current_row, self.layout.COL_CALCIO).value = valores_finales.get('calcio', 0)
+                    ws.cell(current_row, self.layout.COL_HIERRO).value = valores_finales.get('hierro', 0)
+                    ws.cell(current_row, self.layout.COL_SODIO).value = valores_finales.get('sodio', 0)
 
                 current_row += 1
 
@@ -545,7 +538,7 @@ class NutritionalAnalysisExcelGenerator:
         self._add_totals_row(ws, total_row, nivel_data)
 
         # Recomendaciones
-        req_row = total_row + 2
+        req_row = total_row + 1
         self._add_recommendations_row(ws, req_row, nivel_data)
 
         # % Adecuación (calculado automáticamente)
@@ -562,6 +555,7 @@ class NutritionalAnalysisExcelGenerator:
         ws.cell(row, 1).value = "TOTAL MENÚ"
         ws.cell(row, 1).font = Font(bold=True)
         ws.cell(row, 1).fill = self.total_fill
+        ws.merge_cells(f'A{row}:G{row}')
 
         # Valores totales
         totales = nivel_data.get('totales', {})
@@ -581,6 +575,7 @@ class NutritionalAnalysisExcelGenerator:
         ws.cell(row, 1).value = "RECOMENDACIÓN"
         ws.cell(row, 1).font = Font(bold=True)
         ws.cell(row, 1).fill = self.header_fill
+        ws.merge_cells(f'A{row}:G{row}')
 
         # Valores recomendados
         requerimientos = nivel_data.get('requerimientos', {})
@@ -602,6 +597,7 @@ class NutritionalAnalysisExcelGenerator:
         """Agregar fila de % adecuación con fórmulas"""
         ws.cell(row, 1).value = "% ADECUACIÓN"
         ws.cell(row, 1).font = Font(bold=True)
+        ws.merge_cells(f'A{row}:G{row}')
 
         for col in range(self.layout.COL_CALORIAS, self.layout.COL_SODIO + 1):
             col_letter = get_column_letter(col)
@@ -655,27 +651,35 @@ class NutritionalAnalysisExcelGenerator:
         # Nutricionista que elabora
         ws.cell(row=row, column=1).value = "NOMBRE NUTRICIONISTA - DIETISTA QUE ELABORA EL ANÁLISIS"
         ws.cell(row=row, column=1).font = Font(bold=True)
-        ws.cell(row=row, column=4).value = "SARA ISABEL DIAZ MARQUEZ"
+        ws.cell(row=row, column=5).value = "SARA ISABEL DIAZ MARQUEZ"
+        ws.merge_cells(f'A{row}:D{row}')
 
         # Matrícula profesional
         row += 1
         ws.cell(row=row, column=1).value = "FIRMA"
         ws.cell(row=row, column=1).font = Font(bold=True)
-        ws.cell(row=row, column=4).value = "MATRÍCULA PROFESIONAL"
-        ws.cell(row=row, column=7).value = "1107089938"
+        ws.merge_cells(f'A{row}:C{row}')
+
+        ws.cell(row=row, column=8).value = "MATRÍCULA PROFESIONAL"
+        ws.cell(row=row, column=11).value = "1107089938"
+        ws.merge_cells(f'H{row}:J{row}')
 
         # Nutricionista que revisa
         row += 2
         ws.cell(row=row, column=1).value = "NOMBRE NUTRICIONISTA - DIETISTA QUE REVISA Y APRUEBA EL ANÁLISIS POR PARTE DE LA SEM"
         ws.cell(row=row, column=1).font = Font(bold=True)
-        ws.cell(row=row, column=4).value = "GABRIELA GIRALDO MARTINEZ"
+        ws.cell(row=row, column=5).value = "GABRIELA GIRALDO MARTINEZ"
+        ws.merge_cells(f'A{row}:D{row}')
 
         # Matrícula profesional (revisa)
         row += 1
         ws.cell(row=row, column=1).value = "FIRMA"
         ws.cell(row=row, column=1).font = Font(bold=True)
-        ws.cell(row=row, column=4).value = "MATRÍCULA PROFESIONAL"
-        ws.cell(row=row, column=7).value = "1005964870"
+        ws.merge_cells(f'A{row}:C{row}')
+
+        ws.cell(row=row, column=8).value = "MATRÍCULA PROFESIONAL"
+        ws.cell(row=row, column=11).value = "1005964870"
+        ws.merge_cells(f'H{row}:J{row}')
 
     def _apply_formatting(self, ws: Worksheet) -> None:
         """Aplicar formateo profesional"""
@@ -716,34 +720,12 @@ class NutritionalAnalysisExcelGenerator:
         # NIVEL (fila 7)
         ws.merge_cells('A7:C7')
 
-        # MENÚ No. (fila 8) - SIN COMBINAR
+        # MENÚ No. (fila 8)
+        ws.merge_cells('A8:C8')
 
-        # Combinar filas adicionales (A:G)
-        # Fila 19
-        ws.merge_cells('A19:G19')
+        # Combinar filas adicionales (A:G) - SE ELIMINAN MERGES ESTÁTICOS PROBLEMÁTICOS
 
-        # Fila 21
-        ws.merge_cells('A21:G21')
-
-        # Fila 22
-        ws.merge_cells('A22:G22')
-
-        # Combinar filas con dos rangos (A:C y D:F)
-        # Fila 27
-        ws.merge_cells('A27:C27')
-        ws.merge_cells('D27:F27')
-
-        # Fila 28
-        ws.merge_cells('A28:C28')
-        ws.merge_cells('D28:F28')
-
-        # Fila 30
-        ws.merge_cells('A30:C30')
-        ws.merge_cells('D30:F30')
-
-        # Fila 31
-        ws.merge_cells('A31:C31')
-        ws.merge_cells('D31:F31')
+        # Combinar filas con dos rangos (A:C y D:F) - SE ELIMINAN MERGES ESTÁTICOS PROBLEMÁTICOS
 
     # =================================================================
     # MÉTODOS AUXILIARES
