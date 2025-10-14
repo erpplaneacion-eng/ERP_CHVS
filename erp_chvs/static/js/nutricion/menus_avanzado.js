@@ -920,14 +920,15 @@ function toggleIngredientes(prepId) {
 
 function crearAccordionNivelEscolar(nivel, index) {
     const cardId = `collapse-${index}`;
-    
+    const isOpen = nivel.es_programa_actual;
+
     return `
         <div class="card nivel-card">
             <div class="card-header" id="heading-${index}">
                 <h6 class="mb-0">
-                    <button class="btn btn-link nivel-header-btn ${index === 0 ? '' : 'collapsed'}" type="button" 
+                    <button class="btn btn-link nivel-header-btn ${isOpen ? '' : 'collapsed'}" type="button" 
                             data-target="#${cardId}" 
-                            aria-expanded="${index === 0 ? 'true' : 'false'}" aria-controls="${cardId}">
+                            aria-expanded="${isOpen ? 'true' : 'false'}" aria-controls="${cardId}">
                         <i class="fas fa-graduation-cap"></i>
                         ${nivel.nivel_escolar.nombre}
                         <div class="nivel-summary">
@@ -935,12 +936,12 @@ function crearAccordionNivelEscolar(nivel, index) {
                             <span class="badge badge-success">${nivel.totales.peso_neto_total.toFixed(0)}g neto</span>
                             <span class="badge badge-warning">${nivel.totales.peso_bruto_total.toFixed(0)}g bruto</span>
                         </div>
-                        <i class="fas fa-chevron-down toggle-icon" style="transform: ${index === 0 ? 'rotate(180deg)' : 'rotate(0deg)'}"></i>
+                        <i class="fas fa-chevron-down toggle-icon" style="transform: ${isOpen ? 'rotate(180deg)' : 'rotate(0deg)'}"></i>
                     </button>
                 </h6>
             </div>
             
-            <div id="${cardId}" class="collapse ${index === 0 ? 'show' : ''}" 
+            <div id="${cardId}" class="collapse ${isOpen ? 'show' : ''}" 
                  aria-labelledby="heading-${index}" data-parent="#nivelesAccordion">
                 <div class="card-body">
                     <div class="nivel-totales mb-3">
@@ -1150,8 +1151,42 @@ function crearPreparacion(preparacion, nivelIndex, prepIndex) {
 }
 
 function crearFilaIngrediente(ingrediente, nivelIndex, prepIndex, ingIndex) {
+    console.log("Datos del ingrediente recibido:", ingrediente); // DEBUGGING
     const inputId = `peso-${nivelIndex}-${prepIndex}-${ingIndex}`;
-    const valores = ingrediente.valores_por_100g;
+    const pesoNeto = ingrediente.peso_neto_base;
+    let nutrientesFinales;
+    let baseNutrientesPor100g;
+
+    if (ingrediente.valores_finales_guardados && pesoNeto > 0) {
+        console.log("-> Usando valores finales guardados."); // DEBUGGING
+        // Use the final, saved values directly for display
+        nutrientesFinales = ingrediente.valores_finales_guardados;
+        
+        // Back-calculate the "per 100g" values to populate the data-* attributes correctly
+        baseNutrientesPor100g = {
+            calorias_kcal: (nutrientesFinales.calorias / pesoNeto) * 100,
+            proteina_g: (nutrientesFinales.proteina / pesoNeto) * 100,
+            grasa_g: (nutrientesFinales.grasa / pesoNeto) * 100,
+            cho_g: (nutrientesFinales.cho / pesoNeto) * 100,
+            calcio_mg: (nutrientesFinales.calcio / pesoNeto) * 100,
+            hierro_mg: (nutrientesFinales.hierro / pesoNeto) * 100,
+            sodio_mg: (nutrientesFinales.sodio / pesoNeto) * 100,
+        };
+    } else {
+        console.log("-> Recalculando desde datos ICBF (fallback)."); // DEBUGGING
+        // Fallback to using ICBF data if no saved values or peso is zero
+        baseNutrientesPor100g = ingrediente.valores_por_100g;
+        const factor = pesoNeto / 100;
+        nutrientesFinales = {
+            calorias: baseNutrientesPor100g.calorias_kcal * factor,
+            proteina: baseNutrientesPor100g.proteina_g * factor,
+            grasa: baseNutrientesPor100g.grasa_g * factor,
+            cho: baseNutrientesPor100g.cho_g * factor,
+            calcio: baseNutrientesPor100g.calcio_mg * factor,
+            hierro: baseNutrientesPor100g.hierro_mg * factor,
+            sodio: baseNutrientesPor100g.sodio_mg * factor,
+        };
+    }
 
     return `
         <tr class="ingrediente-row"
@@ -1170,13 +1205,13 @@ function crearFilaIngrediente(ingrediente, nivelIndex, prepIndex, ingIndex) {
                        step="1"
                        data-base="${ingrediente.peso_neto_base}"
                        data-parte-comestible="${ingrediente.parte_comestible}"
-                       data-calorias="${valores.calorias_kcal}"
-                       data-proteina="${valores.proteina_g}"
-                       data-grasa="${valores.grasa_g}"
-                       data-cho="${valores.cho_g}"
-                       data-calcio="${valores.calcio_mg}"
-                       data-hierro="${valores.hierro_mg}"
-                       data-sodio="${valores.sodio_mg}"
+                       data-calorias="${baseNutrientesPor100g.calorias_kcal}"
+                       data-proteina="${baseNutrientesPor100g.proteina_g}"
+                       data-grasa="${baseNutrientesPor100g.grasa_g}"
+                       data-cho="${baseNutrientesPor100g.cho_g}"
+                       data-calcio="${baseNutrientesPor100g.calcio_mg}"
+                       data-hierro="${baseNutrientesPor100g.hierro_mg}"
+                       data-sodio="${baseNutrientesPor100g.sodio_mg}"
                        data-prep-id="${ingrediente.id_preparacion_real || prepIndex}"
                        data-ing-id="${ingrediente.id_ingrediente || ingrediente.id_ingrediente_siesa || ingIndex}">
             </td>
@@ -1185,25 +1220,25 @@ function crearFilaIngrediente(ingrediente, nivelIndex, prepIndex, ingIndex) {
             </td>
             <td class="parte-comestible">${ingrediente.parte_comestible}%</td>
             <td class="nutriente-cal" id="cal-${nivelIndex}-${prepIndex}-${ingIndex}">
-                ${valores.calorias_kcal.toFixed(1)}
+                ${nutrientesFinales.calorias.toFixed(1)}
             </td>
             <td class="nutriente-prot" id="prot-${nivelIndex}-${prepIndex}-${ingIndex}">
-                ${valores.proteina_g.toFixed(1)}
+                ${nutrientesFinales.proteina.toFixed(1)}
             </td>
             <td class="nutriente-grasa" id="grasa-${nivelIndex}-${prepIndex}-${ingIndex}">
-                ${valores.grasa_g.toFixed(1)}
+                ${nutrientesFinales.grasa.toFixed(1)}
             </td>
             <td class="nutriente-cho" id="cho-${nivelIndex}-${prepIndex}-${ingIndex}">
-                ${valores.cho_g.toFixed(1)}
+                ${nutrientesFinales.cho.toFixed(1)}
             </td>
             <td class="nutriente-calcio" id="calcio-${nivelIndex}-${prepIndex}-${ingIndex}">
-                ${valores.calcio_mg.toFixed(1)}
+                ${nutrientesFinales.calcio.toFixed(1)}
             </td>
             <td class="nutriente-hierro" id="hierro-${nivelIndex}-${prepIndex}-${ingIndex}">
-                ${valores.hierro_mg.toFixed(1)}
+                ${nutrientesFinales.hierro.toFixed(1)}
             </td>
             <td class="nutriente-sodio" id="sodio-${nivelIndex}-${prepIndex}-${ingIndex}">
-                ${valores.sodio_mg.toFixed(1)}
+                ${nutrientesFinales.sodio.toFixed(1)}
             </td>
         </tr>
     `;
