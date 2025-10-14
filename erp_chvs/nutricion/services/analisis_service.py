@@ -246,161 +246,84 @@ class AnalisisNutricionalService:
         # Crear copia profunda para este nivel
         preparaciones_nivel = copy.deepcopy(preparaciones_data)
 
-                # Cargar análisis guardado si existe (pesos y valores)
-
-                if analisis_guardado:
-
-                    AnalisisNutricionalService._aplicar_analisis_guardado(
-
-                        preparaciones_nivel,
-
-                        analisis_guardado
-
-                    )
-
-        
-
-                # Calcular totales
-
-                totales = CalculoService.calcular_totales_ingredientes(
-
-                    [ing for prep in preparaciones_nivel for ing in prep['ingredientes']]
-
-                )
-
-        
-
-                # Preparar requerimientos
-
-                requerimientos_dict = {
-
-                    'calorias_kcal': float(requerimiento.calorias_kcal),
-
-                    'proteina_g': float(requerimiento.proteina_g),
-
-                    'grasa_g': float(requerimiento.grasa_g),
-
-                    'cho_g': float(requerimiento.cho_g),
-
-                    'calcio_mg': float(requerimiento.calcio_mg),
-
-                    'hierro_mg': float(requerimiento.hierro_mg),
-
-                    'sodio_mg': float(requerimiento.sodio_mg)
-
-                }
-
-        
-
-                # Calcular porcentajes
-
-                porcentajes = CalculoService.calcular_todos_porcentajes(totales, requerimientos_dict)
-
-        
-
-                return {
-
-                    'nivel_escolar': {
-
-                        'id': nivel_escolar.id_grado_escolar_uapa,
-
-                        'nombre': nivel_escolar.nivel_escolar_uapa,
-
-                        'rango_edades': getattr(nivel_escolar, 'rango_edades', '')
-
-                    },
-
-                    'es_programa_actual': es_programa_actual,
-
-                    'requerimientos': requerimientos_dict,
-
-                    'totales': totales,
-
-                    'porcentajes_adecuacion': porcentajes,
-
-                    'preparaciones': preparaciones_nivel
-
-                }
-
-        
-
-            @staticmethod
-
-            def _aplicar_analisis_guardado(
-
-                preparaciones_nivel: List[Dict],
-
-                analisis_guardado: TablaAnalisisNutricionalMenu
-
-            ) -> None:
-
-                """
-
-                Aplica el análisis guardado (pesos y nutrientes) a los ingredientes.
-
-        
-
-                Modifica preparaciones_nivel in-place.
-
-        
-
-                Args:
-
-                    preparaciones_nivel: Lista de preparaciones (se modifica)
-
-                    analisis_guardado: Análisis con datos guardados
-
-                """
-
-                for prep in preparaciones_nivel:
-
-                    for ing in prep['ingredientes']:
-
-                        if ing.get('alimento_encontrado', True):
-
-                            # Buscar ingrediente guardado
-
-                            ingrediente_guardado = TablaIngredientesPorNivel.objects.filter(
-
-                                id_analisis=analisis_guardado,
-
-                                id_preparacion__id_preparacion=prep['id_preparacion'],
-
-                                id_ingrediente_siesa__id_ingrediente_siesa=ing['id_ingrediente']
-
-                            ).first()
-
-        
-
-                            if ingrediente_guardado:
-
-                                # Aplicar pesos guardados
-
-                                ing['peso_neto_base'] = float(ingrediente_guardado.peso_neto)
-
-                                ing['peso_bruto_base'] = float(ingrediente_guardado.peso_bruto)
-
-        
-
-                                # Adjuntar los valores nutricionales finales que fueron guardados
-
-                                ing['valores_finales_guardados'] = {
-
-                                    'calorias': float(ingrediente_guardado.calorias),
-
-                                    'proteina': float(ingrediente_guardado.proteina),
-
-                                    'grasa': float(ingrediente_guardado.grasa),
-
-                                    'cho': float(ingrediente_guardado.cho),
-
-                                    'calcio': float(ingrediente_guardado.calcio),
-
-                                    'hierro': float(ingrediente_guardado.hierro),
-
-                                    'sodio': float(ingrediente_guardado.sodio),
-
-                                }
+        # Cargar análisis guardado si existe (pesos y valores)
+        if analisis_guardado:
+            AnalisisNutricionalService._aplicar_analisis_guardado(
+                preparaciones_nivel,
+                analisis_guardado
+            )
+
+        # Calcular totales
+        totales = CalculoService.calcular_totales_ingredientes(
+            [ing for prep in preparaciones_nivel for ing in prep['ingredientes']]
+        )
+
+        # Preparar requerimientos
+        requerimientos_dict = {
+            'calorias_kcal': float(requerimiento.calorias_kcal),
+            'proteina_g': float(requerimiento.proteina_g),
+            'grasa_g': float(requerimiento.grasa_g),
+            'cho_g': float(requerimiento.cho_g),
+            'calcio_mg': float(requerimiento.calcio_mg),
+            'hierro_mg': float(requerimiento.hierro_mg),
+            'sodio_mg': float(requerimiento.sodio_mg)
+        }
+
+        # Calcular porcentajes
+        porcentajes = CalculoService.calcular_todos_porcentajes(totales, requerimientos_dict)
+
+        return {
+            'nivel_escolar': {
+                'id': nivel_escolar.id_grado_escolar_uapa,
+                'nombre': nivel_escolar.nivel_escolar_uapa,
+                'rango_edades': getattr(nivel_escolar, 'rango_edades', '')
+            },
+            'es_programa_actual': es_programa_actual,
+            'requerimientos': requerimientos_dict,
+            'totales': totales,
+            'porcentajes_adecuacion': porcentajes,
+            'preparaciones': preparaciones_nivel
+        }
+
+    @staticmethod
+    def _aplicar_analisis_guardado(
+        preparaciones_nivel: List[Dict],
+        analisis_guardado: TablaAnalisisNutricionalMenu
+    ) -> None:
+        """
+        Aplica el análisis guardado (pesos y nutrientes) a los ingredientes.
+
+        Modifica preparaciones_nivel in-place.
+
+        Args:
+            preparaciones_nivel: Lista de preparaciones (se modifica)
+            analisis_guardado: Análisis con datos guardados
+        """
+        for prep in preparaciones_nivel:
+            for ing in prep['ingredientes']:
+                if ing.get('alimento_encontrado', True):
+                    # Buscar ingrediente guardado
+                    ingrediente_guardado = TablaIngredientesPorNivel.objects.filter(
+                        id_analisis=analisis_guardado,
+                        id_preparacion__id_preparacion=prep['id_preparacion'],
+                        id_ingrediente_siesa__id_ingrediente_siesa=ing['id_ingrediente']
+                    ).first()
+
+                    if ingrediente_guardado:
+                        # Aplicar pesos guardados
+                        ing['peso_neto_base'] = float(ingrediente_guardado.peso_neto)
+                        ing['peso_bruto_base'] = float(ingrediente_guardado.peso_bruto)
+
+                        # Adjuntar los valores nutricionales finales que fueron guardados
+                        ing['valores_finales_guardados'] = {
+                            'calorias': float(ingrediente_guardado.calorias),
+                            'proteina': float(ingrediente_guardado.proteina),
+                            'grasa': float(ingrediente_guardado.grasa),
+                            'cho': float(ingrediente_guardado.cho),
+                            'calcio': float(ingrediente_guardado.calcio),
+                            'hierro': float(ingrediente_guardado.hierro),
+                            'sodio': float(ingrediente_guardado.sodio),
+                        }
 
     @staticmethod
     def guardar_analisis(
