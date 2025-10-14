@@ -73,20 +73,7 @@ class CalculoService:
     ) -> Dict[str, float]:
         """
         Suma los valores nutricionales de todos los ingredientes.
-
-        Args:
-            ingredientes: Lista de dicts con valores nutricionales
-
-        Returns:
-            Dict con totales de todos los nutrientes
-
-        Example:
-            >>> ingredientes = [
-            ...     {'calorias': 100, 'proteina': 5, 'peso_neto': 50},
-            ...     {'calorias': 200, 'proteina': 10, 'peso_neto': 100}
-            ... ]
-            >>> CalculoService.calcular_totales_ingredientes(ingredientes)
-            {'calorias': 300.0, 'proteina': 15.0, 'peso_neto': 150.0, ...}
+        Prioritiza el uso de valores pre-calculados si existen.
         """
         totales = {
             'calorias_kcal': 0.0,
@@ -102,18 +89,33 @@ class CalculoService:
 
         for ing in ingredientes:
             if ing.get('alimento_encontrado', True):
-                valores = ing.get('valores_por_100g', {})
-                peso_neto = ing.get('peso_neto_base', 0)
-                factor = peso_neto / 100
+                # Revisa si existen valores finales pre-calculados de un análisis guardado
+                if 'valores_finales_guardados' in ing:
+                    # Si existen, úsalos directamente
+                    valores_finales = ing['valores_finales_guardados']
+                    totales['calorias_kcal'] += valores_finales.get('calorias', 0)
+                    totales['proteina_g'] += valores_finales.get('proteina', 0)
+                    totales['grasa_g'] += valores_finales.get('grasa', 0)
+                    totales['cho_g'] += valores_finales.get('cho', 0)
+                    totales['calcio_mg'] += valores_finales.get('calcio', 0)
+                    totales['hierro_mg'] += valores_finales.get('hierro', 0)
+                    totales['sodio_mg'] += valores_finales.get('sodio', 0)
+                else:
+                    # Si no, recalcula desde los datos base del ICBF
+                    valores = ing.get('valores_por_100g', {})
+                    peso_neto = ing.get('peso_neto_base', 0)
+                    factor = peso_neto / 100
 
-                totales['calorias_kcal'] += valores.get('calorias_kcal', 0) * factor
-                totales['proteina_g'] += valores.get('proteina_g', 0) * factor
-                totales['grasa_g'] += valores.get('grasa_g', 0) * factor
-                totales['cho_g'] += valores.get('cho_g', 0) * factor
-                totales['calcio_mg'] += valores.get('calcio_mg', 0) * factor
-                totales['hierro_mg'] += valores.get('hierro_mg', 0) * factor
-                totales['sodio_mg'] += valores.get('sodio_mg', 0) * factor
-                totales['peso_neto_total'] += peso_neto
+                    totales['calorias_kcal'] += valores.get('calorias_kcal', 0) * factor
+                    totales['proteina_g'] += valores.get('proteina_g', 0) * factor
+                    totales['grasa_g'] += valores.get('grasa_g', 0) * factor
+                    totales['cho_g'] += valores.get('cho_g', 0) * factor
+                    totales['calcio_mg'] += valores.get('calcio_mg', 0) * factor
+                    totales['hierro_mg'] += valores.get('hierro_mg', 0) * factor
+                    totales['sodio_mg'] += valores.get('sodio_mg', 0) * factor
+                
+                # Sumar los pesos siempre, independientemente de la ruta de cálculo de nutrientes
+                totales['peso_neto_total'] += ing.get('peso_neto_base', 0)
                 totales['peso_bruto_total'] += ing.get('peso_bruto_base', 0)
 
         return totales

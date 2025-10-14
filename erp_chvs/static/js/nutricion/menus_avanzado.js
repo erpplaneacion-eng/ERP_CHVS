@@ -1151,14 +1151,12 @@ function crearPreparacion(preparacion, nivelIndex, prepIndex) {
 }
 
 function crearFilaIngrediente(ingrediente, nivelIndex, prepIndex, ingIndex) {
-    console.log("Datos del ingrediente recibido:", ingrediente); // DEBUGGING
     const inputId = `peso-${nivelIndex}-${prepIndex}-${ingIndex}`;
     const pesoNeto = ingrediente.peso_neto_base;
     let nutrientesFinales;
     let baseNutrientesPor100g;
 
     if (ingrediente.valores_finales_guardados && pesoNeto > 0) {
-        console.log("-> Usando valores finales guardados."); // DEBUGGING
         // Use the final, saved values directly for display
         nutrientesFinales = ingrediente.valores_finales_guardados;
         
@@ -1173,7 +1171,6 @@ function crearFilaIngrediente(ingrediente, nivelIndex, prepIndex, ingIndex) {
             sodio_mg: (nutrientesFinales.sodio / pesoNeto) * 100,
         };
     } else {
-        console.log("-> Recalculando desde datos ICBF (fallback)."); // DEBUGGING
         // Fallback to using ICBF data if no saved values or peso is zero
         baseNutrientesPor100g = ingrediente.valores_por_100g;
         const factor = pesoNeto / 100;
