@@ -200,6 +200,7 @@ class NutritionalAnalysisExcelGenerator:
 
             # Formateo final
             self._apply_formatting(ws)
+            self._apply_page_setup(ws)
 
             # Combinar celdas AL FINAL (después de todo el formateo)
             self._merge_cells(ws)
@@ -265,6 +266,7 @@ class NutritionalAnalysisExcelGenerator:
 
             # Formateo
             self._apply_formatting(ws)
+            self._apply_page_setup(ws)
 
             # Combinar celdas AL FINAL (después de todo el formateo)
             self._merge_cells(ws)
@@ -689,6 +691,14 @@ class NutritionalAnalysisExcelGenerator:
 
         # Bordes y alineación deshabilitados temporalmente para debug
         # TODO: Re-habilitar cuando se resuelva el problema de MergedCell
+
+    def _apply_page_setup(self, ws: Worksheet) -> None:
+        """Configura la página para impresión."""
+        ws.page_setup.orientation = 'landscape'
+        ws.page_setup.paper_size = 9  # ID para tamaño Carta
+        ws.page_setup.fitToPage = True
+        ws.page_setup.fitToWidth = 1
+        ws.page_setup.fitToHeight = 1
 
     def _merge_cells(self, ws: Worksheet) -> None:
         """
