@@ -384,50 +384,61 @@ class NutritionalAnalysisExcelGenerator:
         nivel_data: Dict
     ) -> int:
         """
-        Poblar ingredientes desde datos de análisis.
+        Poblar ingredientes desde datos de análisis, combinando celdas para preparaciones.
 
         Returns:
             Última fila usada
         """
         current_row = self.layout.DATA_START_ROW
+        center_align = Alignment(vertical='center', horizontal='center', wrap_text=True)
 
         for preparacion in nivel_data.get('preparaciones', []):
-            componente = preparacion.get('componente', 'SIN COMPONENTE')
-            grupo_alimentos = preparacion.get('grupo_alimentos', 'SIN GRUPO')
+            start_row_for_prep = current_row
+            ingredients_in_prep = [ing for ing in preparacion.get('ingredientes', []) if ing.get('alimento_encontrado')]
+            num_ingredients = len(ingredients_in_prep)
 
-            for ingrediente in preparacion.get('ingredientes', []):
-                if not ingrediente.get('alimento_encontrado'):
-                    continue
+            if num_ingredients == 0:
+                continue
 
-                # Datos básicos
-                ws.cell(current_row, self.layout.COL_COMPONENTE).value = componente
-                ws.cell(current_row, self.layout.COL_GRUPO).value = grupo_alimentos
-                ws.cell(current_row, self.layout.COL_PREPARACION).value = \
-                    preparacion.get('nombre', '')
-                ws.cell(current_row, self.layout.COL_INGREDIENTE).value = \
-                    ingrediente.get('nombre', '')
-                ws.cell(current_row, self.layout.COL_CODIGO).value = \
-                    ingrediente.get('codigo_icbf', '')
+            # Escribir datos compartidos en la primera fila de la preparación
+            ws.cell(row=start_row_for_prep, column=self.layout.COL_COMPONENTE).value = preparacion.get('componente', 'SIN COMPONENTE')
+            ws.cell(row=start_row_for_prep, column=self.layout.COL_GRUPO).value = preparacion.get('grupo_alimentos', 'SIN GRUPO')
+            ws.cell(row=start_row_for_prep, column=self.layout.COL_PREPARACION).value = preparacion.get('nombre', '')
 
-                # Pesos
-                ws.cell(current_row, self.layout.COL_PESO_BRUTO).value = \
-                    ingrediente.get('peso_bruto_base', 0)
-                ws.cell(current_row, self.layout.COL_PESO_NETO).value = \
-                    ingrediente.get('peso_neto_base', 0)
+            # Escribir los datos de cada ingrediente
+            for ingrediente in ingredients_in_prep:
+                # Datos específicos del ingrediente
+                ws.cell(row=current_row, column=self.layout.COL_INGREDIENTE).value = ingrediente.get('nombre', '')
+                ws.cell(row=current_row, column=self.layout.COL_CODIGO).value = ingrediente.get('codigo_icbf', '')
+                ws.cell(row=current_row, column=self.layout.COL_PESO_BRUTO).value = ingrediente.get('peso_bruto_base', 0)
+                ws.cell(row=current_row, column=self.layout.COL_PESO_NETO).value = ingrediente.get('peso_neto_base', 0)
 
                 # Valores nutricionales
                 if 'valores_finales_guardados' in ingrediente:
-                    # Usar los valores finales que ya fueron calculados y guardados
                     valores_finales = ingrediente['valores_finales_guardados']
-                    ws.cell(current_row, self.layout.COL_CALORIAS).value = valores_finales.get('calorias', 0)
-                    ws.cell(current_row, self.layout.COL_PROTEINA).value = valores_finales.get('proteina', 0)
-                    ws.cell(current_row, self.layout.COL_GRASA).value = valores_finales.get('grasa', 0)
-                    ws.cell(current_row, self.layout.COL_CHO).value = valores_finales.get('cho', 0)
-                    ws.cell(current_row, self.layout.COL_CALCIO).value = valores_finales.get('calcio', 0)
-                    ws.cell(current_row, self.layout.COL_HIERRO).value = valores_finales.get('hierro', 0)
-                    ws.cell(current_row, self.layout.COL_SODIO).value = valores_finales.get('sodio', 0)
-
+                    ws.cell(row=current_row, column=self.layout.COL_CALORIAS).value = valores_finales.get('calorias', 0)
+                    ws.cell(row=current_row, column=self.layout.COL_PROTEINA).value = valores_finales.get('proteina', 0)
+                    ws.cell(row=current_row, column=self.layout.COL_GRASA).value = valores_finales.get('grasa', 0)
+                    ws.cell(row=current_row, column=self.layout.COL_CHO).value = valores_finales.get('cho', 0)
+                    ws.cell(row=current_row, column=self.layout.COL_CALCIO).value = valores_finales.get('calcio', 0)
+                    ws.cell(row=current_row, column=self.layout.COL_HIERRO).value = valores_finales.get('hierro', 0)
+                    ws.cell(row=current_row, column=self.layout.COL_SODIO).value = valores_finales.get('sodio', 0)
+                
                 current_row += 1
+
+            # Combinar celdas si la preparación tiene más de un ingrediente
+            if num_ingredients > 1:
+                end_row_for_prep = current_row - 1
+                cols_to_merge = [
+                    self.layout.COL_COMPONENTE,
+                    self.layout.COL_GRUPO,
+                    self.layout.COL_PREPARACION
+                ]
+                for col_idx in cols_to_merge:
+                    ws.merge_cells(start_row=start_row_for_prep, start_column=col_idx, end_row=end_row_for_prep, end_column=col_idx)
+                    # Aplicar alineación a la celda superior del rango combinado
+                    cell_to_align = ws.cell(row=start_row_for_prep, column=col_idx)
+                    cell_to_align.alignment = center_align
 
         return current_row - 1  # Última fila con datos
 
@@ -438,53 +449,77 @@ class NutritionalAnalysisExcelGenerator:
         menu_id: int
     ) -> int:
         """
-        Poblar ingredientes consultando la base de datos.
+        Poblar ingredientes desde la BD, combinando celdas para preparaciones.
 
         Returns:
             Última fila usada
         """
         current_row = self.layout.DATA_START_ROW
+        center_align = Alignment(vertical='center', horizontal='center', wrap_text=True)
 
         for preparacion in preparaciones:
-            componente = preparacion.id_componente.componente \
-                if preparacion.id_componente else "SIN COMPONENTE"
+            start_row_for_prep = current_row
+            
+            componente = preparacion.id_componente.componente if preparacion.id_componente else "SIN COMPONENTE"
             grupo_alimentos = (
                 preparacion.id_componente.id_grupo_alimentos.grupo_alimentos
                 if preparacion.id_componente and preparacion.id_componente.id_grupo_alimentos
                 else "SIN GRUPO"
             )
 
-            ingredientes = TablaPreparacionIngredientes.objects.filter(
+            ingredientes_qs = TablaPreparacionIngredientes.objects.filter(
                 id_preparacion=preparacion
             ).select_related('id_ingrediente_siesa')
+            
+            # Filtrar previamente para obtener un conteo preciso
+            valid_ingredients_data = []
+            for ing_prep in ingredientes_qs:
+                alimento_icbf = self._find_alimento_icbf(ing_prep.id_ingrediente_siesa)
+                if alimento_icbf:
+                    valid_ingredients_data.append((ing_prep, alimento_icbf))
 
-            for ing_prep in ingredientes:
+            num_ingredients = len(valid_ingredients_data)
+            if num_ingredients == 0:
+                continue
+
+            # Escribir datos compartidos en la primera fila
+            ws.cell(row=start_row_for_prep, column=self.layout.COL_COMPONENTE).value = componente
+            ws.cell(row=start_row_for_prep, column=self.layout.COL_GRUPO).value = grupo_alimentos
+            ws.cell(row=start_row_for_prep, column=self.layout.COL_PREPARACION).value = preparacion.preparacion
+
+            for ing_prep, alimento_icbf in valid_ingredients_data:
                 ingrediente = ing_prep.id_ingrediente_siesa
-
-                # Buscar información nutricional ICBF
-                alimento_icbf = self._find_alimento_icbf(ingrediente)
-
-                if not alimento_icbf:
-                    continue
-
-                # Obtener pesos del análisis guardado si existe
-                peso_neto, peso_bruto = self._get_saved_weights(
-                    menu_id, preparacion, ingrediente
-                )
-
-                # Calcular valores nutricionales
+                peso_neto, peso_bruto = self._get_saved_weights(menu_id, preparacion, ingrediente)
                 factor = self._to_float(peso_neto) / 100.0
                 valores_100g = self._extract_nutritional_values(alimento_icbf)
 
-                # Poblar fila
-                self._populate_ingredient_row(
-                    ws, current_row, componente, grupo_alimentos,
-                    preparacion.preparacion, ingrediente.nombre_ingrediente,
-                    alimento_icbf.codigo, peso_bruto, peso_neto,
-                    valores_100g, factor
-                )
-
+                # Poblar datos específicos del ingrediente
+                ws.cell(row=current_row, column=self.layout.COL_INGREDIENTE).value = ingrediente.nombre_ingrediente
+                ws.cell(row=current_row, column=self.layout.COL_CODIGO).value = alimento_icbf.codigo
+                ws.cell(row=current_row, column=self.layout.COL_PESO_BRUTO).value = round(peso_bruto, 1)
+                ws.cell(row=current_row, column=self.layout.COL_PESO_NETO).value = round(peso_neto, 1)
+                ws.cell(row=current_row, column=self.layout.COL_CALORIAS).value = round(valores_100g['calorias_kcal'] * factor, 1)
+                ws.cell(row=current_row, column=self.layout.COL_PROTEINA).value = round(valores_100g['proteina_g'] * factor, 1)
+                ws.cell(row=current_row, column=self.layout.COL_GRASA).value = round(valores_100g['grasa_g'] * factor, 1)
+                ws.cell(row=current_row, column=self.layout.COL_CHO).value = round(valores_100g['cho_g'] * factor, 1)
+                ws.cell(row=current_row, column=self.layout.COL_CALCIO).value = round(valores_100g['calcio_mg'] * factor, 1)
+                ws.cell(row=current_row, column=self.layout.COL_HIERRO).value = round(valores_100g['hierro_mg'] * factor, 1)
+                ws.cell(row=current_row, column=self.layout.COL_SODIO).value = round(valores_100g['sodio_mg'] * factor, 1)
+                
                 current_row += 1
+
+            # Combinar celdas si es necesario
+            if num_ingredients > 1:
+                end_row_for_prep = current_row - 1
+                cols_to_merge = [
+                    self.layout.COL_COMPONENTE,
+                    self.layout.COL_GRUPO,
+                    self.layout.COL_PREPARACION
+                ]
+                for col_idx in cols_to_merge:
+                    ws.merge_cells(start_row=start_row_for_prep, start_column=col_idx, end_row=end_row_for_prep, end_column=col_idx)
+                    cell_to_align = ws.cell(row=start_row_for_prep, column=col_idx)
+                    cell_to_align.alignment = center_align
 
         return current_row - 1
 
