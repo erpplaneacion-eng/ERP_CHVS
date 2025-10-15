@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Tuple
 from decimal import Decimal
 
 from openpyxl import Workbook, load_workbook
+from openpyxl.drawing.image import Image
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
@@ -61,7 +62,7 @@ class ExcelLayout:
     COL_SODIO = 14
 
     # Rangos
-    TITLE_RANGE = 'A1:N1'
+    TITLE_RANGE = 'D1:N1'
     TOTAL_LABEL_COLS = 3  # A:C
 
 
@@ -177,6 +178,11 @@ class NutritionalAnalysisExcelGenerator:
             wb = self._create_workbook()
             ws = wb.active
 
+            # Extraer logo_path y agregarlo
+            menu_info = analisis_data.get('menu', {})
+            logo_path = menu_info.get('logo_path')
+            self._insert_logo(ws, logo_path)
+
             # Poblar secciones
             self._populate_title(ws)
             self._populate_administrative_section(ws, analisis_data)
@@ -236,6 +242,15 @@ class NutritionalAnalysisExcelGenerator:
             wb = self._create_workbook()
             ws = wb.active
 
+            # Obtener y insertar logo
+            logo_path = None
+            if menu.id_contrato and menu.id_contrato.imagen:
+                try:
+                    logo_path = menu.id_contrato.imagen.path
+                except (FileNotFoundError, ValueError):
+                    pass  # Ignorar si el archivo no existe
+            self._insert_logo(ws, logo_path)
+
             # Poblar título
             self._populate_title(ws)
 
@@ -289,6 +304,27 @@ class NutritionalAnalysisExcelGenerator:
         wb.active.title = "Análisis Nutricional"
         return wb
 
+    def _insert_logo(self, ws: Worksheet, logo_path: str) -> None:
+        """Inserta el logo del programa en la celda A1."""
+        if not logo_path:
+            return
+
+        try:
+            img = Image(logo_path)
+            # Ajustar el tamaño de la imagen si es necesario
+            img.height = 60  # Altura en píxeles
+            img.width = 200   # Ancho en píxeles
+            ws.add_image(img, 'A1')
+
+            # Ajustar altura de la fila 1 para que quepa el logo
+            ws.row_dimensions[1].height = 50
+
+        except FileNotFoundError:
+            # Si el logo no se encuentra, simplemente no se inserta.
+            # Se podría agregar un log aquí si fuera necesario.
+            print(f"Warning: Logo file not found at {logo_path}")
+            pass
+
     # =================================================================
     # MÉTODOS PRIVADOS - POBLACIÓN DE SECCIONES
     # =================================================================
@@ -296,7 +332,7 @@ class NutritionalAnalysisExcelGenerator:
     def _populate_title(self, ws: Worksheet) -> None:
         """Poblar título principal"""
         # Asignar valor sin combinar celdas (temporalmente deshabilitado)
-        title_cell = ws['A1']
+        title_cell = ws['D1']
         title_cell.value = "ANÁLISIS NUTRICIONAL"
         title_cell.font = Font(bold=True, size=16)
         title_cell.alignment = Alignment(horizontal='center', vertical='center')

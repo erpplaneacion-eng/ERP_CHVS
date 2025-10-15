@@ -78,13 +78,21 @@ class AnalisisNutricionalService:
             analisis_por_nivel.append(analisis_nivel)
 
         # 5. Preparar respuesta
+        logo_path = None
+        if menu.id_contrato and menu.id_contrato.imagen:
+            try:
+                logo_path = menu.id_contrato.imagen.path
+            except (FileNotFoundError, ValueError):
+                logo_path = None # Handle cases where file is missing or path is invalid
+
         return {
             'success': True,
             'menu': {
                 'id': menu.id_menu,
                 'nombre': menu.menu,
                 'modalidad': menu.id_modalidad.modalidad if menu.id_modalidad else 'N/A',
-                'programa': menu.id_contrato.programa if menu.id_contrato else 'N/A'
+                'programa': menu.id_contrato.programa if menu.id_contrato else 'N/A',
+                'logo_path': logo_path
             },
             'analisis_por_nivel': analisis_por_nivel
         }
