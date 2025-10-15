@@ -19,12 +19,12 @@ class MasterNutritionalExcelGenerator(ExcelReportDrawer):
 
     def __init__(self):
         super().__init__()
-        # Espacio estimado en filas por cada reporte individual, más un margen.
-        self.ROW_OFFSET_PER_REPORT = 50
 
     def generate(self, masive_analysis_data: Dict) -> io.BytesIO:
         """
         Método principal para generar el reporte maestro.
+        Cada nivel escolar tiene su propia pestaña con todos sus menús.
+        Cada menú se imprime en una página separada.
 
         Args:
             masive_analysis_data: El diccionario de datos masivos del servicio.
@@ -51,16 +51,16 @@ class MasterNutritionalExcelGenerator(ExcelReportDrawer):
                     'analisis_por_nivel': [menu_analisis['analisis']]
                 }
 
-                # Dibujar el reporte para este menú
-                self._draw_single_report(ws, current_row, reconstructed_data, nivel_escolar_id=None)
+                # Dibujar el reporte y obtener la última fila real utilizada
+                end_row = self._draw_single_report(ws, current_row, reconstructed_data, nivel_escolar_id=None)
 
-                # Actualizar la fila para el siguiente reporte
-                current_row += self.ROW_OFFSET_PER_REPORT
-
-                # Agregar un salto de página para la impresión (excepto para el último)
+                # Agregar un salto de página después de cada menú (excepto el último)
                 if i < len(menus_analisis) - 1:
-                    ws.row_dimensions[current_row - 2].page_break = True
-            
+                    # Colocar el salto de página en la fila siguiente al final del reporte
+                    ws.row_dimensions[end_row + 1].page_break = True
+                    # El siguiente reporte comienza 2 filas después del salto
+                    current_row = end_row + 2
+
             # Aplicar formato y configuración de página a la hoja completa
             self._apply_formatting(ws)
             self._apply_page_setup(ws)

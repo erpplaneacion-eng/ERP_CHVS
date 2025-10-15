@@ -375,7 +375,7 @@ class ExcelReportDrawer:
         # Como último recurso, devolver el primer nivel
         return analisis_por_nivel[0] if analisis_por_nivel else None
 
-    def _draw_single_report(self, ws: Worksheet, start_row: int, analisis_data: Dict, nivel_escolar_id: Optional[str] = None) -> None:
+    def _draw_single_report(self, ws: Worksheet, start_row: int, analisis_data: Dict, nivel_escolar_id: Optional[str] = None) -> int:
         """
         Dibuja un reporte de análisis completo en la hoja y fila especificadas.
 
@@ -384,6 +384,9 @@ class ExcelReportDrawer:
             start_row: Fila inicial para el reporte.
             analisis_data: Datos del análisis nutricional.
             nivel_escolar_id: ID del nivel escolar (opcional).
+
+        Returns:
+            int: La última fila utilizada por el reporte (incluyendo firmas).
         """
         menu_info = analisis_data.get('menu', {})
         logo_path = menu_info.get('logo_path')
@@ -407,6 +410,15 @@ class ExcelReportDrawer:
         )
 
         self._add_calculations_section(ws, last_data_row, nivel_data)
-        self._add_signatures(ws, last_data_row + 6)
+
+        # La sección de firmas comienza 6 filas después de los datos
+        signatures_start_row = last_data_row + 6
+        self._add_signatures(ws, signatures_start_row)
 
         self._merge_cells_for_section(ws, start_row=start_row)
+
+        # Calcular la última fila del reporte
+        # Sección de firmas ocupa aproximadamente 5-6 filas
+        final_row = signatures_start_row + 5
+
+        return final_row
