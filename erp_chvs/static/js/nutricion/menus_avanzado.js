@@ -301,12 +301,21 @@ async function generarMenusAutomaticos(modalidadId, modalidadNombre) {
 }
 let menuActualId = null;
 let componentesAlimentos = [];
+let modalidadActualId = null; // Variable global para la modalidad
 
 function abrirGestionPreparaciones(menuId, menuNumero) {
     menuActualId = menuId;
     menuActualAnalisis = menuId;
     document.getElementById('menuNumeroModal').textContent = menuNumero;
     document.getElementById('modalPreparaciones').style.display = 'block';
+
+    // Encontrar la modalidad del menú actual
+    for (const modId in menusData) {
+        if (menusData[modId].some(menu => menu.id_menu === menuId)) {
+            modalidadActualId = modId;
+            break;
+        }
+    }
 
     const btnAgregar = document.getElementById('btnAgregarPreparacion');
     if (btnAgregar) {
@@ -322,6 +331,10 @@ function abrirGestionPreparaciones(menuId, menuNumero) {
 async function abrirModalNuevaPreparacion(menuId) {
     document.getElementById('menuIdPrep').value = menuId;
     document.getElementById('nombrePreparacion').value = '';
+
+    // Resetear y ocultar la sección de copia
+    document.getElementById('opcionesCopiaContainer').style.display = 'none';
+    document.getElementById('selectPreparacionCopia').innerHTML = '';
 
     if (componentesAlimentos.length === 0) {
         await cargarComponentesAlimentos();
@@ -339,6 +352,76 @@ async function abrirModalNuevaPreparacion(menuId) {
 
     document.getElementById('modalNuevaPreparacion').style.display = 'block';
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Evento para mostrar las opciones de copia
+    document.getElementById('btnMostrarOpcionesCopia').addEventListener('click', async function(e) {
+        e.preventDefault();
+        if (!modalidadActualId) {
+            alert('No se pudo determinar la modalidad actual.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/nutricion/api/preparaciones-por-modalidad/${modalidadActualId}/`);
+            const data = await response.json();
+
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            const select = document.getElementById('selectPreparacionCopia');
+            select.innerHTML = '<option value="">-- Seleccione una preparación --</option>';
+            data.preparaciones.forEach(prep => {
+                const option = new Option(prep.nombre, prep.id);
+                select.add(option);
+            });
+
+            document.getElementById('opcionesCopiaContainer').style.display = 'block';
+
+        } catch (error) {
+            alert(`Error al cargar preparaciones para copiar: ${error.message}`);
+        }
+    });
+
+    // Evento para ejecutar la copia
+    document.getElementById('btnEjecutarCopia').addEventListener('click', async function() {
+        const sourceId = document.getElementById('selectPreparacionCopia').value;
+        const targetMenuId = document.getElementById('menuIdPrep').value;
+
+        if (!sourceId) {
+            alert('Por favor, seleccione una preparación para copiar.');
+            return;
+        }
+
+        try {
+            const response = await fetch('/nutricion/api/preparaciones/copiar/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    source_preparacion_id: sourceId,
+                    target_menu_id: targetMenuId
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert(`✓ ${data.message}`);
+                document.getElementById('modalNuevaPreparacion').style.display = 'none';
+                cargarPreparacionesMenu(targetMenuId);
+            } else {
+                throw new Error(data.error || 'Error desconocido al copiar.');
+            }
+
+        } catch (error) {
+            alert(`Error: ${error.message}`);
+        }
+    });
+});
 
 async function cargarComponentesAlimentos() {
     try {

@@ -514,6 +514,99 @@ def api_preparacion_detail(request, id_preparacion):
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
 
 
+@login_required
+@csrf_exempt
+@transaction.atomic
+def api_copiar_preparacion(request):
+    """API para copiar una preparación completa a un nuevo menú."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        source_preparacion_id = data.get('source_preparacion_id')
+        target_menu_id = data.get('target_menu_id')
+
+        if not source_preparacion_id or not target_menu_id:
+            return JsonResponse({'error': 'Faltan parámetros requeridos.'}, status=400)
+
+        # Obtener los objetos de la base de datos
+        source_preparacion = get_object_or_404(TablaPreparaciones, pk=source_preparacion_id)
+        target_menu = get_object_or_404(TablaMenus, pk=target_menu_id)
+
+        # Crear la nueva preparación (la copia)
+        new_preparacion = TablaPreparaciones.objects.create(
+            preparacion=source_preparacion.preparacion, # Copia el nombre
+            id_menu=target_menu, # Asigna al nuevo menú
+            id_componente=source_preparacion.id_componente # Copia el componente
+        )
+
+        # Obtener los ingredientes de la preparación original
+        source_ingredientes = TablaPreparacionIngredientes.objects.filter(
+            id_preparacion=source_preparacion
+        )
+
+        # Crear las nuevas relaciones de ingredientes en lote
+        nuevos_ingredientes = []
+        for ing in source_ingredientes:
+            nuevos_ingredientes.append(
+                TablaPreparacionIngredientes(
+                    id_preparacion=new_preparacion,
+                    id_ingrediente_siesa=ing.id_ingrediente_siesa
+                )
+            )
+        
+        if nuevos_ingredientes:
+            TablaPreparacionIngredientes.objects.bulk_create(nuevos_ingredientes)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Preparación "{new_preparacion.preparacion}" copiada exitosamente.',
+            'nueva_preparacion': {
+                'id_preparacion': new_preparacion.id_preparacion,
+                'preparacion': new_preparacion.preparacion,
+                'menu': new_preparacion.id_menu.menu
+            }
+        })
+
+    except (TablaPreparaciones.DoesNotExist, TablaMenus.DoesNotExist):
+        return JsonResponse({'error': 'La preparación o el menú de destino no existen.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': f'Ocurrió un error inesperado: {str(e)}'}, status=500)
+
+
+@login_required
+def api_preparaciones_por_modalidad(request, modalidad_id):
+    """API para listar todas las preparaciones únicas dentro de una modalidad."""
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        # Encontrar todos los menús de esa modalidad
+        menus_en_modalidad = TablaMenus.objects.filter(id_modalidad_id=modalidad_id)
+
+        # Encontrar todas las preparaciones en esos menús, obteniendo solo nombres únicos
+        preparaciones = TablaPreparaciones.objects.filter(
+            id_menu__in=menus_en_modalidad
+        ).order_by('preparacion').distinct('preparacion')
+
+        # Formatear la respuesta
+        # Se devuelve el ID de la *primera* preparación encontrada con ese nombre.
+        # Esto es suficiente para que la API de copiado encuentre el original.
+        preparaciones_data = [
+            {
+                "id": prep.id_preparacion,
+                "nombre": prep.preparacion
+            }
+            for prep in preparaciones
+        ]
+
+        return JsonResponse({'preparaciones': preparaciones_data})
+
+    except Exception as e:
+        return JsonResponse({'error': f'Ocurrió un error inesperado: {str(e)}'}, status=500)
+
+
 # =================== INGREDIENTES SIESA ===================
 
 @login_required

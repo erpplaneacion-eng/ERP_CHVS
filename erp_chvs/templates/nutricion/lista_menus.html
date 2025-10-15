@@ -130,11 +130,24 @@
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-save"></i> Guardar
                 </button>
-                <button type="button" class="btn btn-secondary" onclick="cerrarModalPreparacion()">
-                    <i class="fas fa-times"></i> Cancelar
-                </button>
-            </div>
         </form>
+
+        <hr>
+
+        <div id="seccionCopiarPreparacion">
+            <a href="#" id="btnMostrarOpcionesCopia" class="link-copia">¿O copiar una preparación existente de esta modalidad?</a>
+            <div id="opcionesCopiaContainer" style="display: none; margin-top: 15px;">
+                <div class="form-group">
+                    <label for="selectPreparacionCopia">Seleccione una preparación para copiar</label>
+                    <select id="selectPreparacionCopia" class="form-control"></select>
+                </div>
+                <div class="form-actions">
+                    <button id="btnEjecutarCopia" class="btn btn-secondary">
+                        <i class="fas fa-copy"></i> Copiar Preparación Seleccionada
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
