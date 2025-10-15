@@ -97,7 +97,7 @@ class ExcelStyles:
 class ColumnWidths:
     """Anchos de columnas"""
     WIDTHS = {
-        'A': 25, 'B': 15, 'C': 15, 'D': 20, 'E': 25, 'F': 30,
+        'A': 25, 'B': 15, 'C': 15, 'D': 50, 'E': 25, 'F': 20,
         'G': 15, 'H': 12, 'I': 12, 'J': 12, 'K': 10, 'L': 10,
         'M': 10, 'N': 10, 'O': 12, 'P': 12
     }
