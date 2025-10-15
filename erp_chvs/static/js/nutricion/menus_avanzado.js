@@ -143,23 +143,31 @@ function crearAcordeon(modalidad) {
     const tieneMenus = menusModalidad.length > 0;
     const accordionDiv = document.createElement('div');
     accordionDiv.className = 'accordion';
+
     // Crear header
     const header = document.createElement('div');
     header.className = 'accordion-header';
     header.onclick = function() { toggleAccordion(this); };
+
+    const downloadUrl = `/nutricion/exportar-modalidad-excel/${programaActual.id}/${modalidadId}/`;
+
     header.innerHTML = `
         <div>
             <strong>${modalidad.modalidad}</strong>
             <span class="preparacion-badge">${menusModalidad.length} / 20 menús</span>
         </div>
-        <div>
+        <div class="accordion-header-actions">
+            <a href="${downloadUrl}" class="btn btn-success btn-sm" onclick="event.stopPropagation();" title="Descargar Reporte Maestro para ${modalidad.modalidad}">
+                <i class="fas fa-file-excel"></i> Descargar Modalidad
+            </a>
             ${!tieneMenus ? `<button class="btn-generar-auto" data-modalidad-id="${modalidadId}" data-modalidad-nombre="${modalidad.modalidad}">
                 <i class="fas fa-magic"></i> Generar 20 Menús
             </button>` : ''}
             <i class="fas fa-chevron-down"></i>
         </div>
     `;
-    // Agregar event listener al botón si existe
+
+    // Agregar event listener al botón de generar menús si existe
     if (!tieneMenus) {
         setTimeout(() => {
             const btn = header.querySelector('.btn-generar-auto');
@@ -173,6 +181,7 @@ function crearAcordeon(modalidad) {
             }
         }, 0);
     }
+
     // Crear content
     const content = document.createElement('div');
     content.className = 'accordion-content';
@@ -180,11 +189,13 @@ function crearAcordeon(modalidad) {
     const grid = document.createElement('div');
     grid.className = 'menus-grid';
     grid.id = `grid-${modalidadId}`;
+
     if (tieneMenus) {
         grid.innerHTML = generarTarjetasMenus(menusModalidad);
     } else {
         grid.innerHTML = '<p style="padding: 20px;">Genere los menús para esta modalidad</p>';
     }
+
     content.appendChild(grid);
     accordionDiv.appendChild(header);
     accordionDiv.appendChild(content);

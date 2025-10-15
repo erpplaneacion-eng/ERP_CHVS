@@ -27,6 +27,7 @@ from .models import (
 from .forms import AlimentoForm
 from principal.models import ModalidadesDeConsumo
 from planeacion.models import Programa
+from .services import AnalisisNutricionalService
 
 
 # =================== VISTAS GENERALES ===================
@@ -819,6 +820,9 @@ def download_menu_excel_service(request, menu_id):
         return HttpResponse(f"Error generando Excel desde servicio: {str(e)}", status=500)
 
 
+from .excel_drawing_utils import ExcelReportDrawer
+from .master_excel_generator import MasterNutritionalExcelGenerator
+
 @login_required
 def download_menu_excel_with_nivel(request, menu_id, nivel_escolar_id):
     """
@@ -837,3 +841,35 @@ def download_menu_excel_with_nivel(request, menu_id, nivel_escolar_id):
 
     except Exception as e:
         return HttpResponse(f"Error generando Excel: {str(e)}", status=500)
+
+
+@login_required
+def download_modalidad_excel(request, programa_id, modalidad_id):
+    """
+    Descarga el reporte maestro de Excel para todos los menús de una modalidad.
+    """
+    try:
+        # 1. Llamar al nuevo servicio para obtener los datos masivos
+        masive_data = AnalisisNutricionalService.obtener_analisis_masivo_por_modalidad(
+            programa_id=programa_id,
+            modalidad_id=modalidad_id
+        )
+
+        if not masive_data.get('success'):
+            raise ValueError("No se pudieron generar los datos para el reporte maestro.")
+
+        # 2. Instanciar y usar el nuevo generador maestro
+        generator = MasterNutritionalExcelGenerator()
+        excel_stream = generator.generate(masive_data)
+
+        # 3. Devolver la respuesta
+        response = HttpResponse(
+            excel_stream,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f"reporte_maestro_{masive_data['programa_nombre']}_{masive_data['modalidad_nombre']}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+    except Exception as e:
+        return HttpResponse(f"Error generando el reporte maestro de Excel: {str(e)}", status=500)

@@ -16,7 +16,8 @@ from ..models import (
     TablaPreparacionIngredientes,
     TablaRequerimientosNutricionales,
     TablaAnalisisNutricionalMenu,
-    TablaIngredientesPorNivel
+    TablaIngredientesPorNivel,
+    TablaGradosEscolaresUapa
 )
 from .calculo_service import CalculoService
 
@@ -442,3 +443,70 @@ class AnalisisNutricionalService:
                 'ingredientes_guardados': ingredientes_guardados,
                 'created': created
             }
+
+    @staticmethod
+    def obtener_analisis_masivo_por_modalidad(programa_id: int, modalidad_id: int) -> Dict:
+        """
+        Obtiene y consolida el análisis nutricional de todos los menús de una modalidad.
+
+        Args:
+            programa_id: ID del programa/contrato.
+            modalidad_id: ID de la modalidad de consumo.
+
+        Returns:
+            Dict con los análisis agrupados por nivel escolar.
+        """
+        from planeacion.models import Programa
+        from principal.models import ModalidadesDeConsumo
+
+        programa = Programa.objects.get(id=programa_id)
+        modalidad = ModalidadesDeConsumo.objects.get(id_modalidades=modalidad_id)
+
+        menus = TablaMenus.objects.filter(
+            id_contrato=programa,
+            id_modalidad=modalidad
+        ).order_by('menu')
+
+        analisis_final_por_nivel = {}
+
+        for menu in menus:
+            try:
+                resultado_menu = AnalisisNutricionalService.obtener_analisis_completo(menu.id_menu)
+                if not resultado_menu.get('success'):
+                    continue
+
+                for analisis_nivel in resultado_menu.get('analisis_por_nivel', []):
+                    nombre_nivel = analisis_nivel.get('nivel_escolar', {}).get('nombre', 'Desconocido')
+                    
+                    if nombre_nivel not in analisis_final_por_nivel:
+                        analisis_final_por_nivel[nombre_nivel] = []
+
+                    menu_data_for_level = {
+                        'menu_info': resultado_menu['menu'],
+                        'analisis': analisis_nivel
+                    }
+                    analisis_final_por_nivel[nombre_nivel].append(menu_data_for_level)
+
+            except Exception as e:
+                # Log o manejo del error para un menú individual si es necesario
+                print(f"Error procesando menú {menu.id_menu}: {e}")
+                continue
+        
+        # Ordenar los menús dentro de cada nivel de forma robusta
+        def sort_key(menu_analysis):
+            menu_name = str(menu_analysis['menu_info']['nombre'])
+            if menu_name.isdigit():
+                return (0, int(menu_name))  # Tupla para ordenar: los números van primero
+            else:
+                return (1, menu_name)  # Los strings van después, ordenados alfabéticamente
+
+        for nivel in analisis_final_por_nivel:
+            analisis_final_por_nivel[nivel].sort(key=sort_key)
+
+        return {
+            "success": True,
+            "programa_nombre": programa.programa,
+            "modalidad_nombre": modalidad.modalidad,
+            "analisis_por_nivel": analisis_final_por_nivel
+        }
+
