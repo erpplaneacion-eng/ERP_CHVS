@@ -21,16 +21,13 @@ urlpatterns = [
     path('api/crear-menu-especial/', views.api_crear_menu_especial, name='api_crear_menu_especial'),
     path('exportar-excel/<int:menu_id>/', views.download_menu_excel, name='exportar_menu_excel'),
 
-    # Preparaciones
-    path('preparaciones/', views.lista_preparaciones, name='lista_preparaciones'),
-    path('preparaciones/<int:id_preparacion>/', views.detalle_preparacion, name='detalle_preparacion'),
+    # Preparaciones (APIs - las vistas de lista se eliminaron, funcionalidad en lista_menus)
     path('api/preparaciones/', views.api_preparaciones, name='api_preparaciones'),
     path('api/preparaciones/<int:id_preparacion>/', views.api_preparacion_detail, name='api_preparacion_detail'),
     path('api/preparaciones/copiar/', views.api_copiar_preparacion, name='api_copiar_preparacion'),
     path('api/preparaciones-por-modalidad/<str:modalidad_id>/', views.api_preparaciones_por_modalidad, name='api_preparaciones_por_modalidad'),
 
-    # Ingredientes
-    path('ingredientes/', views.lista_ingredientes, name='lista_ingredientes'),
+    # Ingredientes (APIs - la vista de lista se eliminó, funcionalidad en lista_menus)
     path('api/ingredientes/', views.api_ingredientes, name='api_ingredientes'),
     path('api/ingredientes/<str:id_ingrediente>/', views.api_ingrediente_detail, name='api_ingrediente_detail'),
 

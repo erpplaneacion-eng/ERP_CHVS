@@ -69,26 +69,70 @@ window.abrirAgregarIngrediente = async function(preparacionId) {
     modal.style.visibility = 'visible';
     modal.style.opacity = '1';
     
-    // Forzar visibilidad del contenido
+    // Forzar visibilidad del contenido con mejores dimensiones
     if (modalContent) {
         modalContent.style.display = 'block';
         modalContent.style.visibility = 'visible';
         modalContent.style.opacity = '1';
         modalContent.style.position = 'relative';
         modalContent.style.zIndex = '10000';
-        modalContent.style.width = '800px';
-        modalContent.style.height = '600px';
+        modalContent.style.width = '90vw';
+        modalContent.style.maxWidth = '1200px';
+        modalContent.style.height = '80vh';
+        modalContent.style.maxHeight = '700px';
         modalContent.style.backgroundColor = 'white';
-        modalContent.style.borderRadius = '8px';
-        modalContent.style.padding = '20px';
+        modalContent.style.borderRadius = '12px';
+        modalContent.style.padding = '25px';
+        modalContent.style.boxShadow = '0 10px 30px rgba(0,0,0,0.3)';
+        modalContent.style.overflow = 'hidden';
+        modalContent.style.display = 'flex';
+        modalContent.style.flexDirection = 'column';
     }
     
     console.log('✅ Modal de ingredientes MOVIDO AL BODY y FORZADO a ser visible');
 };
 
-// Función para agregar fila de ingrediente (implementación provisional)
+// Función para agregar fila de ingrediente (implementación completa)
 window.agregarFilaIngrediente = function() {
-    console.log('Función agregarFilaIngrediente - esperando implementación completa');
+    const tbody = document.getElementById('tbodyIngredientes');
+    const filaIndex = tbody.children.length;
+    const tr = document.createElement('tr');
+    tr.className = 'fila-ingrediente';
+    tr.id = `fila-ing-${filaIndex}`;
+    
+    const optionsHTML = '<option value="">Seleccione un ingrediente...</option>' +
+        ingredientesSiesa.map(ing => `<option value="${ing.id_ingrediente_siesa}">${ing.id_ingrediente_siesa} - ${ing.nombre_ingrediente}</option>`).join('');
+    
+    tr.innerHTML = `
+        <td>
+            <select class="select-ingrediente" id="ingrediente-${filaIndex}" required>
+                ${optionsHTML}
+            </select>
+        </td>
+        <td style="text-align: center;">
+            <button type="button" class="btn-eliminar-fila" onclick="eliminarFilaIngrediente(${filaIndex})">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    `;
+    tbody.appendChild(tr);
+
+    // Inicializar Select2 para el nuevo dropdown
+    $(`#ingrediente-${filaIndex}`).select2({
+        placeholder: 'Buscar ingrediente...', 
+        allowClear: true,
+        language: {
+            noResults: function() {
+                return "No se encontraron ingredientes";
+            },
+            searching: function() {
+                return "Buscando...";
+            }
+        },
+        dropdownParent: $('#modalAgregarIngredientes')
+    });
+    
+    console.log(`✅ Fila de ingrediente ${filaIndex} agregada con ${ingredientesSiesa.length} ingredientes disponibles`);
 };
 
 // Función para guardar ingredientes (implementación provisional)
@@ -788,43 +832,7 @@ async function cargarIngredientesSiesa() {
         alert('Error al cargar lista de ingredientes');
     }
 }
-// Sobrescribir con implementación completa
-window.agregarFilaIngrediente = function() {
-    const tbody = document.getElementById('tbodyIngredientes');
-    const filaIndex = tbody.children.length;
-    const tr = document.createElement('tr');
-    tr.className = 'fila-ingrediente';
-    tr.id = `fila-ing-${filaIndex}`;
-    const optionsHTML = '<option value="">Seleccione un ingrediente...</option>' +
-        ingredientesSiesa.map(ing => `<option value="${ing.id_ingrediente_siesa}">${ing.id_ingrediente_siesa} - ${ing.nombre_ingrediente}</option>`).join('');
-    tr.innerHTML = `
-        <td>
-            <select class="select-ingrediente" id="ingrediente-${filaIndex}" required>
-                ${optionsHTML}
-            </select>
-        </td>
-        <td style="text-align: center;">
-            <button type="button" class="btn-eliminar-fila" onclick="eliminarFilaIngrediente(${filaIndex})">
-                <i class="fas fa-trash"></i>
-            </button>
-        </td>
-    `;
-    tbody.appendChild(tr);
-
-    $(`#ingrediente-${filaIndex}`).select2({
-        placeholder: 'Buscar ingrediente...', 
-        allowClear: true,
-        language: {
-            noResults: function() {
-                return "No se encontraron ingredientes";
-            },
-            searching: function() {
-                return "Buscando...";
-            }
-        },
-        dropdownParent: $('#modalAgregarIngredientes')
-    });
-};
+// Función duplicada eliminada - ya está implementada arriba
 
 // Sobrescribir con implementación completa
 window.eliminarFilaIngrediente = function(index) {

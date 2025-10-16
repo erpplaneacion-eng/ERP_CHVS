@@ -6,7 +6,7 @@
 .modal {
     display: none;
     position: fixed;
-    z-index: 1000;
+    z-index: 1000; /* Base, puede ser sobreescrito por estilos específicos */
     left: 0;
     top: 0;
     width: 100%;

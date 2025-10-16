@@ -47,34 +47,175 @@
     overflow-y: auto;
 }
 
-/* Modales anidados - aparecen sobre otros modales */
-#modalNuevaPreparacion {
-    z-index: 1100;
+/* ===================================== */
+/* Z-INDEX DE MODALES - JERARQUÍA CLARA */
+/* ===================================== */
+
+/* Modal base de preparaciones */
+#modalPreparaciones {
+    z-index: 1000 !important;
 }
+
+/* Modales de primer nivel (sobre preparaciones) */
+#modalNuevaPreparacion {
+    z-index: 1100 !important;
+}
+
+#modalMenuEspecial {
+    z-index: 1100 !important;
+}
+
+#modalEditarMenuEspecial {
+    z-index: 1100 !important;
+}
+
+/* ===================================== */
+/* MODAL DE INGREDIENTES - RECREADO     */
+/* ===================================== */
 
 #modalAgregarIngredientes {
-    z-index: 1150;
+    z-index: 1150 !important;
 }
 
-.button-container {
+#modalAgregarIngredientes .modal-content.modal-ingredientes {
+    width: 90vw;
+    max-width: 1100px;
+    height: auto;
+    max-height: 90vh;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Header */
+#modalAgregarIngredientes .modal-header-ingredientes {
+    padding: 20px 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#modalAgregarIngredientes .modal-header-ingredientes h2 {
+    margin: 0;
+    font-size: 1.6rem;
+    color: white;
+}
+
+#modalAgregarIngredientes .modal-header-ingredientes .close {
+    color: white;
+    font-size: 36px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+    transition: all 0.2s;
+}
+
+#modalAgregarIngredientes .modal-header-ingredientes .close:hover {
+    color: #ff6b6b;
+    transform: scale(1.2);
+}
+
+/* Body */
+#modalAgregarIngredientes .modal-body-ingredientes {
+    padding: 25px 30px;
+    flex: 1;
+    overflow-y: auto;
+    background-color: #f8f9fa;
+}
+
+#modalAgregarIngredientes .ingredientes-toolbar {
     margin-bottom: 20px;
 }
 
-.table-container {
-    max-height: 400px;
-    overflow-y: auto;
+#modalAgregarIngredientes .ingredientes-table-wrapper {
+    background: white;
+    border-radius: 8px;
+    padding: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
 }
 
-.table-header-ingredient {
-    width: 80%;
+#modalAgregarIngredientes .table {
+    width: 100%;
+    margin-bottom: 0;
 }
 
-.table-header-actions {
-    width: 20%;
+#modalAgregarIngredientes .table thead th {
+    background: #667eea;
+    color: white;
+    padding: 15px;
+    font-weight: 600;
+    border: none;
 }
 
-.form-actions-spaced {
-    margin-top: 20px;
+#modalAgregarIngredientes .table tbody td {
+    padding: 12px 15px;
+    vertical-align: middle;
+}
+
+/* Select2 en el modal */
+#modalAgregarIngredientes .select2-container {
+    width: 100% !important;
+}
+
+#modalAgregarIngredientes .select2-selection {
+    min-height: 42px !important;
+    border: 2px solid #e0e0e0 !important;
+    border-radius: 6px !important;
+}
+
+#modalAgregarIngredientes .select2-selection:focus {
+    border-color: #667eea !important;
+}
+
+/* Dropdown de Select2 dentro del modal de ingredientes */
+#modalAgregarIngredientes .select2-dropdown {
+    z-index: 9999 !important;
+    border: 2px solid #667eea !important;
+    border-radius: 6px !important;
+}
+
+#modalAgregarIngredientes .select2-results {
+    max-height: 300px !important;
+}
+
+#modalAgregarIngredientes .select2-results__option {
+    padding: 10px 15px !important;
+}
+
+#modalAgregarIngredientes .select2-results__option--highlighted {
+    background-color: #667eea !important;
+}
+
+/* Footer */
+#modalAgregarIngredientes .modal-footer-ingredientes {
+    padding: 20px 30px;
+    background-color: white;
+    border-top: 2px solid #e0e0e0;
+    border-radius: 0 0 12px 12px;
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+}
+
+#modalAgregarIngredientes .modal-footer-ingredientes .btn {
+    min-width: 180px;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+/* Modal de análisis nutricional (nivel más alto) */
+#modalAnalisisNutricional {
+    z-index: 1200 !important;
 }
 
 /* Texto de ayuda */

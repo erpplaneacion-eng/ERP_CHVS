@@ -138,10 +138,7 @@ class NutricionManager {
         const currentPage = this.detectarPaginaActual();
         
         const pageModules = {
-            'lista_menus': ['menus_avanzado.js'],
-            'lista_preparaciones': ['preparaciones.js'],
-            'lista_ingredientes': ['ingredientes.js'],
-            'detalle_preparacion': ['detalle_preparacion.js'],
+            'lista_menus': [], // Los módulos ya se cargan en el HTML
             'lista_alimentos': ['alimentos.js'],
             'menus_basicos': ['menus.js']
         };
@@ -280,8 +277,7 @@ class NutricionManager {
         const moduleFiles = {
             'utils': 'core/utils.js',
             'modals': 'core/modal-manager.js',
-            'api': 'core/api-client.js',
-            'menus_avanzado': 'menus_avanzado.js'
+            'api': 'core/api-client.js'
         };
         
         if (moduleFiles[moduleName]) {

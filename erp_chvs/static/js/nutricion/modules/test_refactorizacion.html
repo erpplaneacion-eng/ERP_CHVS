@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Test de Refactorización - Menús Avanzados</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-header {
+            background: #2196F3;
+            color: white;
+            padding: 15px;
+            border-radius: 8px 8px 0 0;
+            margin: -20px -20px 20px -20px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .test-success {
+            background: #4CAF50;
+            color: white;
+        }
+        .test-error {
+            background: #f44336;
+            color: white;
+        }
+        .test-warning {
+            background: #FF9800;
+            color: white;
+        }
+        .test-info {
+            background: #2196F3;
+            color: white;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        pre {
+            background: #263238;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .counter {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+        .counter.success {
+            background: #4CAF50;
+            color: white;
+        }
+        .counter.error {
+            background: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>🧪 Test de Refactorización - Sistema de Menús Avanzados</h1>
+            <p>Pruebas automáticas de los módulos refactorizados</p>
+        </div>
+
+        <h2>🎯 Acciones de Prueba</h2>
+        <button onclick="testInicializacion()">1️⃣ Test Inicialización</button>
+        <button onclick="testManagers()">2️⃣ Test Managers</button>
+        <button onclick="testFuncionesGlobales()">3️⃣ Test Funciones Globales</button>
+        <button onclick="testModales()">4️⃣ Test Modales</button>
+        <button onclick="testCompleto()">🚀 Test Completo</button>
+        <button onclick="limpiarResultados()">🗑️ Limpiar</button>
+
+        <div id="resultados"></div>
+    </div>
+
+    <!-- Cargar módulos en orden -->
+    <script src="../modules/ModalesManager.js"></script>
+    <script src="../modules/FiltrosManager.js"></script>
+    <script src="../modules/ModalidadesManager.js"></script>
+    <script src="../modules/PreparacionesManager.js"></script>
+    <script src="../modules/IngredientesManager.js"></script>
+    <script src="../modules/AnalisisNutricionalManager.js"></script>
+    <script src="../modules/MenusEspecialesManager.js"></script>
+    <script src="../menus_avanzado_refactorizado.js"></script>
+
+    <script>
+        let testsPasados = 0;
+        let testsFallidos = 0;
+
+        function log(message, type = 'info') {
+            const resultados = document.getElementById('resultados');
+            const div = document.createElement('div');
+            div.className = `test-result test-${type}`;
+            div.textContent = message;
+            resultados.appendChild(div);
+            
+            if (type === 'success') testsPasados++;
+            if (type === 'error') testsFallidos++;
+            
+            actualizarContadores();
+        }
+
+        function actualizarContadores() {
+            const header = document.querySelector('.test-header');
+            let contadores = header.querySelector('.contadores');
+            
+            if (!contadores) {
+                contadores = document.createElement('div');
+                contadores.className = 'contadores';
+                header.appendChild(contadores);
+            }
+            
+            contadores.innerHTML = `
+                <span class="counter success">✅ Pasados: ${testsPasados}</span>
+                <span class="counter error">❌ Fallidos: ${testsFallidos}</span>
+            `;
+        }
+
+        function limpiarResultados() {
+            document.getElementById('resultados').innerHTML = '';
+            testsPasados = 0;
+            testsFallidos = 0;
+            actualizarContadores();
+        }
+
+        function testInicializacion() {
+            limpiarResultados();
+            log('🧪 === TEST DE INICIALIZACIÓN ===', 'info');
+            
+            try {
+                if (typeof MenusAvanzadosController !== 'undefined') {
+                    log('✅ MenusAvanzadosController está definido', 'success');
+                } else {
+                    log('❌ MenusAvanzadosController NO está definido', 'error');
+                }
+
+                if (window.menusController) {
+                    log('✅ window.menusController está instanciado', 'success');
+                } else {
+                    log('❌ window.menusController NO está instanciado', 'error');
+                }
+
+                if (window.menusController instanceof MenusAvanzadosController) {
+                    log('✅ window.menusController es instancia de MenusAvanzadosController', 'success');
+                } else {
+                    log('❌ window.menusController NO es instancia correcta', 'error');
+                }
+
+            } catch (error) {
+                log('❌ Error en test de inicialización: ' + error.message, 'error');
+            }
+        }
+
+        function testManagers() {
+            limpiarResultados();
+            log('🧪 === TEST DE MANAGERS ===', 'info');
+
+            const managers = {
+                'FiltrosManager': 'filtrosManager',
+                'ModalidadesManager': 'modalidadesManager',
+                'PreparacionesManager': 'preparacionesManager',
+                'IngredientesManager': 'ingredientesManager',
+                'ModalesManager': 'modalesManager',
+                'AnalisisNutricionalManager': 'analisisNutricionalManager',
+                'MenusEspecialesManager': 'menusEspecialesManager'
+            };
+
+            for (const [className, propName] of Object.entries(managers)) {
+                try {
+                    if (typeof window[className] !== 'undefined') {
+                        log(`✅ ${className} está definido`, 'success');
+                    } else {
+                        log(`❌ ${className} NO está definido`, 'error');
+                        continue;
+                    }
+
+                    if (window.menusController && window.menusController[propName]) {
+                        log(`✅ menusController.${propName} está instanciado`, 'success');
+                    } else {
+                        log(`❌ menusController.${propName} NO está instanciado`, 'error');
+                        continue;
+                    }
+
+                    if (window.menusController[propName] instanceof window[className]) {
+                        log(`✅ menusController.${propName} es instancia de ${className}`, 'success');
+                    } else {
+                        log(`❌ menusController.${propName} NO es instancia correcta`, 'error');
+                    }
+                } catch (error) {
+                    log(`❌ Error al verificar ${className}: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        function testFuncionesGlobales() {
+            limpiarResultados();
+            log('🧪 === TEST DE FUNCIONES GLOBALES ===', 'info');
+
+            const funciones = [
+                'abrirGestionPreparaciones',
+                'abrirModalAnalisisNutricional',
+                'abrirModalMenuEspecial',
+                'crearMenuEspecial',
+                'abrirEditarMenuEspecial',
+                'guardarEdicionMenuEspecial',
+                'eliminarMenuEspecial',
+                'cerrarModalPreparacion',
+                'cerrarModalIngredientes',
+                'cerrarModalAnalisisNutricional'
+            ];
+
+            for (const funcion of funciones) {
+                if (typeof window[funcion] === 'function') {
+                    log(`✅ window.${funcion} está disponible`, 'success');
+                } else {
+                    log(`❌ window.${funcion} NO está disponible`, 'error');
+                }
+            }
+        }
+
+        function testModales() {
+            limpiarResultados();
+            log('🧪 === TEST DE MODALES (REQUIERE HTML) ===', 'info');
+
+            const modales = [
+                'modalPreparaciones',
+                'modalNuevaPreparacion',
+                'modalAgregarIngredientes',
+                'modalAnalisisNutricional',
+                'modalMenuEspecial',
+                'modalEditarMenuEspecial'
+            ];
+
+            for (const modalId of modales) {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    log(`✅ Modal #${modalId} existe en DOM`, 'success');
+                } else {
+                    log(`⚠️ Modal #${modalId} NO existe (normal en test aislado)`, 'warning');
+                }
+            }
+        }
+
+        function testCompleto() {
+            limpiarResultados();
+            log('🚀 === EJECUTANDO TODOS LOS TESTS ===', 'info');
+            
+            setTimeout(() => testInicializacion(), 100);
+            setTimeout(() => testManagers(), 500);
+            setTimeout(() => testFuncionesGlobales(), 1000);
+            setTimeout(() => testModales(), 1500);
+            
+            setTimeout(() => {
+                log('', 'info');
+                log('🎉 === RESUMEN FINAL ===', 'info');
+                log(`Tests Pasados: ${testsPasados}`, 'success');
+                log(`Tests Fallidos: ${testsFallidos}`, testsFallidos > 0 ? 'error' : 'success');
+                
+                if (testsFallidos === 0) {
+                    log('🎊 ¡TODOS LOS TESTS PASARON EXITOSAMENTE!', 'success');
+                } else {
+                    log('⚠️ Algunos tests fallaron. Revisar resultados arriba.', 'warning');
+                }
+            }, 2000);
+        }
+
+        // Ejecutar test automático al cargar la página
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                log('📋 Página de tests cargada correctamente', 'info');
+                log('👆 Haz click en los botones para ejecutar los tests', 'info');
+            }, 500);
+        });
+    </script>
+</body>
+</html>
