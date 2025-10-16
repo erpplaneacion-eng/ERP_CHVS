@@ -105,26 +105,10 @@ class MenusAvanzadosController {
      */
     setupEventListeners() {
         // Los event listeners ahora están manejados por cada manager individual
-        // Solo mantenemos los event listeners específicos del controlador principal
-        
-        // Event listener para análisis nutricional
-        const btnAnalisis = document.getElementById('btnAnalisisNutricional');
-        if (btnAnalisis) {
-            btnAnalisis.addEventListener('click', (e) => this.handleAnalisisNutricional(e));
-        }
+        // Los botones del modal se configuran dinámicamente cuando se abre el modal
     }
 
     // =================== MÉTODOS DE COORDINACIÓN ===================
-
-    /**
-     * Manejar análisis nutricional
-     * @param {Event} e - Evento del botón
-     */
-    handleAnalisisNutricional(e) {
-        if (this.menuActualAnalisis) {
-            this.abrirModalAnalisisNutricional(this.menuActualAnalisis);
-        }
-    }
 
     // =================== MÉTODOS DE CARGA DE DATOS ===================
 
@@ -245,8 +229,9 @@ class MenusAvanzadosController {
             }
         }
 
-        // Configurar botón de agregar preparación
+        // Configurar botones del modal
         this.configurarBotonAgregarPreparacion(menuId);
+        this.configurarBotonAnalisisNutricional(menuId);
         
         // Cargar preparaciones
         this.cargarPreparacionesMenu(menuId);
@@ -270,6 +255,29 @@ class MenusAvanzadosController {
                 
                 if (this.preparacionesManager) {
                     this.preparacionesManager.abrirModalNuevaPreparacion(menuId);
+                }
+            };
+        }
+    }
+
+    /**
+     * Configurar botón de análisis nutricional
+     * @param {number} menuId - ID del menú
+     */
+    configurarBotonAnalisisNutricional(menuId) {
+        const btnAnalisis = document.getElementById('btnAnalisisNutricional');
+        if (btnAnalisis) {
+            // Remover todos los event listeners anteriores
+            const newBtn = btnAnalisis.cloneNode(true);
+            btnAnalisis.parentNode.replaceChild(newBtn, btnAnalisis);
+            
+            // Asignar el evento al nuevo botón
+            newBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (this.analisisNutricionalManager) {
+                    this.analisisNutricionalManager.abrirModalAnalisisNutricional(menuId);
                 }
             };
         }
