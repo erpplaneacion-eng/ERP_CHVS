@@ -222,9 +222,9 @@ function crearElemento(tag, atributos = {}, contenido = '') {
  * Manejo centralizado de errores
  * @param {Error} error - Error a manejar
  * @param {string} contexto - Contexto donde ocurrió el error
- * @param {boolean} mostrarNotificacion - Si mostrar notificación al usuario
+ * @param {boolean} debeNotificar - Si mostrar notificación al usuario
  */
-function manejarError(error, contexto = '', mostrarNotificacion = true) {
+function manejarError(error, contexto = '', debeNotificar = true) {
     console.error(`Error en ${contexto}:`, error);
 
     // Log detallado para debugging
@@ -241,7 +241,7 @@ function manejarError(error, contexto = '', mostrarNotificacion = true) {
     }
 
     // Mostrar notificación solo si se solicita
-    if (mostrarNotificacion) {
+    if (debeNotificar) {
         mostrarNotificacion('error', `${contexto ? contexto + ': ' : ''}${mensaje}`);
     }
 

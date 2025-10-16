@@ -1,9 +1,144 @@
 // Gestión Avanzada de Menús por Modalidad - Módulo de Nutrición
+
+// =================== VARIABLES GLOBALES ===================
 let programaActual = null;
 let municipioActual = null;
 let modalidadesData = [];
 let menusData = {};
+
+// =================== DECLARACIÓN TEMPRANA DE FUNCIONES PARA ONCLICK ===================
+// Estas funciones se declaran aquí para que estén disponibles inmediatamente
+// Las implementaciones están más abajo en el archivo
+
+// Función para cerrar modal de preparación (implementación provisional)
+window.cerrarModalPreparacion = function() {
+    const modal = document.getElementById('modalNuevaPreparacion');
+    if (modal) modal.style.display = 'none';
+};
+
+// Función para cerrar modal de ingredientes (implementación provisional)
+window.cerrarModalIngredientes = function() {
+    const modal = document.getElementById('modalAgregarIngredientes');
+    if (modal) {
+        modal.style.display = 'none';
+        // Limpiar tabla
+        const tbody = document.getElementById('tbodyIngredientes');
+        if (tbody) tbody.innerHTML = '';
+    }
+};
+
+// Función para cerrar modal de análisis (implementación provisional)
+window.cerrarModalAnalisisNutricional = function() {
+    const modal = document.getElementById('modalAnalisisNutricional');
+    if (modal) modal.style.display = 'none';
+};
+
+// Función para abrir modal de agregar ingredientes (implementación completa)
+window.abrirAgregarIngrediente = async function(preparacionId) {
+    console.log('🟢 [COMPLETA] abrirAgregarIngrediente llamada para preparación:', preparacionId);
+    
+    document.getElementById('preparacionIdIngredientes').value = preparacionId;
+    document.getElementById('tbodyIngredientes').innerHTML = '';
+    
+    if (typeof ingredientesSiesa === 'undefined' || ingredientesSiesa.length === 0) {
+        console.log('Cargando ingredientes SIESA...');
+        await cargarIngredientesSiesa();
+    }
+    
+    console.log('Agregando primera fila de ingrediente...');
+    window.agregarFilaIngrediente();
+    
+    console.log('✅ Abriendo modal de ingredientes (versión completa)');
+    const modal = document.getElementById('modalAgregarIngredientes');
+    const modalContent = modal.querySelector('.modal-content');
+    
+    // MOVER MODAL AL BODY Y FORZAR VISIBILIDAD
+    document.body.appendChild(modal);
+    
+    // FORZAR VISIBILIDAD DEL MODAL
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100vw';
+    modal.style.height = '100vh';
+    modal.style.zIndex = '9999';
+    modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    modal.style.visibility = 'visible';
+    modal.style.opacity = '1';
+    
+    // Forzar visibilidad del contenido
+    if (modalContent) {
+        modalContent.style.display = 'block';
+        modalContent.style.visibility = 'visible';
+        modalContent.style.opacity = '1';
+        modalContent.style.position = 'relative';
+        modalContent.style.zIndex = '10000';
+        modalContent.style.width = '800px';
+        modalContent.style.height = '600px';
+        modalContent.style.backgroundColor = 'white';
+        modalContent.style.borderRadius = '8px';
+        modalContent.style.padding = '20px';
+    }
+    
+    console.log('✅ Modal de ingredientes MOVIDO AL BODY y FORZADO a ser visible');
+};
+
+// Función para agregar fila de ingrediente (implementación provisional)
+window.agregarFilaIngrediente = function() {
+    console.log('Función agregarFilaIngrediente - esperando implementación completa');
+};
+
+// Función para guardar ingredientes (implementación provisional)
+window.guardarIngredientes = function() {
+    console.log('Función guardarIngredientes - esperando implementación completa');
+};
+
+// Función para eliminar ingrediente (implementación provisional)
+window.eliminarIngrediente = function(preparacionId, ingredienteId) {
+    console.log('Eliminando ingrediente:', ingredienteId, 'de preparación:', preparacionId);
+};
+
+// Función para eliminar fila de ingrediente (implementación provisional)
+window.eliminarFilaIngrediente = function(index) {
+    console.log('Eliminando fila:', index);
+};
+
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Inicializando eventos de modales...');
+    
+    // Asegurar que todos los modales estén ocultos al cargar
+    const modalesOcultar = ['modalPreparaciones', 'modalNuevaPreparacion', 'modalAgregarIngredientes', 'modalAnalisisNutricional'];
+    modalesOcultar.forEach(modalId => {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = 'none';
+            console.log(`✅ ${modalId} oculto`);
+        }
+    });
+    
+    // Configurar botones de cerrar (X) para cada modal
+    const configurarBotonCerrar = (modalId, funcionCerrar) => {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            const closeBtn = modal.querySelector('.close');
+            if (closeBtn) {
+                closeBtn.onclick = funcionCerrar;
+                console.log(`✅ Botón cerrar configurado para ${modalId}`);
+            }
+        }
+    };
+    
+    configurarBotonCerrar('modalPreparaciones', () => {
+        document.getElementById('modalPreparaciones').style.display = 'none';
+    });
+    
+    configurarBotonCerrar('modalNuevaPreparacion', window.cerrarModalPreparacion);
+    configurarBotonCerrar('modalAgregarIngredientes', window.cerrarModalIngredientes);
+    configurarBotonCerrar('modalAnalisisNutricional', window.cerrarModalAnalisisNutricional);
+    
     inicializarEventos();
     // Si hay municipio preseleccionado, cargar programas
     if (typeof MUNICIPIO_ACTUAL !== 'undefined' && MUNICIPIO_ACTUAL) {
@@ -317,18 +452,33 @@ function abrirGestionPreparaciones(menuId, menuNumero) {
         }
     }
 
+    // Configurar botón de agregar preparación
     const btnAgregar = document.getElementById('btnAgregarPreparacion');
     if (btnAgregar) {
-        btnAgregar.replaceWith(btnAgregar.cloneNode(true));
-        const nuevoBtn = document.getElementById('btnAgregarPreparacion');
-        nuevoBtn.addEventListener('click', function() {
+        console.log('🔧 Configurando botón Agregar Preparación para menú:', menuId);
+        
+        // Remover todos los event listeners anteriores
+        const newBtn = btnAgregar.cloneNode(true);
+        btnAgregar.parentNode.replaceChild(newBtn, btnAgregar);
+        
+        // Asignar el evento al nuevo botón
+        newBtn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔵 [CLICK] Botón Agregar Preparación - menú:', menuId);
+            console.log('🔵 Llamando a abrirModalNuevaPreparacion...');
             abrirModalNuevaPreparacion(menuId);
-        });
+        };
+    } else {
+        console.warn('⚠️ Botón btnAgregarPreparacion no encontrado');
     }
+    
     cargarPreparacionesMenu(menuId);
 }
 
 async function abrirModalNuevaPreparacion(menuId) {
+    console.log('🔵 abrirModalNuevaPreparacion llamada para menú:', menuId);
+    
     document.getElementById('menuIdPrep').value = menuId;
     document.getElementById('nombrePreparacion').value = '';
 
@@ -350,6 +500,7 @@ async function abrirModalNuevaPreparacion(menuId) {
         selectComponente.appendChild(option);
     });
 
+    console.log('✅ Abriendo modal Nueva Preparación');
     document.getElementById('modalNuevaPreparacion').style.display = 'block';
 }
 
@@ -626,15 +777,6 @@ async function eliminarPreparacion(preparacionId, menuId) {
     }
 }
 let ingredientesSiesa = [];
-async function abrirAgregarIngrediente(preparacionId) {
-    document.getElementById('preparacionIdIngredientes').value = preparacionId;
-    document.getElementById('tbodyIngredientes').innerHTML = '';
-    if (ingredientesSiesa.length === 0) {
-        await cargarIngredientesSiesa();
-    }
-    agregarFilaIngrediente();
-    document.getElementById('modalAgregarIngredientes').style.display = 'block';
-}
 async function cargarIngredientesSiesa() {
     try {
         const response = await fetch('/nutricion/api/ingredientes/');
@@ -646,7 +788,8 @@ async function cargarIngredientesSiesa() {
         alert('Error al cargar lista de ingredientes');
     }
 }
-function agregarFilaIngrediente() {
+// Sobrescribir con implementación completa
+window.agregarFilaIngrediente = function() {
     const tbody = document.getElementById('tbodyIngredientes');
     const filaIndex = tbody.children.length;
     const tr = document.createElement('tr');
@@ -681,16 +824,20 @@ function agregarFilaIngrediente() {
         },
         dropdownParent: $('#modalAgregarIngredientes')
     });
-}
-function eliminarFilaIngrediente(index) {
+};
+
+// Sobrescribir con implementación completa
+window.eliminarFilaIngrediente = function(index) {
     $(`#ingrediente-${index}`).select2('destroy');
 
     const fila = document.getElementById(`fila-ing-${index}`);
     if (fila) {
         fila.remove();
     }
-}
-async function guardarIngredientes() {
+};
+
+// Sobrescribir con implementación completa
+window.guardarIngredientes = async function() {
     const preparacionId = document.getElementById('preparacionIdIngredientes').value;
     const tbody = document.getElementById('tbodyIngredientes');
     const filas = tbody.querySelectorAll('.fila-ingrediente');
@@ -746,8 +893,10 @@ async function guardarIngredientes() {
         console.error('Error:', error);
         alert('Error al guardar ingredientes');
     }
-}
-function cerrarModalIngredientes() {
+};
+
+// Sobrescribir con implementación completa
+window.cerrarModalIngredientes = function() {
     $('.select-ingrediente').each(function() {
         if ($(this).hasClass('select2-hidden-accessible')) {
             $(this).select2('destroy');
@@ -756,8 +905,22 @@ function cerrarModalIngredientes() {
 
     document.getElementById('modalAgregarIngredientes').style.display = 'none';
     document.getElementById('tbodyIngredientes').innerHTML = '';
-}
-async function eliminarIngrediente(preparacionId, ingredienteId) {
+};
+
+// Sobrescribir con implementación completa
+window.cerrarModalPreparacion = function() {
+    document.getElementById('modalNuevaPreparacion').style.display = 'none';
+    const nombrePrep = document.getElementById('nombrePreparacion');
+    const componenteAlim = document.getElementById('componenteAlimento');
+    const menuIdPrep = document.getElementById('menuIdPrep');
+    
+    if (nombrePrep) nombrePrep.value = '';
+    if (componenteAlim) componenteAlim.value = '';
+    if (menuIdPrep) menuIdPrep.value = '';
+};
+
+// Sobrescribir con implementación completa
+window.eliminarIngrediente = async function(preparacionId, ingredienteId) {
     if (!confirm('¿Está seguro de eliminar este ingrediente?')) {
         return;
     }
@@ -779,7 +942,7 @@ async function eliminarIngrediente(preparacionId, ingredienteId) {
         console.error('Error:', error);
         alert('Error al eliminar el ingrediente');
     }
-}
+};
 function resetearFiltros() {
     document.getElementById('filtroPrograma').innerHTML = '<option value="">Primero seleccione un municipio...</option>';
     document.getElementById('filtroPrograma').disabled = true;
@@ -951,9 +1114,10 @@ async function cargarAnalisisNutricional(menuId) {
     }
 }
 
-function cerrarModalAnalisisNutricional() {
+// Sobrescribir con implementación completa
+window.cerrarModalAnalisisNutricional = function() {
     document.getElementById('modalAnalisisNutricional').style.display = 'none';
-}
+};
 
 function renderizarAnalisisNutricional(data) {
     window.menuActual = data.menu;
@@ -1453,3 +1617,20 @@ function inicializarEventosInputs() {
 // - recalcularPorcentajesAdecuacion()
 // - getEstadoAdecuacion()
 // - guardarAnalisisAutomatico()
+
+// =================== EXPORTAR FUNCIONES GLOBALES ===================
+// ✅ TODAS las funciones ya están exportadas como window.* en sus definiciones
+// Este bloque ya no es necesario porque usamos el patrón de sobrescritura:
+// 
+// 1. Declaración temprana (líneas 14-59) con implementación básica
+// 2. Sobrescritura completa (líneas 685-859) con lógica completa
+// 
+// Funciones disponibles globalmente:
+// - window.cerrarModalPreparacion
+// - window.cerrarModalIngredientes
+// - window.cerrarModalAnalisisNutricional
+// - window.abrirAgregarIngrediente
+// - window.agregarFilaIngrediente
+// - window.guardarIngredientes
+// - window.eliminarIngrediente
+// - window.eliminarFilaIngrediente

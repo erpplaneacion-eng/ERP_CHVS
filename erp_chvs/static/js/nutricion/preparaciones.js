@@ -55,19 +55,36 @@ function abrirModalNuevo() {
     if (form) form.reset();
 
     document.getElementById('preparacionId').value = '';
-    ModalManager.abrir(PREPARACION_CONFIG.modalId);
+    
+    // Usar la instancia global de modalManager en lugar de la clase
+    if (window.modalManager) {
+        window.modalManager.abrir(PREPARACION_CONFIG.modalId);
+    } else {
+        console.error('ModalManager no está disponible');
+    }
 }
 
 function cerrarModal() {
     const form = document.getElementById(PREPARACION_CONFIG.formId);
     if (form) form.reset();
 
-    ModalManager.cerrar(PREPARACION_CONFIG.modalId);
+    // Usar la instancia global de modalManager en lugar de la clase
+    if (window.modalManager) {
+        window.modalManager.cerrar(PREPARACION_CONFIG.modalId);
+    } else {
+        console.error('ModalManager no está disponible');
+    }
 }
 
 async function editarPreparacion(id) {
     try {
-        const data = await ApiClient.get(`${PREPARACION_CONFIG.apiEndpoint}${id}/`);
+        // Usar la instancia global de nutricionAPI
+        const apiClient = window.nutricionAPI || window.ApiClient;
+        if (!apiClient) {
+            throw new Error('ApiClient no está disponible');
+        }
+        
+        const data = await apiClient.get(`${PREPARACION_CONFIG.apiEndpoint}${id}/`);
 
         // Llenar formulario
         document.getElementById('modalTitle').textContent = 'Editar Preparación';
@@ -75,7 +92,12 @@ async function editarPreparacion(id) {
         document.getElementById('preparacionNombre').value = data.preparacion;
         document.getElementById('preparacionMenu').value = data.id_menu;
 
-        ModalManager.abrir(PREPARACION_CONFIG.modalId);
+        // Usar la instancia global de modalManager
+        if (window.modalManager) {
+            window.modalManager.abrir(PREPARACION_CONFIG.modalId);
+        } else {
+            console.error('ModalManager no está disponible');
+        }
 
     } catch (error) {
         NutricionUtils.mostrarNotificacion('error', 'Error al cargar la preparación');
@@ -95,14 +117,20 @@ async function guardarPreparacion(event) {
     };
 
     try {
+        // Usar la instancia global de nutricionAPI
+        const apiClient = window.nutricionAPI || window.ApiClient;
+        if (!apiClient) {
+            throw new Error('ApiClient no está disponible');
+        }
+        
         let result;
 
         if (id) {
             // Actualizar
-            result = await ApiClient.put(`${PREPARACION_CONFIG.apiEndpoint}${id}/`, data);
+            result = await apiClient.put(`${PREPARACION_CONFIG.apiEndpoint}${id}/`, data);
         } else {
             // Crear
-            result = await ApiClient.post(PREPARACION_CONFIG.apiEndpoint, data);
+            result = await apiClient.post(PREPARACION_CONFIG.apiEndpoint, data);
         }
 
         if (result.success) {
@@ -123,21 +151,34 @@ async function guardarPreparacion(event) {
 }
 
 async function eliminarPreparacion(id) {
-    const confirmado = await ModalManager.confirmar(
-        '¿Está seguro de eliminar esta preparación?',
-        'Se eliminarán también todos sus ingredientes asociados.'
-    );
+    // Usar SweetAlert2 para confirmación
+    const result = await Swal.fire({
+        title: '¿Está seguro?',
+        text: 'Se eliminarán también todos los ingredientes asociados a esta preparación.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    });
 
-    if (!confirmado) return;
+    if (!result.isConfirmed) return;
 
     try {
-        const result = await ApiClient.delete(`${PREPARACION_CONFIG.apiEndpoint}${id}/`);
+        // Usar la instancia global de nutricionAPI
+        const apiClient = window.nutricionAPI || window.ApiClient;
+        if (!apiClient) {
+            throw new Error('ApiClient no está disponible');
+        }
+        
+        const response = await apiClient.delete(`${PREPARACION_CONFIG.apiEndpoint}${id}/`);
 
-        if (result.success) {
+        if (response.success) {
             NutricionUtils.mostrarNotificacion('success', 'Preparación eliminada exitosamente');
             setTimeout(() => location.reload(), 1000);
         } else {
-            NutricionUtils.mostrarNotificacion('error', result.error || 'Error al eliminar');
+            NutricionUtils.mostrarNotificacion('error', response.error || 'Error al eliminar');
         }
 
     } catch (error) {

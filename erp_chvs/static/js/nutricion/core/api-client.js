@@ -394,3 +394,6 @@ Object.assign(window.NutricionAPI, {
 
 // Exportar instancia principal para uso directo
 window.nutricionAPI = nutricionAPI;
+
+// Exportar también como ApiClient para compatibilidad con código existente
+window.ApiClient = nutricionAPI;

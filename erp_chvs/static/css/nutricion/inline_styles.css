@@ -20,9 +20,9 @@
     gap: 10px;
 }
 
-/* Modal de análisis nutricional */
+/* Modal de análisis nutricional - se abre sobre modal de preparaciones */
 .modal-analisis-nutricional {
-    z-index: 10001;
+    z-index: 1200 !important; /* Mayor que modal de preparaciones */
 }
 
 .modal-analisis-content {
@@ -30,12 +30,30 @@
     width: 95%;
     max-height: 95vh;
     overflow-y: auto;
+    z-index: 1201 !important;
 }
 
 /* Modal de agregar ingredientes */
-.modal-ingredientes {
-    max-width: 1000px;
+#modalAgregarIngredientes .modal-content {
+    width: 1000px;
+    max-width: 90%;
     max-height: 90vh;
+    min-height: 400px;
+    background-color: white;
+    margin: 5% auto;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    overflow-y: auto;
+}
+
+/* Modales anidados - aparecen sobre otros modales */
+#modalNuevaPreparacion {
+    z-index: 1100;
+}
+
+#modalAgregarIngredientes {
+    z-index: 1150;
 }
 
 .button-container {

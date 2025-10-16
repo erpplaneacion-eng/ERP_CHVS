@@ -10,7 +10,9 @@
       "Bash(python3 manage.py makemigrations:*)",
       "Bash(\"C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\" manage.py makemigrations nutricion)",
       "Bash(python -m py_compile:*)",
-      "Bash(python3 -m py_compile:*)"
+      "Bash(python3 -m py_compile:*)",
+      "Bash(find:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
