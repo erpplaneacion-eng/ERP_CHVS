@@ -50,8 +50,31 @@
                 <input type="file" class="form-control" name="archivo_excel" id="archivo_excel" required accept=".xls,.xlsx">
             </div>
 
-            <!-- Focalización -->
+            <!-- Tipo de Procesamiento -->
             <div class="form-group mb-3">
+                <label class="form-label d-block">
+                    <i class="fas fa-cogs"></i> Tipo de Procesamiento:
+                </label>
+                <div class="btn-group" role="group" aria-label="Tipo de procesamiento">
+                    <input type="radio" class="btn-check" name="tipo_procesamiento" id="yumbo" value="yumbo" autocomplete="off" checked>
+                    <label class="btn btn-outline-primary" for="yumbo">
+                        <i class="fas fa-file-excel"></i> Procesar archivos de Yumbo
+                    </label>
+
+                    <input type="radio" class="btn-check" name="tipo_procesamiento" id="buga" value="buga" autocomplete="off">
+                    <label class="btn btn-outline-primary" for="buga">
+                        <i class="fas fa-file-excel"></i> Procesar archivos de Buga
+                    </label>
+
+                    <input type="radio" class="btn-check" name="tipo_procesamiento" id="nuevo" value="nuevo" autocomplete="off">
+                    <label class="btn btn-outline-primary" for="nuevo">
+                        <i class="fas fa-file-excel"></i> Procesar archivos de Cali
+                    </label>
+                </div>
+            </div>
+
+            <!-- Focalización -->
+            <div class="form-group mb-4">
                 <label for="focalizacion" class="form-label">
                     <i class="fas fa-bullseye"></i> Focalización:
                 </label>
@@ -72,29 +95,6 @@
                     <option value="F10">F10</option>
                     {% endfor %}
                 </select>
-            </div>
-
-            <!-- Tipo de Procesamiento -->
-            <div class="form-group mb-4">
-                <label class="form-label d-block">
-                    <i class="fas fa-cogs"></i> Tipo de Procesamiento:
-                </label>
-                <div class="btn-group" role="group" aria-label="Tipo de procesamiento">
-                    <input type="radio" class="btn-check" name="tipo_procesamiento" id="yumbo" value="yumbo" autocomplete="off" checked>
-                    <label class="btn btn-outline-primary" for="yumbo">
-                        <i class="fas fa-file-excel"></i> Procesar archivos de Yumbo
-                    </label>
-
-                    <input type="radio" class="btn-check" name="tipo_procesamiento" id="buga" value="buga" autocomplete="off">
-                    <label class="btn btn-outline-primary" for="buga">
-                        <i class="fas fa-file-excel"></i> Procesar archivos de Buga
-                    </label>
-
-                    <input type="radio" class="btn-check" name="tipo_procesamiento" id="nuevo" value="nuevo" autocomplete="off">
-                    <label class="btn btn-outline-primary" for="nuevo">
-                        <i class="fas fa-file-excel"></i> Procesar archivos de Cali
-                    </label>
-                </div>
             </div>
 
             <button type="submit" class="btn btn-success btn-etapa">
