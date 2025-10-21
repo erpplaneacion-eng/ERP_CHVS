@@ -90,16 +90,25 @@ class DataTransformer:
             df['REFUERZO COMPLEMENTO AM/PM'] = ''
             
             # Aplicar lógica condicional para CALI
+            # Jornada Única (6): CAP AM + ALMUERZO JU
             df.loc[
                 (df['ETC'] == ProcesamientoConfig.ETC_CALI) & 
-                (df['JORNADA'] == ProcesamientoConfig.JORNADA_UNICA_CALI), 
+                (df['JORNADA'] == 6), 
                 ['COMPLEMENTO ALIMENTARIO PREPARADO AM', 'ALMUERZO JORNADA UNICA']
             ] = 'x'
             
+            # Jornada Mañana (2): Solo CAP AM
             df.loc[
                 (df['ETC'] == ProcesamientoConfig.ETC_CALI) & 
-                (df['JORNADA'].isin(ProcesamientoConfig.JORNADAS_DOBLES_CALI)), 
-                ['COMPLEMENTO ALIMENTARIO PREPARADO AM', 'COMPLEMENTO ALIMENTARIO PREPARADO PM']
+                (df['JORNADA'] == 2), 
+                'COMPLEMENTO ALIMENTARIO PREPARADO AM'
+            ] = 'x'
+            
+            # Jornada Tarde (3): Solo CAP PM
+            df.loc[
+                (df['ETC'] == ProcesamientoConfig.ETC_CALI) & 
+                (df['JORNADA'] == 3), 
+                'COMPLEMENTO ALIMENTARIO PREPARADO PM'
             ] = 'x'
             
             # --- PASO 5: TRANSFORMACIÓN DE GRADO PARA ESTADÍSTICAS ---
@@ -213,26 +222,30 @@ class DataTransformer:
             
             # Aplicar lógica para YUMBO
             if 'YUMBO' in unique_etc:
+                # Jornada Única: CAP AM + ALMUERZO JU
                 df.loc[
                     (df['ETC'] == 'YUMBO') & (df['JORNADA'] == ProcesamientoConfig.JORNADA_UNICA_OTROS), 
                     ['COMPLEMENTO ALIMENTARIO PREPARADO AM', 'ALMUERZO JORNADA UNICA']
                 ] = 'x'
                 
+                # Jornadas Dobles (TARDE/MAÑANA): Solo CAP AM + REFUERZO
                 df.loc[
                     (df['ETC'] == 'YUMBO') & (df['JORNADA'].isin(ProcesamientoConfig.JORNADAS_DOBLES_OTROS)), 
-                    ['COMPLEMENTO ALIMENTARIO PREPARADO AM', 'COMPLEMENTO ALIMENTARIO PREPARADO PM', 'REFUERZO COMPLEMENTO AM/PM']
+                    ['COMPLEMENTO ALIMENTARIO PREPARADO AM', 'REFUERZO COMPLEMENTO AM/PM']
                 ] = 'x'
             
             # Aplicar lógica para GUADALAJARA DE BUGA
             if 'GUADALAJARA DE BUGA' in unique_etc:
+                # Jornada Única: CAP AM + ALMUERZO JU
                 df.loc[
                     (df['ETC'] == 'GUADALAJARA DE BUGA') & (df['JORNADA'] == ProcesamientoConfig.JORNADA_UNICA_OTROS), 
                     ['COMPLEMENTO ALIMENTARIO PREPARADO AM', 'ALMUERZO JORNADA UNICA']
                 ] = 'x'
                 
+                # Jornadas Dobles (TARDE/MAÑANA): Solo CAP AM
                 df.loc[
                     (df['ETC'] == 'GUADALAJARA DE BUGA') & (df['JORNADA'].isin(ProcesamientoConfig.JORNADAS_DOBLES_OTROS)), 
-                    ['COMPLEMENTO ALIMENTARIO PREPARADO AM', 'COMPLEMENTO ALIMENTARIO PREPARADO PM']
+                    'COMPLEMENTO ALIMENTARIO PREPARADO AM'
                 ] = 'x'
             
             return df
