@@ -114,7 +114,12 @@ def procesar_listados_view(request):
                 # ================================
                 archivo = request.FILES['archivo_excel']
                 focalizacion = request.POST.get('focalizacion', '')
-                tipo_procesamiento = request.POST.get('tipo_procesamiento', ProcesamientoConfig.TIPO_PROCESAMIENTO_ORIGINAL)
+                tipo_procesamiento = request.POST.get('tipo_procesamiento', '')
+
+                # Validar tipo de procesamiento
+                if not tipo_procesamiento:
+                    contexto['error'] = "Tipo de procesamiento no seleccionado. Por favor, seleccione el municipio (Yumbo, Buga o Cali)."
+                    return render(request, 'facturacion/procesar_listados.html', contexto)
 
                 # Validar focalización
                 if not focalizacion or focalizacion not in FOCALIZACIONES_DISPONIBLES:
@@ -290,7 +295,14 @@ def validar_archivo_ajax(request):
             })
         
         archivo = request.FILES['archivo_excel']
-        tipo_procesamiento = request.POST.get('tipo_procesamiento', ProcesamientoConfig.TIPO_PROCESAMIENTO_ORIGINAL)
+        tipo_procesamiento = request.POST.get('tipo_procesamiento', '')
+        
+        # Validar que se haya especificado tipo de procesamiento
+        if not tipo_procesamiento:
+            return JsonResponse({
+                'success': False,
+                'error': 'Debe seleccionar el tipo de procesamiento (Yumbo, Buga o Cali)'
+            })
         
         # Validar archivo básico
         if not procesamiento_service.excel_processor.validar_archivo_excel(archivo):

@@ -59,7 +59,7 @@ class FacturacionManager {
     handleFileChange(event) {
         const file = event.target.files[0];
         const form = event.target.closest('form');
-        const tipoProcesamiento = form.querySelector('input[name="tipo_procesamiento"]')?.value || 'original';
+        const tipoProcesamiento = form.querySelector('input[name="tipo_procesamiento"]:checked')?.value || '';
         
         if (file) {
             this.validateFile(file, tipoProcesamiento)

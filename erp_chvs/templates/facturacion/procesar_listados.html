@@ -56,19 +56,19 @@
                     <i class="fas fa-cogs"></i> Tipo de Procesamiento:
                 </label>
                 <div class="btn-group" role="group" aria-label="Tipo de procesamiento">
-                    <input type="radio" class="btn-check" name="tipo_procesamiento" id="yumbo" value="yumbo" autocomplete="off" checked>
+                    <input type="radio" class="btn-check" name="tipo_procesamiento" id="yumbo" value="yumbo" autocomplete="off" required>
                     <label class="btn btn-outline-primary" for="yumbo">
-                        <i class="fas fa-file-excel"></i> Procesar archivos de Yumbo
+                        <i class="fas fa-file-excel"></i> Yumbo
                     </label>
 
                     <input type="radio" class="btn-check" name="tipo_procesamiento" id="buga" value="buga" autocomplete="off">
                     <label class="btn btn-outline-primary" for="buga">
-                        <i class="fas fa-file-excel"></i> Procesar archivos de Buga
+                        <i class="fas fa-file-excel"></i> Buga
                     </label>
 
                     <input type="radio" class="btn-check" name="tipo_procesamiento" id="nuevo" value="nuevo" autocomplete="off">
                     <label class="btn btn-outline-primary" for="nuevo">
-                        <i class="fas fa-file-excel"></i> Procesar archivos de Cali
+                        <i class="fas fa-file-excel"></i> Cali
                     </label>
                 </div>
             </div>
@@ -357,6 +357,20 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Configurar validación del formulario
+        const formEtapa1 = document.getElementById('form-etapa-1');
+        if (formEtapa1) {
+            formEtapa1.addEventListener('submit', function(e) {
+                // Validar que se haya seleccionado un tipo de procesamiento
+                const tipoSeleccionado = document.querySelector('input[name="tipo_procesamiento"]:checked');
+                if (!tipoSeleccionado) {
+                    e.preventDefault();
+                    alert('⚠️ Por favor, seleccione el tipo de procesamiento (Yumbo, Buga o Cali)');
+                    return false;
+                }
+            });
+        }
+
         // Configurar validación de archivos
         const fileInput = document.getElementById('archivo_excel');
         if (fileInput) {
@@ -391,7 +405,10 @@
         const focalizacionSelect = document.getElementById('focalizacion');
 
         async function actualizarFocalizacionesDisponibles() {
-            const tipoSeleccionado = document.querySelector('input[name="tipo_procesamiento"]:checked').value;
+            const tipoRadio = document.querySelector('input[name="tipo_procesamiento"]:checked');
+            if (!tipoRadio) return; // Si no hay selección, salir
+            
+            const tipoSeleccionado = tipoRadio.value;
 
             // Resetear todas las opciones primero
             Array.from(focalizacionSelect.options).forEach(opt => {
