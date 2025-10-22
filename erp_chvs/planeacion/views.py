@@ -63,11 +63,11 @@ def ciclos_menus_view(request):
     Vista principal para planificar ciclos de menús.
     Muestra filtros y tabla de planificación de raciones.
     """
-    # Obtener municipios únicos de listados_focalizacion
-    etc_values = ListadosFocalizacion.objects.values_list('etc', flat=True).distinct().order_by('etc')
+    # Obtener programas activos ordenados por nombre
+    programas = Programa.objects.filter(estado='activo').order_by('programa')
 
     context = {
-        'etc_values': etc_values,
+        'programas': programas,
         'focalizaciones': FOCALIZACIONES_DISPONIBLES,
     }
 
@@ -86,23 +86,25 @@ def inicializar_ciclos_menus(request):
         import json
         data = json.loads(request.body)
 
-        etc = data.get('etc')
+        programa_id = data.get('programa_id')
         focalizacion = data.get('focalizacion')
         ano = data.get('ano', 2025)
 
-        if not etc or not focalizacion:
+        if not programa_id or not focalizacion:
             return JsonResponse({
                 'success': False,
-                'error': 'Parámetros ETC y Focalización son requeridos'
+                'error': 'Parámetros Programa y Focalización son requeridos'
             }, status=400)
 
-        # Obtener municipio
+        # Obtener programa y municipio
         try:
-            municipio_obj = PrincipalMunicipio.objects.get(nombre_municipio__iexact=etc)
-        except PrincipalMunicipio.DoesNotExist:
+            programa_obj = Programa.objects.get(id=programa_id)
+            municipio_obj = programa_obj.municipio
+            etc = municipio_obj.nombre_municipio
+        except Programa.DoesNotExist:
             return JsonResponse({
                 'success': False,
-                'error': f'Municipio "{etc}" no encontrado'
+                'error': f'Programa con ID "{programa_id}" no encontrado'
             }, status=404)
 
         # Obtener todos los registros de listados_focalizacion para este ETC y focalización
@@ -330,7 +332,7 @@ def obtener_datos_ciclos(request):
     API para obtener datos de planificación existentes.
     """
     try:
-        etc = request.GET.get('etc')
+        programa_id = request.GET.get('programa_id')
         focalizacion = request.GET.get('focalizacion')
         ano = request.GET.get('ano', '2025')
 
@@ -340,19 +342,20 @@ def obtener_datos_ciclos(request):
         except (ValueError, TypeError):
             ano = 2025
 
-        if not etc or not focalizacion:
+        if not programa_id or not focalizacion:
             return JsonResponse({
                 'success': False,
-                'error': 'Parámetros ETC y Focalización son requeridos'
+                'error': 'Parámetros Programa y Focalización son requeridos'
             }, status=400)
 
-        # Obtener municipio
+        # Obtener programa y municipio
         try:
-            municipio_obj = PrincipalMunicipio.objects.get(nombre_municipio__iexact=etc)
-        except PrincipalMunicipio.DoesNotExist:
+            programa_obj = Programa.objects.get(id=programa_id)
+            municipio_obj = programa_obj.municipio
+        except Programa.DoesNotExist:
             return JsonResponse({
                 'success': False,
-                'error': f'Municipio "{etc}" no encontrado'
+                'error': f'Programa con ID "{programa_id}" no encontrado'
             }, status=404)
 
         # Obtener datos

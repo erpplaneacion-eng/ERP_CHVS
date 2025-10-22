@@ -12,13 +12,20 @@
     <div class="filters-container">
         <div class="filter-group">
             <div class="filter-field">
-                <label for="filter-etc">ETC (Municipio)</label> {# ID ajustado #}
-                <select id="filter-etc" name="etc" required>
-                    <option value="">Seleccione...</option>
-                    {% for etc in etc_values %}
-                        <option value="{{ etc }}">{{ etc }}</option>
+                <label for="filter-programa">Programa</label>
+                <select id="filter-programa" name="programa" required>
+                    <option value="">Seleccione un programa...</option>
+                    {% for programa in programas %}
+                        <option value="{{ programa.id }}" data-municipio="{{ programa.municipio.nombre_municipio }}">
+                            {{ programa.programa }} - {{ programa.municipio.nombre_municipio }}
+                        </option>
                     {% endfor %}
                 </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="municipio-auto">Municipio</label>
+                <input type="text" id="municipio-auto" class="form-control" readonly placeholder="Se seleccionará automáticamente">
             </div>
 
             <div class="filter-field">
@@ -57,7 +64,7 @@
     <div id="results-container" class="results-container">
         <div class="no-data">
             <i class="fas fa-info-circle"></i>
-            <p>Seleccione ETC y Focalización para ver los datos de planificación.</p>
+            <p>Seleccione Programa y Focalización para ver los datos de planificación.</p>
         </div>
     </div>
 </div>
@@ -72,5 +79,24 @@
         urlObtener: "{% url 'planeacion:obtener_datos_ciclos' %}",
         csrfToken: "{{ csrf_token }}"
     };
+
+    // Manejo de selección automática de municipio
+    document.addEventListener('DOMContentLoaded', function() {
+        const programaSelect = document.getElementById('filter-programa');
+        const municipioAutoInput = document.getElementById('municipio-auto');
+
+        if (programaSelect && municipioAutoInput) {
+            programaSelect.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                const municipio = selectedOption.getAttribute('data-municipio');
+                
+                if (municipio) {
+                    municipioAutoInput.value = municipio;
+                } else {
+                    municipioAutoInput.value = '';
+                }
+            });
+        }
+    });
 </script>
 {% endblock %}

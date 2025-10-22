@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Obtener elementos del DOM
     const btnBuscar = document.getElementById('btn-buscar');
     const btnInicializar = document.getElementById('btn-inicializar');
-    const etcSelect = document.getElementById('filter-etc');
+    const programaSelect = document.getElementById('filter-programa');
     const focalizacionSelect = document.getElementById('filter-focalizacion');
     const anoInput = document.getElementById('filter-ano');
     const resultsContainer = document.getElementById('results-container');
@@ -53,41 +53,41 @@ document.addEventListener('DOMContentLoaded', function() {
     // Evento para el botón de Buscar
     if (btnBuscar) {
         btnBuscar.addEventListener('click', function() {
-            const etc = etcSelect.value;
+            const programaId = programaSelect.value;
             const focalizacion = focalizacionSelect.value;
             const ano = anoInput.value;
 
-            if (!etc || !focalizacion) {
-                mostrarAlertaSegura('Por favor, seleccione un ETC y una Focalización.', 'warning');
+            if (!programaId || !focalizacion) {
+                mostrarAlertaSegura('Por favor, seleccione un Programa y una Focalización.', 'warning');
                 return;
             }
 
-            buscarDatos(etc, focalizacion, ano);
+            buscarDatos(programaId, focalizacion, ano);
         });
     }
 
     // Evento para el botón de Inicializar
     if (btnInicializar) {
         btnInicializar.addEventListener('click', function() {
-            const etc = etcSelect.value;
+            const programaId = programaSelect.value;
             const focalizacion = focalizacionSelect.value;
             const ano = anoInput.value;
 
-            if (!etc || !focalizacion) {
-                mostrarAlertaSegura('Por favor, seleccione un ETC y una Focalización.', 'warning');
+            if (!programaId || !focalizacion) {
+                mostrarAlertaSegura('Por favor, seleccione un Programa y una Focalización.', 'warning');
                 return;
             }
 
             // Inicia el proceso. El primer llamado nunca se fuerza.
-            inicializarCiclos(etc, focalizacion, ano, false);
+            inicializarCiclos(programaId, focalizacion, ano, false);
         });
     }
 
-    async function buscarDatos(etc, focalizacion, ano) {
+    async function buscarDatos(programaId, focalizacion, ano) {
         mostrarCargando();
 
         try {
-            const url = `${config.urlObtener}?etc=${encodeURIComponent(etc)}&focalizacion=${encodeURIComponent(focalizacion)}&ano=${ano}`;
+            const url = `${config.urlObtener}?programa_id=${encodeURIComponent(programaId)}&focalizacion=${encodeURIComponent(focalizacion)}&ano=${ano}`;
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    async function inicializarCiclos(etc, focalizacion, ano, forzar) {
+    async function inicializarCiclos(programaId, focalizacion, ano, forzar) {
         // Mostrar indicador de carga
         btnInicializar.disabled = true;
         btnInicializar.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...';
@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-CSRFToken': config.csrfToken
                 },
                 body: JSON.stringify({
-                    etc: etc,
+                    programa_id: programaId,
                     focalizacion: focalizacion,
                     ano: parseInt(ano),
                     forzar_actualizacion: forzar
@@ -158,13 +158,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 } else if (data.requiere_confirmacion) {
                     if (typeof ERPUtils === 'undefined' || typeof ERPUtils.showConfirm !== 'function') {
-                        await mostrarConfirmacionNativa(data, etc, focalizacion, ano);
+                        await mostrarConfirmacionNativa(data, programaId, focalizacion, ano);
                         return;
                     }
 
                     // Verificar que SweetAlert2 esté disponible
                     if (typeof Swal === 'undefined') {
-                        await mostrarConfirmacionNativa(data, etc, focalizacion, ano);
+                        await mostrarConfirmacionNativa(data, programaId, focalizacion, ano);
                         return;
                     }
 
@@ -177,13 +177,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         );
 
                         if (userConfirmed) {
-                            inicializarCiclos(etc, focalizacion, ano, true);
+                            inicializarCiclos(programaId, focalizacion, ano, true);
                         } else {
                             mostrarNotificacionSegura('Operación cancelada. Los registros existentes se mantienen intactos.', 'info');
-                            buscarDatos(etc, focalizacion, ano);
+                            buscarDatos(programaId, focalizacion, ano);
                         }
                     } else {
-                        await mostrarConfirmacionNativa(data, etc, focalizacion, ano);
+                        await mostrarConfirmacionNativa(data, programaId, focalizacion, ano);
                     }
                 } else {
                     // Otros errores controlados por el backend
@@ -690,7 +690,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 
-    async function mostrarConfirmacionNativa(data, etc, focalizacion, ano) {
+    async function mostrarConfirmacionNativa(data, programaId, focalizacion, ano) {
         const titulo = '⚠️ Confirmación Requerida';
         const mensaje = `
             <div style="text-align: center; padding: 10px;">
@@ -713,10 +713,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const userConfirmed = await mostrarModalConfirmacionPersonalizado(titulo, mensaje, 'warning');
 
             if (userConfirmed) {
-                inicializarCiclos(etc, focalizacion, ano, true);
+                inicializarCiclos(programaId, focalizacion, ano, true);
             } else {
                 mostrarNotificacionSegura('Operación cancelada. Los registros existentes se mantienen intactos.', 'info');
-                buscarDatos(etc, focalizacion, ano);
+                buscarDatos(programaId, focalizacion, ano);
             }
 
             return userConfirmed;
@@ -725,10 +725,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const confirmacionNativa = confirm(`${titulo}\n\n${data.warning}. Existen ${data.total_registros_existentes} registros que serán sobreescritos. ¿Desea continuar?`);
 
             if (confirmacionNativa) {
-                inicializarCiclos(etc, focalizacion, ano, true);
+                inicializarCiclos(programaId, focalizacion, ano, true);
             } else {
                 mostrarNotificacionSegura('Operación cancelada. Los registros existentes se mantienen intactos.', 'info');
-                buscarDatos(etc, focalizacion, ano);
+                buscarDatos(programaId, focalizacion, ano);
             }
 
             return confirmacionNativa;
