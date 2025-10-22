@@ -837,6 +837,9 @@ def guardar_analisis_nutricional(request):
 
     try:
         data = json.loads(request.body)
+        
+        print(f"[DEBUG] Datos recibidos: {data}")
+        print(f"[DEBUG] Claves disponibles: {list(data.keys())}")
 
         # Delegar al servicio
         resultado = AnalisisNutricionalService.guardar_analisis(

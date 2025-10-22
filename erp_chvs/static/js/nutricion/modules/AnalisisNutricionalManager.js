@@ -575,24 +575,43 @@ class AnalisisNutricionalManager {
                 btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
             }
 
-            // Recopilar datos de todos los niveles
-            const datosParaGuardar = this.recopilarDatosParaGuardar();
-            
-            const response = await fetch('/nutricion/api/guardar-analisis-nutricional/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify(datosParaGuardar)
-            });
+            // Guardar cada nivel por separado
+            const niveles = this.recopilarDatosParaGuardar();
+            let guardadosExitosos = 0;
+            let errores = [];
 
-            const resultado = await response.json();
+            for (const nivel of niveles) {
+                try {
+                    console.log('Enviando datos para nivel:', nivel.id_nivel_escolar, nivel);
+                    
+                    const response = await fetch('/nutricion/api/guardar-analisis-nutricional/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify(nivel)
+                    });
 
-            if (resultado.success) {
-                alert('✅ Análisis nutricional guardado exitosamente');
+                    const resultado = await response.json();
+
+                    if (resultado.success) {
+                        guardadosExitosos++;
+                    } else {
+                        errores.push(`${nivel.id_nivel_escolar}: ${resultado.error}`);
+                    }
+                } catch (error) {
+                    errores.push(`${nivel.id_nivel_escolar}: ${error.message}`);
+                }
+            }
+
+            // Mostrar resultado
+            if (guardadosExitosos === niveles.length) {
+                alert(`✅ Análisis nutricional guardado exitosamente (${guardadosExitosos} niveles)`);
+            } else if (guardadosExitosos > 0) {
+                alert(`⚠️ Guardado parcial: ${guardadosExitosos}/${niveles.length} niveles guardados\nErrores: ${errores.join(', ')}`);
             } else {
-                throw new Error(resultado.error || 'Error al guardar');
+                throw new Error('No se pudo guardar ningún nivel: ' + errores.join(', '));
             }
 
         } catch (error) {
@@ -611,18 +630,16 @@ class AnalisisNutricionalManager {
      * Recopilar datos para guardar
      */
     recopilarDatosParaGuardar() {
-        const datos = {
-            id_menu: this.menuActual.id,
-            niveles: []
-        };
+        const niveles = [];
 
-        // Recopilar datos de cada nivel
+        // Recopilar datos de cada nivel por separado
         this.datosNutricionales.analisis_por_nivel.forEach((nivel, nivelIndex) => {
             const totales = this.calcularTotalesNivel(nivelIndex);
             const porcentajes = this.calcularPorcentajesNivel(nivelIndex, totales);
             const ingredientes = this.recopilarIngredientesNivel(nivelIndex);
 
-            datos.niveles.push({
+            niveles.push({
+                id_menu: this.menuActual.id,
                 id_nivel_escolar: nivel.nivel_escolar.id,
                 totales: totales,
                 porcentajes: porcentajes,
@@ -630,15 +647,14 @@ class AnalisisNutricionalManager {
             });
         });
 
-        return datos;
+        return niveles;
     }
 
     /**
      * Calcular totales del nivel
      */
     calcularTotalesNivel(nivelIndex) {
-        // TODO: Implementar cálculo de totales
-        return {
+        const totales = {
             calorias: 0,
             proteina: 0,
             grasa: 0,
@@ -649,30 +665,80 @@ class AnalisisNutricionalManager {
             peso_neto: 0,
             peso_bruto: 0
         };
+
+        // Sumar todos los ingredientes del nivel
+        $(`.ingrediente-row[data-nivel="${nivelIndex}"]`).each((index, row) => {
+            const $row = $(row);
+            const pesoNeto = parseFloat($row.find('.peso-input').val()) || 0;
+            const pesoBruto = parseFloat($row.find('.peso-bruto-calc').text()) || 0;
+            
+            totales.peso_neto += pesoNeto;
+            totales.peso_bruto += pesoBruto;
+            
+            // Sumar nutrientes
+            totales.calorias += parseFloat($row.find('.nutriente-cal').text()) || 0;
+            totales.proteina += parseFloat($row.find('.nutriente-prot').text()) || 0;
+            totales.grasa += parseFloat($row.find('.nutriente-grasa').text()) || 0;
+            totales.cho += parseFloat($row.find('.nutriente-cho').text()) || 0;
+            totales.calcio += parseFloat($row.find('.nutriente-calcio').text()) || 0;
+            totales.hierro += parseFloat($row.find('.nutriente-hierro').text()) || 0;
+            totales.sodio += parseFloat($row.find('.nutriente-sodio').text()) || 0;
+        });
+
+        return totales;
     }
 
     /**
      * Calcular porcentajes del nivel
      */
     calcularPorcentajesNivel(nivelIndex, totales) {
-        // TODO: Implementar cálculo de porcentajes
-        return {
-            calorias: 0,
-            proteina: 0,
-            grasa: 0,
-            cho: 0,
-            calcio: 0,
-            hierro: 0,
-            sodio: 0
-        };
+        const nivel = this.datosNutricionales.analisis_por_nivel[nivelIndex];
+        const requerimientos = nivel.requerimientos;
+        
+        const porcentajes = {};
+        const nutrientes = ['calorias', 'proteina', 'grasa', 'cho', 'calcio', 'hierro', 'sodio'];
+        
+        nutrientes.forEach(nutriente => {
+            const total = totales[nutriente] || 0;
+            const requerimiento = requerimientos[nutriente + '_kcal'] || requerimientos[nutriente + '_g'] || requerimientos[nutriente + '_mg'] || 0;
+            
+            if (requerimiento > 0) {
+                porcentajes[nutriente] = Math.min((total / requerimiento) * 100, 100);
+            } else {
+                porcentajes[nutriente] = 0;
+            }
+        });
+
+        return porcentajes;
     }
 
     /**
      * Recopilar ingredientes del nivel
      */
     recopilarIngredientesNivel(nivelIndex) {
-        // TODO: Implementar recopilación de ingredientes
-        return [];
+        const ingredientes = [];
+
+        $(`.ingrediente-row[data-nivel="${nivelIndex}"]`).each((index, row) => {
+            const $row = $(row);
+            const pesoNeto = parseFloat($row.find('.peso-input').val()) || 0;
+            const pesoBruto = parseFloat($row.find('.peso-bruto-calc').text()) || 0;
+            
+            ingredientes.push({
+                id_preparacion: $row.data('prep-id'),
+                id_ingrediente_siesa: $row.data('ing-id'),
+                peso_neto: pesoNeto,
+                peso_bruto: pesoBruto,
+                calorias: parseFloat($row.find('.nutriente-cal').text()) || 0,
+                proteina: parseFloat($row.find('.nutriente-prot').text()) || 0,
+                grasa: parseFloat($row.find('.nutriente-grasa').text()) || 0,
+                cho: parseFloat($row.find('.nutriente-cho').text()) || 0,
+                calcio: parseFloat($row.find('.nutriente-calcio').text()) || 0,
+                hierro: parseFloat($row.find('.nutriente-hierro').text()) || 0,
+                sodio: parseFloat($row.find('.nutriente-sodio').text()) || 0
+            });
+        });
+
+        return ingredientes;
     }
 
     /**
