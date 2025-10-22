@@ -179,7 +179,7 @@
 }
 
 .btn-primary {
-    background: #3498db;
+    background: #1b0ed9;
     color: white;
 }
 
@@ -440,7 +440,7 @@
 }
 
 .search-box i.fa-search {
-    color: #3498db;
+    color: #0121ad;
     font-size: 18px;
     margin-right: 12px;
     transition: all 0.3s ease;

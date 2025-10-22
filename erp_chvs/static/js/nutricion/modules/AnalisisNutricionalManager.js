@@ -284,12 +284,14 @@ class AnalisisNutricionalManager {
             <div class="adecuacion-mini" data-estado="${porcentajes[nutriente.key].estado}">
                 <span>${nutriente.label}:</span>
                 <input type="number" 
-                       class="form-control form-control-sm porcentaje-input" 
+                       class="form-control form-control-sm porcentaje-input bg-light" 
                        id="nivel-${index}-${nutriente.key}-pct"
                        value="${porcentajes[nutriente.key].porcentaje}" 
                        min="0" 
                        max="100" 
                        step="0.1"
+                       readonly
+                       style="cursor: not-allowed;"
                        data-nutriente="${nutriente.key}"
                        data-nivel="${index}">
                 <span class="porcentaje-symbol">%</span>
@@ -491,31 +493,8 @@ class AnalisisNutricionalManager {
             actualizandoPorPeso = false;
         });
         
-        let timeoutPorcentaje = null;
-        $(document).on('change', '.porcentaje-input', (e) => {
-            if (actualizandoPorPeso) return;
-
-            const input = $(e.target);
-            const nivelIndex = input.data('nivel');
-            const nutriente = input.data('nutriente');
-            const porcentajeDeseado = parseFloat(input.val()) || 0;
-
-            if (porcentajeDeseado < 0) {
-                input.val(0);
-                return;
-            }
-            if (porcentajeDeseado > 100) {
-                input.val(100);
-                return;
-            }
-
-            clearTimeout(timeoutPorcentaje);
-            timeoutPorcentaje = setTimeout(() => {
-                actualizandoPorPorcentaje = true;
-                this.calcularPesosDesdeAdecuacion(nivelIndex, nutriente, porcentajeDeseado);
-                actualizandoPorPorcentaje = false;
-            }, 300);
-        });
+        // Funcionalidad de edición de porcentajes eliminada
+        // Los campos de porcentaje ahora son de solo lectura
         
         $(document).on('click', '.nivel-header-btn', (e) => {
             e.preventDefault();
@@ -625,15 +604,7 @@ class AnalisisNutricionalManager {
         });
     }
 
-    /**
-     * Calcular pesos desde adecuación
-     * @param {number} nivelIndex - Índice del nivel
-     * @param {string} nutriente - Nombre del nutriente
-     * @param {number} porcentajeDeseado - Porcentaje deseado
-     */
-    calcularPesosDesdeAdecuacion(nivelIndex, nutriente, porcentajeDeseado) {
-        // TODO: Implementar lógica de cálculo desde adecuación
-    }
+    // Método calcularPesosDesdeAdecuacion eliminado - funcionalidad no requerida
 
     /**
      * Guardar análisis nutricional
