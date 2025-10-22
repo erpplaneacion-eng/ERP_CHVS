@@ -120,9 +120,26 @@ class AnalisisNutricionalManager {
                     ${analisis_por_nivel.map((nivel, index) => this.crearAccordionNivelEscolar(nivel, index)).join('')}
                 </div>
             </div>
+            
+            <!-- Botones de acción -->
+            <div class="analisis-actions mt-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="action-buttons-left">
+                        <button type="button" class="btn btn-success btn-lg" id="btnGuardarAnalisis">
+                            <i class="fas fa-save"></i> Guardar Análisis Nutricional
+                        </button>
+                    </div>
+                    <div class="action-buttons-right">
+                        <button type="button" class="btn btn-secondary btn-lg" onclick="cerrarModalAnalisisNutricional()">
+                            <i class="fas fa-times"></i> Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
         `;
         
         this.inicializarEventosInputs();
+        this.inicializarEventosBotones();
     }
 
     /**
@@ -419,6 +436,17 @@ class AnalisisNutricionalManager {
     }
 
     /**
+     * Inicializar eventos de botones
+     */
+    inicializarEventosBotones() {
+        // Botón de guardar análisis
+        const btnGuardar = document.getElementById('btnGuardarAnalisis');
+        if (btnGuardar) {
+            btnGuardar.addEventListener('click', () => this.guardarAnalisisNutricional());
+        }
+    }
+
+    /**
      * Inicializar eventos de inputs
      */
     inicializarEventosInputs() {
@@ -534,6 +562,117 @@ class AnalisisNutricionalManager {
      */
     calcularPesosDesdeAdecuacion(nivelIndex, nutriente, porcentajeDeseado) {
         // TODO: Implementar lógica de cálculo desde adecuación
+    }
+
+    /**
+     * Guardar análisis nutricional
+     */
+    async guardarAnalisisNutricional() {
+        try {
+            const btnGuardar = document.getElementById('btnGuardarAnalisis');
+            if (btnGuardar) {
+                btnGuardar.disabled = true;
+                btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            }
+
+            // Recopilar datos de todos los niveles
+            const datosParaGuardar = this.recopilarDatosParaGuardar();
+            
+            const response = await fetch('/nutricion/api/guardar-analisis-nutricional/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(datosParaGuardar)
+            });
+
+            const resultado = await response.json();
+
+            if (resultado.success) {
+                alert('✅ Análisis nutricional guardado exitosamente');
+            } else {
+                throw new Error(resultado.error || 'Error al guardar');
+            }
+
+        } catch (error) {
+            console.error('Error al guardar análisis:', error);
+            alert('❌ Error al guardar el análisis: ' + error.message);
+        } finally {
+            const btnGuardar = document.getElementById('btnGuardarAnalisis');
+            if (btnGuardar) {
+                btnGuardar.disabled = false;
+                btnGuardar.innerHTML = '<i class="fas fa-save"></i> Guardar Análisis Nutricional';
+            }
+        }
+    }
+
+    /**
+     * Recopilar datos para guardar
+     */
+    recopilarDatosParaGuardar() {
+        const datos = {
+            id_menu: this.menuActual.id,
+            niveles: []
+        };
+
+        // Recopilar datos de cada nivel
+        this.datosNutricionales.analisis_por_nivel.forEach((nivel, nivelIndex) => {
+            const totales = this.calcularTotalesNivel(nivelIndex);
+            const porcentajes = this.calcularPorcentajesNivel(nivelIndex, totales);
+            const ingredientes = this.recopilarIngredientesNivel(nivelIndex);
+
+            datos.niveles.push({
+                id_nivel_escolar: nivel.nivel_escolar.id,
+                totales: totales,
+                porcentajes: porcentajes,
+                ingredientes: ingredientes
+            });
+        });
+
+        return datos;
+    }
+
+    /**
+     * Calcular totales del nivel
+     */
+    calcularTotalesNivel(nivelIndex) {
+        // TODO: Implementar cálculo de totales
+        return {
+            calorias: 0,
+            proteina: 0,
+            grasa: 0,
+            cho: 0,
+            calcio: 0,
+            hierro: 0,
+            sodio: 0,
+            peso_neto: 0,
+            peso_bruto: 0
+        };
+    }
+
+    /**
+     * Calcular porcentajes del nivel
+     */
+    calcularPorcentajesNivel(nivelIndex, totales) {
+        // TODO: Implementar cálculo de porcentajes
+        return {
+            calorias: 0,
+            proteina: 0,
+            grasa: 0,
+            cho: 0,
+            calcio: 0,
+            hierro: 0,
+            sodio: 0
+        };
+    }
+
+    /**
+     * Recopilar ingredientes del nivel
+     */
+    recopilarIngredientesNivel(nivelIndex) {
+        // TODO: Implementar recopilación de ingredientes
+        return [];
     }
 
     /**
