@@ -551,7 +551,78 @@ class AnalisisNutricionalManager {
      * @param {number} nivelIndex - Índice del nivel
      */
     recalcularTotalesNivel(nivelIndex) {
-        // TODO: Implementar lógica de recálculo
+        console.log(`[DEBUG] Recalculando totales para nivel ${nivelIndex}`);
+        
+        // Calcular totales sumando todos los ingredientes del nivel
+        const totales = this.calcularTotalesNivel(nivelIndex);
+        console.log(`[DEBUG] Totales calculados:`, totales);
+        
+        // Actualizar campos de totales en la interfaz
+        $(`#nivel-${nivelIndex}-calorias`).text(totales.calorias.toFixed(1));
+        $(`#nivel-${nivelIndex}-proteina`).text(totales.proteina.toFixed(1));
+        $(`#nivel-${nivelIndex}-grasa`).text(totales.grasa.toFixed(1));
+        $(`#nivel-${nivelIndex}-cho`).text(totales.cho.toFixed(1));
+        $(`#nivel-${nivelIndex}-calcio`).text(totales.calcio.toFixed(1));
+        $(`#nivel-${nivelIndex}-hierro`).text(totales.hierro.toFixed(1));
+        $(`#nivel-${nivelIndex}-sodio`).text(totales.sodio.toFixed(1));
+        
+        // Calcular porcentajes de adecuación
+        const porcentajes = this.calcularPorcentajesNivel(nivelIndex, totales);
+        console.log(`[DEBUG] Porcentajes calculados:`, porcentajes);
+        
+        // Actualizar campos de porcentajes en la interfaz
+        $(`#nivel-${nivelIndex}-calorias_kcal-pct`).val(porcentajes.calorias.toFixed(1));
+        $(`#nivel-${nivelIndex}-proteina_g-pct`).val(porcentajes.proteina.toFixed(1));
+        $(`#nivel-${nivelIndex}-grasa_g-pct`).val(porcentajes.grasa.toFixed(1));
+        $(`#nivel-${nivelIndex}-cho_g-pct`).val(porcentajes.cho.toFixed(1));
+        $(`#nivel-${nivelIndex}-calcio_mg-pct`).val(porcentajes.calcio.toFixed(1));
+        $(`#nivel-${nivelIndex}-hierro_mg-pct`).val(porcentajes.hierro.toFixed(1));
+        $(`#nivel-${nivelIndex}-sodio_mg-pct`).val(porcentajes.sodio.toFixed(1));
+        
+        // Actualizar badges del header del acordeón
+        $(`#heading-${nivelIndex} .badge-primary`).text(`${totales.calorias.toFixed(0)} Kcal`);
+        $(`#heading-${nivelIndex} .badge-success`).text(`${totales.peso_neto.toFixed(0)}g neto`);
+        $(`#heading-${nivelIndex} .badge-warning`).text(`${totales.peso_bruto.toFixed(0)}g bruto`);
+        
+        // Actualizar colores de estado
+        this.actualizarColoresEstado(nivelIndex, porcentajes);
+        
+        console.log(`[DEBUG] Actualización completada para nivel ${nivelIndex}`);
+    }
+
+    /**
+     * Actualizar colores de estado según porcentajes
+     * @param {number} nivelIndex - Índice del nivel
+     * @param {Object} porcentajes - Porcentajes de adecuación
+     */
+    actualizarColoresEstado(nivelIndex, porcentajes) {
+        const nutrientes = [
+            { key: 'calorias_kcal', nombre: 'calorias' },
+            { key: 'proteina_g', nombre: 'proteina' },
+            { key: 'grasa_g', nombre: 'grasa' },
+            { key: 'cho_g', nombre: 'cho' },
+            { key: 'calcio_mg', nombre: 'calcio' },
+            { key: 'hierro_mg', nombre: 'hierro' },
+            { key: 'sodio_mg', nombre: 'sodio' }
+        ];
+        
+        nutrientes.forEach(nutriente => {
+            const porcentaje = porcentajes[nutriente.nombre] || 0;
+            const inputId = `nivel-${nivelIndex}-${nutriente.key}-pct`;
+            const $input = $(`#${inputId}`);
+            
+            // Remover clases anteriores
+            $input.removeClass('optimo aceptable alto');
+            
+            // Aplicar nueva clase según el porcentaje
+            if (porcentaje <= 35) {
+                $input.addClass('optimo');
+            } else if (porcentaje <= 70) {
+                $input.addClass('aceptable');
+            } else {
+                $input.addClass('alto');
+            }
+        });
     }
 
     /**
