@@ -107,15 +107,15 @@ class FacturacionManager {
             inputElement.classList.remove('is-invalid');
             inputElement.classList.add('is-valid');
         } else {
-            feedbackElement.className = 'invalid-feedback';
-            feedbackElement.textContent = `✗ ${result.error}`;
+            feedbackElement.className = 'alert-feedback';
+            feedbackElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${result.error}`;
             inputElement.classList.remove('is-valid');
-            inputElement.classList.add('is-invalid');
+            inputElement.classList.add('is-alert');
         }
     }
 
     getOrCreateFeedbackElement(inputElement) {
-        let feedbackElement = inputElement.parentNode.querySelector('.valid-feedback, .invalid-feedback');
+        let feedbackElement = inputElement.parentNode.querySelector('.valid-feedback, .invalid-feedback, .alert-feedback');
         
         if (!feedbackElement) {
             feedbackElement = document.createElement('div');
@@ -155,8 +155,8 @@ class FacturacionManager {
         
         // Limpiar validaciones previas
         if (fileInput) {
-            fileInput.classList.remove('is-valid', 'is-invalid');
-            const feedbackElement = form.querySelector('.valid-feedback, .invalid-feedback');
+            fileInput.classList.remove('is-valid', 'is-invalid', 'is-alert');
+            const feedbackElement = form.querySelector('.valid-feedback, .invalid-feedback, .alert-feedback');
             if (feedbackElement) {
                 feedbackElement.remove();
             }
