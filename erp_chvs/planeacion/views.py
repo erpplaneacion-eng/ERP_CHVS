@@ -192,6 +192,9 @@ def inicializar_ciclos_menus(request):
                 ).count()
             }, status=200)
 
+        # Determinar el nombre del programa basado en el municipio
+        nombre_programa = _determinar_nombre_programa_por_municipio(municipio_obj.nombre_municipio)
+        
         # Crear/actualizar registros en PlanificacionRaciones
         registros_creados = 0
         registros_actualizados = 0
@@ -219,6 +222,7 @@ def inicializar_ciclos_menus(request):
                             nivel_escolar=nivel_obj,
                             ano=ano,
                             defaults={
+                                'nombre_programa': nombre_programa,
                                 'cap_am': datos['cap_am'],
                                 'cap_pm': datos['cap_pm'],
                                 'almuerzo_ju': datos['almuerzo_ju'],
@@ -234,6 +238,7 @@ def inicializar_ciclos_menus(request):
                             nivel_escolar=nivel_obj,
                             ano=ano,
                             defaults={
+                                'nombre_programa': nombre_programa,
                                 'cap_am': datos['cap_am'],
                                 'cap_pm': datos['cap_pm'],
                                 'almuerzo_ju': datos['almuerzo_ju'],
@@ -434,3 +439,26 @@ def _obtener_datos_planificacion(municipio_obj, focalizacion, ano):
         })
 
     return sedes_lista
+
+
+def _determinar_nombre_programa_por_municipio(nombre_municipio):
+    """
+    Determina el nombre del programa basado en el municipio.
+    
+    Args:
+        nombre_municipio (str): Nombre del municipio
+        
+    Returns:
+        str: Nombre del programa correspondiente
+    """
+    municipio_upper = nombre_municipio.upper()
+    
+    if 'CALI' in municipio_upper:
+        return 'PAE CALI'
+    elif 'YUMBO' in municipio_upper:
+        return 'PAE YUMBO'
+    elif 'BUGA' in municipio_upper:
+        return 'PAE GUADALAJARA DE BUGA'
+    else:
+        # Municipio no reconocido, usar nombre genérico
+        return f'PAE {nombre_municipio.upper()}'

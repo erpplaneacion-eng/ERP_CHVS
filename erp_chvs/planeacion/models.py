@@ -210,6 +210,14 @@ class PlanificacionRaciones(models.Model):
         default=2025
     )
 
+    # Nombre del programa
+    nombre_programa = models.CharField(
+        max_length=200,
+        verbose_name="Nombre Programa",
+        blank=True,
+        null=True
+    )
+
     # Cantidades editables por tipo de complemento alimentario
     cap_am = models.IntegerField(
         default=0,
