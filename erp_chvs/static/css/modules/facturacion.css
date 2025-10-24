@@ -1094,6 +1094,51 @@
     vertical-align: middle; /* Centra verticalmente el contenido de las celdas */
 }
 
+/* Estilos para badges de complementos alimentarios */
+.complementos-badges {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.complementos-badges .badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 8px;
+    min-width: 35px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.complementos-badges .badge:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Colores específicos para cada tipo de complemento */
+.complementos-badges .badge.bg-success {
+    background-color: #28a745 !important;
+    color: white;
+}
+
+.complementos-badges .badge.bg-info {
+    background-color: #17a2b8 !important;
+    color: white;
+}
+
+.complementos-badges .badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #212529;
+}
+
+.complementos-badges .badge.bg-secondary {
+    background-color: #6c757d !important;
+    color: white;
+}
+
 /* Estilos específicos para la tabla de previsualización */
 .tabla-datos-preview {
     font-size: 9px; /* Letra más pequeña para toda la tabla */

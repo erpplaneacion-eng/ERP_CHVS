@@ -215,8 +215,8 @@
                             <th>Sede en Archivo</th>
                             <th>Total</th>
                             <th>Preescolar</th>
-                            <th>Primaria 1-2</th>
-                            <th>Primaria 3-4-5</th>
+                            <th>Primaria 1-2-3</th>
+                            <th>Primaria 4-5</th>
                             <th>Secundaria</th>
                             <th>Media / Ciclo Comp.</th>
                             <th>Complementos (AM/PM/Alm/Ref)</th>
@@ -234,16 +234,16 @@
                                 <span class="badge bg-primary">{{ item.cantidad }}</span>
                             </td>
                             <td class="text-center">{{ item.prescolar|default:0 }}</td>
-                            <td class="text-center">{{ item.primaria_1_2|default:0 }}</td>
-                            <td class="text-center">{{ item.primaria_3_4_5|default:0 }}</td>
+                            <td class="text-center">{{ item.primaria_1_2_3|default:0 }}</td>
+                            <td class="text-center">{{ item.primaria_4_5|default:0 }}</td>
                             <td class="text-center">{{ item.secundaria|default:0 }}</td>
                             <td class="text-center">{{ item.media_ciclo_complementario|default:0 }}</td>
                             <td>
-                                <div class="d-flex justify-content-center align-items-center gap-1">
+                                <div class="complementos-badges">
                                     <span class="badge bg-success" title="CAP AM">{{ item.cap_am|default:0 }}</span>
                                     <span class="badge bg-info" title="CAP PM">{{ item.cap_pm|default:0 }}</span>
-                                    <span class="badge bg-warning text-dark" title="Almuerzo JU">{{ item.almuerzo_ju|default:0 }}</span>
-                                    <span class="badge badge-purple" title="Refuerzo">{{ item.refuerzo|default:0 }}</span>
+                                    <span class="badge bg-warning" title="Almuerzo JU">{{ item.almuerzo_ju|default:0 }}</span>
+                                    <span class="badge bg-secondary" title="Refuerzo">{{ item.refuerzo|default:0 }}</span>
                                 </div>
                             </td>
                         </tr>

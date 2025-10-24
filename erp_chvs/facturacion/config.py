@@ -57,7 +57,7 @@ class ProcesamientoConfig:
     
     # Niveles escolares para estadísticas
     NIVELES_ESCOLARES = [
-        'prescolar', 'primaria_1_2', 'primaria_3_4_5', 
+        'prescolar', 'primaria_1_2_3', 'primaria_4_5', 
         'secundaria', 'media_ciclo_complementario'
     ]
     
