@@ -27,4 +27,7 @@ urlpatterns = [
     path('api/focalizaciones-existentes/', views.api_focalizaciones_existentes, name='api_focalizaciones_existentes'),
     path('estadisticas-bd/', views.obtener_estadisticas_bd, name='estadisticas_bd'),
     path('api/get-municipio-for-programa/', views.get_municipio_for_programa, name='get_municipio_for_programa'),
+    path('api/get-focalizaciones-for-programa/', views.get_focalizaciones_for_programa, name='get_focalizaciones_for_programa'),
+    path('api/get-sedes-for-programa-focalizacion/', views.get_sedes_for_programa_focalizacion, name='get_sedes_for_programa_focalizacion'),
+    path('api/reemplazar-focalizacion-sedes/', views.reemplazar_focalizacion_sedes, name='reemplazar_focalizacion_sedes'),
 ]

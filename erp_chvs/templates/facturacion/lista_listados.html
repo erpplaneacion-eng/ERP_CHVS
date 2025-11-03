@@ -1,57 +1,364 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Listados de Focalización - ERP CHVS{% endblock %}
+{% block title %}Listados Niño a Niño - Facturación{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modules/facturacion.css' %}">
+<style>
+    .filters-section {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .filter-row {
+        display: flex;
+        gap: 15px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .filter-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 600;
+        color: #495057;
+    }
+
+    .filter-group select,
+    .filter-group input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+
+    .table-container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow-x: auto;
+    }
+
+    .search-box {
+        margin-bottom: 15px;
+        position: relative;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 10px 40px 10px 15px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+
+    .search-box i {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+    }
+
+    .listados-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .listados-table th {
+        background: #f8f9fa;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid #dee2e6;
+        white-space: nowrap;
+    }
+
+    .listados-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .listados-table tr:hover {
+        background: #f8f9fa;
+    }
+
+    .action-btn {
+        padding: 5px 10px;
+        margin: 0 2px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+
+    .action-btn.view {
+        background: #17a2b8;
+        color: white;
+    }
+
+    .action-btn.edit {
+        background: #ffc107;
+        color: black;
+    }
+
+    .action-btn.delete {
+        background: #dc3545;
+        color: white;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .pagination a,
+    .pagination span {
+        padding: 8px 12px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        text-decoration: none;
+        color: #495057;
+    }
+
+    .pagination .current {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-dialog {
+        background: white;
+        border-radius: 8px;
+        max-width: 800px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-header {
+        padding: 20px;
+        border-bottom: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+    }
+
+    .modal-close {
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        color: #6c757d;
+    }
+
+    .modal-close:hover {
+        color: #000;
+    }
+
+    .modal-body {
+        padding: 20px;
+    }
+
+    .modal-footer {
+        padding: 15px 20px;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .sedes-faltantes {
+        background: #fff3cd;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border: 1px solid #ffc107;
+    }
+
+    .sedes-faltantes h4 {
+        color: #856404;
+        margin-bottom: 15px;
+    }
+
+    .sede-faltante-item {
+        background: white;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        border-left: 4px solid #ffc107;
+    }
+
+    .sede-faltante-item h5 {
+        margin: 0 0 10px 0;
+        color: #495057;
+    }
+
+    .stats-box {
+        background: #e7f3ff;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border-left: 4px solid #007bff;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+    }
+
+    .detail-row {
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 4px;
+    }
+
+    .detail-row strong {
+        display: block;
+        color: #495057;
+        margin-bottom: 5px;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="sedes-container">
+    <!-- Header -->
     <div class="page-header">
         <div class="header-left">
-            <h2><i class="fas fa-child"></i> Gestión de Listados Niño a Niño</h2>
-            <p>Total de registros: <strong>{{ total_listados }}</strong></p>
+            <h2><i class="fas fa-child"></i> Listados Niño a Niño</h2>
+            <p>Gestión de beneficiarios individuales del programa PAE</p>
         </div>
         <div class="header-actions">
+            <button onclick="openReplaceModal()" class="btn btn-warning">
+                <i class="fas fa-exchange-alt"></i> Reemplazar Focalización
+            </button>
             <a href="{% url 'facturacion:facturacion_index' %}" class="btn btn-secondary">
                 <i class="fas fa-arrow-left"></i> Volver al Dashboard
             </a>
         </div>
     </div>
 
+    <!-- Estadísticas -->
+    {% if total_listados %}
+    <div class="stats-box">
+        <strong><i class="fas fa-info-circle"></i> Estadísticas:</strong>
+        Total de registros: <strong>{{ total_listados }}</strong>
+        {% if filtros_aplicados.programa %}
+        | Programa: <strong>{{ filtros_aplicados.programa_nombre }}</strong>
+        {% endif %}
+        {% if filtros_aplicados.sede %}
+        | Sede: <strong>{{ filtros_aplicados.sede }}</strong>
+        {% endif %}
+        {% if filtros_aplicados.focalizacion %}
+        | Focalización: <strong>{{ filtros_aplicados.focalizacion }}</strong>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Sedes Faltantes -->
+    {% if sedes_faltantes %}
+    <div class="sedes-faltantes">
+        <h4><i class="fas fa-exclamation-triangle"></i> Sedes Faltantes ({{ total_sedes_faltantes }})</h4>
+        <p>Las siguientes sedes no tienen registros completos:</p>
+
+        {% for sede_data in sedes_faltantes %}
+        <div class="sede-faltante-item">
+            <h5>{{ sede_data.sede }}</h5>
+            <p><strong>Focalizaciones faltantes:</strong> {{ sede_data.focalizaciones_faltantes|join:", " }}</p>
+            <div style="margin-top: 10px;">
+                <button onclick="agregarRegistroDesdeSede('{{ sede_data.sede }}', '{{ filtros_aplicados.programa }}')"
+                        class="btn btn-sm btn-success">
+                    <i class="fas fa-plus"></i> Agregar Registro
+                </button>
+                <button onclick="transferirGradosDesdeSede('{{ sede_data.sede }}', '{{ filtros_aplicados.programa }}', [], '{{ filtros_aplicados.focalizacion }}')"
+                        class="btn btn-sm btn-primary">
+                    <i class="fas fa-exchange-alt"></i> Transferir Grados
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- Filtros -->
-    <div class="filters-container">
-        <form method="GET" class="filters-form">
+    <div class="filters-section">
+        <h4><i class="fas fa-filter"></i> Filtros</h4>
+        <form method="get" id="filterForm">
             <div class="filter-row">
                 <div class="filter-group">
-                    <label for="programa">Filtrar por Programa:</label>
-                    <select name="programa" id="programa">
-                        <option value="">Todos los Programas</option>
+                    <label for="programa">Programa:</label>
+                    <select name="programa" id="programa" class="form-control">
+                        <option value="">Todos los programas</option>
                         {% for prog in programas %}
-                        <option value="{{ prog.id }}" {% if filtros_aplicados.programa == prog.id|stringformat:"s" %}selected{% endif %}>{{ prog.programa }}</option>
+                        <option value="{{ prog.id }}" {% if filtros_aplicados.programa == prog.id|stringformat:"s" %}selected{% endif %}>
+                            {{ prog.programa }} - {{ prog.municipio.nombre_municipio }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
+
                 <div class="filter-group">
-                    <label for="sede">Filtrar por Sede Educativa:</label>
-                    <select name="sede" id="sede">
-                        <option value="">Todas las Sedes</option>
-                        {% for sede_val in sede_values %}
-                        <option value="{{ sede_val }}" {% if filtros_aplicados.sede == sede_val %}selected{% endif %}>{{ sede_val }}</option>
+                    <label for="sede">Sede:</label>
+                    <select name="sede" id="sede" class="form-control">
+                        <option value="">Todas las sedes</option>
+                        {% for sede in sede_values %}
+                        <option value="{{ sede }}" {% if filtros_aplicados.sede == sede %}selected{% endif %}>
+                            {{ sede }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
+
                 <div class="filter-group">
-                    <label for="focalizacion">Filtrar por Focalización:</label>
-                    <select name="focalizacion" id="focalizacion">
-                        <option value="">Todas las Focalizaciones</option>
-                        {% for foc_val in focalizacion_values %}
-                        <option value="{{ foc_val }}" {% if filtros_aplicados.focalizacion == foc_val %}selected{% endif %}>{{ foc_val }}</option>
+                    <label for="focalizacion">Focalización:</label>
+                    <select name="focalizacion" id="focalizacion" class="form-control">
+                        <option value="">Todas las focalizaciones</option>
+                        {% for foc in focalizacion_values %}
+                        <option value="{{ foc }}" {% if filtros_aplicados.focalizacion == foc %}selected{% endif %}>
+                            {{ foc }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="filter-actions">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-filter"></i> Aplicar Filtros
+
+                <div class="filter-group">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <i class="fas fa-search"></i> Filtrar
                     </button>
-                    <a href="{% url 'facturacion:lista_listados' %}" class="btn btn-secondary">
+                </div>
+
+                <div class="filter-group">
+                    <a href="{% url 'facturacion:lista_listados' %}" class="btn btn-secondary" style="width: 100%; display: block; text-align: center;">
                         <i class="fas fa-times"></i> Limpiar
                     </a>
                 </div>
@@ -59,355 +366,454 @@
         </form>
     </div>
 
-    <!-- Barra de búsqueda -->
-    <div class="search-container">
-        <div class="search-box">
-            <i class="fas fa-search"></i>
-            <input type="text" id="searchInput" placeholder="Buscar por nombre, documento, institución..." autocomplete="off">
-            <button id="clearSearch" class="btn-clear-search" title="Limpiar búsqueda">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="search-results-info">
-            <span id="searchResultsCount">Mostrando todos los registros</span>
-        </div>
-    </div>
-
+    <!-- Tabla de Listados -->
     <div class="table-container">
-        <table class="data-table" id="listadosTable">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Buscar en la tabla...">
+            <i class="fas fa-search"></i>
+        </div>
+
+        <div id="searchResultsCount" style="margin-bottom: 10px; color: #6c757d;">
+            Mostrando todos los registros
+        </div>
+
+        {% if listados %}
+        <table class="listados-table" id="listadosTable">
             <thead>
-                <tr>                   
+                <tr>
+                    <th>ID</th>
                     <th>Año</th>
-                    <th>ETC</th>
-                    <th>Institución</th>
                     <th>Sede</th>
                     <th>Documento</th>
                     <th>Nombre Completo</th>
-                    
                     <th>Grado</th>
                     <th>Focalización</th>
+                    <th>Fecha Creación</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 {% for listado in listados %}
-                <tr data-id="{{ listado.id_listados }}">
-                    
-                    <td>{{ listado.ano }}</td>
-                    <td>{{ listado.etc }}</td>
-                    <td>{{ listado.institucion }}</td>
-                    <td>{{ listado.sede }}</td>
-                    <td>{{ listado.doc }}</td>
-                    <td>{{ listado.get_nombre_completo }}</td>
-                   
-                    <td>{{ listado.grado_grupos }}</td>
-                    <td>
-                        <span class="badge badge-info">
-                            {{ listado.focalizacion }}
-                        </span>
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-info" onclick="viewListado('{{ listado.id_listados }}')" title="Ver detalles">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="btn btn-sm btn-warning" onclick="editListado('{{ listado.id_listados }}')" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteListado('{{ listado.id_listados }}')" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-                {% empty %}
                 <tr>
-                    <td colspan="12" class="text-center">No hay registros de listados focalización</td>
+                    <td>{{ listado.id_listados|truncatechars:15 }}</td>
+                    <td>{{ listado.ano }}</td>
+                    <td>{{ listado.sede|truncatechars:30 }}</td>
+                    <td>{{ listado.tipodoc }} {{ listado.doc }}</td>
+                    <td>{{ listado.nombre1 }} {{ listado.apellido1 }}</td>
+                    <td>{{ listado.grado_grupos }}</td>
+                    <td><span class="badge badge-info">{{ listado.focalizacion }}</span></td>
+                    <td>{{ listado.fecha_creacion|date:"d/m/Y" }}</td>
+                    <td>
+                        <button onclick="viewListado('{{ listado.id_listados }}')" class="action-btn view">
+                            <i class="fas fa-eye"></i> Ver
+                        </button>
+                        <button onclick="editListado('{{ listado.id_listados }}')" class="action-btn edit">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button onclick="deleteListado('{{ listado.id_listados }}')" class="action-btn delete">
+                            <i class="fas fa-trash"></i> Eliminar
+                        </button>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-    </div>
 
-    <!-- Paginación -->
-    {% if listados.has_other_pages %}
-    <div class="pagination-container">
-        <nav aria-label="Paginación de listados">
-            <ul class="pagination">
-                {% if listados.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page=1{% if filtros_aplicados.programa %}&programa={{ filtros_aplicados.programa }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}">Primera</a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ listados.previous_page_number }}{% if filtros_aplicados.programa %}&programa={{ filtros_aplicados.programa }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}">Anterior</a>
-                    </li>
-                {% endif %}
+        <!-- Paginación -->
+        {% if listados.has_other_pages %}
+        <div class="pagination">
+            {% if listados.has_previous %}
+            <a href="?page=1{% if filtros_aplicados.programa %}&programa={{ filtros_aplicados.programa }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}{% if filtros_aplicados.focalizacion %}&focalizacion={{ filtros_aplicados.focalizacion }}{% endif %}">
+                <i class="fas fa-angle-double-left"></i> Primera
+            </a>
+            <a href="?page={{ listados.previous_page_number }}{% if filtros_aplicados.programa %}&programa={{ filtros_aplicados.programa }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}{% if filtros_aplicados.focalizacion %}&focalizacion={{ filtros_aplicados.focalizacion }}{% endif %}">
+                <i class="fas fa-angle-left"></i> Anterior
+            </a>
+            {% endif %}
 
-                <li class="page-item active">
-                    <span class="page-link">
-                        Página {{ listados.number }} de {{ listados.paginator.num_pages }}
-                    </span>
-                </li>
+            <span class="current">
+                Página {{ listados.number }} de {{ listados.paginator.num_pages }}
+            </span>
 
-                {% if listados.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ listados.next_page_number }}{% if filtros_aplicados.programa %}&programa={{ filtros_aplicados.programa }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}">Siguiente</a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ listados.paginator.num_pages }}{% if filtros_aplicados.programa %}&programa={{ filtros_aplicados.programa }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}">Última</a>
-                    </li>
-                {% endif %}
-            </ul>
-        </nav>
-    </div>
-    {% endif %}
-
-    <!-- Tarjeta de sedes faltantes -->
-    {% if filtros_aplicados.programa and total_sedes_faltantes > 0 %}
-    <div class="missing-sedes-card">
-        <div class="card-header-missing">
-            <h3><i class="fas fa-exclamation-triangle"></i> Sedes Sin Registros</h3>
-            <p>
-                Para el programa: <strong>{{ filtros_aplicados.programa_nombre }}</strong>
-                {% if filtros_aplicados.focalizacion %}
-                | Focalización: <strong>{{ filtros_aplicados.focalizacion }}</strong>
-                {% endif %}
-                | Sedes sin registros: <strong>{{ total_sedes_faltantes }}</strong>
-            </p>
+            {% if listados.has_next %}
+            <a href="?page={{ listados.next_page_number }}{% if filtros_aplicados.programa %}&programa={{ filtros_aplicados.programa }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}{% if filtros_aplicados.focalizacion %}&focalizacion={{ filtros_aplicados.focalizacion }}{% endif %}">
+                Siguiente <i class="fas fa-angle-right"></i>
+            </a>
+            <a href="?page={{ listados.paginator.num_pages }}{% if filtros_aplicados.programa %}&programa={{ filtros_aplicados.programa }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}{% if filtros_aplicados.focalizacion %}&focalizacion={{ filtros_aplicados.focalizacion }}{% endif %}">
+                Última <i class="fas fa-angle-double-right"></i>
+            </a>
+            {% endif %}
         </div>
-        <div class="missing-sedes-content">
-            <div class="missing-sedes-list">
-                {% for sede_info in sedes_faltantes %}
-                <div class="missing-sede-item">
-                    <div class="sede-info-header">
-                        <span class="sede-name">{{ sede_info.sede }}</span>
-                        {% if sede_info.focalizaciones_faltantes %}
-                        <div class="focalizaciones-badges">
-                            <span class="badge-label">Focalizaciones faltantes:</span>
-                            {% for foc in sede_info.focalizaciones_faltantes %}
-                                <span class="badge badge-warning">{{ foc }}</span>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                    </div>
-                    <button class="btn btn-sm btn-success" onclick="transferirGradosDesdeSede('{{ sede_info.sede }}', '{{ filtros_aplicados.programa }}', {{ grados_disponibles|safe }}, '{{ filtros_aplicados.focalizacion }}')" title="Transferir grados">
-                        <i class="fas fa-exchange-alt"></i> Transferir Grados
-                    </button>
-                </div>
-                {% endfor %}
-            </div>
+        {% endif %}
+
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> No se encontraron listados con los filtros aplicados.
+            <a href="{% url 'facturacion:lista_listados' %}" class="btn btn-sm btn-primary">Limpiar filtros</a>
         </div>
+        {% endif %}
     </div>
-    {% elif filtros_aplicados.programa and total_sedes_faltantes == 0 %}
-    <div class="complete-sedes-card">
-        <div class="card-header-complete">
-            <h3><i class="fas fa-check-circle"></i> Sedes Completas</h3>
-            <p>
-                Todas las sedes del programa <strong>{{ filtros_aplicados.programa_nombre }}</strong>
-                {% if filtros_aplicados.focalizacion %}
-                para la focalización <strong>{{ filtros_aplicados.focalizacion }}</strong>
-                {% endif %}
-                tienen registros en el sistema.
-            </p>
-        </div>
-    </div>
-    {% endif %}
 </div>
 
-<!-- Modal para editar/crear listado -->
-<div class="modal-overlay" id="listadoModal" style="display: none;">
+<!-- Modal para Ver Detalles -->
+<div class="modal-overlay" id="detailModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3>Detalles del Registro</h3>
+            <span class="modal-close" onclick="closeDetailModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="detailContent">
+            <!-- Contenido dinámico -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeDetailModal()">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Editar/Crear -->
+<div class="modal-overlay" id="listadoModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 id="modalTitle">Editar Registro</h3>
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="listadoForm">
+                {% csrf_token %}
+                <input type="hidden" id="id_listados" name="id_listados">
+
+                <div class="form-group mb-3">
+                    <label>Año:</label>
+                    <input type="number" id="ano" name="ano" class="form-control" value="2025" required>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>ETC:</label>
+                    <input type="text" id="etc" name="etc" class="form-control" required>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Institución:</label>
+                    <input type="text" id="institucion" name="institucion" class="form-control" required>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Sede:</label>
+                    <input type="text" id="sede" name="sede" class="form-control" required>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Tipo Documento:</label>
+                    <select id="tipodoc" name="tipodoc" class="form-control" required>
+                        <option value="RC">RC</option>
+                        <option value="TI">TI</option>
+                        <option value="CC">CC</option>
+                        <option value="CE">CE</option>
+                    </select>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Documento:</label>
+                    <input type="text" id="doc" name="doc" class="form-control" required>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Primer Apellido:</label>
+                    <input type="text" id="apellido1" name="apellido1" class="form-control">
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Segundo Apellido:</label>
+                    <input type="text" id="apellido2" name="apellido2" class="form-control">
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Primer Nombre:</label>
+                    <input type="text" id="nombre1" name="nombre1" class="form-control" required>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Segundo Nombre:</label>
+                    <input type="text" id="nombre2" name="nombre2" class="form-control">
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Fecha Nacimiento:</label>
+                    <input type="text" id="fecha_nacimiento" name="fecha_nacimiento" class="form-control" placeholder="DD/MM/YYYY" required>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Edad:</label>
+                    <input type="number" id="edad" name="edad" class="form-control" required>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Género:</label>
+                    <select id="genero" name="genero" class="form-control" required>
+                        <option value="M">Masculino</option>
+                        <option value="F">Femenino</option>
+                    </select>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Grado y Grupo:</label>
+                    <input type="text" id="grado_grupos" name="grado_grupos" class="form-control" required>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Focalización:</label>
+                    <input type="text" id="focalizacion" name="focalizacion" class="form-control" required>
+                </div>
+
+                <h5>Complementos Alimentarios</h5>
+
+                <div class="form-group mb-3">
+                    <label>Complemento AM:</label>
+                    <select id="complemento_alimentario_preparado_am" name="complemento_alimentario_preparado_am" class="form-control">
+                        <option value="">No</option>
+                        <option value="SI">Sí</option>
+                    </select>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Complemento PM:</label>
+                    <select id="complemento_alimentario_preparado_pm" name="complemento_alimentario_preparado_pm" class="form-control">
+                        <option value="">No</option>
+                        <option value="SI">Sí</option>
+                    </select>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Almuerzo Jornada Única:</label>
+                    <select id="almuerzo_jornada_unica" name="almuerzo_jornada_unica" class="form-control">
+                        <option value="">No</option>
+                        <option value="SI">Sí</option>
+                    </select>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Refuerzo AM/PM:</label>
+                    <select id="refuerzo_complemento_am_pm" name="refuerzo_complemento_am_pm" class="form-control">
+                        <option value="">No</option>
+                        <option value="SI">Sí</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+            <button class="btn btn-success" onclick="saveListado()">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Transferencia de Grados -->
+<div class="modal-overlay" id="transferModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 id="transferTitle">Transferir Grados</h3>
+            <span class="modal-close" onclick="closeTransferModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group mb-3">
+                <label>Sede de Origen:</label>
+                <select id="sedeOrigen" class="form-control" onchange="cambiarSedeOrigen()">
+                    <option value="">Selecciona una sede...</option>
+                </select>
+            </div>
+
+            <h5>Grados Disponibles:</h5>
+            <div id="gradosDisponibles" style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: 4px;">
+                <p class="empty-message">Selecciona una sede de origen para ver sus grados</p>
+            </div>
+
+            <h5 style="margin-top: 20px;">Grados Seleccionados:</h5>
+            <div id="gradosSeleccionados" style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: 4px;">
+                <p class="empty-message">Ningún grado seleccionado</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeTransferModal()">Cancelar</button>
+            <button class="btn btn-primary" id="transferBtn" onclick="confirmarTransferencia()" disabled>
+                <i class="fas fa-exchange-alt"></i> Transferir Grados
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Reemplazar Focalización -->
+<div class="modal-overlay" id="replaceFocalizacionModal" style="display: none;">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modalTitle">Registro de Focalización</h3>
-                <span class="modal-close" onclick="closeModal()">&times;</span>
+                <h3>Reemplazar Focalización de Sedes</h3>
+                <span class="modal-close" onclick="closeReplaceModal()">&times;</span>
             </div>
             <div class="modal-body">
-                <form id="listadoForm">
-                    <input type="hidden" id="id_listados" name="id_listados">
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="ano">Año</label>
-                            <input type="number" id="ano" name="ano" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label for="focalizacion">Focalización</label>
-                            <input type="text" id="focalizacion" name="focalizacion" readonly>
-                        </div>
+                <form id="replaceFocalizacionForm" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="form-group mb-3">
+                        <label for="replace_programa">Paso 1: Seleccione el Programa</label>
+                        <select id="replace_programa" name="programa" class="form-control">
+                            <option value="">Seleccione un programa</option>
+                            {% for prog in programas %}
+                            <option value="{{ prog.id }}">{{ prog.programa }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="etc">ETC</label>
-                            <input type="text" id="etc" name="etc" maxlength="100">
-                        </div>
-                        <div class="form-group">
-                            <label for="institucion">Institución</label>
-                            <input type="text" id="institucion" name="institucion" maxlength="200">
-                        </div>
+                    <div class="form-group mb-3">
+                        <label for="replace_focalizacion_origen">Paso 2: Seleccione la Focalización a Reemplazar</label>
+                        <select id="replace_focalizacion_origen" name="focalizacion_origen" class="form-control" disabled>
+                            <option value="">Seleccione una focalización</option>
+                        </select>
                     </div>
-
-                    <div class="form-group">
-                        <label for="sede">Sede Educativa</label>
-                        <input type="text" id="sede" name="sede" maxlength="200">
+                    <div class="form-group mb-3">
+                        <label for="replace_sedes">Paso 3: Seleccione la(s) Sede(s) a Actualizar</label>
+                        <select id="replace_sedes" name="sedes" class="form-control" multiple disabled>
+                        </select>
                     </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="tipodoc">Tipo Documento</label>
-                            <input type="text" id="tipodoc" name="tipodoc" maxlength="10">
-                        </div>
-                        <div class="form-group">
-                            <label for="doc">Número Documento</label>
-                            <input type="text" id="doc" name="doc" maxlength="50" readonly>
-                        </div>
+                    <div class="form-group mb-3">
+                        <label for="replace_focalizacion_nueva">Paso 4: Seleccione la Nueva Focalización</label>
+                        <select id="replace_focalizacion_nueva" name="focalizacion_nueva" class="form-control" disabled>
+                            <option value="">Seleccione una focalización</option>
+                            {% for focalizacion in focalizacion_values %}
+                            <option value="{{ focalizacion }}">{{ focalizacion }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="apellido1">Primer Apellido</label>
-                            <input type="text" id="apellido1" name="apellido1" maxlength="100">
-                        </div>
-                        <div class="form-group">
-                            <label for="apellido2">Segundo Apellido</label>
-                            <input type="text" id="apellido2" name="apellido2" maxlength="100">
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="nombre1">Primer Nombre</label>
-                            <input type="text" id="nombre1" name="nombre1" maxlength="100">
-                        </div>
-                        <div class="form-group">
-                            <label for="nombre2">Segundo Nombre</label>
-                            <input type="text" id="nombre2" name="nombre2" maxlength="100">
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="fecha_nacimiento">Fecha Nacimiento</label>
-                            <input type="text" id="fecha_nacimiento" name="fecha_nacimiento" maxlength="20">
-                        </div>
-                        <div class="form-group">
-                            <label for="edad">Edad</label>
-                            <input type="number" id="edad" name="edad">
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="genero">Género</label>
-                            <input type="text" id="genero" name="genero" maxlength="10">
-                        </div>
-                        <div class="form-group">
-                            <label for="etnia">Etnia</label>
-                            <input type="text" id="etnia" name="etnia" maxlength="50">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="grado_grupos">Grado y Grupos</label>
-                        <input type="text" id="grado_grupos" name="grado_grupos" maxlength="20">
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="complemento_alimentario_preparado_am">Complemento AM</label>
-                            <input type="text" id="complemento_alimentario_preparado_am" name="complemento_alimentario_preparado_am" maxlength="10">
-                        </div>
-                        <div class="form-group">
-                            <label for="complemento_alimentario_preparado_pm">Complemento PM</label>
-                            <input type="text" id="complemento_alimentario_preparado_pm" name="complemento_alimentario_preparado_pm" maxlength="10">
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="almuerzo_jornada_unica">Almuerzo Jornada Única</label>
-                            <input type="text" id="almuerzo_jornada_unica" name="almuerzo_jornada_unica" maxlength="10">
-                        </div>
-                        <div class="form-group">
-                            <label for="refuerzo_complemento_am_pm">Refuerzo AM/PM</label>
-                            <input type="text" id="refuerzo_complemento_am_pm" name="refuerzo_complemento_am_pm" maxlength="10">
-                        </div>
+                    <div class="form-group mb-3">
+                        <label for="replace_archivo_excel">Paso 5: Cargue el Nuevo Archivo Excel</label>
+                        <input type="file" id="replace_archivo_excel" name="archivo_excel" class="form-control" accept=".xls,.xlsx" disabled>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="saveListado()">Guardar</button>
+                <button type="button" class="btn btn-secondary" onclick="closeReplaceModal()">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="submitReplaceForm()" id="submitReplaceBtn" disabled>Reemplazar</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal para ver detalles -->
-<div class="modal-overlay" id="detailModal" style="display: none;">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Detalles del Registro</h3>
-                <span class="modal-close" onclick="closeDetailModal()">&times;</span>
-            </div>
-            <div class="modal-body" id="detailContent">
-                <!-- Contenido dinámico -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeDetailModal()">Cerrar</button>
-            </div>
-        </div>
-    </div>
-</div>
+{% endblock %}
 
-<!-- Modal para transferencia de grados -->
-<div class="modal-overlay" id="transferModal" style="display: none;">
-    <div class="modal-content modal-transfer">
-            <div class="modal-header">
-                <h3>Transferir Grados a Sede</h3>
-                <span class="modal-close" onclick="closeTransferModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="transfer-container">
-                    <div class="transfer-info">
-                        <h4 id="transferTitle">Transferir grados a: [Sede]</h4>
-                        <p>Selecciona la sede de origen y los grados que deseas transferir.</p>
-                    </div>
+{% block extra_js %}
+<script src="{% static 'js/facturacion/facturacion.js' %}"></script>
+<script>
+function openReplaceModal() {
+    document.getElementById('replaceFocalizacionModal').style.display = 'flex';
+}
 
-                    <!-- Selector de sede origen -->
-                    <div class="sede-origin-selector">
-                        <label for="sedeOrigen">Sede de Origen:</label>
-                        <select id="sedeOrigen" onchange="cambiarSedeOrigen()">
-                            <option value="">Selecciona una sede...</option>
-                        </select>
-                    </div>
+function closeReplaceModal() {
+    document.getElementById('replaceFocalizacionModal').style.display = 'none';
+}
 
-                    <div class="transfer-columns">
-                        <!-- Columna Izquierda: Grados Disponibles -->
-                        <div class="transfer-column">
-                            <h5><i class="fas fa-list"></i> Grados Disponibles</h5>
-                            <div id="gradosDisponibles" class="grados-list">
-                                <!-- Se llena dinámicamente -->
-                            </div>
-                        </div>
+async function submitReplaceForm() {
+    const form = document.getElementById('replaceFocalizacionForm');
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('submitReplaceBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Reemplazando...';
 
-                        <!-- Columna Derecha: Grados Seleccionados -->
-                        <div class="transfer-column">
-                            <h5><i class="fas fa-check"></i> Grados a Transferir</h5>
-                            <div id="gradosSeleccionados" class="grados-list">
-                                <p class="empty-message">Ningún grado seleccionado</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeTransferModal()">Cancelar</button>
-                <button type="button" class="btn btn-success" onclick="confirmarTransferencia()" id="transferBtn" disabled>
-                    <i class="fas fa-exchange-alt"></i> Transferir Grados
-                </button>
-            </div>
-    </div>
-</div>
+    try {
+        const response = await fetch("{% url 'facturacion:reemplazar_focalizacion_sedes' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        });
 
+        const data = await response.json();
+
+        if (data.success) {
+            alert('Focalización reemplazada exitosamente');
+            closeReplaceModal();
+            location.reload();
+        } else {
+            alert(`Error: ${data.error}`);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Ocurrió un error de conexión.');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Reemplazar';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const programaSelect = document.getElementById('replace_programa');
+    const focalizacionOrigenSelect = document.getElementById('replace_focalizacion_origen');
+    const sedesSelect = document.getElementById('replace_sedes');
+    const focalizacionNuevaSelect = document.getElementById('replace_focalizacion_nueva');
+    const archivoExcelInput = document.getElementById('replace_archivo_excel');
+    const submitBtn = document.getElementById('submitReplaceBtn');
+
+    if (programaSelect) {
+        programaSelect.addEventListener('change', async function() {
+            const programaId = this.value;
+            focalizacionOrigenSelect.innerHTML = '<option value="">Seleccione una focalización</option>';
+            focalizacionOrigenSelect.disabled = true;
+            sedesSelect.innerHTML = '';
+            sedesSelect.disabled = true;
+            focalizacionNuevaSelect.disabled = true;
+            archivoExcelInput.disabled = true;
+            submitBtn.disabled = true;
+
+            if (programaId) {
+                try {
+                    const response = await fetch(`{% url 'facturacion:get_focalizaciones_for_programa' %}?programa_id=${programaId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        data.focalizaciones.forEach(foc => {
+                            const option = new Option(foc, foc);
+                            focalizacionOrigenSelect.add(option);
+                        });
+                        focalizacionOrigenSelect.disabled = false;
+                    } else {
+                        console.error('Error al obtener focalizaciones');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+        });
+    }
+
+    if (focalizacionOrigenSelect) {
+        focalizacionOrigenSelect.addEventListener('change', async function() {
+            const programaId = programaSelect.value;
+            const focalizacion = this.value;
+            sedesSelect.innerHTML = '';
+            sedesSelect.disabled = true;
+            focalizacionNuevaSelect.disabled = true;
+            archivoExcelInput.disabled = true;
+            submitBtn.disabled = true;
+
+            if (programaId && focalizacion) {
+                try {
+                    const response = await fetch(`{% url 'facturacion:get_sedes_for_programa_focalizacion' %}?programa_id=${programaId}&focalizacion=${focalizacion}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        data.sedes.forEach(sede => {
+                            const option = new Option(sede, sede);
+                            sedesSelect.add(option);
+                        });
+                        sedesSelect.disabled = false;
+                        focalizacionNuevaSelect.disabled = false;
+                        archivoExcelInput.disabled = false;
+                        submitBtn.disabled = false;
+                    } else {
+                        console.error('Error al obtener sedes');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

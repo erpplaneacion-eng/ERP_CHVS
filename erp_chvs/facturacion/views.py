@@ -862,3 +862,96 @@ def get_municipio_for_programa(request):
         return JsonResponse({'municipio': municipio})
     except Programa.DoesNotExist:
         return JsonResponse({'error': 'Programa no encontrado'}, status=404)
+
+@login_required
+def get_focalizaciones_for_programa(request):
+    """
+    Vista AJAX para obtener las focalizaciones de un programa.
+    """
+    programa_id = request.GET.get('programa_id')
+    if not programa_id:
+        return JsonResponse({'error': 'No se proporcionó el ID del programa'}, status=400)
+
+    try:
+        focalizaciones = ListadosFocalizacion.objects.filter(programa_id=programa_id).values_list('focalizacion', flat=True).distinct()
+        return JsonResponse({'focalizaciones': list(focalizaciones)})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def get_sedes_for_programa_focalizacion(request):
+    """
+    Vista AJAX para obtener las sedes de un programa y focalización.
+    """
+    programa_id = request.GET.get('programa_id')
+    focalizacion = request.GET.get('focalizacion')
+
+    if not programa_id or not focalizacion:
+        return JsonResponse({'error': 'Parámetros incompletos'}, status=400)
+
+    try:
+        sedes = ListadosFocalizacion.objects.filter(programa_id=programa_id, focalizacion=focalizacion).values_list('sede', flat=True).distinct()
+        return JsonResponse({'sedes': list(sedes)})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def reemplazar_focalizacion_sedes(request):
+    """
+    Vista para reemplazar la focalización de una o varias sedes de un programa.
+    """
+    try:
+        programa_id = request.POST.get('programa')
+        focalizacion_origen = request.POST.get('focalizacion_origen')
+        sedes = request.POST.getlist('sedes')
+        focalizacion_nueva = request.POST.get('focalizacion_nueva')
+        archivo_excel = request.FILES.get('archivo_excel')
+
+        if not all([programa_id, focalizacion_origen, sedes, focalizacion_nueva, archivo_excel]):
+            return JsonResponse({'success': False, 'error': 'Parámetros incompletos'}, status=400)
+
+        with transaction.atomic():
+            # 1. Eliminar registros existentes
+            ListadosFocalizacion.objects.filter(
+                programa_id=programa_id,
+                focalizacion=focalizacion_origen,
+                sede__in=sedes
+            ).delete()
+
+            # 2. Procesar el nuevo archivo
+            programa = Programa.objects.get(id=programa_id)
+            municipio = programa.municipio.nombre_municipio
+            if "YUMBO" in municipio.upper():
+                tipo_procesamiento = "yumbo"
+            elif "BUGA" in municipio.upper():
+                tipo_procesamiento = "buga"
+            else:
+                tipo_procesamiento = "nuevo"
+
+            resultado_procesamiento = procesamiento_service.procesar_excel_original(archivo_excel, focalizacion_nueva)
+
+            if not resultado_procesamiento['success']:
+                raise Exception(resultado_procesamiento['error'])
+
+            df_para_guardar = resultado_procesamiento.get('dataframe')
+
+            # 3. Validar que el archivo solo contenga las sedes seleccionadas
+            sedes_en_archivo = df_para_guardar['SEDE'].unique().tolist()
+            if not all(sede in sedes for sede in sedes_en_archivo):
+                raise Exception("El archivo contiene sedes que no fueron seleccionadas para el reemplazo.")
+
+            # 4. Guardar nuevos registros
+            resultado_persistencia = PersistenceService.guardar_listados_focalizacion(
+                df_para_guardar,
+                programa_id=programa_id
+            )
+
+            if not resultado_persistencia['success']:
+                raise Exception(resultado_persistencia['error'])
+
+        return JsonResponse({'success': True, 'message': 'Focalización reemplazada exitosamente'})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
