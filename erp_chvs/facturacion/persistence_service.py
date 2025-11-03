@@ -20,6 +20,7 @@ class PersistenceService:
     @staticmethod
     def guardar_listados_focalizacion(
         df: pd.DataFrame,
+        programa_id: Optional[int] = None,
         batch_size: int = 1000
     ) -> Dict[str, Any]:
         """
@@ -27,6 +28,7 @@ class PersistenceService:
 
         Args:
             df: DataFrame con los datos procesados
+            programa_id: ID del programa a asociar
             batch_size: Tamaño del lote para inserción en batch
 
         Returns:
@@ -44,7 +46,7 @@ class PersistenceService:
                     id_listado = PersistenceService._generar_id_listado(row, index)
 
                     # Crear objeto ListadosFocalizacion
-                    registro = PersistenceService._crear_registro_listado(row, id_listado)
+                    registro = PersistenceService._crear_registro_listado(row, id_listado, programa_id)
 
                     registros_para_insertar.append(registro)
 
@@ -172,7 +174,7 @@ class PersistenceService:
         return id_final
 
     @staticmethod
-    def _crear_registro_listado(row: pd.Series, id_listado: str) -> ListadosFocalizacion:
+    def _crear_registro_listado(row: pd.Series, id_listado: str, programa_id: Optional[int] = None) -> ListadosFocalizacion:
         """
         Crea un objeto ListadosFocalizacion a partir de una fila del DataFrame.
         Valida y trunca campos que excedan la longitud máxima permitida.
@@ -180,6 +182,7 @@ class PersistenceService:
         Args:
             row: Fila del DataFrame
             id_listado: ID único para el registro
+            programa_id: ID del programa a asociar
 
         Returns:
             ListadosFocalizacion: Objeto del modelo
@@ -230,7 +233,8 @@ class PersistenceService:
             refuerzo_complemento_am_pm=PersistenceService._safe_string(
                 row.get('REFUERZO COMPLEMENTO AM/PM')
             ),
-            focalizacion=str(row.get('focalizacion', ''))
+            focalizacion=str(row.get('focalizacion', '')),
+            programa_id=programa_id
         )
 
     @staticmethod

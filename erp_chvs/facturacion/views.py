@@ -79,9 +79,11 @@ def procesar_listados_view(request):
         HttpResponse: Página de procesamiento por etapas
     """
     # Inicializar contexto para las dos etapas
+    programas = Programa.objects.select_related('municipio').all()
     contexto = {
         # Configuración general
         'focalizaciones': FOCALIZACIONES_DISPONIBLES,
+        'programas': programas,
 
         # ETAPA 1: Visualización
         'etapa_actual': 1,
@@ -114,12 +116,27 @@ def procesar_listados_view(request):
                 # ================================
                 archivo = request.FILES['archivo_excel']
                 focalizacion = request.POST.get('focalizacion', '')
-                tipo_procesamiento = request.POST.get('tipo_procesamiento', '')
+                programa_id = request.POST.get('programa', '')
 
-                # Validar tipo de procesamiento
-                if not tipo_procesamiento:
-                    contexto['error'] = "Tipo de procesamiento no seleccionado. Por favor, seleccione el municipio (Yumbo, Buga o Cali)."
+                # Validar programa
+                if not programa_id:
+                    contexto['error'] = "Debe seleccionar un programa."
                     return render(request, 'facturacion/procesar_listados.html', contexto)
+
+                try:
+                    programa = Programa.objects.select_related('municipio').get(id=programa_id)
+                    municipio = programa.municipio.nombre_municipio
+                    # Determinar tipo_procesamiento a partir del municipio
+                    if "YUMBO" in municipio.upper():
+                        tipo_procesamiento = "yumbo"
+                    elif "BUGA" in municipio.upper():
+                        tipo_procesamiento = "buga"
+                    else:
+                        tipo_procesamiento = "nuevo" # Cali o cualquier otro
+                except Programa.DoesNotExist:
+                    contexto['error'] = "El programa seleccionado no es válido."
+                    return render(request, 'facturacion/procesar_listados.html', contexto)
+
 
                 # Validar focalización
                 if not focalizacion or focalizacion not in FOCALIZACIONES_DISPONIBLES:
@@ -156,6 +173,7 @@ def procesar_listados_view(request):
                     request.session['datos_etapa_1'] = {
                         'archivo_name': archivo.name,
                         'focalizacion': focalizacion,
+                        'programa_id': programa_id,
                         'tipo_procesamiento': tipo_procesamiento,
                         'total_registros': resultado.get('total_registros', 0),
                         'dataframe_procesado_json': df_json,  # DataFrame ya procesado
@@ -198,6 +216,7 @@ def procesar_listados_view(request):
                 archivo_name = datos_etapa_1['archivo_name']
                 focalizacion = datos_etapa_1['focalizacion']
                 tipo_procesamiento = datos_etapa_1['tipo_procesamiento']
+                programa_id = datos_etapa_1.get('programa_id')
 
                 FacturacionLogger.log_procesamiento_inicio(archivo_name, f"etapa_2_{tipo_procesamiento}", focalizacion)
 
@@ -215,7 +234,7 @@ def procesar_listados_view(request):
 
                     # Guardar directamente en BD usando el DataFrame procesado
                     
-                    resultado_persistencia = PersistenceService.guardar_listados_focalizacion(df_procesado)
+                    resultado_persistencia = PersistenceService.guardar_listados_focalizacion(df_procesado, programa_id=programa_id)
 
                     # Crear resultado compatible con el contexto
                     resultado = {
@@ -245,7 +264,8 @@ def procesar_listados_view(request):
                         archivo_recreado,
                         focalizacion,
                         tipo_procesamiento,
-                        guardar_en_bd=True
+                        guardar_en_bd=True,
+                        programa_id=programa_id
                     )
 
                 # Actualizar contexto con resultados del guardado
@@ -295,15 +315,29 @@ def validar_archivo_ajax(request):
             })
         
         archivo = request.FILES['archivo_excel']
-        tipo_procesamiento = request.POST.get('tipo_procesamiento', '')
-        
-        # Validar que se haya especificado tipo de procesamiento
-        if not tipo_procesamiento:
+        programa_id = request.POST.get('programa', '')
+
+        if not programa_id:
             return JsonResponse({
                 'success': False,
-                'error': 'Debe seleccionar el tipo de procesamiento (Yumbo, Buga o Cali)'
+                'error': 'Debe seleccionar un programa'
             })
-        
+
+        try:
+            programa = Programa.objects.get(id=programa_id)
+            municipio = programa.municipio.nombre_municipio
+            if "YUMBO" in municipio.upper():
+                tipo_procesamiento = "yumbo"
+            elif "BUGA" in municipio.upper():
+                tipo_procesamiento = "buga"
+            else:
+                tipo_procesamiento = "nuevo"
+        except Programa.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'El programa seleccionado no es válido'
+            })
+
         # Validar archivo básico
         if not procesamiento_service.excel_processor.validar_archivo_excel(archivo):
             return JsonResponse({
@@ -913,3 +947,22 @@ def generar_zip_masivo_etc(request, etc, mes, focalizacion):
         HttpResponse: Archivo ZIP con todos los PDFs de las sedes del ETC
     """
     return PDFAsistenciaService.generar_zip_masivo_por_etc(etc, mes, focalizacion)
+
+@login_required
+def get_municipio_for_programa(request):
+    """
+    Vista AJAX para obtener el municipio de un programa.
+    """
+    programa_id = request.GET.get('programa_id')
+    if not programa_id:
+        return JsonResponse({'error': 'No se proporcionó el ID del programa'}, status=400)
+
+    try:
+        programa = Programa.objects.select_related('municipio').get(id=programa_id)
+        municipio = {
+            'id': programa.municipio.pk,
+            'nombre': programa.municipio.nombre_municipio
+        }
+        return JsonResponse({'municipio': municipio})
+    except Programa.DoesNotExist:
+        return JsonResponse({'error': 'Programa no encontrado'}, status=404)

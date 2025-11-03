@@ -26,4 +26,5 @@ urlpatterns = [
     path('estadisticas-sedes/', views.obtener_estadisticas_sedes, name='estadisticas_sedes'),
     path('api/focalizaciones-existentes/', views.api_focalizaciones_existentes, name='api_focalizaciones_existentes'),
     path('estadisticas-bd/', views.obtener_estadisticas_bd, name='estadisticas_bd'),
+    path('api/get-municipio-for-programa/', views.get_municipio_for_programa, name='get_municipio_for_programa'),
 ]

@@ -50,27 +50,25 @@
                 <input type="file" class="form-control" name="archivo_excel" id="archivo_excel" required accept=".xls,.xlsx">
             </div>
 
-            <!-- Tipo de Procesamiento -->
+            <!-- Programa -->
             <div class="form-group mb-3">
-                <label class="form-label d-block">
-                    <i class="fas fa-cogs"></i> Tipo de Procesamiento:
+                <label for="programa" class="form-label">
+                    <i class="fas fa-tasks"></i> Selecciona el Programa:
                 </label>
-                <div class="btn-group" role="group" aria-label="Tipo de procesamiento">
-                    <input type="radio" class="btn-check" name="tipo_procesamiento" id="yumbo" value="yumbo" autocomplete="off" required>
-                    <label class="btn btn-outline-primary" for="yumbo">
-                        <i class="fas fa-file-excel"></i> Yumbo
-                    </label>
+                <select name="programa" id="programa" class="form-control" required>
+                    <option value="">Seleccione un programa</option>
+                    {% for programa in programas %}
+                    <option value="{{ programa.id }}">{{ programa.programa }} - {{ programa.municipio.nombre_municipio }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-                    <input type="radio" class="btn-check" name="tipo_procesamiento" id="buga" value="buga" autocomplete="off">
-                    <label class="btn btn-outline-primary" for="buga">
-                        <i class="fas fa-file-excel"></i> Buga
-                    </label>
-
-                    <input type="radio" class="btn-check" name="tipo_procesamiento" id="nuevo" value="nuevo" autocomplete="off">
-                    <label class="btn btn-outline-primary" for="nuevo">
-                        <i class="fas fa-file-excel"></i> Cali
-                    </label>
-                </div>
+            <!-- Municipio (Display Only) -->
+            <div class="form-group mb-3">
+                <label class="form-label">
+                    <i class="fas fa-map-marker-alt"></i> Municipio:
+                </label>
+                <input type="text" id="municipio_display" class="form-control" readonly placeholder="El municipio se seleccionará automáticamente">
             </div>
 
             <!-- Focalización -->
@@ -357,122 +355,28 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Configurar validación del formulario
-        const formEtapa1 = document.getElementById('form-etapa-1');
-        if (formEtapa1) {
-            formEtapa1.addEventListener('submit', function(e) {
-                // Validar que se haya seleccionado un tipo de procesamiento
-                const tipoSeleccionado = document.querySelector('input[name="tipo_procesamiento"]:checked');
-                if (!tipoSeleccionado) {
-                    e.preventDefault();
-                    alert('⚠️ Por favor, seleccione el tipo de procesamiento (Yumbo, Buga o Cali)');
-                    return false;
-                }
-            });
-        }
+        const programaSelect = document.getElementById('programa');
+        const municipioDisplay = document.getElementById('municipio_display');
 
-        // Configurar validación de archivos
-        const fileInput = document.getElementById('archivo_excel');
-        if (fileInput) {
-            fileInput.addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    const fileInfo = document.createElement('small');
-                    fileInfo.className = 'form-text text-muted file-info';
-                    fileInfo.textContent = `Archivo seleccionado: ${file.name} (${formatFileSize(file.size)})`;
-
-                    const existingInfo = e.target.parentNode.querySelector('.file-info');
-                    if (existingInfo) {
-                        existingInfo.remove();
-                    }
-
-                    e.target.parentNode.appendChild(fileInfo);
-                }
-            });
-        }
-
-        // Función para formatear tamaño de archivo
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-
-        // --- LÓGICA PARA BLOQUEAR FOCALIZACIONES EXISTENTES ---
-        const tipoProcesamientoRadios = document.querySelectorAll('input[name="tipo_procesamiento"]');
-        const focalizacionSelect = document.getElementById('focalizacion');
-
-        async function actualizarFocalizacionesDisponibles() {
-            const tipoRadio = document.querySelector('input[name="tipo_procesamiento"]:checked');
-            if (!tipoRadio) return; // Si no hay selección, salir
-            
-            const tipoSeleccionado = tipoRadio.value;
-
-            // Resetear todas las opciones primero
-            Array.from(focalizacionSelect.options).forEach(opt => {
-                opt.disabled = false;
-                opt.textContent = opt.value; // Restaurar texto original
-            });
-
-            // Validar para Yumbo, Buga y Cali
-            if (tipoSeleccionado === 'yumbo' || tipoSeleccionado === 'buga' || tipoSeleccionado === 'nuevo') {
-                focalizacionSelect.disabled = true; // Bloquear mientras carga
-                const label = document.querySelector('label[for="focalizacion"]');
-                const originalText = label.innerHTML;
-                label.innerHTML += ' <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
-
+        programaSelect.addEventListener('change', async function() {
+            const programaId = this.value;
+            if (programaId) {
                 try {
-                    // Determinar municipio según selección
-                    let municipio = '';
-                    let municipioNombre = ''; // Para mostrar en el mensaje
-
-                    if (tipoSeleccionado === 'yumbo') {
-                        municipio = 'YUMBO';
-                        municipioNombre = 'YUMBO';
-                    } else if (tipoSeleccionado === 'buga') {
-                        municipio = 'GUADALAJARA DE BUGA';
-                        municipioNombre = 'BUGA';
-                    } else if (tipoSeleccionado === 'nuevo') {
-                        municipio = 'CALI';
-                        municipioNombre = 'CALI';
-                    }
-
-                    const response = await fetch(`{% url 'facturacion:api_focalizaciones_existentes' %}?etc=${municipio}`);
-
-                    if (!response.ok) {
-                        throw new Error('Error al consultar el servidor.');
-                    }
-
-                    const data = await response.json();
-                    const focalizacionesExistentes = data.focalizaciones || [];
-
-                    if (focalizacionesExistentes.length > 0) {
-                        Array.from(focalizacionSelect.options).forEach(opt => {
-                            if (focalizacionesExistentes.includes(opt.value)) {
-                                opt.disabled = true;
-                                opt.textContent = `${opt.value} (Ya existe en ${municipioNombre})`;
-                            }
-                        });
+                    const response = await fetch(`{% url 'facturacion:get_municipio_for_programa' %}?programa_id=${programaId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        municipioDisplay.value = data.municipio.nombre;
+                    } else {
+                        municipioDisplay.value = 'Error al obtener el municipio';
                     }
                 } catch (error) {
-                    console.error("Error al actualizar focalizaciones:", error);
-                    // Opcional: mostrar un mensaje de error al usuario
-                } finally {
-                    focalizacionSelect.disabled = false; // Desbloquear al finalizar
-                    label.innerHTML = originalText; // Restaurar texto del label
+                    console.error('Error:', error);
+                    municipioDisplay.value = 'Error de conexión';
                 }
+            } else {
+                municipioDisplay.value = 'El municipio se seleccionará automáticamente';
             }
-        }
-
-        tipoProcesamientoRadios.forEach(radio => {
-            radio.addEventListener('change', actualizarFocalizacionesDisponibles);
         });
-
-        // Ejecutar al cargar la página por si el radio ya está seleccionado
-        actualizarFocalizacionesDisponibles();
-
     });
 </script>
 {% endblock %}
