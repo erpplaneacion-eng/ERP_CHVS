@@ -796,56 +796,65 @@ def obtener_estadisticas_bd(request):
 @login_required
 def reportes_asistencia_view(request):
     """
-    Vista para la nueva interfaz de generación de reportes de asistencia.
+    Vista para la interfaz de generación de reportes de asistencia, centrada en Programas.
     """
+    # Contexto base
     context = {
         'meses_atencion': MESES_ATENCION,
+        'programas': Programa.objects.all().order_by('municipio__nombre_municipio', 'programa'),
+        'sedes': [],
+        'focalizaciones_disponibles': [],
+        'filtros_aplicados': {}
     }
-    
-    # Obtener focalizaciones únicas de la base de datos
-    focalizaciones_disponibles = ListadosFocalizacion.objects.values_list('focalizacion', flat=True).distinct().order_by('focalizacion')
-    context['focalizaciones_disponibles'] = focalizaciones_disponibles
-    
-    # Obtener todos los municipios que tienen sedes
-    municipios_con_sedes = SedesEducativas.objects.select_related('codigo_ie__id_municipios') \
-                                                  .values_list('codigo_ie__id_municipios__nombre_municipio', flat=True) \
-                                                  .distinct().order_by('codigo_ie__id_municipios__nombre_municipio')
-    context['etc_values'] = municipios_con_sedes
 
-    etc_filter = request.GET.get('etc', '').strip()
-    if etc_filter:
-        sedes = SedesEducativas.objects.filter(
-            codigo_ie__id_municipios__nombre_municipio__icontains=etc_filter
-        ).order_by('nombre_sede_educativa')
-        context['sedes'] = sedes
-        context['filtros_aplicados'] = {'etc': etc_filter}
+    # Obtener el programa seleccionado desde los parámetros GET
+    programa_id = request.GET.get('programa', '').strip()
+
+    if programa_id:
+        try:
+            # Filtrar por el programa seleccionado
+            programa_seleccionado = get_object_or_404(Programa, id=programa_id)
+            context['filtros_aplicados']['programa'] = programa_seleccionado
+
+            # 1. Obtener las sedes que tienen registros en ListadosFocalizacion para este programa
+            sedes_con_registros_nombres = ListadosFocalizacion.objects \
+                .filter(programa=programa_seleccionado) \
+                .values_list('sede', flat=True).distinct()
+
+            # Obtener los objetos SedesEducativas completos
+            sedes = SedesEducativas.objects.filter(
+                nombre_sede_educativa__in=sedes_con_registros_nombres
+            ).select_related('codigo_ie__id_municipios').order_by('nombre_sede_educativa')
+            
+            context['sedes'] = sedes
+
+            # 2. Obtener las focalizaciones disponibles solo para el programa seleccionado
+            focalizaciones = ListadosFocalizacion.objects \
+                .filter(programa=programa_seleccionado) \
+                .values_list('focalizacion', flat=True).distinct().order_by('focalizacion')
+            context['focalizaciones_disponibles'] = focalizaciones
+
+        except Programa.DoesNotExist:
+            # Si el ID del programa no es válido, no hacer nada y mostrar la página vacía
+            pass
 
     return render(request, 'facturacion/reportes_asistencia.html', context)
 
 @login_required
-def generar_pdf_asistencia(request, sede_cod_interprise, mes, focalizacion):
+def generar_pdf_asistencia(request, programa_id, sede_cod_interprise, mes, focalizacion):
     """
     Vista para generar PDFs de asistencia.
     Delega la lógica principal al PDFAsistenciaService.
     """
-    return PDFAsistenciaService.generar_pdf_asistencia(sede_cod_interprise, mes, focalizacion)
+    return PDFAsistenciaService.generar_pdf_asistencia(programa_id, sede_cod_interprise, mes, focalizacion)
 
 @login_required
-def generar_zip_masivo_etc(request, etc, mes, focalizacion):
+def generar_zip_masivo_programa(request, programa_id, mes, focalizacion):
     """
     Vista para generar un ZIP masivo con todos los PDFs de asistencia 
-    para todas las sedes de un ETC específico.
-    
-    Args:
-        request: HttpRequest object
-        etc: Nombre del municipio/ETC
-        mes: Mes de atención
-        focalizacion: Tipo de focalización
-    
-    Returns:
-        HttpResponse: Archivo ZIP con todos los PDFs de las sedes del ETC
+    para todas las sedes de un Programa específico.
     """
-    return PDFAsistenciaService.generar_zip_masivo_por_etc(etc, mes, focalizacion)
+    return PDFAsistenciaService.generar_zip_masivo_por_programa(programa_id, mes, focalizacion)
 
 @login_required
 def get_municipio_for_programa(request):

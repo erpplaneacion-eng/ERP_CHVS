@@ -13,8 +13,8 @@ urlpatterns = [
 
     # Nueva vista para la interfaz de generación de reportes de asistencia
     path('reportes-asistencia/', views.reportes_asistencia_view, name='reportes_asistencia'),
-    path('generar-asistencia/<str:sede_cod_interprise>/<str:mes>/<str:focalizacion>/', views.generar_pdf_asistencia, name='generar_pdf_asistencia'),
-    path('generar-zip-masivo/<str:etc>/<str:mes>/<str:focalizacion>/', views.generar_zip_masivo_etc, name='generar_zip_masivo_etc'),
+    path('generar-asistencia/<int:programa_id>/<str:sede_cod_interprise>/<str:mes>/<str:focalizacion>/', views.generar_pdf_asistencia, name='generar_pdf_asistencia'),
+    path('generar-zip-masivo/<int:programa_id>/<str:mes>/<str:focalizacion>/', views.generar_zip_masivo_programa, name='generar_zip_masivo_programa'),
 
     # APIs para gestión de listados focalización
     # Nota: La edición, visualización y eliminación individual se maneja vía archivos Excel

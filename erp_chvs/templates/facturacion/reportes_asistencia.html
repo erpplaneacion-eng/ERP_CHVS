@@ -84,11 +84,11 @@
         <form method="get" class="filters-form">
             <div class="filter-row">
                 <div class="filter-group">
-                    <label for="etc"><strong>Filtrar por Municipio (ETC):</strong></label>
-                    <select name="etc" id="etc" class="form-select">
-                        <option value="">-- Seleccione un municipio --</option>
-                        {% for etc_val in etc_values %}
-                        <option value="{{ etc_val }}" {% if filtros_aplicados.etc == etc_val %}selected{% endif %}>{{ etc_val }}</option>
+                    <label for="programa"><strong>Filtrar por Programa:</strong></label>
+                    <select name="programa" id="programa" class="form-select">
+                        <option value="">-- Seleccione un programa --</option>
+                        {% for prog in programas %}
+                        <option value="{{ prog.id }}" {% if filtros_aplicados.programa.id == prog.id %}selected{% endif %}>{{ prog.programa }} ({{ prog.municipio.nombre_municipio }})</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -99,17 +99,17 @@
                 </div>
             </div>
             <div class="filter-info">
-                <p>Selecciona un municipio para ver la lista de sedes educativas y poder generar los reportes.</p>
+                <p>Selecciona un programa para ver la lista de sedes educativas y poder generar los reportes.</p>
             </div>
         </form>
     </div>
 
-    {% if filtros_aplicados.etc %}
+    {% if filtros_aplicados.programa %}
     <!-- Opción de generación masiva -->
     <div class="bulk-generation-container">
         <div class="bulk-header">
-            <h3><i class="fas fa-download"></i> Generación Masiva por ETC</h3>
-            <p>Generar reportes para todas las sedes de <strong>{{ filtros_aplicados.etc }}</strong> con los mismos parámetros</p>
+            <h3><i class="fas fa-download"></i> Generación Masiva por Programa</h3>
+            <p>Generar reportes para todas las sedes de <strong>{{ filtros_aplicados.programa.programa }}</strong> con los mismos parámetros</p>
         </div>
         <div class="bulk-controls">
             <div class="bulk-form">
@@ -131,7 +131,7 @@
                 </div>
                 <div class="bulk-field">
                     <button type="button" class="btn btn-success btn-lg" id="btn-generar-masivo" 
-                            data-etc="{{ filtros_aplicados.etc }}">
+                            data-programa-id="{{ filtros_aplicados.programa.id }}">
                         <i class="fas fa-archive"></i> Generar ZIP Masivo
                     </button>
                 </div>
@@ -141,7 +141,7 @@
 
     <div class="table-container">
         <div class="section-header">
-            <h3>Sedes Educativas en: <strong>{{ filtros_aplicados.etc }}</strong></h3>
+            <h3>Sedes Educativas en: <strong>{{ filtros_aplicados.programa.programa }}</strong></h3>
             <p><small>O generar reportes individualmente por sede:</small></p>
         </div>
         <table class="data-table" id="sedesTable">
@@ -179,6 +179,7 @@
                                         type="button" 
                                         class="btn btn-success btn-generar-asistencia"
                                         data-sede-cod="{{ sede.cod_interprise }}"
+                                        data-programa-id="{{ filtros_aplicados.programa.id }}"
                                         title="Generar formato de asistencia para esta sede">
                                         <i class="fas fa-download me-1"></i> Generar Reporte
                                     </button>
@@ -186,7 +187,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="4" class="text-center">No se encontraron sedes para este municipio.</td>
+                                <td colspan="4" class="text-center">No se encontraron sedes para este programa.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -214,10 +215,11 @@ document.addEventListener('DOMContentLoaded', function() {
             let originalText = button.innerHTML;
 
             try {
-                const sedeCod = button.dataset.sedeCod || button.getAttribute('data-sede-cod');
+                const sedeCod = button.dataset.sedeCod;
+                const programaId = button.dataset.programaId;
 
-                if (!sedeCod) {
-                    alert('Error: No se pudo obtener el código de la sede.');
+                if (!sedeCod || !programaId) {
+                    alert('Error: No se pudo obtener el código de la sede o el ID del programa.');
                     return;
                 }
 
@@ -243,7 +245,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     Generando...
                 `;
 
-                const url = `/facturacion/generar-asistencia/${sedeCod}/${mes}/${focalizacion}/`;
+                const url = `/facturacion/generar-asistencia/${programaId}/${sedeCod}/${mes}/${focalizacion}/`;
                 await descargarArchivo(url, button, originalText);
 
             } catch (error) {
@@ -254,24 +256,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // === GENERACIÓN MASIVA POR ETC ===
+    // === GENERACIÓN MASIVA POR PROGRAMA ===
     const btnGenerarMasivo = document.getElementById('btn-generar-masivo');
     if (btnGenerarMasivo) {
         btnGenerarMasivo.addEventListener('click', async function(e) {
             e.preventDefault();
 
-            const etc = this.dataset.etc;
+            const programaId = this.dataset.programaId;
             const mes = document.getElementById('bulk-mes').value;
             const focalizacion = document.getElementById('bulk-focalizacion').value;
 
-            if (!etc || !mes || !focalizacion) {
+            if (!programaId || !mes || !focalizacion) {
                 alert('Error: Faltan parámetros para la generación masiva.');
                 return;
             }
 
             // Confirmar la acción
+            const programaNombre = "{{ filtros_aplicados.programa.programa|escapejs }}";
             const confirmacion = confirm(
-                `¿Está seguro de generar reportes para TODAS las sedes del ETC "${etc}" con los parámetros:\n\n` +
+                `¿Está seguro de generar reportes para TODAS las sedes del programa "${programaNombre}" con los parámetros:\n\n` +
                 `• Mes: ${mes}\n` +
                 `• Focalización: ${focalizacion}\n\n` +
                 `Esta operación puede tomar varios minutos.`
@@ -290,7 +293,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     Generando ZIP Masivo... Por favor espere
                 `;
 
-                const url = `/facturacion/generar-zip-masivo/${encodeURIComponent(etc)}/${mes}/${encodeURIComponent(focalizacion)}/`;
+                const url = `/facturacion/generar-zip-masivo/${programaId}/${mes}/${encodeURIComponent(focalizacion)}/`;
                 await descargarArchivo(url, this, originalText);
 
             } catch (error) {
@@ -317,12 +320,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const contentType = response.headers.get('content-type');
 
-        if (contentType && contentType.includes('application/zip')) {
+        if (contentType && (contentType.includes('application/zip') || contentType.includes('application/pdf'))) {
             const blob = await response.blob();
             const downloadUrl = window.URL.createObjectURL(blob);
 
             const contentDisposition = response.headers.get('content-disposition');
-            let filename = 'reportes_asistencia.zip';
+            let filename = 'reporte.zip';
 
             if (contentDisposition && contentDisposition.indexOf('attachment') !== -1) {
                 const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
@@ -346,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
             mostrarExito('¡Reporte generado exitosamente!');
 
         } else {
-            throw new Error('La respuesta del servidor no es un archivo ZIP válido');
+            throw new Error('La respuesta del servidor no es un archivo válido (PDF o ZIP)');
         }
 
         button.disabled = false;
