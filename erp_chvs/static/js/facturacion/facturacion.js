@@ -346,13 +346,36 @@ async function transferirGradosDesdeSede(nombreSede, programaId, focalizacion) {
 
 // Función para cerrar modal de transferencia
 function closeTransferModal() {
-    document.getElementById('transferModal').style.display = 'none';
-    sedeDestinoActual = '';
-    sedeOrigenActual = '';
-    focalizacionActual = '';
-    gradosSeleccionados = [];
-    gradosDisponiblesData = [];
+    const modal = document.getElementById('transferModal');
+    if (modal) {
+        modal.style.display = 'none';
+        sedeDestinoActual = '';
+        sedeOrigenActual = '';
+        focalizacionActual = '';
+        gradosSeleccionados = [];
+        gradosDisponiblesData = [];
+    }
 }
+
+// Cerrar modal al hacer clic fuera del contenido y con tecla ESC
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('transferModal');
+    if (modal) {
+        // Cerrar al hacer clic en el overlay
+        modal.addEventListener('click', function(e) {
+            if (e.target.id === 'transferModal') {
+                closeTransferModal();
+            }
+        });
+
+        // Cerrar con tecla ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal.style.display === 'flex') {
+                closeTransferModal();
+            }
+        });
+    }
+});
 
 // Función para cargar sedes disponibles en el selector
 function cargarSedesOrigen(sedesDisponibles) {
@@ -573,16 +596,6 @@ function confirmarTransferencia() {
             document.getElementById('transferBtn').innerHTML = '<i class="fas fa-exchange-alt"></i> Transferir Grados';
         });
     }
-}
-
-// Función para cerrar modal de transferencia
-function closeTransferModal() {
-    document.getElementById('transferModal').style.display = 'none';
-    sedeDestinoActual = '';
-    sedeOrigenActual = '';
-    focalizacionActual = '';
-    gradosSeleccionados = [];
-    gradosDisponiblesData = [];
 }
 
 // Funcionalidad de búsqueda
