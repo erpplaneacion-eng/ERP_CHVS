@@ -483,17 +483,16 @@ def lista_listados(request):
     """Vista para listar y gestionar listados de focalización con filtros"""
 
     # Obtener parámetros de filtro
-    etc_filter = request.GET.get('etc', '').strip()
+    programa_filter_id = request.GET.get('programa', '').strip()
     sede_filter = request.GET.get('sede', '').strip()
     focalizacion_filter = request.GET.get('focalizacion', '').strip()
 
     # Query base
     listados = ListadosFocalizacion.objects.all().order_by('-fecha_creacion')
 
-
     # Aplicar filtros
-    if etc_filter:
-        listados = listados.filter(etc__icontains=etc_filter)
+    if programa_filter_id:
+        listados = listados.filter(programa_id=programa_filter_id)
 
     if sede_filter:
         listados = listados.filter(sede__icontains=sede_filter)
@@ -502,178 +501,85 @@ def lista_listados(request):
         listados = listados.filter(focalizacion=focalizacion_filter)
 
     # Paginación
-    paginator = Paginator(listados, 15)  # 20 registros por página
+    paginator = Paginator(listados, 15)  # 15 registros por página
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
     # Obtener valores únicos para filtros
-    etc_values = ListadosFocalizacion.objects.values_list('etc', flat=True).distinct().order_by('etc')
+    programas = Programa.objects.all().order_by('municipio__nombre_municipio', 'programa')
     sede_values = ListadosFocalizacion.objects.values_list('sede', flat=True).distinct().order_by('sede')
     focalizacion_values = ListadosFocalizacion.objects.values_list('focalizacion', flat=True).distinct().order_by('focalizacion')
 
-
-    # Obtener sedes faltantes y grados disponibles (solo si hay filtro ETC aplicado)
+    # Lógica para Sedes Faltantes
     sedes_faltantes = []
+    total_sedes_faltantes = 0
     grados_disponibles = []
-    if etc_filter:
-        # Optimización: Obtener sedes válidas del catálogo primero (más eficiente)
-        sedes_catalogo_etc = set(
-            SedesEducativas.objects.filter(
-                codigo_ie__id_municipios__nombre_municipio__icontains=etc_filter
-            ).values_list('nombre_sede_educativa', flat=True).distinct()
-        )
+    filtros_aplicados = {
+        'programa': programa_filter_id,
+        'sede': sede_filter,
+        'focalizacion': focalizacion_filter,
+        'programa_nombre': ''
+    }
 
-        # LÓGICA MEJORADA: Filtrar por focalización si está especificada
-        if focalizacion_filter:
-            # Caso 1: Filtro de focalización específico
-            # Sedes que tienen registros PARA ESTA FOCALIZACIÓN
-            sedes_con_registros_etc = set(
-                ListadosFocalizacion.objects.filter(
-                    etc__icontains=etc_filter,
-                    focalizacion=focalizacion_filter
-                ).values_list('sede', flat=True).distinct()
+    if programa_filter_id:
+        try:
+            programa_seleccionado = Programa.objects.get(id=programa_filter_id)
+            filtros_aplicados['programa_nombre'] = programa_seleccionado.programa
+            etc_filter = programa_seleccionado.municipio.nombre_municipio
+
+            # El resto de la lógica de sedes faltantes funciona con etc_filter
+            sedes_catalogo_etc = set(
+                SedesEducativas.objects.filter(
+                    codigo_ie__id_municipios__nombre_municipio__icontains=etc_filter
+                ).values_list('nombre_sede_educativa', flat=True).distinct()
             )
 
-            # Sedes faltantes para esta focalización específica
-            sedes_sin_registros = list(sedes_catalogo_etc - sedes_con_registros_etc)
-
-            # Crear estructura con detalle de focalizaciones faltantes
-            sedes_faltantes = []
-            for sede in sedes_sin_registros:
-                sedes_faltantes.append({
-                    'sede': sede,
-                    'focalizaciones_faltantes': [focalizacion_filter]
-                })
-        else:
-            # Caso 2: Sin filtro de focalización - mostrar todas las focalizaciones faltantes por sede
-            # Obtener todas las focalizaciones existentes para este ETC
-            focalizaciones_existentes_etc = set(
-                ListadosFocalizacion.objects.filter(
-                    etc__icontains=etc_filter
-                ).values_list('focalizacion', flat=True).distinct()
-            )
-
-            # Para cada sede del catálogo, verificar qué focalizaciones le faltan
-            sedes_faltantes = []
-            for sede in sedes_catalogo_etc:
-                # Focalizaciones que tiene esta sede
-                focalizaciones_sede = set(
+            if focalizacion_filter:
+                sedes_con_registros_etc = set(
                     ListadosFocalizacion.objects.filter(
-                        etc__icontains=etc_filter,
-                        sede=sede
-                    ).values_list('focalizacion', flat=True).distinct()
+                        programa_id=programa_filter_id,
+                        focalizacion=focalizacion_filter
+                    ).values_list('sede', flat=True).distinct()
                 )
-
-                # Focalizaciones que le faltan a esta sede
-                focalizaciones_faltantes = focalizaciones_existentes_etc - focalizaciones_sede
-
-                # Solo agregar si le faltan focalizaciones
-                if focalizaciones_faltantes:
+                sedes_sin_registros = list(sedes_catalogo_etc - sedes_con_registros_etc)
+                for sede in sedes_sin_registros:
                     sedes_faltantes.append({
                         'sede': sede,
-                        'focalizaciones_faltantes': sorted(list(focalizaciones_faltantes))
+                        'focalizaciones_faltantes': [focalizacion_filter]
                     })
-
-        # Obtener sedes con registros (para grados disponibles)
-        # Usamos el filtro de focalización si existe, sino todas las sedes del ETC
-        query_sedes_registros = ListadosFocalizacion.objects.filter(etc__icontains=etc_filter)
-        if focalizacion_filter:
-            query_sedes_registros = query_sedes_registros.filter(focalizacion=focalizacion_filter)
-
-        sedes_con_registros_etc = set(query_sedes_registros.values_list('sede', flat=True).distinct())
-
-        if sedes_con_registros_etc:
-            # --- INICIO DE OPTIMIZACIÓN (EVITAR N+1) ---
-            from principal.models import NivelGradoEscolar
-            from collections import defaultdict
-
-            # 1. Obtener todos los grados únicos para las sedes filtradas en una sola consulta
-            registros_grados = ListadosFocalizacion.objects.filter(
-                etc__icontains=etc_filter,
-                sede__in=sedes_con_registros_etc
-            ).values('sede', 'grado_grupos').distinct()
-
-            # 2. Agrupar grados por sede y extraer grados base
-            grados_por_sede = defaultdict(set)
-            todos_los_grados_base = set()
-            for registro in registros_grados:
-                if registro['grado_grupos']:
-                    grado_base = _extraer_grado_base(str(registro['grado_grupos']))
-                    if grado_base:
-                        grados_por_sede[registro['sede']].add(grado_base)
-                        todos_los_grados_base.add(grado_base)
-
-            # 3. Obtener todos los mapeos de nivel-grado en una sola consulta
-            mapeo_niveles = {
-                nivel.grados_sedes: nivel.nivel_escolar_uapa.nivel_escolar_uapa
-                for nivel in NivelGradoEscolar.objects.filter(grados_sedes__in=todos_los_grados_base).select_related('nivel_escolar_uapa')
-            }
-
-            # 4. Procesar los datos en memoria
-            sedes_disponibles = []
-            for sede, grados_sede in grados_por_sede.items():
-                grados_mapeados = {}
-                grados_sin_nivel = []
-
-                for grado in grados_sede:
-                    nivel_nombre = mapeo_niveles.get(grado)
-                    if nivel_nombre:
-                        if nivel_nombre not in grados_mapeados:
-                            grados_mapeados[nivel_nombre] = []
-                        grados_mapeados[nivel_nombre].append({
-                            'grado': grado,
-                            'descripcion': f"{grado} - {nivel_nombre}"
+            else:
+                focalizaciones_existentes_programa = set(
+                    ListadosFocalizacion.objects.filter(
+                        programa_id=programa_filter_id
+                    ).values_list('focalizacion', flat=True).distinct()
+                )
+                for sede in sedes_catalogo_etc:
+                    focalizaciones_sede = set(
+                        ListadosFocalizacion.objects.filter(
+                            programa_id=programa_filter_id,
+                            sede=sede
+                        ).values_list('focalizacion', flat=True).distinct()
+                    )
+                    focalizaciones_faltantes = focalizaciones_existentes_programa - focalizaciones_sede
+                    if focalizaciones_faltantes:
+                        sedes_faltantes.append({
+                            'sede': sede,
+                            'focalizaciones_faltantes': sorted(list(focalizaciones_faltantes))
                         })
-                    else:
-                        nivel_manual = _mapear_grado_a_nivel_manual(grado)
-                        if nivel_manual:
-                            if nivel_manual not in grados_mapeados:
-                                grados_mapeados[nivel_manual] = []
-                            grados_mapeados[nivel_manual].append({
-                                'grado': grado,
-                                'descripcion': f"Grado {grado} - {nivel_manual} (mapeo manual)"
-                            })
-                        else:
-                            grados_sin_nivel.append({
-                                'grado': grado,
-                                'descripcion': f"Grado {grado} (sin nivel asignado)"
-                            })
+            total_sedes_faltantes = len(sedes_faltantes)
 
-                grados_ordenados = []
-                for nivel, grados in sorted(grados_mapeados.items()):
-                    grados_ordenados.append({
-                        'nivel': nivel,
-                        'grados': sorted(grados, key=lambda x: x['grado'])
-                    })
-
-                if grados_sin_nivel:
-                    grados_ordenados.append({
-                        'nivel': 'Grados Especiales',
-                        'grados': sorted(grados_sin_nivel, key=lambda x: x['grado'])
-                    })
-
-                sedes_disponibles.append({
-                    'sede': sede,
-                    'grados': grados_ordenados,
-                    'total_grados': len(grados_sede)
-                })
-
-            grados_disponibles = sedes_disponibles
-            # --- FIN DE OPTIMIZACIÓN ---
+        except Programa.DoesNotExist:
+            pass # No hacer nada si el programa no existe
 
     context = {
         'listados': page_obj,
         'total_listados': listados.count(),
-        'etc_values': etc_values,
+        'programas': programas,
         'sede_values': sede_values,
         'focalizacion_values': focalizacion_values,
-        'filtros_aplicados': {
-            'etc': etc_filter,
-            'sede': sede_filter,
-            'focalizacion': focalizacion_filter,
-        },
+        'filtros_aplicados': filtros_aplicados,
         'sedes_faltantes': sedes_faltantes,
-        'total_sedes_faltantes': len(sedes_faltantes),
+        'total_sedes_faltantes': total_sedes_faltantes,
         'grados_disponibles': grados_disponibles,
     }
 

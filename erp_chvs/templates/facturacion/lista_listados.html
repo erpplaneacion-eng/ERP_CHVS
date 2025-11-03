@@ -21,11 +21,11 @@
         <form method="GET" class="filters-form">
             <div class="filter-row">
                 <div class="filter-group">
-                    <label for="etc">Filtrar por ETC:</label>
-                    <select name="etc" id="etc">
-                        <option value="">Todos los ETC</option>
-                        {% for etc_val in etc_values %}
-                        <option value="{{ etc_val }}" {% if filtros_aplicados.etc == etc_val %}selected{% endif %}>{{ etc_val }}</option>
+                    <label for="programa">Filtrar por Programa:</label>
+                    <select name="programa" id="programa">
+                        <option value="">Todos los Programas</option>
+                        {% for prog in programas %}
+                        <option value="{{ prog.id }}" {% if filtros_aplicados.programa == prog.id|stringformat:"s" %}selected{% endif %}>{{ prog.programa }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -134,10 +134,10 @@
             <ul class="pagination">
                 {% if listados.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page=1{% if filtros_aplicados.etc %}&etc={{ filtros_aplicados.etc }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}">Primera</a>
+                        <a class="page-link" href="?page=1{% if filtros_aplicados.programa %}&programa={{ filtros_aplicados.programa }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}">Primera</a>
                     </li>
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ listados.previous_page_number }}{% if filtros_aplicados.etc %}&etc={{ filtros_aplicados.etc }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}">Anterior</a>
+                        <a class="page-link" href="?page={{ listados.previous_page_number }}{% if filtros_aplicados.programa %}&programa={{ filtros_aplicados.programa }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}">Anterior</a>
                     </li>
                 {% endif %}
 
@@ -149,10 +149,10 @@
 
                 {% if listados.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ listados.next_page_number }}{% if filtros_aplicados.etc %}&etc={{ filtros_aplicados.etc }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}">Siguiente</a>
+                        <a class="page-link" href="?page={{ listados.next_page_number }}{% if filtros_aplicados.programa %}&programa={{ filtros_aplicados.programa }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}">Siguiente</a>
                     </li>
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ listados.paginator.num_pages }}{% if filtros_aplicados.etc %}&etc={{ filtros_aplicados.etc }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}">Última</a>
+                        <a class="page-link" href="?page={{ listados.paginator.num_pages }}{% if filtros_aplicados.programa %}&programa={{ filtros_aplicados.programa }}{% endif %}{% if filtros_aplicados.sede %}&sede={{ filtros_aplicados.sede }}{% endif %}">Última</a>
                     </li>
                 {% endif %}
             </ul>
@@ -161,12 +161,12 @@
     {% endif %}
 
     <!-- Tarjeta de sedes faltantes -->
-    {% if filtros_aplicados.etc and total_sedes_faltantes > 0 %}
+    {% if filtros_aplicados.programa and total_sedes_faltantes > 0 %}
     <div class="missing-sedes-card">
         <div class="card-header-missing">
             <h3><i class="fas fa-exclamation-triangle"></i> Sedes Sin Registros</h3>
             <p>
-                Para ETC: <strong>{{ filtros_aplicados.etc }}</strong>
+                Para el programa: <strong>{{ filtros_aplicados.programa_nombre }}</strong>
                 {% if filtros_aplicados.focalizacion %}
                 | Focalización: <strong>{{ filtros_aplicados.focalizacion }}</strong>
                 {% endif %}
@@ -188,7 +188,7 @@
                         </div>
                         {% endif %}
                     </div>
-                    <button class="btn btn-sm btn-success" onclick="transferirGradosDesdeSede('{{ sede_info.sede }}', '{{ filtros_aplicados.etc }}', {{ grados_disponibles|safe }}, '{{ filtros_aplicados.focalizacion }}')" title="Transferir grados">
+                    <button class="btn btn-sm btn-success" onclick="transferirGradosDesdeSede('{{ sede_info.sede }}', '{{ filtros_aplicados.programa }}', {{ grados_disponibles|safe }}, '{{ filtros_aplicados.focalizacion }}')" title="Transferir grados">
                         <i class="fas fa-exchange-alt"></i> Transferir Grados
                     </button>
                 </div>
@@ -196,12 +196,12 @@
             </div>
         </div>
     </div>
-    {% elif filtros_aplicados.etc and total_sedes_faltantes == 0 %}
+    {% elif filtros_aplicados.programa and total_sedes_faltantes == 0 %}
     <div class="complete-sedes-card">
         <div class="card-header-complete">
             <h3><i class="fas fa-check-circle"></i> Sedes Completas</h3>
             <p>
-                Todas las sedes del ETC <strong>{{ filtros_aplicados.etc }}</strong>
+                Todas las sedes del programa <strong>{{ filtros_aplicados.programa_nombre }}</strong>
                 {% if filtros_aplicados.focalizacion %}
                 para la focalización <strong>{{ filtros_aplicados.focalizacion }}</strong>
                 {% endif %}
