@@ -357,6 +357,47 @@
     document.addEventListener('DOMContentLoaded', function() {
         const programaSelect = document.getElementById('programa');
         const municipioDisplay = document.getElementById('municipio_display');
+        const focalizacionSelect = document.getElementById('focalizacion');
+
+        async function actualizarFocalizacionesDisponibles() {
+            const programaId = programaSelect.value;
+
+            // Resetear todas las opciones primero
+            Array.from(focalizacionSelect.options).forEach(opt => {
+                opt.disabled = false;
+                opt.textContent = opt.value; // Restaurar texto original
+            });
+
+            if (programaId) {
+                focalizacionSelect.disabled = true;
+                const label = document.querySelector('label[for="focalizacion"]');
+                const originalText = label.innerHTML;
+                label.innerHTML += ' <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+                try {
+                    const response = await fetch(`{% url 'facturacion:api_focalizaciones_existentes' %}?programa_id=${programaId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const focalizacionesExistentes = data.focalizaciones || [];
+                        if (focalizacionesExistentes.length > 0) {
+                            Array.from(focalizacionSelect.options).forEach(opt => {
+                                if (focalizacionesExistentes.includes(opt.value)) {
+                                    opt.disabled = true;
+                                    opt.textContent = `${opt.value} (Ya existe en este programa)`;
+                                }
+                            });
+                        }
+                    } else {
+                        console.error('Error al obtener focalizaciones');
+                    }
+                } catch (error) {
+                    console.error("Error al actualizar focalizaciones:", error);
+                } finally {
+                    focalizacionSelect.disabled = false;
+                    label.innerHTML = originalText;
+                }
+            }
+        }
 
         programaSelect.addEventListener('change', async function() {
             const programaId = this.value;
@@ -366,6 +407,7 @@
                     if (response.ok) {
                         const data = await response.json();
                         municipioDisplay.value = data.municipio.nombre;
+                        await actualizarFocalizacionesDisponibles(); // Llama a la función aquí
                     } else {
                         municipioDisplay.value = 'Error al obtener el municipio';
                     }
@@ -375,6 +417,7 @@
                 }
             } else {
                 municipioDisplay.value = 'El municipio se seleccionará automáticamente';
+                await actualizarFocalizacionesDisponibles(); // Llama a la función también al limpiar
             }
         });
     });
