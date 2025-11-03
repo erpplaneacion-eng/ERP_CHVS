@@ -586,119 +586,14 @@ def lista_listados(request):
     return render(request, 'facturacion/lista_listados.html', context)
 
 # ===== APIs PARA GESTIÓN DE LISTADOS FOCALIZACIÓN =====
-
-@login_required
-@csrf_exempt
-def api_listados(request):
-    """API para manejar listados de focalización via AJAX"""
-    if request.method == 'GET':
-        listados = ListadosFocalizacion.objects.all().order_by('-fecha_creacion').values(
-            'id_listados', 'ano', 'etc', 'institucion', 'sede', 'tipodoc', 'doc',
-            'nombre1', 'apellido1', 'fecha_nacimiento', 'edad', 'genero',
-            'grado_grupos', 'focalizacion', 'fecha_creacion'
-        )
-        return JsonResponse({'listados': list(listados)})
-
-    elif request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-
-            # Crear nuevo registro
-            listado = ListadosFocalizacion.objects.create(
-                id_listados=data['id_listados'],
-                ano=data.get('ano', 2025),
-                etc=data.get('etc', ''),
-                institucion=data.get('institucion', ''),
-                sede=data.get('sede', ''),
-                tipodoc=data.get('tipodoc', ''),
-                doc=data.get('doc', ''),
-                apellido1=data.get('apellido1'),
-                apellido2=data.get('apellido2'),
-                nombre1=data.get('nombre1', ''),
-                nombre2=data.get('nombre2'),
-                fecha_nacimiento=data.get('fecha_nacimiento'),
-                edad=data.get('edad', 0),
-                etnia=data.get('etnia'),
-                genero=data.get('genero', ''),
-                grado_grupos=data.get('grado_grupos', ''),
-                complemento_alimentario_preparado_am=data.get('complemento_alimentario_preparado_am'),
-                complemento_alimentario_preparado_pm=data.get('complemento_alimentario_preparado_pm'),
-                almuerzo_jornada_unica=data.get('almuerzo_jornada_unica'),
-                refuerzo_complemento_am_pm=data.get('refuerzo_complemento_am_pm'),
-                focalizacion=data.get('focalizacion', '')
-            )
-
-            return JsonResponse({
-                'success': True,
-                'id_listado': listado.id_listados,
-                'message': 'Registro creado exitosamente'
-            })
-
-        except IntegrityError as e:
-            return JsonResponse({'success': False, 'error': f'ID ya existe: {str(e)}'})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': f'Error al crear registro: {str(e)}'})
-
-@login_required
-@csrf_exempt
-def api_listado_detail(request, id_listado):
-    """API para manejar un listado específico"""
-    listado = get_object_or_404(ListadosFocalizacion, id_listados=id_listado)
-
-    if request.method == 'GET':
-        return JsonResponse({
-            'id_listados': listado.id_listados,
-            'ano': listado.ano,
-            'etc': listado.etc,
-            'institucion': listado.institucion,
-            'sede': listado.sede,
-            'tipodoc': listado.tipodoc,
-            'doc': listado.doc,
-            'apellido1': listado.apellido1,
-            'apellido2': listado.apellido2,
-            'nombre1': listado.nombre1,
-            'nombre2': listado.nombre2,
-            'fecha_nacimiento': listado.fecha_nacimiento,
-            'edad': listado.edad,
-            'etnia': listado.etnia,
-            'genero': listado.genero,
-            'grado_grupos': listado.grado_grupos,
-            'complemento_alimentario_preparado_am': listado.complemento_alimentario_preparado_am,
-            'complemento_alimentario_preparado_pm': listado.complemento_alimentario_preparado_pm,
-            'almuerzo_jornada_unica': listado.almuerzo_jornada_unica,
-            'refuerzo_complemento_am_pm': listado.refuerzo_complemento_am_pm,
-            'focalizacion': listado.focalizacion,
-        })
-
-    elif request.method == 'PUT':
-        try:
-            data = json.loads(request.body)
-
-            # Actualizar campos permitidos
-            campos_actualizables = [
-                'etc', 'institucion', 'sede', 'tipodoc', 'apellido1', 'apellido2',
-                'nombre1', 'nombre2', 'fecha_nacimiento', 'edad', 'etnia', 'genero',
-                'grado_grupos', 'complemento_alimentario_preparado_am',
-                'complemento_alimentario_preparado_pm', 'almuerzo_jornada_unica',
-                'refuerzo_complemento_am_pm'
-            ]
-
-            for campo in campos_actualizables:
-                if campo in data:
-                    setattr(listado, campo, data[campo])
-
-            listado.save()
-            return JsonResponse({'success': True})
-
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': f'Error al actualizar: {str(e)}'})
-
-    elif request.method == 'DELETE':
-        try:
-            listado.delete()
-            return JsonResponse({'success': True})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
+# NOTA: Las APIs de creación, edición, visualización y eliminación individual de registros
+# han sido deshabilitadas. Los registros solo deben modificarse a través de la carga de
+# archivos Excel para mantener la integridad de los datos.
+#
+# Si se necesita modificar registros, use las siguientes opciones:
+# 1. Reemplazar focalización completa (reemplazar_focalizacion_sedes)
+# 2. Transferir grados entre sedes (api_transferir_grados)
+# 3. Cargar nuevamente el archivo Excel con los datos corregidos
 
 @login_required
 @csrf_exempt

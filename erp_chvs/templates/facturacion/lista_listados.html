@@ -92,30 +92,6 @@
         background: #f8f9fa;
     }
 
-    .action-btn {
-        padding: 5px 10px;
-        margin: 0 2px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-    }
-
-    .action-btn.view {
-        background: #17a2b8;
-        color: white;
-    }
-
-    .action-btn.edit {
-        background: #ffc107;
-        color: black;
-    }
-
-    .action-btn.delete {
-        background: #dc3545;
-        color: white;
-    }
-
     .pagination {
         display: flex;
         justify-content: center;
@@ -229,24 +205,6 @@
         margin-bottom: 20px;
         border-left: 4px solid #007bff;
     }
-
-    .detail-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 15px;
-    }
-
-    .detail-row {
-        padding: 10px;
-        background: #f8f9fa;
-        border-radius: 4px;
-    }
-
-    .detail-row strong {
-        display: block;
-        color: #495057;
-        margin-bottom: 5px;
-    }
 </style>
 {% endblock %}
 
@@ -296,10 +254,6 @@
             <h5>{{ sede_data.sede }}</h5>
             <p><strong>Focalizaciones faltantes:</strong> {{ sede_data.focalizaciones_faltantes|join:", " }}</p>
             <div style="margin-top: 10px;">
-                <button onclick="agregarRegistroDesdeSede('{{ sede_data.sede }}', '{{ filtros_aplicados.programa }}')"
-                        class="btn btn-sm btn-success">
-                    <i class="fas fa-plus"></i> Agregar Registro
-                </button>
                 <button onclick="transferirGradosDesdeSede('{{ sede_data.sede }}', '{{ filtros_aplicados.programa }}', [], '{{ filtros_aplicados.focalizacion }}')"
                         class="btn btn-sm btn-primary">
                     <i class="fas fa-exchange-alt"></i> Transferir Grados
@@ -389,7 +343,6 @@
                     <th>Grado</th>
                     <th>Focalización</th>
                     <th>Fecha Creación</th>
-                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -403,17 +356,6 @@
                     <td>{{ listado.grado_grupos }}</td>
                     <td><span class="badge badge-info">{{ listado.focalizacion }}</span></td>
                     <td>{{ listado.fecha_creacion|date:"d/m/Y" }}</td>
-                    <td>
-                        <button onclick="viewListado('{{ listado.id_listados }}')" class="action-btn view">
-                            <i class="fas fa-eye"></i> Ver
-                        </button>
-                        <button onclick="editListado('{{ listado.id_listados }}')" class="action-btn edit">
-                            <i class="fas fa-edit"></i> Editar
-                        </button>
-                        <button onclick="deleteListado('{{ listado.id_listados }}')" class="action-btn delete">
-                            <i class="fas fa-trash"></i> Eliminar
-                        </button>
-                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -455,158 +397,6 @@
     </div>
 </div>
 
-<!-- Modal para Ver Detalles -->
-<div class="modal-overlay" id="detailModal">
-    <div class="modal-dialog">
-        <div class="modal-header">
-            <h3>Detalles del Registro</h3>
-            <span class="modal-close" onclick="closeDetailModal()">&times;</span>
-        </div>
-        <div class="modal-body" id="detailContent">
-            <!-- Contenido dinámico -->
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeDetailModal()">Cerrar</button>
-        </div>
-    </div>
-</div>
-
-<!-- Modal para Editar/Crear -->
-<div class="modal-overlay" id="listadoModal">
-    <div class="modal-dialog">
-        <div class="modal-header">
-            <h3 id="modalTitle">Editar Registro</h3>
-            <span class="modal-close" onclick="closeModal()">&times;</span>
-        </div>
-        <div class="modal-body">
-            <form id="listadoForm">
-                {% csrf_token %}
-                <input type="hidden" id="id_listados" name="id_listados">
-
-                <div class="form-group mb-3">
-                    <label>Año:</label>
-                    <input type="number" id="ano" name="ano" class="form-control" value="2025" required>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>ETC:</label>
-                    <input type="text" id="etc" name="etc" class="form-control" required>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Institución:</label>
-                    <input type="text" id="institucion" name="institucion" class="form-control" required>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Sede:</label>
-                    <input type="text" id="sede" name="sede" class="form-control" required>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Tipo Documento:</label>
-                    <select id="tipodoc" name="tipodoc" class="form-control" required>
-                        <option value="RC">RC</option>
-                        <option value="TI">TI</option>
-                        <option value="CC">CC</option>
-                        <option value="CE">CE</option>
-                    </select>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Documento:</label>
-                    <input type="text" id="doc" name="doc" class="form-control" required>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Primer Apellido:</label>
-                    <input type="text" id="apellido1" name="apellido1" class="form-control">
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Segundo Apellido:</label>
-                    <input type="text" id="apellido2" name="apellido2" class="form-control">
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Primer Nombre:</label>
-                    <input type="text" id="nombre1" name="nombre1" class="form-control" required>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Segundo Nombre:</label>
-                    <input type="text" id="nombre2" name="nombre2" class="form-control">
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Fecha Nacimiento:</label>
-                    <input type="text" id="fecha_nacimiento" name="fecha_nacimiento" class="form-control" placeholder="DD/MM/YYYY" required>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Edad:</label>
-                    <input type="number" id="edad" name="edad" class="form-control" required>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Género:</label>
-                    <select id="genero" name="genero" class="form-control" required>
-                        <option value="M">Masculino</option>
-                        <option value="F">Femenino</option>
-                    </select>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Grado y Grupo:</label>
-                    <input type="text" id="grado_grupos" name="grado_grupos" class="form-control" required>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Focalización:</label>
-                    <input type="text" id="focalizacion" name="focalizacion" class="form-control" required>
-                </div>
-
-                <h5>Complementos Alimentarios</h5>
-
-                <div class="form-group mb-3">
-                    <label>Complemento AM:</label>
-                    <select id="complemento_alimentario_preparado_am" name="complemento_alimentario_preparado_am" class="form-control">
-                        <option value="">No</option>
-                        <option value="SI">Sí</option>
-                    </select>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Complemento PM:</label>
-                    <select id="complemento_alimentario_preparado_pm" name="complemento_alimentario_preparado_pm" class="form-control">
-                        <option value="">No</option>
-                        <option value="SI">Sí</option>
-                    </select>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Almuerzo Jornada Única:</label>
-                    <select id="almuerzo_jornada_unica" name="almuerzo_jornada_unica" class="form-control">
-                        <option value="">No</option>
-                        <option value="SI">Sí</option>
-                    </select>
-                </div>
-
-                <div class="form-group mb-3">
-                    <label>Refuerzo AM/PM:</label>
-                    <select id="refuerzo_complemento_am_pm" name="refuerzo_complemento_am_pm" class="form-control">
-                        <option value="">No</option>
-                        <option value="SI">Sí</option>
-                    </select>
-                </div>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-            <button class="btn btn-success" onclick="saveListado()">Guardar</button>
-        </div>
-    </div>
-</div>
 
 <!-- Modal para Transferencia de Grados -->
 <div class="modal-overlay" id="transferModal">

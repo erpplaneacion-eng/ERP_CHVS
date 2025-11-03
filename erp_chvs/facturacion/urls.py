@@ -17,8 +17,7 @@ urlpatterns = [
     path('generar-zip-masivo/<str:etc>/<str:mes>/<str:focalizacion>/', views.generar_zip_masivo_etc, name='generar_zip_masivo_etc'),
 
     # APIs para gestión de listados focalización
-    path('api/listados/', views.api_listados, name='api_listados'),
-    path('api/listados/<str:id_listado>/', views.api_listado_detail, name='api_listado_detail'),
+    # Nota: La edición, visualización y eliminación individual se maneja vía archivos Excel
     path('api/transferir-grados/', views.api_transferir_grados, name='api_transferir_grados'),
 
     # Servicios AJAX
