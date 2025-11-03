@@ -596,6 +596,115 @@ def lista_listados(request):
 # 3. Cargar nuevamente el archivo Excel con los datos corregidos
 
 @login_required
+def api_obtener_sedes_con_grados(request):
+    """
+    API para obtener sedes disponibles con sus grados para transferencia.
+
+    Retorna las sedes que tienen registros para un programa y focalización,
+    agrupadas por grado con conteo de estudiantes.
+    """
+    try:
+        programa_id = request.GET.get('programa_id')
+        focalizacion = request.GET.get('focalizacion')
+
+        if not programa_id or not focalizacion:
+            return JsonResponse({
+                'success': False,
+                'error': 'Parámetros incompletos. Se requiere programa_id y focalizacion'
+            })
+
+        # Obtener todas las sedes del programa con esa focalización
+        sedes_query = ListadosFocalizacion.objects.filter(
+            programa_id=programa_id,
+            focalizacion=focalizacion
+        ).values('sede').distinct()
+
+        sedes_con_grados = []
+
+        for sede_data in sedes_query:
+            sede_nombre = sede_data['sede']
+
+            # Obtener grados únicos de esta sede
+            grados_query = ListadosFocalizacion.objects.filter(
+                programa_id=programa_id,
+                focalizacion=focalizacion,
+                sede=sede_nombre
+            ).exclude(grado_grupos__isnull=True).exclude(grado_grupos='')
+
+            # Agrupar por grado base
+            grados_dict = {}
+            for registro in grados_query:
+                grado_base = _extraer_grado_base(registro.grado_grupos)
+                if grado_base:
+                    if grado_base not in grados_dict:
+                        grados_dict[grado_base] = {
+                            'grado': grado_base,
+                            'count': 0,
+                            'grupos': set()
+                        }
+                    grados_dict[grado_base]['count'] += 1
+                    grados_dict[grado_base]['grupos'].add(registro.grado_grupos)
+
+            # Organizar grados por nivel educativo
+            niveles = {
+                'Transición': [],
+                'Primaria': [],
+                'Secundaria': [],
+                'Media': []
+            }
+
+            for grado_base, info in grados_dict.items():
+                grado_obj = {
+                    'grado': grado_base,
+                    'descripcion': f"{info['count']} estudiante{'s' if info['count'] != 1 else ''} ({', '.join(sorted(info['grupos']))})"
+                }
+
+                # Clasificar por nivel
+                if grado_base.startswith('-'):
+                    niveles['Transición'].append(grado_obj)
+                elif grado_base in ['0', '1', '2', '3', '4', '5']:
+                    niveles['Primaria'].append(grado_obj)
+                elif grado_base in ['6', '7', '8', '9']:
+                    niveles['Secundaria'].append(grado_obj)
+                elif grado_base in ['10', '11']:
+                    niveles['Media'].append(grado_obj)
+                else:
+                    niveles['Primaria'].append(grado_obj)
+
+            # Construir estructura de niveles con grados
+            grados_por_nivel = []
+            for nivel, grados in niveles.items():
+                if grados:
+                    # Ordenar grados dentro del nivel
+                    grados_sorted = sorted(grados, key=lambda x: x['grado'])
+                    grados_por_nivel.append({
+                        'nivel': nivel,
+                        'grados': grados_sorted
+                    })
+
+            if grados_por_nivel:
+                sedes_con_grados.append({
+                    'sede': sede_nombre,
+                    'total_grados': len(grados_dict),
+                    'total_estudiantes': sum(g['count'] for g in grados_dict.values()),
+                    'grados': grados_por_nivel
+                })
+
+        return JsonResponse({
+            'success': True,
+            'sedes': sedes_con_grados
+        })
+
+    except Exception as e:
+        FacturacionLogger.log_procesamiento_error(
+            "api_obtener_sedes_con_grados", str(e)
+        )
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener sedes: {str(e)}'
+        })
+
+@login_required
 @csrf_exempt
 def api_transferir_grados(request):
     """API para transferir grados de una sede a otra respetando la focalización"""
@@ -605,20 +714,19 @@ def api_transferir_grados(request):
             sede_destino = data.get('sede_destino')
             sede_origen = data.get('sede_origen')
             grados_seleccionados = data.get('grados_seleccionados', [])
-            etc = data.get('etc')
             focalizacion = data.get('focalizacion')  # Focalización activa
 
-            if not sede_destino or not sede_origen or not grados_seleccionados or not etc:
-                return JsonResponse({'success': False, 'error': 'Parámetros incompletos'})
+            if not sede_destino or not sede_origen or not grados_seleccionados:
+                return JsonResponse({'success': False, 'error': 'Parámetros incompletos: sede_destino, sede_origen y grados_seleccionados son requeridos'})
 
             # Obtener registros fuente (de la sede origen específica con esos grados)
             # IMPORTANTE: Filtrar también por focalización para evitar mezclar focalizaciones
             query_fuente = ListadosFocalizacion.objects.filter(
-                etc__icontains=etc,
                 sede=sede_origen
             )
 
             # Si se especifica focalización, filtrar solo por esa focalización
+            # RECOMENDADO: Siempre especificar focalización para evitar mezclar datos
             if focalizacion:
                 query_fuente = query_fuente.filter(focalizacion=focalizacion)
 

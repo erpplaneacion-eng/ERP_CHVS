@@ -18,6 +18,7 @@ urlpatterns = [
 
     # APIs para gestión de listados focalización
     # Nota: La edición, visualización y eliminación individual se maneja vía archivos Excel
+    path('api/obtener-sedes-con-grados/', views.api_obtener_sedes_con_grados, name='api_obtener_sedes_con_grados'),
     path('api/transferir-grados/', views.api_transferir_grados, name='api_transferir_grados'),
 
     # Servicios AJAX
