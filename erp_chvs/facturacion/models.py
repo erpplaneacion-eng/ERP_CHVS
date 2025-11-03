@@ -134,6 +134,14 @@ class ListadosFocalizacion(models.Model):
         verbose_name="Focalización"
     )
 
+    programa = models.ForeignKey(
+        'planeacion.Programa',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Programa"
+    )
+
     # Campos de auditoría
     fecha_creacion = models.DateTimeField(
         auto_now_add=True,
