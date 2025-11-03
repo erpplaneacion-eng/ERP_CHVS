@@ -148,8 +148,14 @@ class PDFAsistenciaService:
 
         nombre_municipio_etc = programa_obj.municipio.nombre_municipio
         dane_municipio = programa_obj.municipio.codigo_municipio
-        departamento_obj = programa_obj.municipio.id_departamentos
-        dane_departamento = departamento_obj.codigo_departamento
+        
+        # Corrección: Obtener el departamento usando el codigo_departamento del municipio
+        try:
+            departamento_obj = PrincipalDepartamento.objects.get(codigo_departamento=programa_obj.municipio.codigo_departamento)
+            dane_departamento = departamento_obj.codigo_departamento
+        except PrincipalDepartamento.DoesNotExist:
+            departamento_obj = None
+            dane_departamento = 'N/A'
 
         nombre_sede_focalizacion = sede_obj.nombre_sede_educativa
         es_industrializado = False
