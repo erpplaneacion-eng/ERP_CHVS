@@ -333,7 +333,7 @@ class AsistenciaPDFGenerator:
         c.line(margen + 705, y_resumen - 2, margen + 755, y_resumen - 2)
 
         # --- Firmas, Observaciones y Leyenda (común para todos los pies de página) ---
-        self._dibujar_seccion_firmas_y_leyenda(y_resumen - 10, pagina_actual, total_paginas)
+        self._dibujar_seccion_firmas_y_leyenda(y_resumen, pagina_actual, total_paginas)
 
     def _dibujar_pie_pagina_original(self, pagina_actual, total_paginas, total_estudiantes):
         """
