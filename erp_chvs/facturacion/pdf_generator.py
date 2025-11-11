@@ -333,7 +333,7 @@ class AsistenciaPDFGenerator:
         c.line(margen + 705, y_resumen - 2, margen + 755, y_resumen - 2)
 
         # --- Firmas, Observaciones y Leyenda (común para todos los pies de página) ---
-        self._dibujar_seccion_firmas_y_leyenda(y_resumen, pagina_actual, total_paginas)
+        self._dibujar_firmas_y_leyenda_cali(y_resumen, pagina_actual, total_paginas)
 
     def _dibujar_pie_pagina_original(self, pagina_actual, total_paginas, total_estudiantes):
         """
@@ -392,12 +392,11 @@ class AsistenciaPDFGenerator:
         c.line(self.margen + 585, y_resumen - 2, self.margen + 635, y_resumen - 2)
 
         # --- Firmas, Observaciones y Leyenda (común para todos los pies de página) ---
-        self._dibujar_seccion_firmas_y_leyenda(y_resumen - 10, pagina_actual, total_paginas)
+        self._dibujar_firmas_y_leyenda_original(y_resumen - 10, pagina_actual, total_paginas)
 
-    def _dibujar_seccion_firmas_y_leyenda(self, y_inicio, pagina_actual, total_paginas):
+    def _dibujar_firmas_y_leyenda_original(self, y_inicio, pagina_actual, total_paginas):
         """
-        Dibuja las secciones de firmas, observaciones, leyenda y nota final.
-        Esta función es común para ambos tipos de pie de página.
+        Dibuja las secciones de firmas, observaciones y leyenda para el formato original.
         """
         c = self.c
         y_actual = y_inicio
@@ -448,19 +447,80 @@ class AsistenciaPDFGenerator:
         self._dibujar_texto_en_celda(texto_celda3, x_celda3, y_leyenda, ancho_celda3, alto_explicaciones)
 
         y_texto_nota = y_leyenda - 5
-        texto_nota = """NOTA: El operador/responsable de prestar el servicio en los establecimientos educativos debe tener en cuenta:
-                    - El archivo de este documento impreso y debidamente diligenciado debe realizarse conforme a los Lineamientos Técnico Administrativos del Programa PAE y estar disponibles para consulta de los veedores y/o supervisores del mismo.
-                    - En procura del cuidado del medio ambiente hacer uso racional de los recursos.
-                    - La firma del presente documento da fe la veracidad del contenido del mismo para el seguimiento, monitoreo y control del programa.
-                    - El presente formato no debe tener tachones, ni enmendaduras para garantizar la validez del mismo."""
-        
-        lineas_nota = texto_nota.split('\n')
-        c.setFont("Helvetica", 4)
-        
-        for linea in lineas_nota:
-            c.drawString(self.margen + 5, y_texto_nota, linea)
-            y_texto_nota -= 5
+        self._dibujar_nota_final(y_texto_nota, pagina_actual, total_paginas)
 
+    def _dibujar_firmas_y_leyenda_cali(self, y_inicio, pagina_actual, total_paginas):
+        """
+        Dibuja las secciones de firmas y un cuadro de observaciones ampliado para Cali.
+        """
+        c = self.c
+        y_actual = y_inicio
+
+        y_actual -= 5
+        c.line(self.margen, y_actual, self.width - self.margen, y_actual)
+
+        y_actual -= 10
+        c.drawString(self.margen + 5, y_actual, "NOMBRE DEL RESPONSABLE DEL OPERADOR:")
+        c.line(self.margen + 125, y_actual - 2, self.width/2 - 10, y_actual - 2)
+        c.drawString(self.width/2 + 10, y_actual, "NOMBRE RECTOR ESTABLECIMIENTO EDUCATIVO:")
+        c.line(self.width/2 + 135, y_actual - 2, self.width - self.margen - 5, y_actual - 2)
+
+        y_actual -= 5
+        c.line(self.margen, y_actual, self.width - self.margen, y_actual)
+
+        y_actual -= 10
+        c.drawString(self.margen + 5, y_actual, "FIRMA DEL RESPONSABLE DEL OPERADOR:")
+        c.line(self.margen + 125, y_actual - 2, self.width/2 - 10, y_actual - 2)
+        c.drawString(self.width/2 + 10, y_actual, "FIRMA DEL RECTOR ESTABLECIMIENTO:")
+        c.line(self.width/2 + 135, y_actual - 2, self.width - self.margen - 5, y_actual - 2)
+
+        y_actual -= 5
+        c.line(self.margen, y_actual, self.width - self.margen, y_actual)
+
+        # Cuadro de observaciones ampliado
+        y_actual -= 5
+        c.drawString(self.margen + 3, y_actual, "Observaciones:")
+        alto_observaciones = 40  # Altura ampliada
+        y_caja_obs = y_actual - alto_observaciones
+        c.rect(self.margen, y_caja_obs, self.width - 2 * self.margen, alto_observaciones)
+        
+        y_texto_nota = y_caja_obs - 5
+        self._dibujar_nota_final(y_texto_nota, pagina_actual, total_paginas)
+
+    def _dibujar_nota_final(self, y_inicio, pagina_actual, total_paginas):
+        """
+        Dibuja la nota final en dos columnas y el número de página.
+        """
+        c = self.c
+        
+        # 1. Definir layout de la sección de notas
+        alto_nota_section = 25  # Altura fija para toda la sección de notas
+        y_caja_nota = y_inicio - alto_nota_section
+        
+        ancho_total = self.width - 2 * self.margen
+        ancho_col1 = ancho_total * 0.65
+        ancho_col2 = ancho_total * 0.35
+        
+        x_col1 = self.margen
+        x_col2 = self.margen + ancho_col1
+
+        # 2. Dibujar recuadros para las columnas
+        c.rect(x_col1, y_caja_nota, ancho_col1, alto_nota_section)
+        c.rect(x_col2, y_caja_nota, ancho_col2, alto_nota_section)
+
+        # 3. Texto de la Columna 1 (Nota Original)
+        texto_nota_original = """NOTA: El operador/responsable de prestar el servicio en los establecimientos educativos debe tener en cuenta:
+- El archivo de este documento impreso y debidamente diligenciado debe realizarse conforme a los Lineamientos Técnico Administrativos del Programa PAE y estar disponibles para consulta de los veedores y/o supervisores del mismo.
+- En procura del cuidado del medio ambiente hacer uso racional de los recursos.
+- La firma del presente documento da fe la veracidad del contenido del mismo para el seguimiento, monitoreo y control del programa.
+- El presente formato no debe tener tachones, ni enmendaduras para garantizar la validez del mismo."""
+        self._dibujar_texto_en_celda(texto_nota_original.replace('\n', ' ').replace('- ', ''), x_col1, y_caja_nota, ancho_col1, alto_nota_section)
+
+        # 4. Texto de la Columna 2 (Certificación)
+        texto_certificacion = "LA INSTITUCION EDUCATIVA CON LA FIRMA CERTIFICA LA ENTREGA COMPLETA DE LOS ALIMENTOS A LOS ESTUDIANTES."
+        self._dibujar_texto_en_celda(texto_certificacion, x_col2, y_caja_nota, ancho_col2, alto_nota_section)
+
+        # 5. Número de Página
         c.setFont("Helvetica", 6)
         c.drawCentredString(self.width/2, self.margen - 8, f"Página {pagina_actual}/{total_paginas}")
 
