@@ -749,10 +749,46 @@ ESTILOS PARA VENTANAS MODALES - PLANEACIÓN
 /* ESTILOS PARA MODALES DE ALIMENTOS (FORMULARIOS LARGOS)   */
 /* ========================================================== */
 
-.modal-large .modal-content {
-    width: 90%;
-    max-width: 1000px;
-    max-height: 90vh;
+.modal-content.modal-large {
+    width: 96%;
+    max-width: 1600px;  /* Aumentado para ofrecer más espacio horizontal */
+    height: 90vh;
+    max-height: 96vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.modal-content.modal-large .modal-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding-right: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: #0a8f17 #f1f1f1;
+}
+
+.modal-content.modal-large .modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-content.modal-large .modal-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.modal-content.modal-large .modal-body::-webkit-scrollbar-thumb {
+    background: #0a8f17;
+    border-radius: 10px;
+}
+
+.modal-content.modal-large .modal-body::-webkit-scrollbar-thumb:hover {
+    background: #087d14;
+}
+
+.modal-content.modal-large .modal-footer {
+    margin-top: 20px;
 }
 
 .form-grid {
@@ -779,9 +815,18 @@ ESTILOS PARA VENTANAS MODALES - PLANEACIÓN
 
 .form-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(3, 1fr);  /* 3 columnas fijas en lugar de auto-fit */
+    gap: 20px;  /* Aumentado el gap de 15px a 20px */
     margin-bottom: 15px;
+}
+
+/* Para filas con menos de 3 campos */
+.form-row.two-columns {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.form-row.one-column {
+    grid-template-columns: 1fr;
 }
 
 .form-group {
@@ -840,37 +885,54 @@ label[for$="_carbohidratos_totales_g"]::after {
 }
 
 /* Responsividad para modales en pantallas pequeñas */
+@media (max-width: 1200px) {
+    .modal-content.modal-large {
+        width: 95%;
+        max-width: 1200px;
+        height: auto;
+        max-height: 95vh;
+    }
+
+    .form-row {
+        grid-template-columns: repeat(2, 1fr);  /* 2 columnas en tablets */
+        gap: 15px;
+    }
+}
+
 @media (max-width: 768px) {
-    .modal-large .modal-content {
+    .modal-content.modal-large {
         width: 95%;
         margin: 20px auto;
         max-height: 95vh;
+        height: auto;
     }
-    
-    .form-row {
-        grid-template-columns: 1fr;
+
+    .form-row,
+    .form-row.two-columns,
+    .form-row.one-column {
+        grid-template-columns: 1fr;  /* 1 columna en móviles */
         gap: 10px;
     }
-    
+
     .form-section {
         padding: 15px;
     }
-    
+
     .form-scroll-container {
         max-height: 60vh !important;
     }
 }
 
 @media (max-width: 480px) {
-    .modal-large .modal-content {
+    .modal-content.modal-large {
         width: 98%;
         margin: 10px auto;
     }
-    
+
     .form-section h3 {
         font-size: 1em;
     }
-    
+
     .form-control {
         font-size: 0.85em;
         padding: 8px 10px;

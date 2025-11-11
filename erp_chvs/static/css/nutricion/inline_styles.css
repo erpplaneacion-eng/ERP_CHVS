@@ -227,9 +227,33 @@
 
 /* Modal de alimentos */
 .modal-alimentos-scroll {
-    max-height: 70vh;
+    flex: 1;
+    min-height: 0;
+    max-height: none;
     overflow-y: auto;
     padding-right: 15px;
+    /* Mejorar el scroll en diferentes navegadores */
+    scrollbar-width: thin;
+    scrollbar-color: #0a8f17 #f1f1f1;
+}
+
+/* Estilos personalizados para scrollbar (Webkit) */
+.modal-alimentos-scroll::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-alimentos-scroll::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.modal-alimentos-scroll::-webkit-scrollbar-thumb {
+    background: #0a8f17;
+    border-radius: 10px;
+}
+
+.modal-alimentos-scroll::-webkit-scrollbar-thumb:hover {
+    background: #087d14;
 }
 
 /* Centrado de texto para celdas vacías */
