@@ -209,7 +209,13 @@ class AsistenciaPDFGenerator:
 
         # Lógica para rellenar las casillas dinámicamente
         mes_actual = self.datos_encabezado.get('mes', '').upper()
-        dias_habiles = DIAS_HABILES_POR_MES.get(mes_actual, [])
+        dias_personalizados = self.datos_encabezado.get('dias_personalizados')
+
+        if dias_personalizados:
+            dias_habiles = dias_personalizados
+        else:
+            dias_habiles = DIAS_HABILES_POR_MES.get(mes_actual, [])
+        
         num_dias = len(dias_habiles) if dias_habiles else 22 # Usar 22 como default si no hay días definidos
         casilla_ancho = (ancho_disponible_dias / num_dias) if num_dias > 0 else 0
 
@@ -261,7 +267,13 @@ class AsistenciaPDFGenerator:
         # 1. Calcular valores base
         pdf_codigo_complemento = self.datos_encabezado.get('codigo_complemento', '')
         mes_actual = self.datos_encabezado.get('mes', '').upper()
-        dias_habiles_del_mes = DIAS_HABILES_POR_MES.get(mes_actual, [])
+        dias_personalizados = self.datos_encabezado.get('dias_personalizados')
+
+        if dias_personalizados:
+            dias_habiles_del_mes = dias_personalizados
+        else:
+            dias_habiles_del_mes = DIAS_HABILES_POR_MES.get(mes_actual, [])
+
         num_dias_habiles = len(dias_habiles_del_mes) if dias_habiles_del_mes else 22
         raciones_mensuales = total_estudiantes * num_dias_habiles
 
@@ -370,7 +382,13 @@ class AsistenciaPDFGenerator:
         y_resumen -= 15
         
         mes_actual = self.datos_encabezado.get('mes', '').upper()
-        dias_habiles_del_mes = DIAS_HABILES_POR_MES.get(mes_actual, [])
+        dias_personalizados = self.datos_encabezado.get('dias_personalizados')
+
+        if dias_personalizados:
+            dias_habiles_del_mes = dias_personalizados
+        else:
+            dias_habiles_del_mes = DIAS_HABILES_POR_MES.get(mes_actual, [])
+            
         num_dias_habiles = len(dias_habiles_del_mes) if dias_habiles_del_mes else 22
         raciones_mensuales = raciones_diarias * num_dias_habiles
 
@@ -658,7 +676,13 @@ class AsistenciaPDFGenerator:
 
                     # Replicar la misma lógica dinámica para las filas de estudiantes
                     mes_actual = self.datos_encabezado.get('mes', '').upper()
-                    dias_habiles = DIAS_HABILES_POR_MES.get(mes_actual, [])
+                    dias_personalizados = self.datos_encabezado.get('dias_personalizados')
+
+                    if dias_personalizados:
+                        dias_habiles = dias_personalizados
+                    else:
+                        dias_habiles = DIAS_HABILES_POR_MES.get(mes_actual, [])
+
                     num_dias = len(dias_habiles) if dias_habiles else 22
                     casilla_ancho = (ancho_col13_fijo - ancho_total_dias) / num_dias if num_dias > 0 else 0
 

@@ -130,6 +130,11 @@
                     </select>
                 </div>
                 <div class="bulk-field">
+                    <label for="bulk-dias">Días de Atención (Opcional):</label>
+                    <input type="text" id="bulk-dias" class="form-control" placeholder="Ej: 1,2,3,10,11">
+                    <small class="form-text text-muted">Separados por comas. Si se deja vacío, se usarán los días hábiles del mes.</small>
+                </div>
+                <div class="bulk-field">
                     <button type="button" class="btn btn-success btn-lg" id="btn-generar-masivo" 
                             data-programa-id="{{ filtros_aplicados.programa.id }}">
                         <i class="fas fa-archive"></i> Generar ZIP Masivo
@@ -150,6 +155,7 @@
                     <th>Sede Educativa</th>
                     <th>Mes de Atención</th>
                     <th>Focalización</th>
+                    <th>Días de Atención (Opcional)</th>
                     <th>Acción</th>
                 </tr>
             </thead>
@@ -174,6 +180,9 @@
                                         {% endfor %}
                                     </select>
                                 </td>
+                                <td>
+                                    <input type="text" id="dias-{{ sede.cod_interprise }}" class="form-control form-control-sm" placeholder="Ej: 1,2,3,10,11">
+                                </td>
                                 <td class="text-center">
                                     <button 
                                         type="button" 
@@ -187,7 +196,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="4" class="text-center">No se encontraron sedes para este programa.</td>
+                                <td colspan="5" class="text-center">No se encontraron sedes para este programa.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -225,14 +234,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 const mesElement = document.getElementById(`mes-${sedeCod}`);
                 const focalizacionElement = document.getElementById(`focalizacion-${sedeCod}`);
+                const diasElement = document.getElementById(`dias-${sedeCod}`);
 
-                if (!mesElement || !focalizacionElement) {
+                if (!mesElement || !focalizacionElement || !diasElement) {
                     alert(`Error: No se encontraron los selectores para la sede ${sedeCod}`);
                     return;
                 }
 
                 const mes = mesElement.value;
                 const focalizacion = focalizacionElement.value;
+                const dias = diasElement.value.trim();
 
                 if (!mes || !focalizacion) {
                     alert('Error: Faltan parámetros (mes o focalización)');
@@ -245,7 +256,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     Generando...
                 `;
 
-                const url = `/facturacion/generar-asistencia/${programaId}/${sedeCod}/${mes}/${focalizacion}/`;
+                let url = `/facturacion/generar-asistencia/${programaId}/${sedeCod}/${mes}/${focalizacion}/`;
+                
+                if (dias) {
+                    const params = new URLSearchParams({ dias: dias });
+                    url += `?${params.toString()}`;
+                }
+
                 await descargarArchivo(url, button, originalText);
 
             } catch (error) {
@@ -265,6 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const programaId = this.dataset.programaId;
             const mes = document.getElementById('bulk-mes').value;
             const focalizacion = document.getElementById('bulk-focalizacion').value;
+            const dias = document.getElementById('bulk-dias').value.trim();
 
             if (!programaId || !mes || !focalizacion) {
                 alert('Error: Faltan parámetros para la generación masiva.');
@@ -273,12 +291,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Confirmar la acción
             const programaNombre = "{{ filtros_aplicados.programa.programa|escapejs }}";
-            const confirmacion = confirm(
-                `¿Está seguro de generar reportes para TODAS las sedes del programa "${programaNombre}" con los parámetros:\n\n` +
+            let confirmacionMsg = `¿Está seguro de generar reportes para TODAS las sedes del programa "${programaNombre}" con los parámetros:\n\n` +
                 `• Mes: ${mes}\n` +
-                `• Focalización: ${focalizacion}\n\n` +
-                `Esta operación puede tomar varios minutos.`
-            );
+                `• Focalización: ${focalizacion}\n`;
+
+            if (dias) {
+                confirmacionMsg += `• Días específicos: ${dias}\n`;
+            }
+            
+            confirmacionMsg += `\nEsta operación puede tomar varios minutos.`;
+
+            const confirmacion = confirm(confirmacionMsg);
 
             if (!confirmacion) {
                 return;
@@ -293,7 +316,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     Generando ZIP Masivo... Por favor espere
                 `;
 
-                const url = `/facturacion/generar-zip-masivo/${programaId}/${mes}/${encodeURIComponent(focalizacion)}/`;
+                let url = `/facturacion/generar-zip-masivo/${programaId}/${mes}/${encodeURIComponent(focalizacion)}/`;
+
+                if (dias) {
+                    const params = new URLSearchParams({ dias: dias });
+                    url += `?${params.toString()}`;
+                }
+
                 await descargarArchivo(url, this, originalText);
 
             } catch (error) {

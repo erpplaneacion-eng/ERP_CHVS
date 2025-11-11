@@ -846,7 +846,15 @@ def generar_pdf_asistencia(request, programa_id, sede_cod_interprise, mes, focal
     Vista para generar PDFs de asistencia.
     Delega la lógica principal al PDFAsistenciaService.
     """
-    return PDFAsistenciaService.generar_pdf_asistencia(programa_id, sede_cod_interprise, mes, focalizacion)
+    dias_str = request.GET.get('dias')
+    dias_personalizados = None
+    if dias_str:
+        try:
+            dias_personalizados = [int(d.strip()) for d in dias_str.split(',') if d.strip().isdigit()]
+        except (ValueError, TypeError):
+            return HttpResponse("Formato de días inválido. Deben ser números separados por comas.", status=400)
+
+    return PDFAsistenciaService.generar_pdf_asistencia(programa_id, sede_cod_interprise, mes, focalizacion, dias_personalizados=dias_personalizados)
 
 @login_required
 def generar_zip_masivo_programa(request, programa_id, mes, focalizacion):
@@ -854,7 +862,15 @@ def generar_zip_masivo_programa(request, programa_id, mes, focalizacion):
     Vista para generar un ZIP masivo con todos los PDFs de asistencia 
     para todas las sedes de un Programa específico.
     """
-    return PDFAsistenciaService.generar_zip_masivo_por_programa(programa_id, mes, focalizacion)
+    dias_str = request.GET.get('dias')
+    dias_personalizados = None
+    if dias_str:
+        try:
+            dias_personalizados = [int(d.strip()) for d in dias_str.split(',') if d.strip().isdigit()]
+        except (ValueError, TypeError):
+            return HttpResponse("Formato de días inválido. Deben ser números separados por comas.", status=400)
+            
+    return PDFAsistenciaService.generar_zip_masivo_por_programa(programa_id, mes, focalizacion, dias_personalizados=dias_personalizados)
 
 @login_required
 def get_municipio_for_programa(request):
