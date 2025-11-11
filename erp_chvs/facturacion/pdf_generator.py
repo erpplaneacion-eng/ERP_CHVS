@@ -422,9 +422,11 @@ class AsistenciaPDFGenerator:
         y_actual -= 5
         c.line(self.margen, y_actual, self.width - self.margen, y_actual)
 
-        c.drawString(self.margen + 3, y_actual, "Observaciones:")
-        y_actual -= self.alto_fila
-        c.line(self.margen, y_actual, self.width - self.margen, y_actual)
+        # Ajuste para dibujar el texto "Observaciones" dentro del cuadro
+        y_linea_obs_superior = y_actual
+        c.rect(self.margen, y_linea_obs_superior - self.alto_fila, self.width - 2 * self.margen, self.alto_fila)
+        c.drawString(self.margen + 3, y_linea_obs_superior - 4, "Observaciones:")
+        y_actual = y_linea_obs_superior - self.alto_fila
         
         alto_explicaciones = 25
         y_leyenda = y_actual - alto_explicaciones
@@ -476,11 +478,11 @@ class AsistenciaPDFGenerator:
         y_actual -= 5
         c.line(self.margen, y_actual, self.width - self.margen, y_actual)
 
-        # Cuadro de observaciones ampliado
-        c.drawString(self.margen + 3, y_actual, "Observaciones:")
-        alto_observaciones = 40  # Altura ampliada
+        # Cuadro de observaciones ampliado con texto dentro
+        alto_observaciones = 40
         y_caja_obs = y_actual - alto_observaciones
         c.rect(self.margen, y_caja_obs, self.width - 2 * self.margen, alto_observaciones)
+        c.drawString(self.margen + 3, y_actual - 4, "Observaciones:")
         
         y_texto_nota = y_caja_obs
         self._dibujar_nota_final(y_texto_nota, pagina_actual, total_paginas)
@@ -491,8 +493,7 @@ class AsistenciaPDFGenerator:
         """
         c = self.c
         
-        # 1. Definir layout de la sección de notas
-        alto_nota_section = 25  # Altura fija para toda la sección de notas
+        alto_nota_section = 25
         y_caja_nota = y_inicio - alto_nota_section
         
         ancho_total = self.width - 2 * self.margen
@@ -502,11 +503,9 @@ class AsistenciaPDFGenerator:
         x_col1 = self.margen
         x_col2 = self.margen + ancho_col1
 
-        # 2. Dibujar recuadros para las columnas
         c.rect(x_col1, y_caja_nota, ancho_col1, alto_nota_section)
         c.rect(x_col2, y_caja_nota, ancho_col2, alto_nota_section)
 
-        # 3. Texto de la Columna 1 (Nota Original)
         texto_nota_original = """NOTA: El operador/responsable de prestar el servicio en los establecimientos educativos debe tener en cuenta:
 - El archivo de este documento impreso y debidamente diligenciado debe realizarse conforme a los Lineamientos Técnico Administrativos del Programa PAE y estar disponibles para consulta de los veedores y/o supervisores del mismo.
 - En procura del cuidado del medio ambiente hacer uso racional de los recursos.
@@ -514,11 +513,9 @@ class AsistenciaPDFGenerator:
 - El presente formato no debe tener tachones, ni enmendaduras para garantizar la validez del mismo."""
         self._dibujar_texto_en_celda(texto_nota_original.replace('\n', ' ').replace('- ', ''), x_col1, y_caja_nota, ancho_col1, alto_nota_section)
 
-        # 4. Texto de la Columna 2 (Certificación)
         texto_certificacion = "LA INSTITUCION EDUCATIVA CON LA FIRMA CERTIFICA LA ENTREGA COMPLETA DE LOS ALIMENTOS A LOS ESTUDIANTES."
-        self._dibujar_texto_en_celda(texto_certificacion, x_col2, y_caja_nota, ancho_col2, alto_nota_section)
+        self._dibujar_texto_centrado_en_celda(texto_certificacion, x_col2, y_caja_nota, ancho_col2, alto_nota_section)
 
-        # 5. Número de Página
         c.setFont("Helvetica", 6)
         c.drawCentredString(self.width/2, self.margen - 8, f"Página {pagina_actual}/{total_paginas}")
 
@@ -543,6 +540,32 @@ class AsistenciaPDFGenerator:
             y_texto -= 5
             if y_texto < y:
                 break
+
+    def _dibujar_texto_centrado_en_celda(self, texto, x, y, ancho, alto):
+        """Dibuja texto multilínea centrado vertical y horizontalmente en una celda."""
+        c = self.c
+        c.setFont("Helvetica", 4)
+        
+        palabras = texto.split()
+        lineas = []
+        linea_actual = ""
+        for palabra in palabras:
+            if c.stringWidth(linea_actual + " " + palabra, "Helvetica", 4) < ancho - 6:
+                linea_actual += " " + palabra if linea_actual else palabra
+            else:
+                lineas.append(linea_actual)
+                linea_actual = palabra
+        if linea_actual:
+            lineas.append(linea_actual)
+        
+        line_height = 5
+        total_text_height = len(lineas) * line_height
+        
+        y_start = y + (alto + total_text_height) / 2 - line_height + 2
+
+        for linea in lineas:
+            c.drawCentredString(x + ancho / 2, y_start, linea)
+            y_start -= line_height
 
     def generar_pdf(self, lista_estudiantes):
         c = self.c
