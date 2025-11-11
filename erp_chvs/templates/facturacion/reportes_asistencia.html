@@ -27,7 +27,7 @@
 .bulk-form {
     display: flex;
     gap: 20px;
-    align-items: end;
+    align-items: flex-start;
     flex-wrap: wrap;
 }
 
@@ -51,6 +51,15 @@
 .bulk-field .btn {
     padding: 10px 20px;
     font-weight: 600;
+}
+
+.bulk-actions {
+    display: flex;
+    align-items: flex-end;
+}
+
+.bulk-dias-field .form-text {
+    margin-top: 6px;
 }
 
 @media (max-width: 768px) {
@@ -129,12 +138,12 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="bulk-field">
+                <div class="bulk-field bulk-dias-field">
                     <label for="bulk-dias">Días de Atención (Opcional):</label>
                     <input type="text" id="bulk-dias" class="form-control" placeholder="Ej: 1,2,3,10,11">
                     <small class="form-text text-muted">Separados por comas. Si se deja vacío, se usarán los días hábiles del mes.</small>
                 </div>
-                <div class="bulk-field">
+                <div class="bulk-field bulk-actions">
                     <button type="button" class="btn btn-success btn-lg" id="btn-generar-masivo" 
                             data-programa-id="{{ filtros_aplicados.programa.id }}">
                         <i class="fas fa-archive"></i> Generar ZIP Masivo
