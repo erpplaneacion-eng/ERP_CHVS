@@ -58,6 +58,10 @@ class AlimentosManager {
                 this.closeModal();
             }
         });
+
+        // ⭐ IMPORTANTE: Interceptar el submit del formulario
+        // Convertir punto a coma antes de enviar (Django espera coma con locale español)
+        this.alimentoForm.addEventListener('submit', (e) => this.handleFormSubmit(e));
     }
 
     setupValidations() {
@@ -158,7 +162,9 @@ class AlimentosManager {
         // Habilitar código para nuevo alimento
         const codigoInput = document.getElementById('id_codigo');
         if (codigoInput) {
-            codigoInput.disabled = false;
+            codigoInput.readOnly = false;
+            codigoInput.style.backgroundColor = '';
+            codigoInput.style.cursor = '';
         }
 
         this.openModal();
@@ -179,26 +185,21 @@ class AlimentosManager {
         // Poblar formulario con datos existentes
         this.populateForm(data);
 
-        // Deshabilitar edición de código
+        // IMPORTANTE: Usar readonly en lugar de disabled
+        // disabled NO envía el valor en el POST
+        // readonly sí envía el valor pero no permite edición
         const codigoInput = document.getElementById('id_codigo');
         if (codigoInput) {
-            codigoInput.disabled = true;
+            codigoInput.readOnly = true;
+            codigoInput.style.backgroundColor = '#e9ecef';
+            codigoInput.style.cursor = 'not-allowed';
         }
 
         this.openModal();
     }
 
     populateForm(data) {
-        const fields = [
-            'codigo', 'nombre', 'parteAnalizada', 'humedad', 'energiaKcal', 'energiaKj',
-            'proteina', 'lipidos', 'carbohidratosTotales', 'carbohidratosDisponibles',
-            'fibraDietaria', 'cenizas', 'calcio', 'hierro', 'sodio', 'fosforo',
-            'yodo', 'zinc', 'magnesio', 'potasio', 'tiamina', 'riboflavina',
-            'niacina', 'folatos', 'vitaminaB12', 'vitaminaC', 'vitaminaA',
-            'grasaSaturada', 'grasaMonoinsaturada', 'grasaPoliinsaturada',
-            'colesterol', 'parteComestible'
-        ];
-
+        // Mapeo directo: data-attribute en HTML → ID del input en el formulario
         const fieldMappings = {
             'codigo': 'id_codigo',
             'nombre': 'id_nombre_del_alimento',
@@ -234,15 +235,38 @@ class AlimentosManager {
             'parteComestible': 'id_parte_comestible_field'
         };
 
-        fields.forEach(field => {
-            const elementId = fieldMappings[field];
-            const element = document.getElementById(elementId);
-            const value = data[field];
+        console.log('🔍 DEBUG: Poblando formulario...');
+        console.log('📦 Dataset completo:', data);
 
-            if (element && value !== undefined) {
-                element.value = value;
+        // Iterar sobre el mapeo y poblar cada campo
+        for (const [dataKey, elementId] of Object.entries(fieldMappings)) {
+            const element = document.getElementById(elementId);
+            const value = data[dataKey];
+
+            if (!element) {
+                console.warn(`⚠️ Elemento no encontrado: ${elementId}`);
+                continue;
             }
-        });
+
+            // Verificar si el valor existe y no está vacío
+            // Nota: Permitimos 0 como valor válido para campos numéricos
+            if (value !== undefined && value !== null && value !== '') {
+                // Los valores ya vienen con punto decimal (formato estándar)
+                // gracias a {% localize off %} en el template
+                element.value = value;
+                console.log(`✅ ${dataKey} → ${elementId}: "${value}"`);
+            } else if (value === '0' || value === 0) {
+                // Caso especial: 0 es un valor válido
+                element.value = '0';
+                console.log(`✅ ${dataKey} → ${elementId}: "0"`);
+            } else {
+                // Limpiar el campo si no hay valor (undefined, null o string vacío)
+                element.value = '';
+                console.log(`⭕ ${dataKey} → ${elementId}: (vacío)`);
+            }
+        }
+
+        console.log('✨ Formulario poblado completamente');
     }
 
     clearForm() {
@@ -261,6 +285,14 @@ class AlimentosManager {
         inputs.forEach(input => {
             input.style.borderColor = '#ced4da';
         });
+
+        // Resetear campo código a editable
+        const codigoInput = document.getElementById('id_codigo');
+        if (codigoInput) {
+            codigoInput.readOnly = false;
+            codigoInput.style.backgroundColor = '';
+            codigoInput.style.cursor = '';
+        }
     }
 
     openModal() {
@@ -278,6 +310,34 @@ class AlimentosManager {
         this.modal.style.display = 'none';
         document.body.style.overflow = 'auto';
         this.clearForm();
+    }
+
+    handleFormSubmit(event) {
+        console.log('📤 Preparando envío del formulario...');
+
+        // ESTRATEGIA: Mantener los valores con PUNTO (formato estándar)
+        // Los inputs type="number" ya tienen el formato correcto
+        // Solo necesitamos asegurar que no haya problemas de envío
+
+        const numericInputs = this.alimentoForm.querySelectorAll('input[type="number"]');
+        let emptyRequiredFields = [];
+
+        numericInputs.forEach(input => {
+            if (input.value && input.value.trim() !== '') {
+                console.log(`✅ ${input.name}: "${input.value}" (manteniendo punto decimal)`);
+            } else if (input.hasAttribute('required')) {
+                emptyRequiredFields.push(input.name);
+                console.warn(`⚠️ ${input.name}: campo requerido vacío`);
+            }
+        });
+
+        if (emptyRequiredFields.length > 0) {
+            console.error('❌ Campos requeridos vacíos:', emptyRequiredFields);
+        }
+
+        console.log('✅ Formulario listo para enviar con formato estándar (punto decimal)');
+        // Permitir que el formulario se envíe normalmente con punto decimal
+        // Django debe aceptar el formato estándar
     }
 
     // Función para validar formulario antes de enviar

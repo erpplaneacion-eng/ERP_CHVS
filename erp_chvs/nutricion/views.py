@@ -76,12 +76,22 @@ def lista_alimentos(request):
 @login_required
 def editar_alimento(request, codigo):
     """Vista para editar un alimento"""
+    from django.contrib import messages
+
     alimento_a_editar = get_object_or_404(TablaAlimentos2018Icbf, pk=codigo)
 
     if request.method == 'POST':
         form = AlimentoForm(request.POST, instance=alimento_a_editar)
         if form.is_valid():
             form.save()
+            messages.success(request, f'Alimento "{alimento_a_editar.nombre_del_alimento}" actualizado correctamente.')
+            return redirect('nutricion:lista_alimentos')
+        else:
+            # Si hay errores, mostrarlos en consola del servidor para debugging
+            print("❌ ERROR: Formulario no válido al editar alimento")
+            print(f"Código: {codigo}")
+            print(f"Errores: {form.errors}")
+            messages.error(request, f'Error al actualizar el alimento. Por favor, revise los datos ingresados.')
             return redirect('nutricion:lista_alimentos')
 
     return redirect('nutricion:lista_alimentos')

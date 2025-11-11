@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load l10n %}
 
 {% block title %}Lista de Alimentos ICBF{% endblock %}
 
@@ -11,6 +12,29 @@
 {% block content %}
     <h1>Lista de Alimentos ICBF 2018</h1>
     <p>Gestión de alimentos según la tabla del Instituto Colombiano de Bienestar Familiar.</p>
+
+    <!-- Mensajes de Django -->
+    {% if messages %}
+    <div class="messages-container">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {% if message.tags == 'success' %}
+                <i class="fas fa-check-circle"></i>
+            {% elif message.tags == 'error' %}
+                <i class="fas fa-exclamation-circle"></i>
+            {% elif message.tags == 'warning' %}
+                <i class="fas fa-exclamation-triangle"></i>
+            {% else %}
+                <i class="fas fa-info-circle"></i>
+            {% endif %}
+            {{ message }}
+            <button type="button" class="close" onclick="this.parentElement.remove()">
+                <span>&times;</span>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 
     <div class="actions-bar">
         <!-- Formulario de Búsqueda -->
@@ -48,6 +72,7 @@
                 <td>{{ alimento.lipidos_g }}</td>
                 <td>{{ alimento.carbohidratos_totales_g }}</td>
                 <td>
+                    {% localize off %}
                     <button class="btn-edit edit-alimento-btn"
                             data-codigo="{{ alimento.codigo }}"
                             data-nombre="{{ alimento.nombre_del_alimento }}"
@@ -81,6 +106,7 @@
                             data-grasa-poliinsaturada="{{ alimento.grasa_poliinsaturada_g|default:'' }}"
                             data-colesterol="{{ alimento.colesterol_mg|default:'' }}"
                             data-parte-comestible="{{ alimento.parte_comestible_field|default:'' }}">
+                    {% endlocalize %}
                         Editar
                     </button>
                 </td>

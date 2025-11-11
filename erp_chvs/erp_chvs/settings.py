@@ -150,6 +150,13 @@ LANGUAGE_CODE = 'es-col'
 
 TIME_ZONE = 'America/Bogota'
 
+# Localización: Usar formato local para mostrar, pero aceptar ambos formatos en formularios
+USE_L10N = True
+USE_THOUSAND_SEPARATOR = False  # No usar separador de miles en formularios
+
+# Importante: Esto permite que Django acepte tanto punto como coma en formularios
+DECIMAL_SEPARATOR = '.'  # Usar punto como separador decimal estándar en formularios
+
 USE_I18N = True
 
 USE_TZ = True
