@@ -958,7 +958,10 @@ def reemplazar_focalizacion_sedes(request):
             else:
                 tipo_procesamiento = "nuevo"
 
-            resultado_procesamiento = procesamiento_service.procesar_excel_original(archivo_excel, focalizacion_nueva)
+            if tipo_procesamiento == "nuevo":
+                resultado_procesamiento = procesamiento_service.procesar_excel_nuevo_formato(archivo_excel, focalizacion_nueva)
+            else:
+                resultado_procesamiento = procesamiento_service.procesar_excel_original(archivo_excel, focalizacion_nueva)
 
             if not resultado_procesamiento['success']:
                 raise Exception(resultado_procesamiento['error'])
