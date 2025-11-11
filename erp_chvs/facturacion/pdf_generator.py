@@ -242,6 +242,103 @@ class AsistenciaPDFGenerator:
         self.y_inicio_filas = y_tabla_header - self.alto_fila
 
     def _dibujar_pie_pagina(self, pagina_actual, total_paginas, total_estudiantes):
+        """
+        Dispatcher para dibujar el pie de página correcto según el municipio.
+        """
+        municipio = self.datos_encabezado.get('municipio', '').upper()
+        if 'CALI' in municipio:
+            self._dibujar_pie_pagina_cali(pagina_actual, total_paginas, total_estudiantes)
+        else:
+            self._dibujar_pie_pagina_original(pagina_actual, total_paginas, total_estudiantes)
+
+    def _dibujar_pie_pagina_cali(self, pagina_actual, total_paginas, total_estudiantes):
+        """
+        Dibuja el pie de página con la lógica de resumen de raciones específica para Cali.
+        """
+        c = self.c
+        margen = self.margen
+        
+        # 1. Calcular valores base
+        pdf_codigo_complemento = self.datos_encabezado.get('codigo_complemento', '')
+        mes_actual = self.datos_encabezado.get('mes', '').upper()
+        dias_habiles_del_mes = DIAS_HABILES_POR_MES.get(mes_actual, [])
+        num_dias_habiles = len(dias_habiles_del_mes) if dias_habiles_del_mes else 22
+        raciones_mensuales = total_estudiantes * num_dias_habiles
+
+        # 2. Determinar en qué fila va el valor
+        valor_cajm = 0
+        valor_cajt = 0
+        valor_almuerzo = 0
+
+        if 'CAJM' in pdf_codigo_complemento:
+            valor_cajm = raciones_mensuales
+        elif 'CAJT' in pdf_codigo_complemento:
+            valor_cajt = raciones_mensuales
+        elif 'ALMUERZO' in pdf_codigo_complemento:
+            valor_almuerzo = raciones_mensuales
+
+        # 3. Dibujar las tres filas de resumen de raciones
+        y_resumen = self.margen + 130
+        c.setFont("Helvetica", 4)
+
+        # --- Fila 1: CAJM ---
+        c.drawString(margen + 3, y_resumen, "EJECUCION MENSUAL PROGRAMADA CAJM:")
+        c.drawCentredString(margen + 125, y_resumen, str(valor_cajm))
+        c.line(margen + 100, y_resumen - 2, margen + 150, y_resumen - 2)
+        
+        c.drawString(margen + 160, y_resumen, "RACIONES MENSUALES ENTREGADAS CAJM:")
+        c.line(margen + 260, y_resumen - 2, margen + 310, y_resumen - 2)
+        
+        c.drawString(margen + 320, y_resumen, "PREPARADA EN SITIO:")
+        c.line(margen + 380, y_resumen - 2, margen + 430, y_resumen - 2)
+        c.drawString(margen + 440, y_resumen, "INDUSTRIALIZADA:")
+        c.line(margen + 490, y_resumen - 2, margen + 540, y_resumen - 2)
+        c.drawString(margen + 550, y_resumen, "CATERING:")
+        c.line(margen + 585, y_resumen - 2, margen + 635, y_resumen - 2)
+        
+        y_resumen -= 15
+
+        # --- Fila 2: CAJT ---
+        c.drawString(margen + 3, y_resumen, "EJECUCION MENSUAL PROGRAMADA CAJT:")
+        c.drawCentredString(margen + 125, y_resumen, str(valor_cajt))
+        c.line(margen + 100, y_resumen - 2, margen + 150, y_resumen - 2)
+
+        c.drawString(margen + 160, y_resumen, "RACIONES MENSUALES ENTREGADAS CAJT:")
+        c.line(margen + 260, y_resumen - 2, margen + 310, y_resumen - 2)
+
+        c.drawString(margen + 320, y_resumen, "PREPARADA EN SITIO:")
+        c.line(margen + 380, y_resumen - 2, margen + 430, y_resumen - 2)
+        c.drawString(margen + 440, y_resumen, "INDUSTRIALIZADA:")
+        c.line(margen + 490, y_resumen - 2, margen + 540, y_resumen - 2)
+        c.drawString(margen + 550, y_resumen, "CATERING:")
+        c.line(margen + 585, y_resumen - 2, margen + 635, y_resumen - 2)
+
+        y_resumen -= 15
+
+        # --- Fila 3: Almuerzo ---
+        c.drawString(margen + 3, y_resumen, "EJECUCION MENSUAL PROGRAMADA ALMUERZO:")
+        c.drawCentredString(margen + 125, y_resumen, str(valor_almuerzo))
+        c.line(margen + 100, y_resumen - 2, margen + 150, y_resumen - 2)
+
+        c.drawString(margen + 160, y_resumen, "RACIONES MENSUALES ENTREGADAS ALMUERZO:")
+        c.line(margen + 260, y_resumen - 2, margen + 310, y_resumen - 2)
+
+        c.drawString(margen + 320, y_resumen, "PREPARADA EN SITIO:")
+        c.line(margen + 380, y_resumen - 2, margen + 430, y_resumen - 2)
+        c.drawString(margen + 440, y_resumen, "INDUSTRIALIZADA:")
+        c.line(margen + 490, y_resumen - 2, margen + 540, y_resumen - 2)
+        c.drawString(margen + 550, y_resumen, "CATERING:")
+        c.line(margen + 585, y_resumen - 2, margen + 635, y_resumen - 2)
+        c.drawString(margen + 645, y_resumen, "OLLA COMUNITARIA:")
+        c.line(margen + 705, y_resumen - 2, margen + 755, y_resumen - 2)
+
+        # --- Firmas, Observaciones y Leyenda (común para todos los pies de página) ---
+        self._dibujar_seccion_firmas_y_leyenda(y_resumen - 10, pagina_actual, total_paginas)
+
+    def _dibujar_pie_pagina_original(self, pagina_actual, total_paginas, total_estudiantes):
+        """
+        Dibuja el pie de página original para municipios que no son Cali.
+        """
         c = self.c
         y_resumen = self.margen + 130 # Subimos para dar espacio a todo el pie de página
 
@@ -253,18 +350,15 @@ class AsistenciaPDFGenerator:
         texto1_diario = f"RACIONES DIARIAS PROGRAMADAS {codigo_complemento}:"
         c.drawString(self.margen + 3, y_resumen, texto1_diario)
         
-        # --- INICIO DE CAMBIO: Centrar valor y acortar línea ---
         x_centro_valor_prog = self.margen + 125
         ancho_linea_valor_prog = 30
         c.drawCentredString(x_centro_valor_prog, y_resumen, str(raciones_diarias)) # Valor dinámico centrado
         c.line(x_centro_valor_prog - ancho_linea_valor_prog/2, y_resumen - 2, x_centro_valor_prog + ancho_linea_valor_prog/2, y_resumen - 2)
-        # --- FIN DE CAMBIO ---
 
         texto2_diario = f"RACIONES DIARIAS ENTREGADAS {codigo_complemento}:"
         c.drawString(self.margen + 160, y_resumen, texto2_diario)
         c.line(self.margen + 260, y_resumen - 2, self.margen + 310, y_resumen - 2) # Línea vacía
 
-        # Nuevos campos para la fila diaria
         c.drawString(self.margen + 320, y_resumen, "PREPARADA EN SITIO:")
         c.line(self.margen + 380, y_resumen - 2, self.margen + 430, y_resumen - 2)
         c.drawString(self.margen + 440, y_resumen, "INDUSTRIALIZADA:")
@@ -275,26 +369,21 @@ class AsistenciaPDFGenerator:
         # --- Fila 2: Raciones Mensuales ---
         y_resumen -= 15
         
-        # --- INICIO DE MEJORA: Usar días hábiles dinámicos ---
         mes_actual = self.datos_encabezado.get('mes', '').upper()
         dias_habiles_del_mes = DIAS_HABILES_POR_MES.get(mes_actual, [])
-        num_dias_habiles = len(dias_habiles_del_mes) if dias_habiles_del_mes else 22 # Fallback a 22 si no hay días definidos
+        num_dias_habiles = len(dias_habiles_del_mes) if dias_habiles_del_mes else 22
         raciones_mensuales = raciones_diarias * num_dias_habiles
-        # --- FIN DE MEJORA ---
 
         texto1_mensual = f"RACIONES MENSUALES PROGRAMADAS {codigo_complemento}:"
         c.drawString(self.margen + 3, y_resumen, texto1_mensual)
 
-        # --- INICIO DE CAMBIO: Centrar valor y acortar línea ---
-        c.drawCentredString(x_centro_valor_prog, y_resumen, str(raciones_mensuales)) # Valor dinámico centrado
+        c.drawCentredString(x_centro_valor_prog, y_resumen, str(raciones_mensuales))
         c.line(x_centro_valor_prog - ancho_linea_valor_prog/2, y_resumen - 2, x_centro_valor_prog + ancho_linea_valor_prog/2, y_resumen - 2)
-        # --- FIN DE CAMBIO ---
 
         texto2_mensual = f"RACIONES MENSUALES ENTREGADAS {codigo_complemento}:"
         c.drawString(self.margen + 160, y_resumen, texto2_mensual)
-        c.line(self.margen + 260, y_resumen - 2, self.margen + 310, y_resumen - 2) # Línea vacía
+        c.line(self.margen + 260, y_resumen - 2, self.margen + 310, y_resumen - 2)
 
-        # Nuevos campos para la fila mensual
         c.drawString(self.margen + 320, y_resumen, "PREPARADA EN SITIO:")
         c.line(self.margen + 380, y_resumen - 2, self.margen + 430, y_resumen - 2)
         c.drawString(self.margen + 440, y_resumen, "INDUSTRIALIZADA:")
@@ -302,9 +391,17 @@ class AsistenciaPDFGenerator:
         c.drawString(self.margen + 550, y_resumen, "CATERING:")
         c.line(self.margen + 585, y_resumen - 2, self.margen + 635, y_resumen - 2)
 
-        # --- Firmas, Observaciones y Leyenda ---
-        y_actual = y_resumen - 10
-        
+        # --- Firmas, Observaciones y Leyenda (común para todos los pies de página) ---
+        self._dibujar_seccion_firmas_y_leyenda(y_resumen - 10, pagina_actual, total_paginas)
+
+    def _dibujar_seccion_firmas_y_leyenda(self, y_inicio, pagina_actual, total_paginas):
+        """
+        Dibuja las secciones de firmas, observaciones, leyenda y nota final.
+        Esta función es común para ambos tipos de pie de página.
+        """
+        c = self.c
+        y_actual = y_inicio
+
         y_actual -= 5
         c.line(self.margen, y_actual, self.width - self.margen, y_actual)
 
@@ -328,15 +425,11 @@ class AsistenciaPDFGenerator:
 
         y_actual -= 5
         c.drawString(self.margen + 3, y_actual, "Observaciones:")
-        # Dejar un espacio para observaciones de aprox. 1 renglon
         y_actual -= self.alto_fila
         c.line(self.margen, y_actual, self.width - self.margen, y_actual)
         
-        # --- Leyenda y Nota ---
-        # La leyenda se dibuja inmediatamente debajo de la línea de observaciones
         alto_explicaciones = 25
         y_leyenda = y_actual - alto_explicaciones
-        alto_explicaciones = 25
         ancho_total_explicaciones = self.width - 2 * self.margen
         ancho_celda1 = ancho_total_explicaciones * 0.15
         ancho_celda2 = ancho_total_explicaciones * 0.10
@@ -354,8 +447,7 @@ class AsistenciaPDFGenerator:
         texto_celda3 = "3. Tipo de complemento: Indique el tipo de complemento y modalidad que recibe el titular de Derecho, así: CAJMPS (Complemento Alimentario Jornada mañana preparado en sitio), CAJMRI (Complemento Alimentario Jornada mañana Ración Industrializada), CAJTPS (Complemento Alimentario Jornada Tarde preparado en sitio), CAJTRI (Complemento Alimentario Jornada tarde Ración Industrializada), APS (Almuerzo Preparado en Sitio población Vulnerable), RRI (Refrigerio Reforzado Industrializado), CAIE (Complemento Alimentario Industrializado para Emergencias), APSD (Almuerzo preparado en sitio Desplazados), CAJMPSD (Complemento Alimentario Jornada Mañana preparado en sitio Desplazados), CAJTPSD (Complemento Alimentario Jornada Tarde preparado en sitio Desplazados), CAJMRID (Complemento Alimentario Jornada mañana Ración Industrializada Desplazados), CAJTRID (Complemento Alimentario Jornada Tarde Ración Industrializada Desplazados)."
         self._dibujar_texto_en_celda(texto_celda3, x_celda3, y_leyenda, ancho_celda3, alto_explicaciones)
 
-        # --- Nota Final ---
-        y_texto_nota = y_leyenda - 5 # Posición justo debajo de la leyenda
+        y_texto_nota = y_leyenda - 5
         texto_nota = """NOTA: El operador/responsable de prestar el servicio en los establecimientos educativos debe tener en cuenta:
                     - El archivo de este documento impreso y debidamente diligenciado debe realizarse conforme a los Lineamientos Técnico Administrativos del Programa PAE y estar disponibles para consulta de los veedores y/o supervisores del mismo.
                     - En procura del cuidado del medio ambiente hacer uso racional de los recursos.
@@ -365,15 +457,9 @@ class AsistenciaPDFGenerator:
         lineas_nota = texto_nota.split('\n')
         c.setFont("Helvetica", 4)
         
-        # Dibujar cada línea de la nota
         for linea in lineas_nota:
-            # Dividir líneas largas si es necesario (aunque en este caso son cortas)
-            palabras = linea.split()
-            linea_actual_wrap = ""
-            # Este es un wrapper simple, para textos más complejos se necesitaría una librería
-            # pero para este caso específico, las líneas ya están pre-formateadas.
             c.drawString(self.margen + 5, y_texto_nota, linea)
-            y_texto_nota -= 5 # Espacio entre líneas
+            y_texto_nota -= 5
 
         c.setFont("Helvetica", 6)
         c.drawCentredString(self.width/2, self.margen - 8, f"Página {pagina_actual}/{total_paginas}")
