@@ -422,7 +422,6 @@ class AsistenciaPDFGenerator:
         y_actual -= 5
         c.line(self.margen, y_actual, self.width - self.margen, y_actual)
 
-        y_actual -= 5
         c.drawString(self.margen + 3, y_actual, "Observaciones:")
         y_actual -= self.alto_fila
         c.line(self.margen, y_actual, self.width - self.margen, y_actual)
@@ -446,7 +445,7 @@ class AsistenciaPDFGenerator:
         texto_celda3 = "3. Tipo de complemento: Indique el tipo de complemento y modalidad que recibe el titular de Derecho, así: CAJMPS (Complemento Alimentario Jornada mañana preparado en sitio), CAJMRI (Complemento Alimentario Jornada mañana Ración Industrializada), CAJTPS (Complemento Alimentario Jornada Tarde preparado en sitio), CAJTRI (Complemento Alimentario Jornada tarde Ración Industrializada), APS (Almuerzo Preparado en Sitio población Vulnerable), RRI (Refrigerio Reforzado Industrializado), CAIE (Complemento Alimentario Industrializado para Emergencias), APSD (Almuerzo preparado en sitio Desplazados), CAJMPSD (Complemento Alimentario Jornada Mañana preparado en sitio Desplazados), CAJTPSD (Complemento Alimentario Jornada Tarde preparado en sitio Desplazados), CAJMRID (Complemento Alimentario Jornada mañana Ración Industrializada Desplazados), CAJTRID (Complemento Alimentario Jornada Tarde Ración Industrializada Desplazados)."
         self._dibujar_texto_en_celda(texto_celda3, x_celda3, y_leyenda, ancho_celda3, alto_explicaciones)
 
-        y_texto_nota = y_leyenda - 5
+        y_texto_nota = y_leyenda
         self._dibujar_nota_final(y_texto_nota, pagina_actual, total_paginas)
 
     def _dibujar_firmas_y_leyenda_cali(self, y_inicio, pagina_actual, total_paginas):
@@ -478,13 +477,12 @@ class AsistenciaPDFGenerator:
         c.line(self.margen, y_actual, self.width - self.margen, y_actual)
 
         # Cuadro de observaciones ampliado
-        y_actual -= 5
         c.drawString(self.margen + 3, y_actual, "Observaciones:")
         alto_observaciones = 40  # Altura ampliada
         y_caja_obs = y_actual - alto_observaciones
         c.rect(self.margen, y_caja_obs, self.width - 2 * self.margen, alto_observaciones)
         
-        y_texto_nota = y_caja_obs - 5
+        y_texto_nota = y_caja_obs
         self._dibujar_nota_final(y_texto_nota, pagina_actual, total_paginas)
 
     def _dibujar_nota_final(self, y_inicio, pagina_actual, total_paginas):
