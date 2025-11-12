@@ -170,7 +170,7 @@ class ExcelReportDrawer:
             label_cell = ws[f'A{row}']
             label_cell.value = label
             label_cell.font = Font(bold=True)
-            label_cell.alignment = Alignment(horizontal='right', vertical='center')
+            label_cell.alignment = Alignment(horizontal='left', vertical='center')
 
             value_cell = ws[f'D{row}']
             value_cell.value = value
@@ -219,6 +219,11 @@ class ExcelReportDrawer:
                     ws.cell(row=current_row, column=self.layout.COL_HIERRO).value = valores_finales.get('hierro', 0)
                     ws.cell(row=current_row, column=self.layout.COL_SODIO).value = valores_finales.get('sodio', 0)
                 
+                
+                # Aplicar bordes a toda la fila
+                for col_idx in range(self.layout.COL_COMPONENTE, self.layout.COL_SODIO + 1):
+                    ws.cell(row=current_row, column=col_idx).border = self.border
+
                 current_row += 1
 
             if num_ingredients > 1:
@@ -245,6 +250,7 @@ class ExcelReportDrawer:
         ws.cell(row, 1).value = "TOTAL MENÚ"
         ws.cell(row, 1).font = Font(bold=True)
         ws.cell(row, 1).fill = self.total_fill
+        ws.cell(row, 1).border = self.border
         ws.merge_cells(f'A{row}:G{row}')
 
         totales = nivel_data.get('totales', {})
@@ -259,6 +265,7 @@ class ExcelReportDrawer:
         ws.cell(row, 1).value = "RECOMENDACIÓN"
         ws.cell(row, 1).font = Font(bold=True)
         ws.cell(row, 1).fill = self.header_fill
+        ws.cell(row, 1).border = self.border
         ws.merge_cells(f'A{row}:G{row}')
 
         requerimientos = nivel_data.get('requerimientos', {})
@@ -273,6 +280,7 @@ class ExcelReportDrawer:
         """Agregar fila de % adecuación con fórmulas."""
         ws.cell(row, 1).value = "% ADECUACIÓN"
         ws.cell(row, 1).font = Font(bold=True)
+        ws.cell(row, 1).border = self.border
         ws.merge_cells(f'A{row}:G{row}')
 
         for col in range(self.layout.COL_CALORIAS, self.layout.COL_SODIO + 1):
