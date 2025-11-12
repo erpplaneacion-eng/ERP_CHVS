@@ -145,7 +145,7 @@ class ExcelReportDrawer:
 
     def _populate_title(self, ws: Worksheet, start_row: int) -> None:
         """Poblar título principal en una fila específica."""
-        title_cell = ws[f'D{start_row}']
+        title_cell = ws.cell(row=start_row, column=4)
         title_cell.value = "ANÁLISIS NUTRICIONAL"
         title_cell.font = Font(bold=True, size=16)
         title_cell.alignment = Alignment(horizontal='center', vertical='center')
@@ -167,12 +167,27 @@ class ExcelReportDrawer:
 
         for i, (label, value) in enumerate(admin_data):
             row = start_row + i
-            label_cell = ws[f'A{row}']
+            label_cell = ws.cell(row=row, column=1)
             label_cell.value = label
             label_cell.font = Font(bold=True)
             label_cell.alignment = Alignment(horizontal='left', vertical='center')
 
-            value_cell = ws[f'D{row}']
+            value_cell = ws.cell(row=row, column=4)
+
+            # Debug: verificar tipo de celda
+            cell_type = type(value_cell).__name__
+            if cell_type != 'Cell':
+                print(f"[WARNING] Celda en fila {row}, columna 4 es tipo: {cell_type}")
+                print(f"[WARNING] Merged cells en hoja: {ws.merged_cells}")
+                # Intentar unmerge si es necesario
+                from openpyxl.worksheet.cell_range import CellRange
+                for merged_range in list(ws.merged_cells.ranges):
+                    if value_cell.coordinate in merged_range:
+                        print(f"[WARNING] Deshaciendo merge: {merged_range}")
+                        ws.unmerge_cells(str(merged_range))
+                        value_cell = ws.cell(row=row, column=4)  # Obtener celda de nuevo
+                        break
+
             value_cell.value = value
             value_cell.alignment = Alignment(horizontal='left', vertical='center')
 
@@ -191,6 +206,9 @@ class ExcelReportDrawer:
         current_row = start_row
         center_align = Alignment(vertical='center', horizontal='center', wrap_text=True)
 
+        # Contador de ingredientes totales procesados
+        total_ingredients_added = 0
+
         for preparacion in nivel_data.get('preparaciones', []):
             start_row_for_prep = current_row
             ingredients_in_prep = [ing for ing in preparacion.get('ingredientes', []) if ing.get('alimento_encontrado')]
@@ -198,6 +216,8 @@ class ExcelReportDrawer:
 
             if num_ingredients == 0:
                 continue
+
+            total_ingredients_added += num_ingredients
 
             ws.cell(row=start_row_for_prep, column=self.layout.COL_COMPONENTE).value = preparacion.get('componente', 'SIN COMPONENTE')
             ws.cell(row=start_row_for_prep, column=self.layout.COL_GRUPO).value = preparacion.get('grupo_alimentos', 'SIN GRUPO')
@@ -230,9 +250,16 @@ class ExcelReportDrawer:
                 end_row_for_prep = current_row - 1
                 cols_to_merge = [self.layout.COL_COMPONENTE, self.layout.COL_GRUPO, self.layout.COL_PREPARACION]
                 for col_idx in cols_to_merge:
-                    ws.merge_cells(start_row=start_row_for_prep, start_column=col_idx, end_row=end_row_for_prep, end_column=col_idx)
+                    # Primero aplicar el alineamiento ANTES de combinar
                     cell_to_align = ws.cell(row=start_row_for_prep, column=col_idx)
                     cell_to_align.alignment = center_align
+                    # Luego combinar
+                    ws.merge_cells(start_row=start_row_for_prep, start_column=col_idx, end_row=end_row_for_prep, end_column=col_idx)
+
+        # Si no se agregó ningún ingrediente, retornar start_row - 1
+        # Esto evita problemas con menús vacíos
+        if total_ingredients_added == 0:
+            return start_row - 1
 
         return current_row - 1
 
@@ -377,14 +404,6 @@ class ExcelReportDrawer:
         ws.page_setup.fitToWidth = 1
         ws.page_setup.fitToHeight = 0 # Allow multiple pages vertically
 
-    def _merge_cells_for_section(self, ws: Worksheet, start_row: int) -> None:
-        """Combina las celdas para una sección de análisis completa."""
-        ws.merge_cells(start_row=start_row, start_column=4, end_row=start_row, end_column=14)
-        admin_start = start_row + 1
-        for i in range(7):
-            row = admin_start + i
-            ws.merge_cells(f'A{row}:C{row}')
-
     def _extract_nivel_escolar(self, analisis_data: Dict) -> str:
         """Extraer nombre del nivel escolar."""
         analisis_por_nivel = analisis_data.get('analisis_por_nivel', [])
@@ -445,8 +464,16 @@ class ExcelReportDrawer:
 
         self._populate_title(ws, start_row=start_row)
 
+        # Combinar título inmediatamente después de escribirlo
+        ws.merge_cells(start_row=start_row, start_column=4, end_row=start_row, end_column=14)
+
         admin_start_row = start_row + 1
         self._populate_administrative_section(ws, start_row=admin_start_row, analisis_data=analisis_data)
+
+        # Combinar sección administrativa inmediatamente después de escribirla
+        for i in range(7):
+            row = admin_start_row + i
+            ws.merge_cells(f'A{row}:C{row}')
 
         nivel_data = self._extract_nivel_data(analisis_data, nivel_escolar_id)
         if not nivel_data:
@@ -465,8 +492,6 @@ class ExcelReportDrawer:
         # La sección de firmas comienza 6 filas después de los datos
         signatures_start_row = last_data_row + 6
         self._add_signatures(ws, signatures_start_row)
-
-        self._merge_cells_for_section(ws, start_row=start_row)
 
         # Calcular la última fila del reporte
         # Sección de firmas ocupa aproximadamente 5-6 filas
