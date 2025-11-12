@@ -82,7 +82,7 @@ class ExcelStyles:
 class ColumnWidths:
     """Anchos de columnas"""
     WIDTHS = {
-        'A': 25, 'B': 15, 'C': 15, 'D': 20, 'E': 25, 'F': 30,
+        'A': 25, 'B': 25, 'C': 15, 'D': 35, 'E': 15, 'F': 25,
         'G': 15, 'H': 12, 'I': 12, 'J': 12, 'K': 10, 'L': 10,
         'M': 10, 'N': 10, 'O': 12, 'P': 12
     }
@@ -251,6 +251,7 @@ class ExcelReportDrawer:
         ws.cell(row, 1).font = Font(bold=True)
         ws.cell(row, 1).fill = self.total_fill
         ws.cell(row, 1).border = self.border
+        ws.cell(row, 1).alignment = Alignment(horizontal='center')
         ws.merge_cells(f'A{row}:G{row}')
 
         totales = nivel_data.get('totales', {})
@@ -259,13 +260,12 @@ class ExcelReportDrawer:
             cell.value = totales.get(key, 0)
             cell.fill = self.total_fill
             cell.border = self.border
+            cell.alignment = Alignment(horizontal='center')
 
     def _add_recommendations_row(self, ws: Worksheet, row: int, nivel_data: Dict) -> None:
         """Agregar fila de recomendaciones."""
-        ws.cell(row, 1).value = "RECOMENDACIÓN"
-        ws.cell(row, 1).font = Font(bold=True)
-        ws.cell(row, 1).fill = self.header_fill
         ws.cell(row, 1).border = self.border
+        ws.cell(row, 1).alignment = Alignment(horizontal='center')
         ws.merge_cells(f'A{row}:G{row}')
 
         requerimientos = nivel_data.get('requerimientos', {})
@@ -275,12 +275,14 @@ class ExcelReportDrawer:
             cell.value = requerimientos.get(key, default_values[i - self.layout.COL_CALORIAS])
             cell.fill = self.header_fill
             cell.border = self.border
+            cell.alignment = Alignment(horizontal='center')
 
     def _add_adequacy_row(self, ws: Worksheet, row: int, total_row: int, req_row: int) -> None:
         """Agregar fila de % adecuación con fórmulas."""
         ws.cell(row, 1).value = "% ADECUACIÓN"
         ws.cell(row, 1).font = Font(bold=True)
         ws.cell(row, 1).border = self.border
+        ws.cell(row, 1).alignment = Alignment(horizontal='center')
         ws.merge_cells(f'A{row}:G{row}')
 
         for col in range(self.layout.COL_CALORIAS, self.layout.COL_SODIO + 1):
@@ -290,36 +292,77 @@ class ExcelReportDrawer:
             cell.value = formula
             cell.border = self.border
             cell.number_format = '0.00"%"'
+            cell.alignment = Alignment(horizontal='center')
 
     def _add_signatures(self, ws: Worksheet, start_row: int) -> None:
         """Agregar sección de firmas."""
+        bottom_border = Border(bottom=Side(style='thin'))
+        full_border = self.border
+        center_align = Alignment(horizontal='center', vertical='center')
+
         row = start_row
+        # --- Bloque 1 ---
         ws.cell(row=row, column=1).value = "NOMBRE NUTRICIONISTA - DIETISTA QUE ELABORA EL ANÁLISIS"
         ws.cell(row=row, column=1).font = Font(bold=True)
-        ws.cell(row=row, column=5).value = "SARA ISABEL DIAZ MARQUEZ"
+        ws.cell(row=row, column=1).border = full_border
         ws.merge_cells(f'A{row}:D{row}')
 
-        row += 1
+        name_value_cell = ws.cell(row=row, column=5)
+        name_value_cell.value = "SARA ISABEL DIAZ MARQUEZ"
+        name_value_cell.border = full_border
+        name_value_cell.alignment = center_align
+        ws.merge_cells(f'E{row}:G{row}')
+
+        row += 3
         ws.cell(row=row, column=1).value = "FIRMA"
         ws.cell(row=row, column=1).font = Font(bold=True)
-        ws.merge_cells(f'A{row}:C{row}')
+        ws.cell(row=row, column=1).border = full_border
+        
+        for col_idx in range(2, 5):
+            ws.cell(row=row, column=col_idx).border = bottom_border
+        ws.merge_cells(f'B{row}:D{row}')
+
         ws.cell(row=row, column=8).value = "MATRÍCULA PROFESIONAL"
-        ws.cell(row=row, column=11).value = "1107089938"
+        ws.cell(row=row, column=8).border = full_border
         ws.merge_cells(f'H{row}:J{row}')
+        
+        matricula_value_cell = ws.cell(row=row, column=11)
+        matricula_value_cell.value = "1107089938"
+        matricula_value_cell.border = full_border
+        matricula_value_cell.alignment = center_align
+        ws.merge_cells(f'K{row}:L{row}')
 
         row += 2
+        # --- Bloque 2 ---
         ws.cell(row=row, column=1).value = "NOMBRE NUTRICIONISTA - DIETISTA QUE REVISA Y APRUEBA EL ANÁLISIS POR PARTE DE LA SEM"
         ws.cell(row=row, column=1).font = Font(bold=True)
-        ws.cell(row=row, column=5).value = "GABRIELA GIRALDO MARTINEZ"
+        ws.cell(row=row, column=1).border = full_border
         ws.merge_cells(f'A{row}:D{row}')
 
-        row += 1
+        name_value_cell_2 = ws.cell(row=row, column=5)
+        name_value_cell_2.value = "GABRIELA GIRALDO MARTINEZ"
+        name_value_cell_2.border = full_border
+        name_value_cell_2.alignment = center_align
+        ws.merge_cells(f'E{row}:G{row}')
+
+        row += 3
         ws.cell(row=row, column=1).value = "FIRMA"
         ws.cell(row=row, column=1).font = Font(bold=True)
-        ws.merge_cells(f'A{row}:C{row}')
+        ws.cell(row=row, column=1).border = full_border
+
+        for col_idx in range(2, 5):
+            ws.cell(row=row, column=col_idx).border = bottom_border
+        ws.merge_cells(f'B{row}:D{row}')
+
         ws.cell(row=row, column=8).value = "MATRÍCULA PROFESIONAL"
-        ws.cell(row=row, column=11).value = "1005964870"
+        ws.cell(row=row, column=8).border = full_border
         ws.merge_cells(f'H{row}:J{row}')
+
+        matricula_value_cell_2 = ws.cell(row=row, column=11)
+        matricula_value_cell_2.value = "1005964870"
+        matricula_value_cell_2.border = full_border
+        matricula_value_cell_2.alignment = center_align
+        ws.merge_cells(f'K{row}:L{row}')
 
     def _apply_formatting(self, ws: Worksheet) -> None:
         """Aplica formato a todo el worksheet."""
