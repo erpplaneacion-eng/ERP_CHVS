@@ -689,8 +689,25 @@ class AsistenciaPDFGenerator:
                     # Reducir grosor de línea para casillas de días
                     c.setLineWidth(0.5)
 
+                    # Obtener marcas de asistencia si existen
+                    marcas_asistencia = self.datos_encabezado.get('marcas_asistencia', {})
+                    dias_marcados = marcas_asistencia.get(estudiante.id_listados, [])
+
                     for k in range(num_dias):
                         c.rect(x_col13 + k * casilla_ancho, y_fila, casilla_ancho, self.alto_fila)
+
+                        # Si este estudiante tiene marca para este día, dibujar punto de referencia
+                        if dias_habiles and k < len(dias_habiles) and dias_habiles[k] in dias_marcados:
+                            # Dibujar un pequeño círculo como punto de referencia
+                            centro_x = x_col13 + k * casilla_ancho + casilla_ancho/2
+                            centro_y = y_fila + self.alto_fila/2
+                            radio = 1.5  # Radio pequeño para el punto
+
+                            c.setStrokeColorRGB(0.85, 0.85, 0.85)  # Color del borde igual al relleno
+                            c.setFillColorRGB(0.85, 0.85, 0.85)  # Color gris muy claro y tenue
+                            c.circle(centro_x, centro_y, radio, fill=1)
+                            c.setStrokeColorRGB(0, 0, 0)  # Restaurar color de borde negro
+                            c.setFillColorRGB(0, 0, 0)  # Restaurar color de relleno negro
 
                     c.rect(x_col13 + num_dias * casilla_ancho, y_fila, ancho_total_dias, self.alto_fila)
 

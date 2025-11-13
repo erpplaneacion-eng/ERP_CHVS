@@ -16,6 +16,11 @@ urlpatterns = [
     path('generar-asistencia/<int:programa_id>/<str:sede_cod_interprise>/<str:mes>/<str:focalizacion>/', views.generar_pdf_asistencia, name='generar_pdf_asistencia'),
     path('generar-zip-masivo/<int:programa_id>/<str:mes>/<str:focalizacion>/', views.generar_zip_masivo_programa, name='generar_zip_masivo_programa'),
 
+    # Nuevas rutas para generación prediligenciada
+    path('generar-asistencia-prediligenciada/', views.generar_pdf_asistencia_prediligenciada, name='generar_pdf_asistencia_prediligenciada'),
+    path('api/conteo-estudiantes-por-nivel/', views.api_conteo_estudiantes_por_nivel, name='api_conteo_estudiantes_por_nivel'),
+    path('api/get-sedes-completas/', views.api_get_sedes_completas, name='api_get_sedes_completas'),
+
     # APIs para gestión de listados focalización
     # Nota: La edición, visualización y eliminación individual se maneja vía archivos Excel
     path('api/obtener-sedes-con-grados/', views.api_obtener_sedes_con_grados, name='api_obtener_sedes_con_grados'),

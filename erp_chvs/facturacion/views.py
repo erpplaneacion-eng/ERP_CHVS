@@ -21,10 +21,13 @@ from .services import ProcesamientoService, ValidacionService, EstadisticasServi
 from .config import ProcesamientoConfig, FOCALIZACIONES_DISPONIBLES, MESES_ATENCION
 from .logging_config import FacturacionLogger
 from planeacion.models import SedesEducativas, Programa
-from .utils import _mapear_grado_a_nivel_manual, _extraer_grado_base, _recrear_archivo_desde_sesion
+from .utils import _mapear_grado_a_nivel_manual, _extraer_grado_base, _recrear_archivo_desde_sesion, _determinar_nivel_educativo
 from .persistence_service import PersistenceService
 from .pdf_generator import crear_formato_asistencia
 from .pdf_service import PDFAsistenciaService
+import random
+from io import BytesIO
+import zipfile
 
 # Inicializar servicios
 procesamiento_service = ProcesamientoService()
@@ -986,3 +989,371 @@ def reemplazar_focalizacion_sedes(request):
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+# ===== NUEVAS VISTAS PARA GENERACIÓN PREDILIGENCIADA =====
+
+@login_required
+@require_http_methods(["GET"])
+def api_get_sedes_completas(request):
+    """
+    API para obtener las sedes completas con su cod_interprise y nombre
+    para un programa específico.
+
+    Returns:
+        JsonResponse con array de sedes: [{ nombre, cod_interprise }, ...]
+    """
+    try:
+        programa_id = request.GET.get('programa_id')
+
+        if not programa_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'Falta el parámetro programa_id'
+            }, status=400)
+
+        # Obtener programa
+        try:
+            programa_obj = Programa.objects.get(id=programa_id)
+        except Programa.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Programa no encontrado'
+            }, status=404)
+
+        # Obtener sedes que tienen registros en ListadosFocalizacion para este programa
+        sedes_con_registros_nombres = ListadosFocalizacion.objects.filter(
+            programa=programa_obj
+        ).values_list('sede', flat=True).distinct()
+
+        # Obtener los objetos SedesEducativas completos
+        sedes = SedesEducativas.objects.filter(
+            nombre_sede_educativa__in=sedes_con_registros_nombres
+        ).select_related('codigo_ie__id_municipios').order_by('nombre_sede_educativa')
+
+        # Construir respuesta
+        sedes_data = []
+        for sede in sedes:
+            sedes_data.append({
+                'nombre': sede.nombre_sede_educativa,
+                'cod_interprise': sede.cod_interprise
+            })
+
+        return JsonResponse({
+            'success': True,
+            'sedes': sedes_data
+        })
+
+    except Exception as e:
+        FacturacionLogger.log_procesamiento_error(
+            "api_get_sedes_completas", str(e)
+        )
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener sedes: {str(e)}'
+        }, status=500)
+
+@login_required
+@require_http_methods(["GET"])
+def api_conteo_estudiantes_por_nivel(request):
+    """
+    API para obtener el conteo de estudiantes agrupados por nivel educativo
+    para una sede, programa, focalización y complemento específicos.
+
+    Returns:
+        JsonResponse con:
+        - total: Total de estudiantes
+        - por_nivel: Dict con conteos por nivel (transicion, primaria, secundaria, media)
+        - por_complemento: Dict con conteos por tipo de complemento
+    """
+    try:
+        programa_id = request.GET.get('programa_id')
+        sede_nombre = request.GET.get('sede_nombre')
+        focalizacion = request.GET.get('focalizacion')
+        complemento = request.GET.get('complemento')  # "CAP AM", "CAP PM", "Almuerzo JU", "Refuerzo"
+
+        if not all([programa_id, sede_nombre, focalizacion, complemento]):
+            return JsonResponse({
+                'success': False,
+                'error': 'Parámetros incompletos'
+            }, status=400)
+
+        # Obtener estudiantes de la sede con el complemento específico
+        estudiantes = ListadosFocalizacion.objects.filter(
+            programa_id=programa_id,
+            sede=sede_nombre,
+            focalizacion=focalizacion
+        )
+
+        # Filtrar por complemento activo
+        estudiantes_con_complemento = []
+        for est in estudiantes:
+            if complemento in est.complementos_activos:
+                estudiantes_con_complemento.append(est)
+
+        # Agrupar por nivel educativo (5 niveles)
+        conteo_por_nivel = {
+            'preescolar': 0,
+            'primaria_1_3': 0,
+            'primaria_4_5': 0,
+            'secundaria': 0,
+            'media': 0
+        }
+
+        for est in estudiantes_con_complemento:
+            nivel = _determinar_nivel_educativo(est.grado_grupos)
+            if nivel in conteo_por_nivel:
+                conteo_por_nivel[nivel] += 1
+
+        return JsonResponse({
+            'success': True,
+            'total': len(estudiantes_con_complemento),
+            'por_nivel': conteo_por_nivel,
+            'complemento': complemento
+        })
+
+    except Exception as e:
+        FacturacionLogger.log_procesamiento_error(
+            "api_conteo_estudiantes_por_nivel", str(e)
+        )
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener conteo: {str(e)}'
+        }, status=500)
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def generar_pdf_asistencia_prediligenciada(request):
+    """
+    Genera un PDF de asistencia con marcas (X) prediligenciadas según
+    la configuración de días proporcionada.
+
+    Recibe un JSON con:
+    - programa_id
+    - sede_cod_interprise
+    - sede_nombre
+    - mes
+    - focalizacion
+    - complemento
+    - dias: [{ dia: 3, total: 400, transicion: 80, primaria: 120, secundaria: 120, media: 80 }, ...]
+    """
+    try:
+        data = json.loads(request.body)
+
+        programa_id = data.get('programa_id')
+        sede_cod_interprise = data.get('sede_cod_interprise')
+        sede_nombre = data.get('sede_nombre')
+        mes = data.get('mes')
+        focalizacion = data.get('focalizacion')
+        complemento = data.get('complemento')
+        configuracion_dias = data.get('dias', [])
+
+        if not all([programa_id, sede_cod_interprise, sede_nombre, mes, focalizacion, complemento]):
+            return JsonResponse({
+                'success': False,
+                'error': 'Parámetros incompletos'
+            }, status=400)
+
+        FacturacionLogger.log_procesamiento_inicio(
+            f"PDF_Prediligenciado_{sede_nombre}_{mes}",
+            "generar_pdf_prediligenciado",
+            focalizacion
+        )
+
+        # Obtener programa y sede
+        programa_obj = get_object_or_404(Programa, id=programa_id)
+        sede_obj = get_object_or_404(
+            SedesEducativas.objects.select_related('codigo_ie__id_municipios'),
+            cod_interprise=sede_cod_interprise
+        )
+
+        # Obtener estudiantes de la sede con el complemento específico
+        estudiantes_sede = ListadosFocalizacion.objects.filter(
+            programa=programa_obj,
+            sede=sede_nombre,
+            focalizacion=focalizacion
+        ).order_by('apellido1', 'apellido2', 'nombre1')
+
+        # Filtrar solo estudiantes con el complemento activo
+        estudiantes_con_complemento = []
+        for est in estudiantes_sede:
+            if complemento in est.complementos_activos:
+                estudiantes_con_complemento.append(est)
+
+        if not estudiantes_con_complemento:
+            return HttpResponse(
+                f"No se encontraron estudiantes con el complemento '{complemento}' en la sede {sede_nombre}",
+                status=404
+            )
+
+        # Ordenar por grado
+        def clave_ordenamiento_grado(estudiante):
+            grado_base_str = _extraer_grado_base(estudiante.grado_grupos)
+            try:
+                return int(grado_base_str)
+            except (ValueError, TypeError):
+                return float('inf')
+
+        estudiantes_ordenados = sorted(estudiantes_con_complemento, key=clave_ordenamiento_grado)
+
+        # Agrupar estudiantes por nivel educativo (5 niveles)
+        estudiantes_por_nivel = {
+            'preescolar': [],
+            'primaria_1_3': [],
+            'primaria_4_5': [],
+            'secundaria': [],
+            'media': []
+        }
+
+        for est in estudiantes_ordenados:
+            nivel = _determinar_nivel_educativo(est.grado_grupos)
+            if nivel in estudiantes_por_nivel:
+                estudiantes_por_nivel[nivel].append(est)
+
+        # Generar marcas de asistencia aleatorias según configuración
+        marcas_asistencia = {}  # {id_listados: [dias_marcados]}
+
+        for config_dia in configuracion_dias:
+            dia = config_dia['dia']
+
+            # Validar que no se marquen más estudiantes de los disponibles por nivel
+            for nivel in ['preescolar', 'primaria_1_3', 'primaria_4_5', 'secundaria', 'media']:
+                cantidad_solicitada = config_dia.get(nivel, 0)
+                cantidad_disponible = len(estudiantes_por_nivel[nivel])
+
+                if cantidad_solicitada > cantidad_disponible:
+                    nivel_display = nivel.replace('_', ' ').title()
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'El día {dia} solicita {cantidad_solicitada} estudiantes de {nivel_display}, pero solo hay {cantidad_disponible} disponibles.'
+                    }, status=400)
+
+            # Seleccionar aleatoriamente estudiantes por nivel para este día
+            seleccionados_dia = []
+
+            if config_dia.get('preescolar', 0) > 0:
+                seleccionados_dia += random.sample(
+                    estudiantes_por_nivel['preescolar'],
+                    config_dia['preescolar']
+                )
+
+            if config_dia.get('primaria_1_3', 0) > 0:
+                seleccionados_dia += random.sample(
+                    estudiantes_por_nivel['primaria_1_3'],
+                    config_dia['primaria_1_3']
+                )
+
+            if config_dia.get('primaria_4_5', 0) > 0:
+                seleccionados_dia += random.sample(
+                    estudiantes_por_nivel['primaria_4_5'],
+                    config_dia['primaria_4_5']
+                )
+
+            if config_dia.get('secundaria', 0) > 0:
+                seleccionados_dia += random.sample(
+                    estudiantes_por_nivel['secundaria'],
+                    config_dia['secundaria']
+                )
+
+            if config_dia.get('media', 0) > 0:
+                seleccionados_dia += random.sample(
+                    estudiantes_por_nivel['media'],
+                    config_dia['media']
+                )
+
+            # Registrar marcas para este día
+            for est in seleccionados_dia:
+                if est.id_listados not in marcas_asistencia:
+                    marcas_asistencia[est.id_listados] = []
+                marcas_asistencia[est.id_listados].append(dia)
+
+        # Preparar datos del encabezado
+        nombre_municipio_etc = programa_obj.municipio.nombre_municipio
+        dane_municipio = programa_obj.municipio.codigo_municipio
+
+        try:
+            departamento_obj = PrincipalDepartamento.objects.get(
+                codigo_departamento=programa_obj.municipio.codigo_departamento
+            )
+            dane_departamento = departamento_obj.codigo_departamento
+        except PrincipalDepartamento.DoesNotExist:
+            departamento_obj = None
+            dane_departamento = 'N/A'
+
+        try:
+            sede_info_dane = SedesEducativas.objects.get(nombre_sede_educativa=sede_nombre)
+            dane_ie = sede_info_dane.cod_dane
+            es_industrializado = sede_info_dane.industrializado == 'VERDADERO'
+        except SedesEducativas.DoesNotExist:
+            dane_ie = 'DANE no encontrado'
+            es_industrializado = False
+
+        ano = estudiantes_ordenados[0].ano if estudiantes_ordenados else datetime.now().year
+
+        # Mapear complemento a código
+        if es_industrializado:
+            mapeo_codigos = {
+                "CAP AM": "CAJMRI",
+                "CAP PM": "CAJTRI",
+                "Almuerzo JU": "ALMUERZO",
+                "Refuerzo": "RCRI"
+            }
+        else:
+            mapeo_codigos = {
+                "CAP AM": "CAJMPS",
+                "CAP PM": "CAJTPS",
+                "Almuerzo JU": "ALMUERZO",
+                "Refuerzo": "RCPS"
+            }
+
+        codigo_complemento = mapeo_codigos.get(complemento, complemento)
+
+        ruta_logo_final = None
+        if programa_obj and programa_obj.imagen:
+            ruta_logo_final = programa_obj.imagen.path
+
+        institucion_con_focalizacion = f"{focalizacion} {sede_nombre}"
+
+        # Extraer solo los días configurados
+        dias_configurados = [config['dia'] for config in configuracion_dias]
+
+        datos_encabezado = {
+            'departamento': str(departamento_obj.nombre_departamento) if departamento_obj else 'N/A',
+            'institucion': str(institucion_con_focalizacion),
+            'municipio': str(nombre_municipio_etc),
+            'dane_ie': str(dane_ie),
+            'operador': str(programa_obj.programa),
+            'contrato': str(programa_obj.contrato),
+            'mes': str(mes).upper(),
+            'ano': str(ano),
+            'dane_departamento': str(dane_departamento),
+            'dane_municipio': str(dane_municipio),
+            'codigo_complemento': str(codigo_complemento),
+            'ruta_logo': ruta_logo_final,
+            'dias_personalizados': sorted(dias_configurados),
+            'marcas_asistencia': marcas_asistencia  # Nueva clave para las marcas
+        }
+
+        # Generar PDF
+        pdf_buffer = BytesIO()
+        crear_formato_asistencia(pdf_buffer, datos_encabezado, estudiantes_ordenados)
+        pdf_buffer.seek(0)
+
+        # Retornar PDF como respuesta
+        response = HttpResponse(pdf_buffer, content_type='application/pdf')
+        nombre_archivo = f"Asistencia_Prediligenciada_{sede_nombre.replace(' ', '_')}_{codigo_complemento}_{mes}_{ano}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
+
+        FacturacionLogger.log_procesamiento_inicio(
+            f"PDF_Prediligenciado_{sede_nombre}_{mes}",
+            "generacion_exitosa",
+            focalizacion
+        )
+
+        return response
+
+    except Exception as e:
+        FacturacionLogger.log_procesamiento_error(
+            "generar_pdf_asistencia_prediligenciada", str(e)
+        )
+        return HttpResponse(f"Error al generar el PDF prediligenciado: {str(e)}", status=500)
