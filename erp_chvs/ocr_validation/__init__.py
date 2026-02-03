@@ -1,1 +1,0 @@
-# Aplicación para validación OCR de PDFs diligenciados

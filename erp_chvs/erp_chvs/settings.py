@@ -28,12 +28,6 @@ SECRET_KEY = os.environ.get(
     'django-insecure-+cc(y)4gjdo(0q9o)4*%hvd@6-c6)!^7!kw5tx2dzv)g(@jwh4'  # Solo para desarrollo
 )
 
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
-
-# LandingAI Configuration
-LANDINGAI_API_KEY = os.environ.get('VISION_AGENT_API_KEY', '')
-VISION_AGENT_API_KEY = LANDINGAI_API_KEY  # Alias para compatibilidad
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 
@@ -69,8 +63,6 @@ INSTALLED_APPS = [
     'nutricion',
     'planeacion',
     'facturacion',
-    'ocr_validation',
-    'iagenerativa',
 ]
 
 MIDDLEWARE = [
