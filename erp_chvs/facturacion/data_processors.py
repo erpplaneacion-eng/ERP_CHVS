@@ -276,9 +276,17 @@ class DataTransformer:
         try:
             from planeacion.models import SedesEducativas
             
+            # Normalizar lista de municipios para la consulta (BUGA -> GUADALAJARA DE BUGA)
+            municipios_consulta = []
+            for m in municipios:
+                if m == 'BUGA':
+                    municipios_consulta.append('GUADALAJARA DE BUGA')
+                else:
+                    municipios_consulta.append(m)
+
             # Obtener todas las sedes de BD para los municipios
             todas_sedes_bd = list(SedesEducativas.objects.filter(
-                codigo_ie__id_municipios__nombre_municipio__in=municipios
+                codigo_ie__id_municipios__nombre_municipio__in=municipios_consulta
             ).values_list('nombre_sede_educativa', flat=True))
             
             agrupacion_sedes = []

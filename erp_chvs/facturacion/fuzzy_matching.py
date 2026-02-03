@@ -108,9 +108,14 @@ class FuzzyMatcher:
         sedes_por_municipio = {}
         
         for municipio in municipios:
+            # Manejar alias de municipios
+            municipio_db = municipio
+            if municipio == 'BUGA':
+                municipio_db = 'GUADALAJARA DE BUGA'
+
             # Obtener sedes por nombre completo
             sedes_principales = list(SedesEducativas.objects.filter(
-                codigo_ie__id_municipios__nombre_municipio=municipio
+                codigo_ie__id_municipios__nombre_municipio=municipio_db
             ).values_list('nombre_sede_educativa', flat=True))
             
             # Obtener sedes por nombre genérico
@@ -121,7 +126,7 @@ class FuzzyMatcher:
             ).exclude(
                 nombre_generico_sede__exact='Sin especificar'
             ).filter(
-                codigo_ie__id_municipios__nombre_municipio=municipio
+                codigo_ie__id_municipios__nombre_municipio=municipio_db
             ).values_list('nombre_generico_sede', 'nombre_sede_educativa'))
             
             sedes_por_municipio[municipio] = {
