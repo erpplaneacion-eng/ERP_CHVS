@@ -235,16 +235,19 @@ class DataTransformer:
                 ] = 'x'
             
             # Aplicar lógica para GUADALAJARA DE BUGA
-            if 'GUADALAJARA DE BUGA' in unique_etc:
+            if 'GUADALAJARA DE BUGA' in unique_etc or 'BUGA' in unique_etc:
+                # Normalizar ETC para facilitar comparaciones
+                mascara_buga = df['ETC'].isin(['GUADALAJARA DE BUGA', 'BUGA'])
+                
                 # Jornada Única: CAP AM + ALMUERZO JU
                 df.loc[
-                    (df['ETC'] == 'GUADALAJARA DE BUGA') & (df['JORNADA'] == ProcesamientoConfig.JORNADA_UNICA_OTROS), 
+                    mascara_buga & (df['JORNADA'] == ProcesamientoConfig.JORNADA_UNICA_OTROS), 
                     ['COMPLEMENTO ALIMENTARIO PREPARADO AM', 'ALMUERZO JORNADA UNICA']
                 ] = 'x'
                 
                 # Jornadas Dobles (TARDE/MAÑANA): Solo CAP AM
                 df.loc[
-                    (df['ETC'] == 'GUADALAJARA DE BUGA') & (df['JORNADA'].isin(ProcesamientoConfig.JORNADAS_DOBLES_OTROS)), 
+                    mascara_buga & (df['JORNADA'].isin(ProcesamientoConfig.JORNADAS_DOBLES_OTROS)), 
                     'COMPLEMENTO ALIMENTARIO PREPARADO AM'
                 ] = 'x'
             
