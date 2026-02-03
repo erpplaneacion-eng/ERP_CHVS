@@ -679,8 +679,8 @@ ESTILOS PARA VENTANAS MODALES - PLANEACIÓN
     background-color: #fff;
     padding: 25px;
     border-radius: 10px;
-    width: 90%;
-    max-width: 500px;
+    width: 100%;
+    max-width: none; /* El tamaño lo controla .modal-dialog */
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     transform: translateY(-50px);
     transition: transform 0.3s ease-out;
@@ -1155,7 +1155,18 @@ ESTILOS ESPECÍFICOS PARA INSTITUCIONES Y SEDES EDUCATIVAS
 
 /* Modal más grande para sedes */
 .modal-lg {
-    max-width: 800px;
+    max-width: 900px;
+}
+
+/* Asegurar que modal-content use todo el ancho disponible en modales grandes */
+.modal-lg .modal-content {
+    max-width: 100%;
+    width: 100%;
+}
+
+.modal-dialog.modal-lg .modal-content {
+    max-width: 100%;
+    width: 100%;
 }
 
 /* Notificaciones */
