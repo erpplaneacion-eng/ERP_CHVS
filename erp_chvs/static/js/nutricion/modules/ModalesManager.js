@@ -90,12 +90,20 @@ class ModalesManager {
     configurarEventListeners() {
         // Event listener para cerrar modal al hacer click en el fondo
         document.addEventListener('click', (event) => {
+            // Cerrar modal solo si se hace clic en el botón X
             if (event.target.classList.contains('close') && event.target.closest('.modal')) {
                 event.target.closest('.modal').style.display = 'none';
+                return;
             }
 
-            if (event.target.classList.contains('modal')) {
-                event.target.style.display = 'none';
+            // Cerrar modal solo si se hace clic DIRECTAMENTE en el fondo del modal
+            // NO si se hace clic en elementos internos (como acordeones, botones, etc.)
+            if (event.target.classList.contains('modal') && !event.target.classList.contains('modal-content')) {
+                // Verificar que no sea un clic dentro del contenido del modal
+                const modalContent = event.target.querySelector('.modal-content');
+                if (modalContent && !modalContent.contains(event.target)) {
+                    event.target.style.display = 'none';
+                }
             }
         });
     }

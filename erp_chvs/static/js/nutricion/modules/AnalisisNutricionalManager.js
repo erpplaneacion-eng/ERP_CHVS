@@ -454,7 +454,10 @@ class AnalisisNutricionalManager {
     inicializarEventosInputs() {
         let actualizandoPorPeso = false;
         let actualizandoPorPorcentaje = false;
-        
+
+        // Remover event listeners anteriores para evitar duplicados
+        $(document).off('input change', '.peso-input');
+
         $(document).on('input change', '.peso-input', (e) => {
             if (actualizandoPorPorcentaje) return;
 
@@ -496,10 +499,22 @@ class AnalisisNutricionalManager {
         // Funcionalidad de edición de porcentajes eliminada
         // Los campos de porcentaje ahora son de solo lectura
         
+        // Remover event listeners anteriores para evitar duplicados
+        $(document).off('click', '.nivel-header-btn');
+
         $(document).on('click', '.nivel-header-btn', (e) => {
             e.preventDefault();
-            const button = $(e.target);
+            e.stopPropagation(); // Evitar que el clic se propague al modal
+
+            // Usar currentTarget para obtener el botón correcto, no el elemento hijo clickeado
+            const button = $(e.currentTarget);
             const targetId = button.data('target');
+
+            if (!targetId) {
+                console.error('No se encontró data-target en el botón');
+                return;
+            }
+
             const target = $(targetId);
             const icon = button.find('.toggle-icon');
 
@@ -576,30 +591,42 @@ class AnalisisNutricionalManager {
      */
     actualizarColoresEstado(nivelIndex, porcentajes) {
         const nutrientes = [
-            { key: 'calorias_kcal', nombre: 'calorias' },
-            { key: 'proteina_g', nombre: 'proteina' },
-            { key: 'grasa_g', nombre: 'grasa' },
-            { key: 'cho_g', nombre: 'cho' },
-            { key: 'calcio_mg', nombre: 'calcio' },
-            { key: 'hierro_mg', nombre: 'hierro' },
-            { key: 'sodio_mg', nombre: 'sodio' }
+            { key: 'calorias_kcal', nombre: 'calorias', totalId: 'calorias' },
+            { key: 'proteina_g', nombre: 'proteina', totalId: 'proteina' },
+            { key: 'grasa_g', nombre: 'grasa', totalId: 'grasa' },
+            { key: 'cho_g', nombre: 'cho', totalId: 'cho' },
+            { key: 'calcio_mg', nombre: 'calcio', totalId: 'calcio' },
+            { key: 'hierro_mg', nombre: 'hierro', totalId: 'hierro' },
+            { key: 'sodio_mg', nombre: 'sodio', totalId: 'sodio' }
         ];
-        
+
         nutrientes.forEach(nutriente => {
             const porcentaje = porcentajes[nutriente.nombre] || 0;
+
+            // Determinar el estado según el porcentaje
+            let estado;
+            if (porcentaje <= 35) {
+                estado = 'optimo';
+            } else if (porcentaje <= 70) {
+                estado = 'aceptable';
+            } else {
+                estado = 'alto';
+            }
+
+            // Actualizar el atributo data-estado del contenedor de adecuación
             const inputId = `nivel-${nivelIndex}-${nutriente.key}-pct`;
             const $input = $(`#${inputId}`);
-            
-            // Remover clases anteriores
-            $input.removeClass('optimo aceptable alto');
-            
-            // Aplicar nueva clase según el porcentaje
-            if (porcentaje <= 35) {
-                $input.addClass('optimo');
-            } else if (porcentaje <= 70) {
-                $input.addClass('aceptable');
-            } else {
-                $input.addClass('alto');
+            const $adecuacionContainer = $input.closest('.adecuacion-mini');
+            if ($adecuacionContainer.length) {
+                $adecuacionContainer.attr('data-estado', estado);
+            }
+
+            // Actualizar el atributo data-estado del contenedor de totales
+            const totalId = `nivel-${nivelIndex}-${nutriente.totalId}`;
+            const $totalElement = $(`#${totalId}`);
+            const $totalContainer = $totalElement.closest('.total-mini');
+            if ($totalContainer.length) {
+                $totalContainer.attr('data-estado', estado);
             }
         });
     }

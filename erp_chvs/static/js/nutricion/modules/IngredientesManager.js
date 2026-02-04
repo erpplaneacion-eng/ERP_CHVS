@@ -205,11 +205,12 @@ class IngredientesManager {
             if (data.success) {
                 alert(`✓ ${ingredientes.length} ingrediente(s) agregado(s) exitosamente`);
                 this.cerrarModalIngredientes();
-                
-                // Notificar al sistema principal para recargar ingredientes
-                if (window.menusController && window.menusController.cargarIngredientesPreparacion) {
-                    window.menusController.cargarIngredientesPreparacion(preparacionId);
-                }
+
+                // Recargar ingredientes en el acordeón
+                this.cargarIngredientesPreparacion(preparacionId);
+
+                // Actualizar el contador de ingredientes en el badge del acordeón
+                this.actualizarContadorIngredientes(preparacionId);
             } else {
                 alert('Error: ' + (data.error || 'No se pudieron guardar los ingredientes'));
             }
@@ -255,17 +256,48 @@ class IngredientesManager {
             
             if (data.success) {
                 alert('✓ Ingrediente eliminado exitosamente');
-                
-                // Notificar al sistema principal para recargar ingredientes
-                if (window.menusController && window.menusController.cargarIngredientesPreparacion) {
-                    window.menusController.cargarIngredientesPreparacion(preparacionId);
-                }
+
+                // Recargar ingredientes en el acordeón
+                this.cargarIngredientesPreparacion(preparacionId);
+
+                // Actualizar el contador de ingredientes en el badge del acordeón
+                this.actualizarContadorIngredientes(preparacionId);
             } else {
                 alert('Error: ' + (data.error || 'No se pudo eliminar'));
             }
         } catch (error) {
             console.error('Error al eliminar ingrediente:', error);
             alert('Error al eliminar el ingrediente');
+        }
+    }
+
+    /**
+     * Actualizar el contador de ingredientes en el badge del acordeón
+     * @param {number} preparacionId - ID de la preparación
+     */
+    async actualizarContadorIngredientes(preparacionId) {
+        try {
+            const response = await fetch(`/nutricion/api/preparaciones/${preparacionId}/ingredientes/`);
+            const data = await response.json();
+
+            // Calcular cantidad de ingredientes
+            const cantidad = data.ingredientes ? data.ingredientes.length : 0;
+
+            // Buscar el contenedor del acordeón de esta preparación
+            const contenidoPrep = document.getElementById(`prep-content-${preparacionId}`);
+            if (contenidoPrep) {
+                // El header es el elemento anterior al contenido
+                const header = contenidoPrep.previousElementSibling;
+                if (header) {
+                    // Buscar el badge de ingredientes
+                    const badge = header.querySelector('.ingredientes-badge');
+                    if (badge) {
+                        badge.innerHTML = `<i class="fas fa-cubes"></i> ${cantidad} ingredientes`;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error al actualizar contador de ingredientes:', error);
         }
     }
 
