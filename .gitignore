@@ -238,3 +238,89 @@ coverage.xml
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# ===========================================
+# Claude Code / AI Assistant settings
+# ===========================================
+.claude/
+CLAUDE.md
+
+# ===========================================
+# Secrets and credentials
+# ===========================================
+*.pem
+*.key
+secrets.json
+credentials.json
+service_account.json
+.secrets/
+config/secrets/
+
+# ===========================================
+# Django specific additions
+# ===========================================
+# Collected static files
+staticfiles/
+static_collected/
+
+# Django cache
+django_cache/
+
+# Celery beat schedule
+celerybeat-schedule.*
+
+# ===========================================
+# Database files
+# ===========================================
+*.sqlite3
+*.db
+*.sqlite
+
+# ===========================================
+# Uploaded files / Media
+# ===========================================
+media/uploads/
+media/temp/
+uploads/
+
+# ===========================================
+# Temporary and generated files
+# ===========================================
+*.bak
+*.backup
+*.orig
+temp/
+tmp/
+.temp/
+.tmp/
+
+# ===========================================
+# PDF and document outputs
+# ===========================================
+output/
+exports/
+generated_pdfs/
+generated_excel/
+
+# ===========================================
+# Test files
+# ===========================================
+.pytest_cache/
+pytest_cache/
+test_output/
+test_results/
+
+# ===========================================
+# Docker (if used in future)
+# ===========================================
+.docker/
+docker-compose.override.yml
+
+# ===========================================
+# Archivos locales de desarrollo
+# ===========================================
+local/
+.local/
+dev_notes.txt
+TODO.txt
+notas.txt
