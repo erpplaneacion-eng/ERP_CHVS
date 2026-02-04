@@ -10,6 +10,7 @@ urlpatterns = [
     # Alimentos ICBF
     path('alimentos/', views.lista_alimentos, name='lista_alimentos'),
     path('alimentos/editar/<str:codigo>/', views.editar_alimento, name='editar_alimento'),
+    path('alimentos/eliminar/<str:codigo>/', views.eliminar_alimento, name='eliminar_alimento'),
 
     # Menús
     path('menus/', views.lista_menus, name='lista_menus'),

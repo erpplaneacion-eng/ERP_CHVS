@@ -4,6 +4,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 import json
@@ -95,6 +96,19 @@ def editar_alimento(request, codigo):
             return redirect('nutricion:lista_alimentos')
 
     return redirect('nutricion:lista_alimentos')
+
+
+@login_required
+@require_http_methods(["DELETE"])
+def eliminar_alimento(request, codigo):
+    """Vista para eliminar un alimento"""
+    try:
+        alimento = get_object_or_404(TablaAlimentos2018Icbf, pk=codigo)
+        nombre = alimento.nombre_del_alimento
+        alimento.delete()
+        return JsonResponse({'success': True, 'message': f'Alimento "{nombre}" eliminado correctamente.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
 
 
 # =================== MENÚS ===================

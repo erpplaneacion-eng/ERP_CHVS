@@ -1327,3 +1327,251 @@ ESTILOS ESPECÍFICOS PARA INSTITUCIONES Y SEDES EDUCATIVAS
         display: none !important;
     }
 }
+
+/* ===================================== */
+/* ESTILOS GLOBALES PARA BUSCADOR        */
+/* ===================================== */
+
+.search-container {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+    margin-bottom: 25px;
+    border: 1px solid rgba(52, 152, 219, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.search-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #3498db, #2980b9, #3498db);
+    background-size: 200% 100%;
+    animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 0 20px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.search-box:focus-within {
+    border-color: #3498db;
+    box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.15), 0 4px 12px rgba(52, 152, 219, 0.1);
+    transform: translateY(-1px);
+}
+
+.search-box i.fa-search {
+    color: #3498db;
+    font-size: 18px;
+    margin-right: 12px;
+    transition: all 0.3s ease;
+}
+
+.search-box:focus-within i.fa-search {
+    color: #2980b9;
+    transform: scale(1.1);
+}
+
+.search-box input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 15px 0;
+    font-size: 15px;
+    color: #2c3e50;
+    outline: none;
+    font-weight: 500;
+}
+
+.search-box input::placeholder {
+    color: #95a5a6;
+    font-style: italic;
+    font-weight: 400;
+}
+
+.btn-clear-search {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    border: none;
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.8);
+    box-shadow: 0 2px 6px rgba(231, 76, 60, 0.3);
+}
+
+.btn-clear-search:hover {
+    background: linear-gradient(135deg, #c0392b, #a93226);
+    transform: scale(1.1);
+}
+
+.btn-clear-search.show {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+}
+
+.search-results-info {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #6c757d;
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(52, 152, 219, 0.05);
+    border-radius: 8px;
+    border-left: 3px solid #3498db;
+}
+
+.search-results-info .highlight {
+    color: #3498db;
+    font-weight: 700;
+    background: rgba(52, 152, 219, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-style: normal;
+}
+
+/* Responsive para el buscador */
+@media (max-width: 768px) {
+    .search-container {
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .search-box {
+        padding: 0 15px;
+    }
+    
+    .search-box input {
+        font-size: 16px;
+        padding: 12px 0;
+    }
+}
+
+/* ===================================== */
+/* ESTILOS GLOBALES PARA PAGINACIÓN      */
+/* ===================================== */
+
+.pagination-container {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.pagination-container .pagination {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.pagination-container .page-item {
+    list-style: none;
+}
+
+.pagination-container .page-link {
+    padding: 8px 12px;
+    background: #3498db;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background 0.3s;
+    border: none;
+}
+
+.pagination-container .page-link:hover {
+    background: #2980b9;
+    color: white;
+}
+
+.pagination-container .page-item.active .page-link {
+    background: #2c3e50;
+    cursor: default;
+}
+
+/* ===================================== */
+/* ESTILOS PARA MODAL DE DETALLES        */
+/* ===================================== */
+
+.detail-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.detail-section {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+}
+
+.detail-section h4 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 1.1em;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 8px;
+}
+
+.detail-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detail-item label {
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 0.85em;
+}
+
+.detail-item span {
+    color: #2c3e50;
+    font-size: 0.95em;
+}
+
+@media (max-width: 768px) {
+    .detail-row {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .detail-row {
+        grid-template-columns: 1fr;
+    }
+}

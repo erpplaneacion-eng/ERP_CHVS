@@ -7,6 +7,7 @@ class AlimentosManager {
         this.alimentoForm = null;
         this.submitBtn = null;
         this.isEditing = false;
+        this.currentSearchTerm = '';
         this.init();
     }
 
@@ -24,6 +25,7 @@ class AlimentosManager {
 
         this.setupEventListeners();
         this.setupValidations();
+        this.setupSearch();
     }
 
     setupEventListeners() {
@@ -33,10 +35,34 @@ class AlimentosManager {
             addBtn.addEventListener('click', () => this.showCreateModal());
         }
 
+        // Botones de ver detalles
+        const viewBtns = document.querySelectorAll('.view-alimento-btn');
+        viewBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const button = e.target.closest('.view-alimento-btn');
+                this.showDetailModal(button);
+            });
+        });
+
         // Botones de editar
         const editBtns = document.querySelectorAll('.edit-alimento-btn');
         editBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => this.showEditModal(e.target));
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const button = e.target.closest('.edit-alimento-btn');
+                this.showEditModal(button);
+            });
+        });
+
+        // Botones de eliminar
+        const deleteBtns = document.querySelectorAll('.delete-alimento-btn');
+        deleteBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const button = e.target.closest('.delete-alimento-btn');
+                this.deleteAlimento(button);
+            });
         });
 
         // Botones de cerrar modal
@@ -52,10 +78,26 @@ class AlimentosManager {
             }
         });
 
+        // Cerrar modal de detalles al hacer click fuera
+        const detailModal = document.getElementById('detailModal');
+        if (detailModal) {
+            detailModal.addEventListener('click', (e) => {
+                if (e.target === detailModal) {
+                    this.closeDetailModal();
+                }
+            });
+        }
+
         // Cerrar modal con Escape
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.modal.style.display === 'flex') {
-                this.closeModal();
+            if (e.key === 'Escape') {
+                if (this.modal.style.display === 'flex') {
+                    this.closeModal();
+                }
+                const detailModal = document.getElementById('detailModal');
+                if (detailModal && detailModal.style.display === 'flex') {
+                    this.closeDetailModal();
+                }
             }
         });
 
@@ -357,15 +399,317 @@ class AlimentosManager {
         return isValid;
     }
 
-    // Método para manejar búsqueda/filtrado (si se necesita en el futuro)
-    filterAlimentos(searchTerm) {
-        const rows = document.querySelectorAll('.alimentos-table tbody tr');
+    // =====================================
+    // FUNCIONALIDAD DE VER DETALLES
+    // =====================================
 
-        rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            const matches = text.includes(searchTerm.toLowerCase());
-            row.style.display = matches ? '' : 'none';
+    showDetailModal(button) {
+        const data = button.dataset;
+        const detailContent = document.getElementById('detailContent');
+
+        if (!detailContent) return;
+
+        detailContent.innerHTML = `
+            <div class="detail-grid">
+                <div class="detail-section">
+                    <h4>Información Básica</h4>
+                    <div class="detail-row">
+                        <div class="detail-item">
+                            <label>Código:</label>
+                            <span>${data.codigo}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Nombre:</label>
+                            <span>${data.nombre}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Parte Analizada:</label>
+                            <span>${data.parteAnalizada}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h4>Macronutrientes</h4>
+                    <div class="detail-row">
+                        <div class="detail-item">
+                            <label>Energía:</label>
+                            <span>${data.energiaKcal} kcal / ${data.energiaKj} kJ</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Proteína:</label>
+                            <span>${data.proteina} g</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Lípidos:</label>
+                            <span>${data.lipidos} g</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Carbohidratos Totales:</label>
+                            <span>${data.carbohidratosTotales} g</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Fibra Dietaria:</label>
+                            <span>${data.fibraDietaria} g</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Humedad:</label>
+                            <span>${data.humedad} g</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h4>Minerales</h4>
+                    <div class="detail-row">
+                        <div class="detail-item">
+                            <label>Calcio:</label>
+                            <span>${data.calcio} mg</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Hierro:</label>
+                            <span>${data.hierro} mg</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Sodio:</label>
+                            <span>${data.sodio} mg</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Fósforo:</label>
+                            <span>${data.fosforo} mg</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Zinc:</label>
+                            <span>${data.zinc} mg</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Magnesio:</label>
+                            <span>${data.magnesio} mg</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Potasio:</label>
+                            <span>${data.potasio} mg</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h4>Vitaminas</h4>
+                    <div class="detail-row">
+                        <div class="detail-item">
+                            <label>Vitamina A:</label>
+                            <span>${data.vitaminaA} ER</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Vitamina C:</label>
+                            <span>${data.vitaminaC} mg</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Vitamina B12:</label>
+                            <span>${data.vitaminaB12} mcg</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Tiamina:</label>
+                            <span>${data.tiamina} mg</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Riboflavina:</label>
+                            <span>${data.riboflavina} mg</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Niacina:</label>
+                            <span>${data.niacina} mg</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Folatos:</label>
+                            <span>${data.folatos} mcg</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h4>Grasas</h4>
+                    <div class="detail-row">
+                        <div class="detail-item">
+                            <label>Grasa Saturada:</label>
+                            <span>${data.grasaSaturada} g</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Grasa Monoinsaturada:</label>
+                            <span>${data.grasaMonoinsaturada} g</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Grasa Poliinsaturada:</label>
+                            <span>${data.grasaPoliinsaturada} g</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Colesterol:</label>
+                            <span>${data.colesterol} mg</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('detailModal').style.display = 'flex';
+    }
+
+    closeDetailModal() {
+        const detailModal = document.getElementById('detailModal');
+        if (detailModal) {
+            detailModal.style.display = 'none';
+        }
+    }
+
+    // =====================================
+    // FUNCIONALIDAD DE ELIMINAR
+    // =====================================
+
+    async deleteAlimento(button) {
+        const codigo = button.dataset.codigo;
+        const nombre = button.dataset.nombre;
+
+        // Usar SweetAlert2 si está disponible, sino confirm nativo
+        if (typeof Swal !== 'undefined') {
+            const result = await Swal.fire({
+                title: '¿Eliminar alimento?',
+                text: `¿Está seguro de que desea eliminar "${nombre}"? Esta acción no se puede deshacer.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (!result.isConfirmed) return;
+        } else {
+            if (!confirm(`¿Está seguro de que desea eliminar "${nombre}"? Esta acción no se puede deshacer.`)) {
+                return;
+            }
+        }
+
+        try {
+            const response = await fetch(`/nutricion/alimentos/eliminar/${codigo}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Mostrar notificación de éxito
+                if (typeof Swal !== 'undefined') {
+                    await Swal.fire({
+                        title: '¡Eliminado!',
+                        text: 'El alimento ha sido eliminado.',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                }
+                // Recargar la página para reflejar los cambios
+                window.location.reload();
+            } else {
+                const errorMsg = result.error || 'Error al eliminar el alimento';
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire('Error', errorMsg, 'error');
+                } else {
+                    alert(errorMsg);
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            const errorMsg = 'Error de conexión al eliminar';
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Error', errorMsg, 'error');
+            } else {
+                alert(errorMsg);
+            }
+        }
+    }
+
+    // =====================================
+    // FUNCIONALIDAD DE BÚSQUEDA (SERVER-SIDE)
+    // =====================================
+
+    setupSearch() {
+        const searchInput = document.getElementById('searchInput');
+        const clearButton = document.getElementById('clearSearch');
+        const resultsCount = document.getElementById('searchResultsCount');
+
+        if (!searchInput || !clearButton || !resultsCount) {
+            console.warn('AlimentosManager: Elementos de búsqueda no encontrados');
+            return;
+        }
+
+        // Obtener término de búsqueda actual de la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentQuery = urlParams.get('q') || '';
+
+        // Establecer valor inicial del input
+        if (currentQuery) {
+            searchInput.value = currentQuery;
+            this.currentSearchTerm = currentQuery;
+            this.updateClearButton();
+            this.updateResultsInfo(currentQuery);
+        }
+
+        // Event listener para mostrar/ocultar botón limpiar mientras escribe
+        searchInput.addEventListener('input', () => {
+            this.currentSearchTerm = searchInput.value.trim();
+            this.updateClearButton();
         });
+
+        // Event listener para limpiar búsqueda
+        clearButton.addEventListener('click', () => {
+            // Redirigir a la página sin parámetro de búsqueda
+            window.location.href = window.location.pathname;
+        });
+
+        // Event listener para Enter - enviar búsqueda al servidor
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.submitSearch();
+            }
+        });
+    }
+
+    submitSearch() {
+        const searchTerm = this.currentSearchTerm.trim();
+
+        if (searchTerm) {
+            // Redirigir con parámetro de búsqueda
+            window.location.href = `${window.location.pathname}?q=${encodeURIComponent(searchTerm)}`;
+        } else {
+            // Si está vacío, quitar el parámetro
+            window.location.href = window.location.pathname;
+        }
+    }
+
+    updateResultsInfo(searchTerm) {
+        const resultsCount = document.getElementById('searchResultsCount');
+        const rows = document.querySelectorAll('.alimentos-table tbody tr');
+        const visibleCount = rows.length;
+
+        if (resultsCount && searchTerm) {
+            resultsCount.innerHTML = `Resultados para "<span class="highlight">${searchTerm}</span>" - Mostrando <span class="highlight">${visibleCount}</span> alimentos`;
+        }
+    }
+
+    updateClearButton() {
+        const clearButton = document.getElementById('clearSearch');
+        if (clearButton) {
+            if (this.currentSearchTerm) {
+                clearButton.classList.add('show');
+            } else {
+                clearButton.classList.remove('show');
+            }
+        }
     }
 }
 
@@ -381,3 +725,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Exportar para uso global si es necesario
 window.AlimentosManager = AlimentosManager;
+// Función global para cerrar modal de detalles (usado desde HTML onclick)
+function closeDetailModal() {
+    const detailModal = document.getElementById('detailModal');
+    if (detailModal) {
+        detailModal.style.display = 'none';
+    }
+}
+
+// Exponer globalmente
+window.closeDetailModal = closeDetailModal;

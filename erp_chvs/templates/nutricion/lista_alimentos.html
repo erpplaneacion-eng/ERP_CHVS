@@ -35,13 +35,27 @@
     </div>
     {% endif %}
 
-    <div class="actions-bar">
-        <!-- Formulario de Búsqueda -->
-        <form method="GET" action="{% url 'nutricion:lista_alimentos' %}" class="search-form">
-            <input type="text" name="q" placeholder="Buscar por nombre o código..." value="{{ search_query }}">
-            <button type="submit" class="btn btn-primary">Buscar</button>
-        </form>
+    <!-- Barra de búsqueda -->
+    <div class="search-container">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Buscar por nombre, código, energía, proteína... (Enter para buscar)" autocomplete="off" value="{{ search_query|default:'' }}">
+            <button id="clearSearch" class="btn-clear-search {% if search_query %}show{% endif %}" title="Limpiar búsqueda">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="search-results-info">
+            <span id="searchResultsCount">
+                {% if search_query %}
+                    Resultados para "<span class="highlight">{{ search_query }}</span>"
+                {% else %}
+                    Mostrando todos los alimentos
+                {% endif %}
+            </span>
+        </div>
+    </div>
 
+    <div class="actions-bar">
         <!-- Botón para Añadir Nuevo Alimento con Modal -->
         <button id="add-alimento-btn" class="btn btn-success" data-create-url="{% url 'nutricion:lista_alimentos' %}">
             <i class="fas fa-plus"></i> Añadir Alimento
@@ -72,7 +86,44 @@
                 <td>{{ alimento.carbohidratos_totales_g }}</td>
                 <td>
                     {% localize off %}
-                    <button class="btn-edit edit-alimento-btn"
+                    <button class="btn btn-sm btn-info view-alimento-btn"
+                            title="Ver detalles"
+                            data-codigo="{{ alimento.codigo }}"
+                            data-nombre="{{ alimento.nombre_del_alimento }}"
+                            data-parte-analizada="{{ alimento.parte_analizada|default:'N/A' }}"
+                            data-humedad="{{ alimento.humedad_g }}"
+                            data-energia-kcal="{{ alimento.energia_kcal }}"
+                            data-energia-kj="{{ alimento.energia_kj }}"
+                            data-proteina="{{ alimento.proteina_g }}"
+                            data-lipidos="{{ alimento.lipidos_g }}"
+                            data-carbohidratos-totales="{{ alimento.carbohidratos_totales_g }}"
+                            data-carbohidratos-disponibles="{{ alimento.carbohidratos_disponibles_g|default:'N/A' }}"
+                            data-fibra-dietaria="{{ alimento.fibra_dietaria_g|default:'N/A' }}"
+                            data-cenizas="{{ alimento.cenizas_g|default:'N/A' }}"
+                            data-calcio="{{ alimento.calcio_mg|default:'N/A' }}"
+                            data-hierro="{{ alimento.hierro_mg|default:'N/A' }}"
+                            data-sodio="{{ alimento.sodio_mg|default:'N/A' }}"
+                            data-fosforo="{{ alimento.fosforo_mg|default:'N/A' }}"
+                            data-yodo="{{ alimento.yodo_mg|default:'N/A' }}"
+                            data-zinc="{{ alimento.zinc_mg|default:'N/A' }}"
+                            data-magnesio="{{ alimento.magnesio_mg|default:'N/A' }}"
+                            data-potasio="{{ alimento.potasio_mg|default:'N/A' }}"
+                            data-tiamina="{{ alimento.tiamina_mg|default:'N/A' }}"
+                            data-riboflavina="{{ alimento.riboflavina_mg|default:'N/A' }}"
+                            data-niacina="{{ alimento.niacina_mg|default:'N/A' }}"
+                            data-folatos="{{ alimento.folatos_mcg|default:'N/A' }}"
+                            data-vitamina-b12="{{ alimento.vitamina_b12_mcg|default:'N/A' }}"
+                            data-vitamina-c="{{ alimento.vitamina_c_mg|default:'N/A' }}"
+                            data-vitamina-a="{{ alimento.vitamina_a_er|default:'N/A' }}"
+                            data-grasa-saturada="{{ alimento.grasa_saturada_g|default:'N/A' }}"
+                            data-grasa-monoinsaturada="{{ alimento.grasa_monoinsaturada_g|default:'N/A' }}"
+                            data-grasa-poliinsaturada="{{ alimento.grasa_poliinsaturada_g|default:'N/A' }}"
+                            data-colesterol="{{ alimento.colesterol_mg|default:'N/A' }}"
+                            data-parte-comestible="{{ alimento.parte_comestible_field|default:'N/A' }}">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-warning edit-alimento-btn"
+                            title="Editar"
                             data-codigo="{{ alimento.codigo }}"
                             data-nombre="{{ alimento.nombre_del_alimento }}"
                             data-parte-analizada="{{ alimento.parte_analizada|default:'' }}"
@@ -105,9 +156,15 @@
                             data-grasa-poliinsaturada="{{ alimento.grasa_poliinsaturada_g|default:'' }}"
                             data-colesterol="{{ alimento.colesterol_mg|default:'' }}"
                             data-parte-comestible="{{ alimento.parte_comestible_field|default:'' }}">
-                    {% endlocalize %}
-                        Editar
+                        <i class="fas fa-edit"></i>
                     </button>
+                    <button class="btn btn-sm btn-danger delete-alimento-btn"
+                            title="Eliminar"
+                            data-codigo="{{ alimento.codigo }}"
+                            data-nombre="{{ alimento.nombre_del_alimento }}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    {% endlocalize %}
                 </td>
             </tr>
             {% empty %}
@@ -125,20 +182,38 @@
     </table>
 </div>
 
-<!-- Controles de paginación -->
-<div class="pagination-controls">
-    {% if alimentos_page.has_previous %}
-        <a href="?q={{ search_query }}&page={{ alimentos_page.previous_page_number }}" class="btn btn-secondary">&laquo; Anterior</a>
-    {% endif %}
+<!-- Paginación -->
+{% if alimentos_page.has_other_pages %}
+<div class="pagination-container">
+    <nav aria-label="Paginación de alimentos">
+        <ul class="pagination">
+            {% if alimentos_page.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1">Primera</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ alimentos_page.previous_page_number }}">Anterior</a>
+                </li>
+            {% endif %}
 
-    <span class="current-page-info">
-        Página {{ alimentos_page.number }} de {{ alimentos_page.paginator.num_pages }}
-    </span>
+            <li class="page-item active">
+                <span class="page-link">
+                    Página {{ alimentos_page.number }} de {{ alimentos_page.paginator.num_pages }}
+                </span>
+            </li>
 
-    {% if alimentos_page.has_next %}
-        <a href="?q={{ search_query }}&page={{ alimentos_page.next_page_number }}" class="btn btn-secondary">Siguiente &raquo;</a>
-    {% endif %}
+            {% if alimentos_page.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ alimentos_page.next_page_number }}">Siguiente</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ alimentos_page.paginator.num_pages }}">Última</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
 </div>
+{% endif %}
 
 <!-- MODAL para Añadir/Editar Alimento -->
 <div id="alimento-modal" class="modal-overlay hidden-initially">
@@ -336,6 +411,24 @@
                     <button type="submit" id="modal-submit-btn" class="btn btn-success">Guardar Alimento</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para ver detalles -->
+<div class="modal-overlay" id="detailModal" style="display: none;">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Detalles del Alimento</h3>
+                <span class="modal-close" onclick="closeDetailModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="detailContent">
+                <!-- Contenido dinámico -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeDetailModal()">Cerrar</button>
+            </div>
         </div>
     </div>
 </div>
