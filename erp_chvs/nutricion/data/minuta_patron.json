@@ -1,0 +1,1118 @@
+[
+  {
+    "tabla_referencia": "Tabla 8",
+    "descripcion": "Minuta Patrón de consumo semanal para el complemento alimentario jornada mañana/tarde -CAJM/JT-",
+    "modalidad": "Preparada en sitio y comida caliente transportada",
+    "nivel_educativo": "Preescolar",
+    "requisitos_componentes": [
+      {
+        "componente": "Bebida con leche",
+        "grupo_alimentos": "Grupo III. Leche y productos lácteos + Otros (cereales, frutas, chocolate o panela)",
+        "frecuencia": "Todos los días",
+        "especificacion_preparacion": "200 cm³ (mitad agua - mitad leche)",
+        "rango_peso_neto": {
+          "leche_polvo": "13 g",
+          "leche_liquida": "100 ml",
+          "acompanantes_bebida": "10 g - 60 g"
+        },
+        "porcion_servida": "200 cm³"
+      },
+      {
+        "componente": "Alimento proteico",
+        "grupo_alimentos": "Grupo III. Leche y productos lácteos o Grupo IV. Carnes, huevos, leguminosas secas, frutos secos y semillas",
+        "frecuencia": "3 veces por semana",
+        "rango_peso_neto": "10 g - 63 g",
+        "porcion_servida": "15 g - 50 g"
+      },
+      {
+        "componente": "Cereal acompañante",
+        "grupo_alimentos": "Grupo I. Cereales, raíces, tubérculos y plátanos",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "14 g - 40 g",
+        "porcion_servida": "14 g - 45 g"
+      },
+      {
+        "componente": "Fruta",
+        "grupo_alimentos": "Grupo II. Fruta y verduras",
+        "frecuencia": "2 veces por semana",
+        "rango_peso_neto": "Mínimo 80 g",
+        "porcion_servida": "Mínimo 80 g"
+      },
+      {
+        "componente": "Azúcares",
+        "grupo_alimentos": "Grupo VI. Azúcares",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "5 g - 7 g"
+      },
+      {
+        "componente": "Grasas",
+        "grupo_alimentos": "Grupo V. Grasas",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "15 cm³ (total semana)"
+      },
+      {
+        "componente": "Agua",
+        "grupo_alimentos": "Agua apta para el consumo humano",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "150 cm³ - 180 cm³",
+        "porcion_servida": "150 cm³ - 180 cm³"
+      }
+    ],
+    "aporte_nutricional_promedio_diario": {
+      "energia_kcal": 276,
+      "proteinas_g": 9.9,
+      "grasas_g": 9.6,
+      "carbohidratos_g": 36.5,
+      "calcio_mg": 159,
+      "hierro_mg": 1.5,
+      "sodio_mg": 95
+    },
+    "adecuacion_nutricional": {
+      "calorias": "21%",
+      "proteinas": "22%",
+      "grasas": "22%",
+      "carbohidratos": "20%",
+      "calcio": "23%",
+      "hierro": "27%",
+      "sodio": "8%"
+    }
+  },
+  {
+    "tabla_referencia": "Tabla 9",
+    "descripcion": "Minuta Patrón de consumo semanal para el complemento alimentario jornada mañana/tarde -CAJM/JT-",
+    "modalidad": "Preparada en sitio y comida caliente transportada",
+    "nivel_educativo": "Primaria (primero, segundo y tercero)",
+    "requisitos_componentes": [
+      {
+        "componente": "Bebida con leche",
+        "grupo_alimentos": "Grupo III. Leche y productos lácteos + Otros (cereales, frutas, chocolate o panela)",
+        "frecuencia": "Todos los días",
+        "especificacion_preparacion": "200 cm³ (mitad agua - mitad leche)",
+        "rango_peso_neto": {
+          "leche_polvo": "13 g",
+          "leche_liquida": "100 ml",
+          "acompanantes_bebida": "10 g - 60 g"
+        },
+        "porcion_servida": "200 cm³"
+      },
+      {
+        "componente": "Alimento proteico",
+        "grupo_alimentos": "Grupo III. Leche y productos lácteos o Grupo IV. Carnes, huevos, leguminosas secas, frutos secos y semillas",
+        "frecuencia": "3 veces por semana",
+        "rango_peso_neto": "20 g - 78 g",
+        "porcion_servida": "20 g - 60 g"
+      },
+      {
+        "componente": "Cereal acompañante",
+        "grupo_alimentos": "Grupo I. Cereales, raíces, tubérculos y plátanos",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "14 g - 40 g",
+        "porcion_servida": "14 g - 45 g"
+      },
+      {
+        "componente": "Fruta",
+        "grupo_alimentos": "Grupo II. Fruta y verduras",
+        "frecuencia": "2 veces por semana (fruta)",
+        "rango_peso_neto": "Mínimo 110 g",
+        "porcion_servida": "Mínimo 110 g"
+      },
+      {
+        "componente": "Azúcares",
+        "grupo_alimentos": "Grupo VI. Azúcares",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "5 g - 7 g"
+      },
+      {
+        "componente": "Grasas",
+        "grupo_alimentos": "Grupo V. Grasas",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "20 cm³ (total semana)"
+      },
+      {
+        "componente": "Agua",
+        "grupo_alimentos": "Agua apta para el consumo humano",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "150 cm³ - 180 cm³",
+        "porcion_servida": "150 cm³ - 180 cm³"
+      }
+    ],
+    "aporte_nutricional_promedio_diario": {
+      "energia_kcal": 334,
+      "proteinas_g": 11.8,
+      "grasas_g": 11.2,
+      "carbohidratos_g": 45.0,
+      "calcio_mg": 171,
+      "hierro_mg": 1.9,
+      "sodio_mg": 108
+    },
+    "recomendaciones_diarias": {
+      "energia_kcal": 1629,
+      "proteinas_g": 57.0,
+      "grasas_g": 54.3,
+      "carbohidratos_g": 228.1,
+      "calcio_mg": 800,
+      "hierro_mg": 6.2,
+      "sodio_mg": 1200
+    },
+    "adecuacion_nutricional": {
+      "calorias": "21%",
+      "proteinas": "21%",
+      "grasas": "21%",
+      "carbohidratos": "20%",
+      "calcio": "21%",
+      "hierro": "31%",
+      "sodio": "9%"
+    }
+  },
+  {
+    "tabla_referencia": "Tabla 10",
+    "descripcion": "Minuta Patrón de consumo semanal para el complemento alimentario jornada mañana/tarde -CAJM/JT-",
+    "modalidad": "Preparada en sitio y comida caliente transportada",
+    "nivel_educativo": "Primaria (cuarto y quinto)",
+    "requisitos_componentes": [
+      {
+        "componente": "Bebida con leche",
+        "grupo_alimentos": "Grupo III. Leche y productos lácteos + Otros (cereales, frutas, chocolate o panela)",
+        "frecuencia": "Todos los días",
+        "especificacion_preparacion": "200 cm³ (mitad agua - mitad leche)",
+        "rango_peso_neto": {
+          "leche_polvo": "13 g",
+          "leche_liquida": "100 ml",
+          "acompanantes_bebida": "10 g - 60 g"
+        },
+        "porcion_servida": "200 cm³"
+      },
+      {
+        "componente": "Alimento proteico",
+        "grupo_alimentos": "Grupo III. Leche y productos lácteos o Grupo IV. Carnes, huevos, leguminosas secas, frutos secos y semillas",
+        "frecuencia": "3 veces por semana",
+        "rango_peso_neto": "30 g - 110 g",
+        "porcion_servida": "35 g - 90 g"
+      },
+      {
+        "componente": "Cereal acompañante",
+        "grupo_alimentos": "Grupo I. Cereales, raíces, tubérculos y plátanos",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "21 g - 85 g",
+        "porcion_servida": "21 g - 105 g"
+      },
+      {
+        "componente": "Fruta",
+        "grupo_alimentos": "Grupo II. Fruta y verduras",
+        "frecuencia": "2 veces por semana (fruta)",
+        "rango_peso_neto": "Mínimo 110 g",
+        "porcion_servida": "Mínimo 110 g"
+      },
+      {
+        "componente": "Azúcares",
+        "grupo_alimentos": "Grupo VI. Azúcares",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "5 g - 7 g"
+      },
+      {
+        "componente": "Grasas",
+        "grupo_alimentos": "Grupo V. Grasas",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "25 cm³ (total semana)"
+      },
+      {
+        "componente": "Agua",
+        "grupo_alimentos": "Agua apta para el consumo humano",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "180 cm³ - 200 cm³",
+        "porcion_servida": "180 cm³ - 200 cm³"
+      }
+    ],
+    "aporte_nutricional_promedio_diario": {
+      "energia_kcal": 407,
+      "proteinas_g": 14.9,
+      "grasas_g": 13.3,
+      "carbohidratos_g": 54.8,
+      "calcio_mg": 191,
+      "hierro_mg": 2.4,
+      "sodio_mg": 139
+    },
+    "recomendaciones_diarias": {
+      "energia_kcal": 1994,
+      "proteinas_g": 69.8,
+      "grasas_g": 66.5,
+      "carbohidratos_g": 279.2,
+      "calcio_mg": 1100,
+      "hierro_mg": 8.7,
+      "sodio_mg": 1500
+    },
+    "adecuacion_nutricional": {
+      "calorias": "20%",
+      "proteinas": "21%",
+      "grasas": "20%",
+      "carbohidratos": "20%",
+      "calcio": "17%",
+      "hierro": "28%",
+      "sodio": "9%"
+    }
+  },
+  {
+    "tabla_referencia": "Tabla 11",
+    "descripcion": "Minuta Patrón de consumo semanal para el complemento alimentario jornada mañana/tarde -CAJM/JT-",
+    "modalidad": "Preparada en sitio y comida caliente transportada",
+    "nivel_educativo": "Secundaria",
+    "requisitos_componentes": [
+      {
+        "componente": "Bebida con leche",
+        "grupo_alimentos": "Grupo III. Leche y productos lácteos + Otros (cereales, frutas, chocolate o panela)",
+        "frecuencia": "Todos los días",
+        "especificacion_preparacion": "220 cm³ (mitad agua - mitad leche)",
+        "rango_peso_neto": {
+          "leche_polvo": "15 g",
+          "leche_liquida": "100 ml",
+          "acompanantes_bebida": "12 g - 60 g"
+        },
+        "porcion_servida": "220 cm³"
+      },
+      {
+        "componente": "Alimento proteico",
+        "grupo_alimentos": "Grupo III. Leche y productos lácteos o Grupo IV. Carnes, huevos, leguminosas secas, frutos secos y semillas",
+        "frecuencia": "3 veces por semana",
+        "rango_peso_neto": "35 g - 140 g",
+        "porcion_servida": "40 g - 105 g"
+      },
+      {
+        "componente": "Cereal acompañante",
+        "grupo_alimentos": "Grupo I. Cereales, raíces, tubérculos y plátanos",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "28 g - 105 g",
+        "porcion_servida": "28 g - 125 g"
+      },
+      {
+        "componente": "Fruta",
+        "grupo_alimentos": "Grupo II. Fruta y verduras",
+        "frecuencia": "2 veces por semana (fruta)",
+        "rango_peso_neto": "Mínimo 130 g",
+        "porcion_servida": "Mínimo 130 g"
+      },
+      {
+        "componente": "Azúcares",
+        "grupo_alimentos": "Grupo VI. Azúcares",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "8 g - 10 g"
+      },
+      {
+        "componente": "Grasas",
+        "grupo_alimentos": "Grupo V. Grasas",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "35 cm³ (total semana)"
+      },
+      {
+        "componente": "Agua",
+        "grupo_alimentos": "Agua apta para el consumo humano",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "200 cm³ - 220 cm³",
+        "porcion_servida": "200 cm³ - 220 cm³"
+      }
+    ],
+    "aporte_nutricional_promedio_diario": {
+      "energia_kcal": 509,
+      "proteinas_g": 18.3,
+      "grasas_g": 17.0,
+      "carbohidratos_g": 68.2,
+      "calcio_mg": 230,
+      "hierro_mg": 3.0,
+      "sodio_mg": 172
+    },
+    "recomendaciones_diarias": {
+      "energia_kcal": 2491,
+      "proteinas_g": 87.2,
+      "grasas_g": 83.0,
+      "carbohidratos_g": 348.7,
+      "calcio_mg": 1100,
+      "hierro_mg": 9.5,
+      "sodio_mg": 1500
+    },
+    "adecuacion_nutricional": {
+      "calorias": "20%",
+      "proteinas": "21%",
+      "grasas": "20%",
+      "carbohidratos": "20%",
+      "calcio": "21%",
+      "hierro": "31%",
+      "sodio": "11%"
+    }
+  },
+  {
+    "tabla_referencia": "Tabla 13",
+    "descripcion": "Minuta Patrón de consumo semanal para el complemento alimentario Almuerzo",
+    "modalidad": "Preparada en sitio y comida caliente transportada",
+    "nivel_educativo": "Preescolar",
+    "requisitos_componentes": [
+      {
+        "componente": "Alimento proteico (Carnes/Huevo)",
+        "grupo_alimentos": "Grupo IV. Carnes, huevos, leguminosas secas, frutos secos y semillas",
+        "frecuencia": "4 por semana (carne), 1 por semana (huevo)",
+        "rango_peso_neto": "38 g - 50 g",
+        "porcion_servida": "30 g - 50 g"
+      },
+      {
+        "componente": "Alimento proteico (Leguminosas)",
+        "grupo_alimentos": "Grupo IV. Carnes, huevos, leguminosas secas, frutos secos y semillas",
+        "frecuencia": "2 veces por semana",
+        "rango_peso_neto": "5 g",
+        "porcion_servida": "15 g"
+      },
+      {
+        "componente": "Cereales",
+        "grupo_alimentos": "Grupo I. Cereales, raíces, tubérculos y plátanos",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "24 g - 26 g",
+        "porcion_servida": "55 g - 60 g"
+      },
+      {
+        "componente": "Tubérculos, raíces, plátanos o derivados de cereales",
+        "grupo_alimentos": "Grupo I. Cereales, raíces, tubérculos y plátanos",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "40 g - 62 g",
+        "porcion_servida": "40 g - 62 g"
+      },
+      {
+        "componente": "Ensalada o verdura caliente",
+        "grupo_alimentos": "Grupo II. Frutas y verduras",
+        "frecuencia": "Todos los días (verduras)",
+        "rango_peso_neto": "Mínimo 50 g",
+        "porcion_servida": "Mínimo 50 g"
+      },
+      {
+        "componente": "Bebida",
+        "grupo_alimentos": "Grupo II. Frutas y verduras",
+        "frecuencia": "Todos los días (frutas)",
+        "rango_peso_neto": "60 g - 65 g",
+        "porcion_servida": "200 cm³"
+      },
+      {
+        "componente": "Leche y productos lácteos",
+        "grupo_alimentos": "Grupo III. Leche y productos lácteos",
+        "frecuencia": "3 veces por semana",
+        "rango_peso_neto": "13 g (polvo) - 100 ml (líquida) - 10 g (queso)"
+      },
+      {
+        "componente": "Azúcares",
+        "grupo_alimentos": "Grupo VI. Azúcares",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "6 g - 8 g"
+      },
+      {
+        "componente": "Grasas",
+        "grupo_alimentos": "Grupo V. Grasas",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "35 cm³ (total semana)"
+      },
+      {
+        "componente": "Agua",
+        "grupo_alimentos": "Agua apta para el consumo humano",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "150 cm³ - 180 cm³",
+        "porcion_servida": "150 cm³ - 180 cm³"
+      }
+    ],
+    "aporte_nutricional_promedio_diario": {
+      "energia_kcal": 417,
+      "proteinas_g": 15.6,
+      "grasas_g": 13.4,
+      "carbohidratos_g": 56.3,
+      "calcio_mg": 110,
+      "hierro_mg": 2.9,
+      "sodio_mg": 132
+    },
+    "recomendaciones_diarias": {
+      "energia_kcal": 1300,
+      "proteinas_g": 45.5,
+      "grasas_g": 43.3,
+      "carbohidratos_g": 182.0,
+      "calcio_mg": 700,
+      "hierro_mg": 5.6,
+      "sodio_mg": 1133
+    },
+    "adecuacion_nutricional": {
+      "calorias": "32%",
+      "proteinas": "34%",
+      "grasas": "31%",
+      "carbohidratos": "31%",
+      "calcio": "16%",
+      "hierro": "52%",
+      "sodio": "12%"
+    }
+  },
+  {
+    "tabla_referencia": "Tabla 14",
+    "descripcion": "Minuta Patrón de consumo semanal para el complemento alimentario Almuerzo",
+    "modalidad": "Preparada en sitio y comida caliente transportada",
+    "nivel_educativo": "Primaria (primero, segundo y tercero)",
+    "requisitos_componentes": [
+      {
+        "componente": "Alimento proteico (Carnes/Huevo)",
+        "grupo_alimentos": "Grupo IV. Carnes, huevos, leguminosas secas, frutos secos y semillas",
+        "frecuencia": "4 por semana (carne), 1 por semana (huevo)",
+        "rango_peso_neto": "44 g - 55 g",
+        "porcion_servida": "35 g - 50 g"
+      },
+      {
+        "componente": "Alimento proteico (Leguminosas)",
+        "grupo_alimentos": "Grupo IV. Carnes, huevos, leguminosas secas, frutos secos y semillas",
+        "frecuencia": "2 veces por semana",
+        "rango_peso_neto": "8 g",
+        "porcion_servida": "24 g"
+      },
+      {
+        "componente": "Cereales",
+        "grupo_alimentos": "Grupo I. Cereales, raíces, tubérculos y plátanos",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "31 g - 37 g",
+        "porcion_servida": "70 g - 85 g"
+      },
+      {
+        "componente": "Tubérculos, raíces, plátanos o derivados de cereales",
+        "grupo_alimentos": "Grupo I. Cereales, raíces, tubérculos y plátanos",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "50 g - 70 g",
+        "porcion_servida": "50 g - 70 g"
+      },
+      {
+        "componente": "Ensalada o verdura caliente",
+        "grupo_alimentos": "Grupo II. Frutas y verduras",
+        "frecuencia": "Todos los días (verduras)",
+        "rango_peso_neto": "Mínimo 60 g",
+        "porcion_servida": "Mínimo 60 g"
+      },
+      {
+        "componente": "Bebida",
+        "grupo_alimentos": "Grupo II. Frutas y verduras",
+        "frecuencia": "Todos los días (frutas)",
+        "rango_peso_neto": "60 g - 65 g",
+        "porcion_servida": "200 cm³"
+      },
+      {
+        "componente": "Leche y productos lácteos",
+        "grupo_alimentos": "Grupo III. Leche y productos lácteos",
+        "frecuencia": "3 veces por semana",
+        "rango_peso_neto": "13 g (polvo) - 100 ml (líquida) - 12 g (queso)"
+      },
+      {
+        "componente": "Azúcares",
+        "grupo_alimentos": "Grupo VI. Azúcares",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "6 g - 8 g"
+      },
+      {
+        "componente": "Grasas",
+        "grupo_alimentos": "Grupo V. Grasas",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "45 cm³ (total semana)"
+      },
+      {
+        "componente": "Agua",
+        "grupo_alimentos": "Agua apta para el consumo humano",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "180 cm³ - 200 cm³",
+        "porcion_servida": "180 cm³ - 200 cm³"
+      }
+    ],
+    "aporte_nutricional_promedio_diario": {
+      "energia_kcal": 499,
+      "proteinas_g": 18.5,
+      "grasas_g": 16.2,
+      "carbohidratos_g": 67.3,
+      "calcio_mg": 122,
+      "hierro_mg": 3.5,
+      "sodio_mg": 152
+    },
+    "recomendaciones_diarias": {
+      "energia_kcal": 1629,
+      "proteinas_g": 57.0,
+      "grasas_g": 54.3,
+      "carbohidratos_g": 228.1,
+      "calcio_mg": 800,
+      "hierro_mg": 6.2,
+      "sodio_mg": 1200
+    },
+    "adecuacion_nutricional": {
+      "calorias": "31%",
+      "proteinas": "32%",
+      "grasas": "30%",
+      "carbohidratos": "30%",
+      "calcio": "15%",
+      "hierro": "56%",
+      "sodio": "13%"
+    }
+  },
+  {
+    "tabla_referencia": "Tabla 15",
+    "descripcion": "Minuta Patrón de consumo semanal para el complemento alimentario Almuerzo",
+    "modalidad": "Preparada en sitio y comida caliente transportada",
+    "nivel_educativo": "Primaria (cuarto y quinto)",
+    "requisitos_componentes": [
+      {
+        "componente": "Alimento proteico (Carnes/Huevo)",
+        "grupo_alimentos": "Grupo IV. Carnes, huevos, leguminosas secas, frutos secos y semillas",
+        "frecuencia": "4 por semana (carne), 1 por semana (huevo)",
+        "rango_peso_neto": "50 g - 63 g",
+        "porcion_servida": "40 g - 50 g"
+      },
+      {
+        "componente": "Alimento proteico (Leguminosas)",
+        "grupo_alimentos": "Grupo IV. Carnes, huevos, leguminosas secas, frutos secos y semillas",
+        "frecuencia": "2 veces por semana (leguminosas)",
+        "rango_peso_neto": "17 g",
+        "porcion_servida": "50 g"
+      },
+      {
+        "componente": "Cereales",
+        "grupo_alimentos": "Grupo I. Cereales, raíces, tubérculos y plátanos",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "40 g - 46 g",
+        "porcion_servida": "90 g - 105 g"
+      },
+      {
+        "componente": "Tubérculos, raíces, plátanos o derivados de cereales",
+        "grupo_alimentos": "Grupo I. Cereales, raíces, tubérculos y plátanos",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "50 g - 95 g",
+        "porcion_servida": "50 g - 95 g"
+      },
+      {
+        "componente": "Ensalada o verdura caliente",
+        "grupo_alimentos": "Grupo II. Frutas y verduras",
+        "frecuencia": "Todos los días (verduras)",
+        "rango_peso_neto": "Mínimo 65 g",
+        "porcion_servida": "Mínimo 65 g"
+      },
+      {
+        "componente": "Bebida",
+        "grupo_alimentos": "Grupo II. Frutas y verduras",
+        "frecuencia": "Todos los días (frutas)",
+        "rango_peso_neto": "60 g - 65 g",
+        "porcion_servida": "200 cm³"
+      },
+      {
+        "componente": "Leche y productos lácteos",
+        "grupo_alimentos": "Grupo III. Leche y productos lácteos",
+        "frecuencia": "3 veces por semana",
+        "rango_peso_neto": "13 g (polvo) - 100 ml (líquida) - 30 g (queso)"
+      },
+      {
+        "componente": "Azúcares",
+        "grupo_alimentos": "Grupo VI. Azúcares",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "6 g - 8 g"
+      },
+      {
+        "componente": "Grasas",
+        "grupo_alimentos": "Grupo V. Grasas",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "55 cm³ (total semana)"
+      },
+      {
+        "componente": "Agua",
+        "grupo_alimentos": "Agua apta para el consumo humano",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "180 cm³ - 200 cm³",
+        "porcion_servida": "180 cm³ - 200 cm³"
+      }
+    ],
+    "aporte_nutricional_promedio_diario": {
+      "energia_kcal": 614,
+      "proteinas_g": 22.8,
+      "grasas_g": 20.1,
+      "carbohidratos_g": 82.4,
+      "calcio_mg": 160,
+      "hierro_mg": 4.1,
+      "sodio_mg": 201
+    },
+    "recomendaciones_diarias": {
+      "energia_kcal": 1994,
+      "proteinas_g": 69.8,
+      "grasas_g": 66.5,
+      "carbohidratos_g": 279.2,
+      "calcio_mg": 1100,
+      "hierro_mg": 8.7,
+      "sodio_mg": 1500
+    },
+    "adecuacion_nutricional": {
+      "calorias": "31%",
+      "proteinas": "33%",
+      "grasas": "30%",
+      "carbohidratos": "30%",
+      "calcio": "15%",
+      "hierro": "48%",
+      "sodio": "13%"
+    }
+  },
+  {
+    "tabla_referencia": "Tabla 16",
+    "descripcion": "Minuta Patrón de consumo semanal para el complemento alimentario Almuerzo",
+    "modalidad": "Preparada en sitio y comida caliente transportada",
+    "nivel_educativo": "Secundaria",
+    "requisitos_componentes": [
+      {
+        "componente": "Alimento proteico (Carnes/Huevo)",
+        "grupo_alimentos": "Grupo IV. Carnes, huevos, leguminosas secas, frutos secos y semillas",
+        "frecuencia": "4 por semana (carne), 1 por semana (huevo)",
+        "rango_peso_neto": "50 g - 78 g",
+        "porcion_servida": "50 g"
+      },
+      {
+        "componente": "Alimento proteico (Leguminosas)",
+        "grupo_alimentos": "Grupo IV. Carnes, huevos, leguminosas secas, frutos secos y semillas",
+        "frecuencia": "2 veces por semana (leguminosas)",
+        "rango_peso_neto": "25 g",
+        "porcion_servida": "75 g"
+      },
+      {
+        "componente": "Cereales",
+        "grupo_alimentos": "Grupo I. Cereales, raíces, tubérculos y plátanos",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "56 g - 60 g",
+        "porcion_servida": "125 g - 135 g"
+      },
+      {
+        "componente": "Tubérculos, raíces, plátanos o derivados de cereales",
+        "grupo_alimentos": "Grupo I. Cereales, raíces, tubérculos y plátanos",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "65 g - 110 g",
+        "porcion_servida": "65 g - 110 g"
+      },
+      {
+        "componente": "Ensalada o verdura caliente",
+        "grupo_alimentos": "Grupo II. Frutas y verduras",
+        "frecuencia": "Todos los días (verduras)",
+        "rango_peso_neto": "Mínimo 70 g",
+        "porcion_servida": "Mínimo 70 g"
+      },
+      {
+        "componente": "Bebida",
+        "grupo_alimentos": "Grupo II. Frutas y verduras",
+        "frecuencia": "Todos los días (frutas)",
+        "rango_peso_neto": "60 g - 65 g",
+        "porcion_servida": "200 cm³"
+      },
+      {
+        "componente": "Leche y productos lácteos",
+        "grupo_alimentos": "Grupo III. Leche y productos lácteos",
+        "frecuencia": "3 veces por semana",
+        "rango_peso_neto": "15 g (polvo) - 120 ml (líquida) - 35 g (queso)"
+      },
+      {
+        "componente": "Azúcares",
+        "grupo_alimentos": "Grupo VI. Azúcares",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "8 g - 10 g"
+      },
+      {
+        "componente": "Grasas",
+        "grupo_alimentos": "Grupo V. Grasas",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "70 cm³ (semana total)"
+      },
+      {
+        "componente": "Agua",
+        "grupo_alimentos": "Agua apta para el consumo humano",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "200 cm³ - 220 cm³",
+        "porcion_servida": "200 cm³ - 220 cm³"
+      }
+    ],
+    "aporte_nutricional_promedio_diario": {
+      "energia_kcal": 764,
+      "proteinas_g": 28.3,
+      "grasas_g": 24.7,
+      "carbohidratos_g": 103.4,
+      "calcio_mg": 187,
+      "hierro_mg": 5.1,
+      "sodio_mg": 237
+    },
+    "recomendaciones_diarias": {
+      "energia_kcal": 2491,
+      "proteinas_g": 87.2,
+      "grasas_g": 83.0,
+      "carbohidratos_g": 348.7,
+      "calcio_mg": 1100,
+      "hierro_mg": 9.5,
+      "sodio_mg": 1500
+    },
+    "adecuacion_nutricional": {
+      "calorias": "31%",
+      "proteinas": "32%",
+      "grasas": "30%",
+      "carbohidratos": "30%",
+      "calcio": "17%",
+      "hierro": "53%",
+      "sodio": "16%"
+    }
+  },
+  {
+    "tabla_referencia": "Tabla 17",
+    "descripcion": "Minuta Patrón de consumo semanal para el complemento alimentario Almuerzo",
+    "modalidad": "Preparada en sitio y comida caliente transportada",
+    "nivel_educativo": "Nivel medio y ciclo complementario",
+    "requisitos_componentes": [
+      {
+        "componente": "Alimento proteico (Carnes/Huevo)",
+        "grupo_alimentos": "Grupo IV. Carnes, huevos, leguminosas secas, frutos secos y semillas",
+        "frecuencia": "4 por semana (carne) 1 por semana (huevo)",
+        "rango_peso_neto": "50 g - 94 g",
+        "porcion_servida": "50 g - 60 g"
+      },
+      {
+        "componente": "Alimento proteico (Leguminosas)",
+        "grupo_alimentos": "Grupo IV. Carnes, huevos, leguminosas secas, frutos secos y semillas",
+        "frecuencia": "2 veces por semana (leguminosas)",
+        "rango_peso_neto": "40 g",
+        "porcion_servida": "120 g"
+      },
+      {
+        "componente": "Cereales",
+        "grupo_alimentos": "Grupo I. Cereales, raíces, tubérculos y plátanos",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "62 g - 64 g",
+        "porcion_servida": "140 g - 145 g"
+      },
+      {
+        "componente": "Tubérculos, raíces, plátanos o derivados de cereales",
+        "grupo_alimentos": "Grupo I. Cereales, raíces, tubérculos y plátanos",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "80 g - 140 g",
+        "porcion_servida": "80 g - 140 g"
+      },
+      {
+        "componente": "Ensalada o verdura caliente",
+        "grupo_alimentos": "Grupo II. Frutas y verduras",
+        "frecuencia": "Todos los días (verduras)",
+        "rango_peso_neto": "Mínimo 90 g",
+        "porcion_servida": "Mínimo 90 g"
+      },
+      {
+        "componente": "Bebida",
+        "grupo_alimentos": "Grupo II. Frutas y verduras",
+        "frecuencia": "Todos los días (frutas)",
+        "rango_peso_neto": "60 g - 65 g",
+        "porcion_servida": "200 cm³"
+      },
+      {
+        "componente": "Leche y productos lácteos",
+        "grupo_alimentos": "Grupo III. Leche y productos lácteos",
+        "frecuencia": "3 veces por semana",
+        "rango_peso_neto": "15 g (polvo) - 120 ml (líquida) - 45 g (queso)"
+      },
+      {
+        "componente": "Azúcares",
+        "grupo_alimentos": "Grupo VI. Azúcares",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "8 g - 10 g"
+      },
+      {
+        "componente": "Grasas",
+        "grupo_alimentos": "Grupo V. Grasas",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "80 cm³ (semana total)"
+      },
+      {
+        "componente": "Agua",
+        "grupo_alimentos": "Agua apta para el consumo humano",
+        "frecuencia": "Todos los días",
+        "rango_peso_neto": "200 cm³ - 220 cm³",
+        "porcion_servida": "200 cm³ - 220 cm³"
+      }
+    ],
+    "aporte_nutricional_promedio_diario": {
+      "energia_kcal": 897,
+      "proteinas_g": 34.0,
+      "grasas_g": 28.8,
+      "carbohidratos_g": 120.9,
+      "calcio_mg": 223,
+      "hierro_mg": 6.1,
+      "sodio_mg": 289
+    },
+    "recomendaciones_diarias": {
+      "energia_kcal": 2900,
+      "proteinas_g": 101.5,
+      "grasas_g": 96.7,
+      "carbohidratos_g": 406.0,
+      "calcio_mg": 1100,
+      "hierro_mg": 11.8,
+      "sodio_mg": 1500
+    },
+    "adecuacion_nutricional": {
+      "calorias": "31%",
+      "proteinas": "33%",
+      "grasas": "30%",
+      "carbohidratos": "30%",
+      "calcio": "20%",
+      "hierro": "51%",
+      "sodio": "19%"
+    }
+  },
+  {
+    "tabla_referencia": "Tabla 18",
+    "descripcion": "Minuta Patrón de consumo semanal para el complemento alimentario jornada mañana/tarde - Ración Industrializada",
+    "modalidad": "Ración Industrializada",
+    "niveles_educativos": [
+      {
+        "nivel": "Preescolar",
+        "requisitos_componentes": [
+          {
+            "componente": "Leche y productos lácteos",
+            "frecuencia": "Todos los días",
+            "detalle": "Bebida 180 cm³ o Queso 15 g"
+          },
+          {
+            "componente": "Cereal acompañante",
+            "frecuencia": "Todos los días",
+            "rango_peso_neto": "12 g - 40 g"
+          },
+          {
+            "componente": "Frutas",
+            "frecuencia": "3 veces por semana",
+            "rango_peso_neto": "Mínimo 100 g"
+          },
+          {
+            "componente": "Postre",
+            "frecuencia": "2 veces por semana",
+            "rango_peso_neto": "12 g - 40 g"
+          }
+        ],
+        "aporte_nutricional_minimo": {
+          "energia_kcal": 280,
+          "proteinas_g": 7.7,
+          "grasas_g": 8.7,
+          "carbohidratos_g": 41.7,
+          "calcio_mg": 162,
+          "hierro_mg": 1.4,
+          "sodio_mg": 246
+        },
+        "recomendaciones_diarias": {
+          "energia_kcal": 1300,
+          "proteinas_g": 32.5,
+          "grasas_g": 36.1,
+          "carbohidratos_g": 211.3,
+          "calcio_mg": 700,
+          "hierro_mg": 5.6,
+          "sodio_mg": 1133
+        },
+        "adecuacion_nutricional": {
+          "calorias": "22%",
+          "proteinas": "24%",
+          "grasas": "24%",
+          "carbohidratos": "20%",
+          "calcio": "23%",
+          "hierro": "24%",
+          "sodio": "22%"
+        }
+      },
+      {
+        "nivel": "Primaria (1ro, 2do y 3ro)",
+        "requisitos_componentes": [
+          {
+            "componente": "Leche y productos lácteos",
+            "frecuencia": "Todos los días",
+            "detalle": "Bebida 200 cm³ o Queso 20 g"
+          },
+          {
+            "componente": "Cereal acompañante",
+            "frecuencia": "Todos los días",
+            "rango_peso_neto": "12 g - 60 g"
+          },
+          {
+            "componente": "Frutas",
+            "frecuencia": "3 veces por semana",
+            "rango_peso_neto": "Mínimo 100 g"
+          },
+          {
+            "componente": "Postre",
+            "frecuencia": "2 veces por semana",
+            "rango_peso_neto": "12 g - 40 g"
+          }
+        ],
+        "aporte_nutricional_minimo": {
+          "energia_kcal": 351,
+          "proteinas_g": 9.7,
+          "grasas_g": 11.2,
+          "carbohidratos_g": 51.8,
+          "calcio_mg": 194,
+          "hierro_mg": 1.8,
+          "sodio_mg": 329
+        },
+        "recomendaciones_diarias": {
+          "energia_kcal": 1629,
+          "proteinas_g": 40.7,
+          "grasas_g": 45.3,
+          "carbohidratos_g": 264.7,
+          "calcio_mg": 800,
+          "hierro_mg": 6.2,
+          "sodio_mg": 1200
+        },
+        "adecuacion_nutricional": {
+          "calorias": "22%",
+          "proteinas": "24%",
+          "grasas": "25%",
+          "carbohidratos": "20%",
+          "calcio": "24%",
+          "hierro": "28%",
+          "sodio": "27%"
+        }
+      },
+      {
+        "nivel": "Primaria (4to y 5to)",
+        "requisitos_componentes": [
+          {
+            "componente": "Leche y productos lácteos",
+            "frecuencia": "Todos los días",
+            "detalle": "Bebida 200 cm³ o Queso 25 g"
+          },
+          {
+            "componente": "Cereal acompañante",
+            "frecuencia": "Todos los días",
+            "rango_peso_neto": "24 g - 70 g"
+          },
+          {
+            "componente": "Frutas",
+            "frecuencia": "3 veces por semana",
+            "rango_peso_neto": "Mínimo 120 g"
+          },
+          {
+            "componente": "Postre",
+            "frecuencia": "2 veces por semana",
+            "rango_peso_neto": "13 g - 50 g"
+          }
+        ],
+        "aporte_nutricional_minimo": {
+          "energia_kcal": 427,
+          "proteinas_g": 11.3,
+          "grasas_g": 13.6,
+          "carbohidratos_g": 63.3,
+          "calcio_mg": 218,
+          "hierro_mg": 2.2,
+          "sodio_mg": 403
+        },
+        "recomendaciones_diarias": {
+          "energia_kcal": 1994,
+          "proteinas_g": 49.9,
+          "grasas_g": 55.4,
+          "carbohidratos_g": 324.0,
+          "calcio_mg": 1100,
+          "hierro_mg": 8.7,
+          "sodio_mg": 1500
+        },
+        "adecuacion_nutricional": {
+          "calorias": "21%",
+          "proteinas": "23%",
+          "grasas": "25%",
+          "carbohidratos": "20%",
+          "calcio": "20%",
+          "hierro": "25%",
+          "sodio": "27%"
+        }
+      },
+      {
+        "nivel": "Secundaria",
+        "requisitos_componentes": [
+          {
+            "componente": "Leche y productos lácteos",
+            "frecuencia": "Todos los días",
+            "detalle": "Bebida 200 cm³ o Queso 35 g"
+          },
+          {
+            "componente": "Cereal acompañante",
+            "frecuencia": "Todos los días",
+            "rango_peso_neto": "32 g - 95 g"
+          },
+          {
+            "componente": "Frutas",
+            "frecuencia": "3 veces por semana",
+            "rango_peso_neto": "Mínimo 120 g"
+          },
+          {
+            "componente": "Postre",
+            "frecuencia": "2 veces por semana",
+            "rango_peso_neto": "13 g - 50 g"
+          }
+        ],
+        "aporte_nutricional_minimo": {
+          "energia_kcal": 511,
+          "proteinas_g": 13.7,
+          "grasas_g": 16.9,
+          "carbohidratos_g": 74.5,
+          "calcio_mg": 248,
+          "hierro_mg": 2.8,
+          "sodio_mg": 522
+        },
+        "recomendaciones_diarias": {
+          "energia_kcal": 2491,
+          "proteinas_g": 62.3,
+          "grasas_g": 69.2,
+          "carbohidratos_g": 404.8,
+          "calcio_mg": 1100,
+          "hierro_mg": 9.5,
+          "sodio_mg": 1500
+        },
+        "adecuacion_nutricional": {
+          "calorias": "21%",
+          "proteinas": "22%",
+          "grasas": "24%",
+          "carbohidratos": "18%",
+          "calcio": "23%",
+          "hierro": "29%",
+          "sodio": "35%"
+        }
+      },
+      {
+        "nivel": "Media y Ciclo Complementario",
+        "requisitos_componentes": [
+          {
+            "componente": "Leche y productos lácteos",
+            "frecuencia": "Todos los días",
+            "detalle": "Bebida 200 cm³ o Queso 45 g"
+          },
+          {
+            "componente": "Cereal acompañante",
+            "frecuencia": "Todos los días",
+            "rango_peso_neto": "32 g - 120 g"
+          },
+          {
+            "componente": "Frutas",
+            "frecuencia": "3 veces por semana",
+            "rango_peso_neto": "Mínimo 120 g"
+          },
+          {
+            "componente": "Postre",
+            "frecuencia": "2 veces por semana",
+            "rango_peso_neto": "13 g - 50 g"
+          }
+        ],
+        "aporte_nutricional_minimo": {
+          "energia_kcal": 577,
+          "proteinas_g": 15.7,
+          "grasas_g": 19.4,
+          "carbohidratos_g": 83.0,
+          "calcio_mg": 274,
+          "hierro_mg": 3.3,
+          "sodio_mg": 622
+        },
+        "recomendaciones_diarias": {
+          "energia_kcal": 2900,
+          "proteinas_g": 72.5,
+          "grasas_g": 80.6,
+          "carbohidratos_g": 471.3,
+          "calcio_mg": 1100,
+          "hierro_mg": 11.8,
+          "sodio_mg": 1500
+        },
+        "adecuacion_nutricional": {
+          "calorias": "20%",
+          "proteinas": "22%",
+          "grasas": "24%",
+          "carbohidratos": "18%",
+          "calcio": "25%",
+          "hierro": "28%",
+          "sodio": "41%"
+        }
+      }
+    ]
+  }
+]
