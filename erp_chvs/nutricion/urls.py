@@ -19,6 +19,7 @@ urlpatterns = [
     path('api/programas-por-municipio/', views.api_programas_por_municipio, name='api_programas_por_municipio'),
     path('api/modalidades-por-programa/', views.api_modalidades_por_programa, name='api_modalidades_por_programa'),
     path('api/generar-menus-automaticos/', views.api_generar_menus_automaticos, name='api_generar_menus_automaticos'),
+    path('api/generar-menu-ia/', views.api_generar_menu_ia, name='api_generar_menu_ia'),
     path('api/crear-menu-especial/', views.api_crear_menu_especial, name='api_crear_menu_especial'),
     path('exportar-excel/<int:menu_id>/', views.download_menu_excel, name='exportar_menu_excel'),
 

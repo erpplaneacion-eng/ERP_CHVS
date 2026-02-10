@@ -260,6 +260,47 @@
     </div>
 </div>
 
+<!-- Modal para generar menú con IA -->
+<div id="modalMenuIA" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="document.getElementById('modalMenuIA').style.display='none'">&times;</span>
+        <h2><i class="fas fa-robot"></i> Generar Menú con IA (Gemini)</h2>
+        <form id="formMenuIA" onsubmit="event.preventDefault(); generarMenuIA();">
+            <input type="hidden" id="modalidadIdIA">
+
+            <div class="alert alert-info">
+                <i class="fas fa-lightbulb"></i> La IA generará un menú diario optimizado según la Minuta Patrón y los alimentos disponibles.
+            </div>
+
+            <div class="form-group">
+                <label>Nivel Educativo <span class="required">*</span></label>
+                <select id="nivelEducativoIA" class="form-control" required>
+                    <option value="">Seleccione un nivel...</option>
+                    <option value="Preescolar">Preescolar</option>
+                    <option value="Primaria (1ro, 2do y 3ro)">Primaria (1ro, 2do y 3ro)</option>
+                    <option value="Primaria (4to y 5to)">Primaria (4to y 5to)</option>
+                    <option value="Secundaria">Secundaria</option>
+                    <option value="Media y Ciclo Complementario">Media y Ciclo Complementario</option>
+                </select>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="btnSubmitIA">
+                    <i class="fas fa-magic"></i> Generar Menú
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalMenuIA').style.display='none'">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+            </div>
+        </form>
+
+        <div id="loadingIA" style="display: none; text-align: center; margin-top: 20px;">
+            <div class="spinner"></div>
+            <p>Gemini está diseñando su menú... esto puede tardar unos segundos.</p>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}

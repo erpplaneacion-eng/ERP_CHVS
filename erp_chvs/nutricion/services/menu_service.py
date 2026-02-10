@@ -8,20 +8,100 @@ from typing import Dict, List, Optional
 from django.db.models import QuerySet
 from django.db import transaction
 
-from ..models import TablaMenus, TablaPreparaciones
+from ..models import (
+    TablaMenus, TablaPreparaciones, TablaIngredientesSiesa, 
+    TablaIngredientesPorNivel, TablaAlimentos2018Icbf,
+    ComponentesAlimentos, TablaPreparacionIngredientes,
+    TablaAnalisisNutricionalMenu
+)
 from planeacion.models import Programa
-from principal.models import ModalidadesDeConsumo
+from principal.models import ModalidadesDeConsumo, TablaGradosEscolaresUapa
+
+from .gemini_service import GeminiService
+from .minuta_service import MinutaService
+from .calculo_service import CalculoService
 
 
 class MenuService:
     """
     Servicio para gestión de menús nutricionales.
-
-    Responsabilidades:
-    - CRUD de menús
-    - Generación automática de menús
-    - Validaciones de negocio
     """
+
+    # =================== GENERACIÓN CON IA ===================
+
+    @staticmethod
+    def generar_menu_con_ia(
+        id_programa: int,
+        id_modalidad: str,
+        nivel_educativo: str
+    ) -> Optional[TablaMenus]:
+        """
+        Orquestador para generar un menú usando Inteligencia Artificial (Gemini).
+        """
+        # 1. Obtener la Minuta Patrón correspondiente
+        try:
+            modalidad_obj = ModalidadesDeConsumo.objects.get(id_modalidades=id_modalidad)
+        except ModalidadesDeConsumo.DoesNotExist:
+            raise ValueError(f"La modalidad con ID {id_modalidad} no existe.")
+
+        minuta_ctx = MinutaService.obtener_por_modalidad_y_nivel(modalidad_obj.modalidad, nivel_educativo)
+        
+        if not minuta_ctx:
+            raise ValueError(f"No se encontró Minuta Patrón para '{modalidad_obj.modalidad}' y nivel '{nivel_educativo}'")
+
+        # 2. Llamar a Gemini
+        gemini = GeminiService()
+        propuesta = gemini.generar_menu(nivel_educativo, minuta_ctx)
+        
+        if not propuesta:
+            return None
+
+        # 3. Persistir en Base de Datos (Transaccional)
+        try:
+            programa = Programa.objects.get(id=id_programa)
+        except Programa.DoesNotExist:
+            raise ValueError(f"El programa con ID {id_programa} no existe.")
+        
+        with transaction.atomic():
+            # Crear el Menú
+            menu = TablaMenus.objects.create(
+                menu=propuesta.get('nombre_menu', f"Menú IA - {nivel_educativo}"),
+                id_contrato=programa,
+                id_modalidad=modalidad_obj
+            )
+
+            # Crear Preparaciones e Ingredientes sugeridos
+            for prep_data in propuesta.get('preparaciones', []):
+                componente_nombre = prep_data.get('componente', '')
+                componente = ComponentesAlimentos.objects.filter(componente__icontains=componente_nombre).first()
+
+                preparacion = TablaPreparaciones.objects.create(
+                    preparacion=prep_data.get('nombre_preparacion'),
+                    id_menu=menu,
+                    id_componente=componente
+                )
+
+                for ing_data in prep_data.get('ingredientes', []):
+                    codigo_icbf = ing_data.get('codigo_icbf')
+                    # Buscamos el ingrediente Siesa correspondiente al código ICBF
+                    # Nota: Asumimos que id_ingrediente_siesa coincide con el código ICBF o hay una relación.
+                    # Si no existe, lo creamos para que el menú sea funcional.
+                    
+                    alimento_icbf = TablaAlimentos2018Icbf.objects.filter(codigo=codigo_icbf).first()
+                    nombre_ing = alimento_icbf.nombre_del_alimento if alimento_icbf else f"Ingrediente {codigo_icbf}"
+                    
+                    ingrediente_siesa, _ = TablaIngredientesSiesa.objects.get_or_create(
+                        id_ingrediente_siesa=codigo_icbf,
+                        defaults={'nombre_ingrediente': nombre_ing}
+                    )
+
+                    # Vincular ingrediente a la preparación
+                    TablaPreparacionIngredientes.objects.get_or_create(
+                        id_preparacion=preparacion,
+                        id_ingrediente_siesa=ingrediente_siesa
+                    )
+
+            return menu
 
     # =================== OBTENCIÓN DE DATOS ===================
 
@@ -29,15 +109,6 @@ class MenuService:
     def obtener_menu(id_menu: int) -> TablaMenus:
         """
         Obtiene un menú por ID.
-
-        Args:
-            id_menu: ID del menú
-
-        Returns:
-            TablaMenus: Instancia del menú
-
-        Raises:
-            TablaMenus.DoesNotExist: Si no existe el menú
         """
         return TablaMenus.objects.select_related(
             'id_modalidad',
@@ -48,12 +119,6 @@ class MenuService:
     def obtener_menus_por_programa(id_programa: int) -> QuerySet:
         """
         Obtiene todos los menús de un programa.
-
-        Args:
-            id_programa: ID del programa
-
-        Returns:
-            QuerySet de menús del programa
         """
         return TablaMenus.objects.filter(
             id_contrato_id=id_programa
@@ -66,13 +131,6 @@ class MenuService:
     ) -> QuerySet:
         """
         Obtiene menús de un programa filtrados por modalidad.
-
-        Args:
-            id_programa: ID del programa
-            id_modalidad: ID de la modalidad
-
-        Returns:
-            QuerySet de menús filtrados
         """
         return TablaMenus.objects.filter(
             id_contrato_id=id_programa,
@@ -83,13 +141,6 @@ class MenuService:
     def contar_menus_modalidad(id_programa: int, id_modalidad: str) -> int:
         """
         Cuenta menús existentes de una modalidad.
-
-        Args:
-            id_programa: ID del programa
-            id_modalidad: ID de la modalidad
-
-        Returns:
-            int: Cantidad de menús
         """
         return TablaMenus.objects.filter(
             id_contrato_id=id_programa,
@@ -106,18 +157,6 @@ class MenuService:
     ) -> TablaMenus:
         """
         Crea un nuevo menú.
-
-        Args:
-            nombre: Nombre del menú
-            id_programa: ID del programa
-            id_modalidad: ID de la modalidad
-
-        Returns:
-            TablaMenus: Menú creado
-
-        Raises:
-            Programa.DoesNotExist: Si no existe el programa
-            ModalidadesDeConsumo.DoesNotExist: Si no existe la modalidad
         """
         programa = Programa.objects.get(id=id_programa)
         modalidad = ModalidadesDeConsumo.objects.get(id_modalidades=id_modalidad)
@@ -138,17 +177,6 @@ class MenuService:
     ) -> List[TablaMenus]:
         """
         Genera múltiples menús automáticamente.
-
-        Args:
-            id_programa: ID del programa
-            id_modalidad: ID de la modalidad
-            cantidad: Cantidad de menús a generar (default: 5)
-
-        Returns:
-            List[TablaMenus]: Lista de menús creados
-
-        Raises:
-            ValueError: Si ya existen menús para esta modalidad
         """
         # Validar que no existan menús previos
         menus_existentes = MenuService.contar_menus_modalidad(
@@ -190,17 +218,6 @@ class MenuService:
     ) -> TablaMenus:
         """
         Crea un menú con nombre personalizado.
-
-        Args:
-            nombre_personalizado: Nombre custom del menú
-            id_programa: ID del programa
-            id_modalidad: ID de la modalidad
-
-        Returns:
-            TablaMenus: Menú creado
-
-        Raises:
-            ValueError: Si el nombre está vacío
         """
         if not nombre_personalizado or nombre_personalizado.strip() == '':
             raise ValueError('El nombre del menú no puede estar vacío')
@@ -220,13 +237,6 @@ class MenuService:
     ) -> TablaMenus:
         """
         Actualiza un menú existente.
-
-        Args:
-            id_menu: ID del menú
-            datos: Dict con campos a actualizar
-
-        Returns:
-            TablaMenus: Menú actualizado
         """
         menu = TablaMenus.objects.get(id_menu=id_menu)
 
@@ -247,12 +257,6 @@ class MenuService:
     def eliminar_menu(id_menu: int) -> bool:
         """
         Elimina un menú (y sus preparaciones en cascada).
-
-        Args:
-            id_menu: ID del menú a eliminar
-
-        Returns:
-            bool: True si se eliminó correctamente
         """
         menu = TablaMenus.objects.get(id_menu=id_menu)
         menu.delete()
@@ -265,13 +269,6 @@ class MenuService:
     ) -> int:
         """
         Elimina todos los menús de una modalidad.
-
-        Args:
-            id_programa: ID del programa
-            id_modalidad: ID de la modalidad
-
-        Returns:
-            int: Cantidad de menús eliminados
         """
         menus = TablaMenus.objects.filter(
             id_contrato_id=id_programa,
@@ -289,13 +286,6 @@ class MenuService:
     def validar_puede_crear_menu(id_programa: int, id_modalidad: str) -> bool:
         """
         Valida si se puede crear un menú para esta modalidad.
-
-        Args:
-            id_programa: ID del programa
-            id_modalidad: ID de la modalidad
-
-        Returns:
-            bool: True si se puede crear
         """
         # Verificar que programa existe
         if not Programa.objects.filter(id=id_programa).exists():
@@ -315,12 +305,6 @@ class MenuService:
     def serializar_menu(menu: TablaMenus) -> Dict:
         """
         Convierte un menú a diccionario.
-
-        Args:
-            menu: Instancia del menú
-
-        Returns:
-            Dict con datos del menú
         """
         return {
             'id_menu': menu.id_menu,
@@ -340,11 +324,5 @@ class MenuService:
     def serializar_lista_menus(menus: QuerySet) -> List[Dict]:
         """
         Serializa una lista de menús.
-
-        Args:
-            menus: QuerySet de menús
-
-        Returns:
-            List[Dict]: Lista de menús serializados
         """
         return [MenuService.serializar_menu(menu) for menu in menus]

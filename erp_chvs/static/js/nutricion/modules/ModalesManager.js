@@ -15,7 +15,8 @@ class ModalesManager {
             agregarIngredientes: 'modalAgregarIngredientes',
             analisisNutricional: 'modalAnalisisNutricional',
             menuEspecial: 'modalMenuEspecial',
-            editarMenuEspecial: 'modalEditarMenuEspecial'
+            editarMenuEspecial: 'modalEditarMenuEspecial',
+            menuIA: 'modalMenuIA'
         };
         
         this.init();

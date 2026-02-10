@@ -28,7 +28,48 @@ from .models import (
 from .forms import AlimentoForm
 from principal.models import ModalidadesDeConsumo
 from planeacion.models import Programa
-from .services import AnalisisNutricionalService
+from .services import AnalisisNutricionalService, MenuService
+
+
+@login_required
+@csrf_exempt
+def api_generar_menu_ia(request):
+    """API para generar un menú usando Inteligencia Artificial (Gemini)"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        programa_id = data.get('programa_id')
+        modalidad_id = data.get('modalidad_id')
+        nivel_educativo = data.get('nivel_educativo')
+
+        if not all([programa_id, modalidad_id, nivel_educativo]):
+            return JsonResponse({'error': 'Faltan parámetros (programa_id, modalidad_id, nivel_educativo)'}, status=400)
+
+        # Delegar al servicio
+        menu = MenuService.generar_menu_con_ia(
+            id_programa=programa_id,
+            id_modalidad=modalidad_id,
+            nivel_educativo=nivel_educativo
+        )
+
+        if not menu:
+            return JsonResponse({'error': 'La IA no pudo generar una propuesta válida. Intente nuevamente.'}, status=500)
+
+        return JsonResponse({
+            'success': True,
+            'menu': {
+                'id': menu.id_menu,
+                'nombre': menu.menu,
+                'modalidad': menu.id_modalidad.modalidad
+            }
+        })
+
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': f'Error inesperado: {str(e)}'}, status=500)
 
 
 # =================== VISTAS GENERALES ===================

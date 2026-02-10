@@ -163,9 +163,10 @@ STATICFILES_DIRS = [BASE_DIR / "static"] # Directorio para archivos estáticos d
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
+# Configuración de IA
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 
+# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # A dónde redirigir al usuario después de un login exitoso.

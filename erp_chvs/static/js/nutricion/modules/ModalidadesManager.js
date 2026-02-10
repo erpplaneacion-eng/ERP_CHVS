@@ -249,6 +249,12 @@ class ModalidadesManager {
                 </div>
                 <div class="menu-label-especial">Crear Menú Especial</div>
             </div>
+            <div class="menu-card menu-card-ia" onclick="abrirModalMenuIA('${modalidadId}')">
+                <div class="menu-numero-ia">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="menu-label-ia">Generar con IA</div>
+            </div>
         `;
 
         return tarjetasMenus + tarjetaEspecial;
