@@ -4,7 +4,15 @@ import json
 import logging
 from ..models import TablaAlimentos2018Icbf
 
+from decimal import Decimal
+
 logger = logging.getLogger(__name__)
+
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super(DecimalEncoder, self).default(obj)
 
 class GeminiService:
     """
@@ -47,7 +55,7 @@ class GeminiService:
                 "na": a['sodio_mg']
             })
         
-        return json.dumps(alimentos_list, ensure_ascii=False)
+        return json.dumps(alimentos_list, ensure_ascii=False, cls=DecimalEncoder)
 
     def generar_menu(self, nivel_educativo, minuta_patron_context):
         """
@@ -68,7 +76,7 @@ class GeminiService:
         4. Responde ÚNICAMENTE en formato JSON.
 
         MINUTA PATRÓN (Contexto):
-        {json.dumps(minuta_patron_context, ensure_ascii=False)}
+        {json.dumps(minuta_patron_context, ensure_ascii=False, cls=DecimalEncoder)}
 
         LISTA DE MATERIAS PRIMAS (Código, Nombre, Energía, Prot, Gras, CHO, Ca, Fe, Na):
         {alimentos_ctx}
