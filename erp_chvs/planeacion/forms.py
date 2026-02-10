@@ -87,9 +87,9 @@ class ProgramaForm(forms.ModelForm):
         if len(contrato.strip()) < 3:
             raise ValidationError("El número de contrato debe tener al menos 3 caracteres.")
 
-        # Solo permitir letras, números, guiones y guiones bajos
-        if not re.match(r'^[a-zA-Z0-9\-_]+$', contrato):
-            raise ValidationError("El número de contrato solo puede contener letras, números, guiones y guiones bajos.")
+        # Permitir letras, números, guiones, guiones bajos, espacios, puntos y slashes
+        if not re.match(r'^[a-zA-Z0-9\-_/\.\s]+$', contrato):
+            raise ValidationError("El número de contrato contiene caracteres no válidos.")
 
         return contrato.strip().upper()
 

@@ -4,6 +4,19 @@
 {% block title %}Listado de Programas{% endblock %}
 
 {% block content %}
+    <style>
+        .errorlist {
+            color: #dc3545;
+            list-style: none;
+            padding: 0;
+            margin: 5px 0 10px 0;
+            font-size: 0.875rem;
+            font-weight: bold;
+        }
+        .errorlist li {
+            margin-bottom: 2px;
+        }
+    </style>
     <h1>Programas de Planeación</h1>
     <p>Estos son los programas activos e inactivos gestionados en el sistema.</p>
     
@@ -16,7 +29,7 @@
     <div class="module-dashboard">
         {% for programa in programas %}
             <div class="card" style="text-decoration: none;">
-                {% if programa.imagen %}
+                {% if programa.imagen and programa.imagen.name %}
                     <img src="{{ programa.imagen.url }}" alt="Imagen de {{ programa.programa }}" style="width: 100%; height: 180px; object-fit: cover; border-top-left-radius: 15px; border-top-right-radius: 15px;">
                 {% else %}
                     <div class="card-icon"><i class="fas fa-image"></i></div>
@@ -46,7 +59,7 @@
                             data-fecha-final="{{ programa.fecha_final|date:'Y-m-d' }}"
                             data-estado="{{ programa.estado }}"
                             data-contrato="{{ programa.contrato }}"
-                            data-imagen-url="{{ programa.imagen.url|default:'' }}">
+                            data-imagen-url="{% if programa.imagen and programa.imagen.name %}{{ programa.imagen.url }}{% endif %}">
                         Ver / Editar
                     </button>
                 </div>
@@ -62,11 +75,13 @@
     <div id="program-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="modal-title">Añadir Nuevo Programa</h2>
+                <h2 id="modal-title">{% if editing_id %}Editar Programa{% else %}Añadir Nuevo Programa{% endif %}</h2>
                 <span class="modal-close-btn">&times;</span>
             </div>
             <div class="modal-body">
-                <form id="program-form" method="POST" action="" enctype="multipart/form-data">
+                <form id="program-form" method="POST" 
+                      action="{% if editing_id %}{% url 'planeacion:editar_programa' editing_id %}{% else %}{% url 'planeacion:lista_programas' %}{% endif %}" 
+                      enctype="multipart/form-data">
                     {% csrf_token %}
                     
                     {{ form.as_p }}
@@ -83,4 +98,20 @@
             </div>
         </div>
     </div>
+
+    {% if form.errors %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('program-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                // También podemos desplazar el scroll hacia el primer error
+                const firstError = modal.querySelector('.errorlist');
+                if (firstError) {
+                    firstError.scrollIntoView();
+                }
+            }
+        });
+    </script>
+    {% endif %}
 {% endblock %}

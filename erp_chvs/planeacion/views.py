@@ -53,6 +53,15 @@ def editar_programa(request, pk):
         if form.is_valid():
             form.save()
             return redirect('planeacion:lista_programas')
+        else:
+            # Si el formulario es inválido, mostramos la lista de nuevo con los errores
+            programas = Programa.objects.all().order_by('-fecha_inicial')
+            context = {
+                'programas': programas,
+                'form': form,
+                'editing_id': pk  # Para saber que estamos editando
+            }
+            return render(request, 'planeacion/lista_programas.html', context)
 
     return redirect('planeacion:lista_programas')
 
