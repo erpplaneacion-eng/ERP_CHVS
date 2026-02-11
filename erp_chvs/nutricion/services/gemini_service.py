@@ -57,26 +57,51 @@ class GeminiService:
         
         return json.dumps(alimentos_list, ensure_ascii=False, cls=DecimalEncoder)
 
-    def generar_menu(self, nivel_educativo, minuta_patron_context):
+    def generar_menu(self, niveles_educativos, minuta_patron_contexts):
         """
-        Genera una propuesta de menú basada en el nivel educativo y la minuta patrón.
+        Genera una propuesta de menú con pesos específicos para TODOS los niveles educativos.
+
+        Args:
+            niveles_educativos: Lista de niveles educativos
+            minuta_patron_contexts: Dict con contextos de minuta patrón por nivel
+
+        Returns:
+            Dict con menú y pesos por nivel
         """
-        alimentos_ctx = self._get_alimentos_context()
+        from ..models import ComponentesAlimentos
+        from .minuta_service import MinutaService
         
+        alimentos_ctx = self._get_alimentos_context()
+        instrucciones_adicionales = MinutaService.obtener_instrucciones()
+        
+        # Obtener lista de componentes válidos
+        componentes_validos = list(ComponentesAlimentos.objects.values_list('componente', flat=True))
+
+        # Construir contexto de minutas para todos los niveles
+        minutas_por_nivel = {}
+        for nivel in niveles_educativos:
+            if nivel in minuta_patron_contexts:
+                minutas_por_nivel[nivel] = minuta_patron_contexts[nivel]
+
         prompt = f"""
         Eres un Nutricionista Experto del Programa de Alimentación Escolar (PAE) en Colombia.
-        Tu tarea es generar un MENÚ DIARIO (un solo día) que cumpla ESTRICTAMENTE con la Minuta Patrón y los requerimientos nutricionales.
+        Tu tarea es generar un MENÚ DIARIO (un solo día) con PESOS ESPECÍFICOS PARA CADA NIVEL EDUCATIVO.
 
-        NIVEL EDUCATIVO: {nivel_educativo}
-        
+        NIVELES EDUCATIVOS: {', '.join(niveles_educativos)}
+
+        INSTRUCCIONES TÉCNICAS DE PLANEACIÓN:
+        {instrucciones_adicionales}
+
         REGLAS DE ORO:
         1. Solo usa alimentos de la LISTA DE MATERIAS PRIMAS adjunta.
-        2. El aporte nutricional TOTAL del menú debe estar lo más cerca posible del 'aporte_nutricional_minimo' de la Minuta Patrón.
-        3. Respeta los 'requisitos_componentes' (frecuencia y detalle).
-        4. Responde ÚNICAMENTE en formato JSON.
+        2. El aporte nutricional TOTAL del menú debe estar lo más cerca posible del 'aporte_nutricional_promedio_diario' de cada Minuta Patrón.
+        3. Respeta los 'requisitos_componentes' (frecuencia y rango de pesos).
+        4. IMPORTANTE: Genera pesos diferentes para cada nivel educativo según sus necesidades.
+        5. El campo 'componente' DEBE ser uno de los siguientes valores exactos: {', '.join(componentes_validos)}.
+        6. Responde ÚNICAMENTE en formato JSON.
 
-        MINUTA PATRÓN (Contexto):
-        {json.dumps(minuta_patron_context, ensure_ascii=False, cls=DecimalEncoder)}
+        MINUTAS PATRÓN POR NIVEL:
+        {json.dumps(minutas_por_nivel, ensure_ascii=False, cls=DecimalEncoder, indent=2)}
 
         LISTA DE MATERIAS PRIMAS (Código, Nombre, Energía, Prot, Gras, CHO, Ca, Fe, Na):
         {alimentos_ctx}
@@ -87,16 +112,26 @@ class GeminiService:
             "preparaciones": [
                 {{
                     "nombre_preparacion": "Nombre del plato (ej: Arroz con Pollo)",
-                    "componente": "Nombre del componente según Minuta Patrón",
-                    "ingredientes": [
-                        {{
-                            "codigo_icbf": "Código de la materia prima",
-                            "peso_neto_sugerido": 50
-                        }}
-                    ]
+                    "componente": "Nombre del componente EXACTO de la lista proporcionada",
+                    "ingredientes_por_nivel": {{
+                        "Preescolar": [
+                            {{
+                                "codigo_icbf": "Código de la materia prima",
+                                "peso_neto": 50
+                            }}
+                        ],
+                        "Primaria (primero, segundo y tercero)": [
+                            {{
+                                "codigo_icbf": "Código de la materia prima",
+                                "peso_neto": 70
+                            }}
+                        ]
+                    }}
                 }}
             ]
         }}
+
+        IMPORTANTE: Debes incluir pesos para TODOS los niveles: {', '.join(niveles_educativos)}
         """
 
         try:

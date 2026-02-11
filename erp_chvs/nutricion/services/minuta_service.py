@@ -5,74 +5,64 @@ from django.conf import settings
 class MinutaService:
     """
     Servicio para gestionar la lectura y filtrado de la Minuta Patrón 
-    desde el archivo JSON.
+    desde el archivo JSON jerárquico.
     """
     
-    # Mapeo de nombres de base de datos a nombres estándar del JSON (Resolución)
+    # Mapeo de modalidades para asegurar coincidencia con el JSON
     NORMALIZACION_MODALIDADES = {
-        'COMPLEMENTO ALIMENTARIO PREPARADO AM': 'Preparada en sitio y comida caliente transportada',
-        'COMPLEMENTO ALIMENTARIO PREPARADO PM': 'Preparada en sitio y comida caliente transportada',
-        'ALMUERZO JORNADA UNICA': 'Preparada en sitio y comida caliente transportada',
-        'REFUERZO COMPLEMENTO AM/PM': 'Preparada en sitio y comida caliente transportada',
-        'COMPLEMENTO AM/PM INDUSTRIALIZADO': 'Ración Industrializada',
+        'COMPLEMENTO ALIMENTARIO PREPARADO AM': 'COMPLEMENTO ALIMENTARIO PREPARADO AM',
+        'COMPLEMENTO ALIMENTARIO PREPARADO PM': 'COMPLEMENTO ALIMENTARIO PREPARADO AM',
+        'REFUERZO COMPLEMENTO AM/PM': 'COMPLEMENTO ALIMENTARIO PREPARADO AM',
+        'ALMUERZO JORNADA UNICA': 'ALMUERZO JORNADA UNICA',
+        'COMPLEMENTO AM/PM INDUSTRIALIZADO': 'COMPLEMENTO AM/PM INDUSTRIALIZADO',
     }
 
-    # Mapeo de niveles educativos (Base de Datos -> Posibles nombres en JSON)
-    NORMALIZACION_NIVELES = {
-        'prescolar': ['Preescolar'],
-        'primaria_1_2_3': [
-            'Primaria (primero, segundo y tercero)', 
-            'Primaria (1ro, 2do y 3ro)'
-        ],
-        'primaria_4_5': [
-            'Primaria (cuarto y quinto)', 
-            'Primaria (4to y 5to)'
-        ],
-        'secundaria': ['Secundaria'],
-        'media_ciclo_complementario': [
-            'Nivel medio y ciclo complementario', 
-            'Media y Ciclo Complementario'
-        ],
-    }
-    
     @staticmethod
     def _get_json_path():
         return os.path.join(settings.BASE_DIR, 'nutricion', 'data', 'minuta_patron.json')
 
     @classmethod
-    def obtener_todas(cls):
+    def obtener_estructura_completa(cls):
+        """Retorna el diccionario completo del JSON."""
         with open(cls._get_json_path(), 'r', encoding='utf-8') as f:
             return json.load(f)
 
     @classmethod
-    def obtener_por_tabla(cls, tabla_referencia):
-        minutas = cls.obtener_todas()
-        return next((m for m in minutas if m['tabla_referencia'] == tabla_referencia), None)
+    def obtener_todas(cls):
+        """
+        Mantiene compatibilidad con código anterior pero retorna 
+        la sección de categorías.
+        """
+        data = cls.obtener_estructura_completa()
+        return data.get('categorias', {})
+
+    @classmethod
+    def obtener_instrucciones(cls):
+        """Retorna las instrucciones de planeación del nutricionista."""
+        data = cls.obtener_estructura_completa()
+        return data.get('instrucciones_planeacion', "")
 
     @classmethod
     def obtener_por_modalidad_y_nivel(cls, modalidad, nivel):
         """
-        Busca una minuta que coincida con la modalidad y el nivel educativo.
+        Busca una minuta que coincida con la modalidad y el nivel educativo 
+        navegando la estructura jerárquica: Categoría -> Modalidad -> Nivel.
         """
-        # Normalizar el nombre de la modalidad y nivel si existen en nuestros mapas
+        # Normalizar el nombre de la modalidad
         modalidad_estandar = cls.NORMALIZACION_MODALIDADES.get(modalidad, modalidad)
-        nivel_estandar = cls.NORMALIZACION_NIVELES.get(nivel, nivel)
         
-        minutas = cls.obtener_todas()
-        for m in minutas:
-            if m['modalidad'] == modalidad_estandar:
-                # Si la tabla tiene 'nivel_educativo' directo (Tablas 8-17)
-                if 'nivel_educativo' in m and m['nivel_educativo'] == nivel_estandar:
-                    return m
-                # Si la tabla tiene una lista de 'niveles_educativos' (Tabla 18)
-                if 'niveles_educativos' in m:
-                    for n in m['niveles_educativos']:
-                        if n['nivel'] == nivel_estandar:
-                            # Retornamos un objeto combinado para que la IA tenga el contexto de la modalidad
-                            return {
-                                "tabla_referencia": m['tabla_referencia'],
-                                "modalidad": m['modalidad'],
-                                "descripcion": m['descripcion'],
-                                **n
-                            }
+        categorias = cls.obtener_todas()
+        
+        # Recorrer categorías (ej: "Complemento Alimentario Preparado (AM/PM)")
+        for desc, modalidades in categorias.items():
+            if modalidad_estandar in modalidades:
+                nivel_data = modalidades[modalidad_estandar].get(nivel)
+                if nivel_data:
+                    # Retornamos un objeto plano para compatibilidad con el resto del sistema
+                    return {
+                        "modalidad": modalidad_estandar,
+                        "descripcion": desc,
+                        "nivel_educativo": nivel,
+                        **nivel_data
+                    }
         return None

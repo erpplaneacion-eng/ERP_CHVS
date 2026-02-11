@@ -9,11 +9,14 @@ from django.db.models import QuerySet
 from django.db import transaction
 
 from ..models import (
-    TablaMenus, TablaPreparaciones, TablaIngredientesSiesa, 
+    TablaMenus, TablaPreparaciones, TablaIngredientesSiesa,
     TablaIngredientesPorNivel, TablaAlimentos2018Icbf,
     ComponentesAlimentos, TablaPreparacionIngredientes,
     TablaAnalisisNutricionalMenu
 )
+import logging
+
+logger = logging.getLogger(__name__)
 from planeacion.models import Programa
 from principal.models import ModalidadesDeConsumo, TablaGradosEscolaresUapa
 
@@ -33,75 +36,269 @@ class MenuService:
     def generar_menu_con_ia(
         id_programa: int,
         id_modalidad: str,
-        nivel_educativo: str
+        niveles_educativos: List[str] = None
     ) -> Optional[TablaMenus]:
         """
         Orquestador para generar un menú usando Inteligencia Artificial (Gemini).
+        Genera menú con pesos específicos para TODOS los niveles educativos.
+
+        Args:
+            id_programa: ID del programa
+            id_modalidad: ID de la modalidad de consumo
+            niveles_educativos: Lista de niveles educativos (opcional, usa todos si no se especifica)
+
+        Returns:
+            TablaMenus: Menú creado con análisis nutricional por nivel
         """
-        # 1. Obtener la Minuta Patrón correspondiente
+        from .calculo_service import CalculoService
+
+        # 1. Validaciones y obtención de datos base
+        try:
+            programa = Programa.objects.get(id=id_programa)
+        except Programa.DoesNotExist:
+            raise ValueError(f"El programa con ID {id_programa} no existe.")
+
         try:
             modalidad_obj = ModalidadesDeConsumo.objects.get(id_modalidades=id_modalidad)
         except ModalidadesDeConsumo.DoesNotExist:
             raise ValueError(f"La modalidad con ID {id_modalidad} no existe.")
 
-        minuta_ctx = MinutaService.obtener_por_modalidad_y_nivel(modalidad_obj.modalidad, nivel_educativo)
-        
-        if not minuta_ctx:
-            raise ValueError(f"No se encontró Minuta Patrón para '{modalidad_obj.modalidad}' y nivel '{nivel_educativo}'")
+        # 2. Obtener todos los niveles educativos si no se especificaron
+        if niveles_educativos is None:
+            niveles_educativos = list(
+                TablaGradosEscolaresUapa.objects.values_list('nivel_escolar_uapa', flat=True)
+            )
 
-        # 2. Llamar a Gemini
+        # 3. Obtener minutas patrón para cada nivel
+        minutas_por_nivel = {}
+        for nivel in niveles_educativos:
+            minuta_ctx = MinutaService.obtener_por_modalidad_y_nivel(
+                modalidad_obj.modalidad,
+                nivel
+            )
+            if minuta_ctx:
+                minutas_por_nivel[nivel] = minuta_ctx
+            else:
+                logger.warning(f"No se encontró Minuta Patrón para '{modalidad_obj.modalidad}' y nivel '{nivel}'")
+
+        if not minutas_por_nivel:
+            raise ValueError(f"No se encontraron Minutas Patrón para '{modalidad_obj.modalidad}'")
+
+        # 4. Llamar a Gemini con todos los niveles
         gemini = GeminiService()
-        propuesta = gemini.generar_menu(nivel_educativo, minuta_ctx)
-        
+        propuesta = gemini.generar_menu(
+            niveles_educativos=list(minutas_por_nivel.keys()),
+            minuta_patron_contexts=minutas_por_nivel
+        )
+
         if not propuesta:
+            logger.error("Gemini no devolvió una propuesta válida")
             return None
 
-        # 3. Persistir en Base de Datos (Transaccional)
-        try:
-            programa = Programa.objects.get(id=id_programa)
-        except Programa.DoesNotExist:
-            raise ValueError(f"El programa con ID {id_programa} no existe.")
-        
+        # 5. Persistir en Base de Datos (Transaccional)
         with transaction.atomic():
-            # Crear el Menú
+            # 5.1 Crear el Menú base
             menu = TablaMenus.objects.create(
-                menu=propuesta.get('nombre_menu', f"Menú IA - {nivel_educativo}"),
+                menu=propuesta.get('nombre_menu', f"Menú IA - {modalidad_obj.modalidad}"),
                 id_contrato=programa,
                 id_modalidad=modalidad_obj
             )
 
-            # Crear Preparaciones e Ingredientes sugeridos
-            for prep_data in propuesta.get('preparaciones', []):
-                componente_nombre = prep_data.get('componente', '')
-                componente = ComponentesAlimentos.objects.filter(componente__icontains=componente_nombre).first()
+            logger.info(f"Menú creado: {menu.menu} (ID: {menu.id_menu})")
 
+            # 5.2 Crear preparaciones (compartidas por todos los niveles)
+            preparaciones_creadas = {}
+
+            for prep_data in propuesta.get('preparaciones', []):
+                prep_nombre = prep_data.get('nombre_preparacion')
+                componente_nombre = prep_data.get('componente', '')
+
+                # Buscar componente
+                componente = ComponentesAlimentos.objects.filter(
+                    componente__icontains=componente_nombre
+                ).first()
+
+                # Crear preparación
                 preparacion = TablaPreparaciones.objects.create(
-                    preparacion=prep_data.get('nombre_preparacion'),
+                    preparacion=prep_nombre,
                     id_menu=menu,
                     id_componente=componente
                 )
+                preparaciones_creadas[prep_nombre] = preparacion
 
-                for ing_data in prep_data.get('ingredientes', []):
-                    codigo_icbf = ing_data.get('codigo_icbf')
-                    # Buscamos el ingrediente Siesa correspondiente al código ICBF
-                    # Nota: Asumimos que id_ingrediente_siesa coincide con el código ICBF o hay una relación.
-                    # Si no existe, lo creamos para que el menú sea funcional.
-                    
+                logger.info(f"  Preparación creada: {prep_nombre}")
+
+                # 5.3 Vincular ingredientes base (sin peso, solo relación M2M)
+                ingredientes_por_nivel = prep_data.get('ingredientes_por_nivel', {})
+
+                # Obtener todos los códigos únicos de ingredientes
+                codigos_unicos = set()
+                for nivel_ings in ingredientes_por_nivel.values():
+                    for ing in nivel_ings:
+                        codigos_unicos.add(ing.get('codigo_icbf'))
+
+                # Crear relaciones base en TablaPreparacionIngredientes
+                for codigo_icbf in codigos_unicos:
                     alimento_icbf = TablaAlimentos2018Icbf.objects.filter(codigo=codigo_icbf).first()
-                    nombre_ing = alimento_icbf.nombre_del_alimento if alimento_icbf else f"Ingrediente {codigo_icbf}"
-                    
-                    ingrediente_siesa, _ = TablaIngredientesSiesa.objects.get_or_create(
+
+                    if not alimento_icbf:
+                        logger.warning(f"    Alimento ICBF {codigo_icbf} no encontrado, omitiendo...")
+                        continue
+
+                    # Crear/obtener ingrediente en Siesa
+                    ingrediente_siesa, created = TablaIngredientesSiesa.objects.get_or_create(
                         id_ingrediente_siesa=codigo_icbf,
-                        defaults={'nombre_ingrediente': nombre_ing}
+                        defaults={'nombre_ingrediente': alimento_icbf.nombre_del_alimento}
                     )
 
-                    # Vincular ingrediente a la preparación
+                    # Vincular a preparación (sin peso)
                     TablaPreparacionIngredientes.objects.get_or_create(
                         id_preparacion=preparacion,
                         id_ingrediente_siesa=ingrediente_siesa
                     )
 
+            # 5.4 Crear análisis nutricional POR CADA NIVEL con pesos específicos
+            for nivel, nivel_data in ingredientes_por_nivel.items():
+                # Convertir nombre del JSON al nombre de la BD
+                nivel_bd = MenuService._convertir_nivel_json_a_bd(nivel)
+
+                # Obtener objeto de nivel escolar
+                nivel_obj = TablaGradosEscolaresUapa.objects.filter(
+                    nivel_escolar_uapa=nivel_bd
+                ).first()
+
+                if not nivel_obj:
+                    logger.warning(f"  Nivel '{nivel}' (BD: '{nivel_bd}') no encontrado en BD, omitiendo...")
+                    continue
+
+                # Crear análisis nutricional para este nivel
+                analisis = TablaAnalisisNutricionalMenu.objects.create(
+                    id_menu=menu,
+                    id_nivel_escolar_uapa=nivel_obj
+                )
+
+                logger.info(f"  Análisis nutricional creado para: {nivel}")
+
+                # 5.5 Por cada preparación, guardar ingredientes CON PESOS
+                for prep_nombre, preparacion in preparaciones_creadas.items():
+                    # Buscar datos de esta preparación en la propuesta
+                    prep_propuesta = next(
+                        (p for p in propuesta['preparaciones'] if p['nombre_preparacion'] == prep_nombre),
+                        None
+                    )
+
+                    if not prep_propuesta:
+                        continue
+
+                    # Obtener ingredientes para este nivel
+                    ingredientes_nivel = prep_propuesta.get('ingredientes_por_nivel', {}).get(nivel, [])
+
+                    for ing_data in ingredientes_nivel:
+                        codigo_icbf = ing_data.get('codigo_icbf')
+                        peso_neto = float(ing_data.get('peso_neto', 0))
+
+                        if peso_neto <= 0:
+                            continue
+
+                        # Obtener alimento ICBF
+                        alimento_icbf = TablaAlimentos2018Icbf.objects.filter(codigo=codigo_icbf).first()
+
+                        if not alimento_icbf:
+                            continue
+
+                        # Obtener ingrediente Siesa
+                        ingrediente_siesa = TablaIngredientesSiesa.objects.filter(
+                            id_ingrediente_siesa=codigo_icbf
+                        ).first()
+
+                        if not ingrediente_siesa:
+                            continue
+
+                        # Calcular valores nutricionales
+                        valores_nutricionales = CalculoService.calcular_valores_nutricionales_alimento(
+                            alimento_icbf,
+                            peso_neto
+                        )
+
+                        # Calcular peso bruto
+                        parte_comestible = float(alimento_icbf.parte_comestible_field or 100)
+                        peso_bruto = CalculoService.calcular_peso_bruto(peso_neto, parte_comestible)
+
+                        # ✅ GUARDAR EN TablaIngredientesPorNivel con pesos y valores calculados
+                        TablaIngredientesPorNivel.objects.create(
+                            id_analisis=analisis,
+                            id_preparacion=preparacion,
+                            id_ingrediente_siesa=ingrediente_siesa,
+                            peso_neto=peso_neto,
+                            peso_bruto=peso_bruto,
+                            parte_comestible=parte_comestible,
+                            calorias=valores_nutricionales['calorias'],
+                            proteina=valores_nutricionales['proteina'],
+                            grasa=valores_nutricionales['grasa'],
+                            cho=valores_nutricionales['cho'],
+                            calcio=valores_nutricionales['calcio'],
+                            hierro=valores_nutricionales['hierro'],
+                            sodio=valores_nutricionales['sodio']
+                        )
+
+                        logger.info(f"    [{nivel}] {ingrediente_siesa.nombre_ingrediente}: {peso_neto}g")
+
+                # 5.6 Calcular totales del análisis nutricional
+                MenuService._actualizar_totales_analisis(analisis)
+
+            logger.info(f"✅ Menú generado exitosamente con IA para {len(minutas_por_nivel)} niveles")
             return menu
+
+    @staticmethod
+    def _convertir_nivel_json_a_bd(nivel_json: str) -> str:
+        """
+        Convierte un nombre de nivel del JSON de minutas al nombre en la BD.
+
+        Args:
+            nivel_json: Nombre del nivel en el JSON (ej: "Preescolar")
+
+        Returns:
+            Nombre del nivel en la BD (ej: "prescolar")
+        """
+        # Mapeo inverso: de JSON a BD
+        MAPEO_INVERSO = {
+            'Preescolar': 'prescolar',
+            'Primaria (primero, segundo y tercero)': 'primaria_1_2_3',
+            'Primaria (1ro, 2do y 3ro)': 'primaria_1_2_3',
+            'Primaria (cuarto y quinto)': 'primaria_4_5',
+            'Primaria (4to y 5to)': 'primaria_4_5',
+            'Secundaria': 'secundaria',
+            'Nivel medio y ciclo complementario': 'media_ciclo_complementario',
+            'Media y Ciclo Complementario': 'media_ciclo_complementario',
+        }
+        return MAPEO_INVERSO.get(nivel_json, nivel_json)
+
+    @staticmethod
+    def _actualizar_totales_analisis(analisis: TablaAnalisisNutricionalMenu):
+        """
+        Calcula y actualiza los totales nutricionales de un análisis.
+        """
+        ingredientes = analisis.ingredientes_configurados.all()
+
+        total_calorias = sum(float(ing.calorias) for ing in ingredientes)
+        total_proteina = sum(float(ing.proteina) for ing in ingredientes)
+        total_grasa = sum(float(ing.grasa) for ing in ingredientes)
+        total_cho = sum(float(ing.cho) for ing in ingredientes)
+        total_calcio = sum(float(ing.calcio) for ing in ingredientes)
+        total_hierro = sum(float(ing.hierro) for ing in ingredientes)
+        total_sodio = sum(float(ing.sodio) for ing in ingredientes)
+
+        # Actualizar análisis
+        analisis.total_calorias = total_calorias
+        analisis.total_proteina = total_proteina
+        analisis.total_grasa = total_grasa
+        analisis.total_cho = total_cho
+        analisis.total_calcio = total_calcio
+        analisis.total_hierro = total_hierro
+        analisis.total_sodio = total_sodio
+        analisis.save()
+
+        logger.info(f"    Totales calculados: {total_calorias:.1f} kcal, {total_proteina:.1f}g prot")
 
     # =================== OBTENCIÓN DE DATOS ===================
 
