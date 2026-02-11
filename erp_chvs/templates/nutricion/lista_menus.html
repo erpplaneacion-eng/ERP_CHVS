@@ -269,24 +269,30 @@
             <input type="hidden" id="modalidadIdIA">
 
             <div class="alert alert-info">
-                <i class="fas fa-lightbulb"></i> La IA generará un menú diario optimizado según la Minuta Patrón y los alimentos disponibles.
+                <i class="fas fa-lightbulb"></i> <strong>Generación Multi-nivel Automática</strong>
+                <p style="margin-top: 10px; margin-bottom: 0;">
+                    La IA generará un menú diario completo con <strong>pesos específicos para todos los niveles educativos</strong>:
+                </p>
+                <ul style="margin-top: 8px; margin-bottom: 0; padding-left: 20px;">
+                    <li>Preescolar</li>
+                    <li>Primaria (1°, 2° y 3°)</li>
+                    <li>Primaria (4° y 5°)</li>
+                    <li>Secundaria</li>
+                    <li>Media y Ciclo Complementario</li>
+                </ul>
+                <p style="margin-top: 10px; margin-bottom: 0; font-size: 0.9em; color: #666;">
+                    ⏱️ Este proceso puede tardar 15-30 segundos. El menú incluirá preparaciones, ingredientes y análisis nutricional completo.
+                </p>
             </div>
 
-            <div class="form-group">
-                <label>Nivel Educativo <span class="required">*</span></label>
-                <select id="nivelEducativoIA" class="form-control" required>
-                    <option value="">Seleccione un nivel...</option>
-                    <option value="Preescolar">Preescolar</option>
-                    <option value="Primaria (1ro, 2do y 3ro)">Primaria (1ro, 2do y 3ro)</option>
-                    <option value="Primaria (4to y 5to)">Primaria (4to y 5to)</option>
-                    <option value="Secundaria">Secundaria</option>
-                    <option value="Media y Ciclo Complementario">Media y Ciclo Complementario</option>
-                </select>
+            <div class="alert alert-warning" style="margin-top: 15px;">
+                <i class="fas fa-exclamation-triangle"></i> <strong>Importante:</strong>
+                Asegúrese de tener configurada la clave API de Gemini en las variables de entorno (.env).
             </div>
 
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary" id="btnSubmitIA">
-                    <i class="fas fa-magic"></i> Generar Menú
+                    <i class="fas fa-magic"></i> Generar Menú para Todos los Niveles
                 </button>
                 <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalMenuIA').style.display='none'">
                     <i class="fas fa-times"></i> Cancelar
@@ -296,7 +302,11 @@
 
         <div id="loadingIA" style="display: none; text-align: center; margin-top: 20px;">
             <div class="spinner"></div>
-            <p>Gemini está diseñando su menú... esto puede tardar unos segundos.</p>
+            <p><strong>Gemini está generando su menú...</strong></p>
+            <p style="font-size: 0.9em; color: #666;">
+                Creando preparaciones y calculando porciones para los 5 niveles educativos.<br>
+                Por favor espere, esto puede tardar hasta 30 segundos.
+            </p>
         </div>
     </div>
 </div>

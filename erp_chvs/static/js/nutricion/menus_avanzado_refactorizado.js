@@ -343,13 +343,13 @@ class MenusAvanzadosController {
 
     /**
      * Generar menú con IA (Gemini)
+     * Genera automáticamente para TODOS los niveles educativos
      */
     async generarMenuIA() {
         const modalidadId = document.getElementById('modalidadIdIA').value;
-        const nivelEducativo = document.getElementById('nivelEducativoIA').value;
-        
-        if (!modalidadId || !nivelEducativo) {
-            alert('Por favor seleccione un nivel educativo.');
+
+        if (!modalidadId) {
+            alert('Error: modalidad no seleccionada. Por favor intente de nuevo.');
             return;
         }
 
@@ -370,8 +370,8 @@ class MenusAvanzadosController {
                 },
                 body: JSON.stringify({
                     programa_id: this.programaActual.id,
-                    modalidad_id: modalidadId,
-                    nivel_educativo: nivelEducativo
+                    modalidad_id: modalidadId
+                    // No se envía nivel_educativo - se genera para TODOS los niveles
                 })
             });
 
@@ -379,10 +379,18 @@ class MenusAvanzadosController {
 
             if (data.success) {
                 this.modalesManager.cerrarModal(this.modalesManager.modales.menuIA);
-                
+
                 Swal.fire({
-                    title: '¡Menú Generado!',
-                    text: `La IA ha creado el menú: ${data.menu.nombre}. ¿Deseas gestionarlo ahora?`,
+                    title: '¡Menú Generado Exitosamente!',
+                    html: `
+                        <p>La IA ha creado el menú: <strong>${data.menu.nombre}</strong></p>
+                        <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                            ✅ Preparaciones creadas<br>
+                            ✅ Ingredientes configurados<br>
+                            ✅ Análisis nutricional para los 5 niveles educativos
+                        </p>
+                        <p style="margin-top: 10px;">¿Deseas gestionar las preparaciones ahora?</p>
+                    `,
                     icon: 'success',
                     showCancelButton: true,
                     confirmButtonText: 'Sí, ir a preparaciones',
@@ -390,7 +398,7 @@ class MenusAvanzadosController {
                 }).then((result) => {
                     // Recargar modalidades para ver el nuevo menú
                     this.cargarModalidadesPorPrograma(this.programaActual.id);
-                    
+
                     if (result.isConfirmed) {
                         setTimeout(() => {
                             this.abrirGestionPreparaciones(data.menu.id, data.menu.nombre);
@@ -402,7 +410,20 @@ class MenusAvanzadosController {
             }
         } catch (error) {
             console.error('Error al generar menú con IA:', error);
-            Swal.fire('Error', error.message, 'error');
+            Swal.fire({
+                title: 'Error al Generar Menú',
+                html: `
+                    <p>${error.message}</p>
+                    <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                        <strong>Posibles causas:</strong><br>
+                        • Clave API de Gemini no configurada<br>
+                        • Error de conexión con Gemini<br>
+                        • No hay Minuta Patrón para esta modalidad<br>
+                        • No hay alimentos ICBF en la base de datos
+                    </p>
+                `,
+                icon: 'error'
+            });
             formIA.style.display = 'block';
             loadingIA.style.display = 'none';
             btnSubmit.disabled = false;

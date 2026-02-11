@@ -34,7 +34,10 @@ from .services import AnalisisNutricionalService, MenuService
 @login_required
 @csrf_exempt
 def api_generar_menu_ia(request):
-    """API para generar un menú usando Inteligencia Artificial (Gemini)"""
+    """
+    API para generar un menú usando Inteligencia Artificial (Gemini).
+    Genera automáticamente el menú con pesos específicos para TODOS los niveles educativos.
+    """
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
@@ -42,16 +45,15 @@ def api_generar_menu_ia(request):
         data = json.loads(request.body)
         programa_id = data.get('programa_id')
         modalidad_id = data.get('modalidad_id')
-        nivel_educativo = data.get('nivel_educativo')
 
-        if not all([programa_id, modalidad_id, nivel_educativo]):
-            return JsonResponse({'error': 'Faltan parámetros (programa_id, modalidad_id, nivel_educativo)'}, status=400)
+        if not all([programa_id, modalidad_id]):
+            return JsonResponse({'error': 'Faltan parámetros (programa_id, modalidad_id)'}, status=400)
 
-        # Delegar al servicio
+        # Delegar al servicio - None genera para TODOS los niveles educativos
         menu = MenuService.generar_menu_con_ia(
             id_programa=programa_id,
             id_modalidad=modalidad_id,
-            nivel_educativo=nivel_educativo
+            niveles_educativos=None  # None = generar para todos los niveles (5 niveles)
         )
 
         if not menu:
@@ -63,7 +65,8 @@ def api_generar_menu_ia(request):
                 'id': menu.id_menu,
                 'nombre': menu.menu,
                 'modalidad': menu.id_modalidad.modalidad
-            }
+            },
+            'mensaje': 'Menú generado exitosamente con análisis nutricional para todos los niveles educativos'
         })
 
     except ValueError as e:
