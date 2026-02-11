@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**ERP_CHVS** is a Django 5.2.5 ERP system for managing Colombia's "Programa de Alimentación Escolar" (PAE - School Feeding Program). It handles billing/focalization lists, nutritional planning, and institutional management.
+**ERP_CHVS** is a Django 5.2.5 ERP system for managing Colombia's "Programa de Alimentación Escolar" (PAE - School Feeding Program). It handles billing/focalization lists, nutritional planning, institutional management, and AI-powered menu generation.
+
+**Deprecated apps**: `ocr_validation` and `iagenerativa` have been removed from the project.
 
 ## Common Commands
 
@@ -29,6 +31,29 @@ python manage.py collectstatic
 
 # Database operations
 python manage.py loaddata <fixture>.json # Load data from fixtures
+
+# AI/Gemini testing (from erp_chvs/ directory)
+python test_gemini.py                    # Test Gemini AI menu generation
+```
+
+## Project Structure
+
+```
+ERP_CHVS/
+├── erp_chvs/                  # Django project root
+│   ├── manage.py              # Django management script
+│   ├── test_gemini.py         # Standalone Gemini AI integration test
+│   ├── requirements.txt       # Python dependencies
+│   ├── .env                   # Environment variables (not in git)
+│   ├── erp_chvs/             # Project settings
+│   ├── templates/            # Global templates
+│   ├── static/               # Static files (CSS, JS)
+│   ├── principal/            # Master data app
+│   ├── nutricion/            # Nutrition planning app
+│   ├── planeacion/           # Planning app
+│   ├── facturacion/          # Billing/focalization app
+│   └── dashboard/            # Dashboard app
+└── archivos excel/           # Excel file input/output directory
 ```
 
 ## Architecture
@@ -63,8 +88,13 @@ views.py → services.py → persistence_service.py → models.py
 - **fuzzy_matching.py**: String matching algorithms (e.g., sede names with typos)
 
 **Nutricion module services** (`nutricion/services/`):
-- `MenuService`, `AnalisisNutricionalService`, `PreparacionService`
-- `IngredienteService`, `ProgramaService`, `CalculoService`
+- `MenuService`: Menu CRUD operations and business logic
+- `GeminiService`: AI-powered menu generation using Google Gemini API
+- `AnalisisNutricionalService`: Nutritional analysis calculations
+- `PreparacionService`: Preparation management
+- `IngredienteService`: Ingredient operations
+- `ProgramaService`: Program-related operations
+- `CalculoService`: Nutritional calculations and adequacy percentages
 
 ### Key Model Relationships
 
@@ -120,8 +150,21 @@ ModalidadesDeConsumo ← TablaPreparaciones → TablaPreparacionIngredientes →
 - **Fuzzy matching**: Configurable threshold for matching external data to official records
 
 ### Configuration
-- Environment variables via `.env`: `DJANGO_DEBUG`, `DB_*`, `GEMINI_API_KEY`
-- Module constants in `config.py` files (thresholds, column names, messages)
+
+**Environment variables** (`.env` file):
+- `DJANGO_SECRET_KEY`: Secret key for cryptographic signing
+- `DJANGO_DEBUG`: Set to `True` for development, `False` for production
+- `DJANGO_ALLOWED_HOSTS`: Comma-separated list of allowed hosts
+- `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`: PostgreSQL connection
+- `GEMINI_API_KEY`: Google Gemini API key for AI menu generation
+
+**Production security** (auto-enabled when `DEBUG=False`):
+- HTTPS redirect, secure cookies, HSTS headers
+- XSS and content-type sniffing protection
+- Proxy SSL header support
+
+**Application constants**:
+- Module-specific in `config.py` files (thresholds, column names, messages)
 - Locale: Spanish (Colombian) `es-col`, timezone `America/Bogota`
 - Decimal separator: `.` (point) for consistency
 
@@ -162,8 +205,30 @@ Two-stage process to validate before saving:
 
 ### Nutricion: Menu Planning & Analysis
 
+**Menu creation workflow**:
 - Menus link to consumption modalities (breakfast, lunch, snack, etc.)
-- Preparations contain ingredients from ICBF 2018 food tables
-- Nutritional analysis calculates adequacy percentages per school level
-- Frontend JS managers handle complex interactions with auto-save
-- Master Excel generator produces planning documents
+- Each menu contains preparations with ingredients from ICBF 2018 food tables
+- Nutritional analysis calculates adequacy percentages per school level (preescolar, primaria, bachillerato)
+- Frontend JS managers (`menus_avanzado_refactorizado.js`) coordinate complex interactions
+- Auto-save functionality (`guardado-automatico.js`) prevents data loss
+
+**AI-powered menu generation** (GeminiService):
+- Uses Google Gemini API to generate complete menu suggestions
+- Takes consumption modality and nutritional requirements as input
+- Returns structured menu with preparations and ingredients
+- Test via `python test_gemini.py` from `erp_chvs/` directory
+
+**Master Excel generator** (`master_excel_generator.py`):
+- Produces comprehensive planning documents with nutritional breakdowns
+- Includes drawings, charts, and formatted tables via `excel_drawing_utils.py`
+- Exports menu cycles, ingredient lists, and cost calculations
+- Used for official reporting and program documentation
+
+### Facturacion: PDF Attendance Reports
+
+**PDF generation workflow**:
+- Uses `reportlab` for PDF creation (`pdf_generator.py`, `pdf_service.py`)
+- Generates attendance reports from focalization data
+- Supports batch processing of multiple reports
+- Templates include institutional headers, beneficiary tables, and signatures
+- Output stored in `archivos excel/` or configured output directory
