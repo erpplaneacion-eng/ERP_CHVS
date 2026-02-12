@@ -28,13 +28,13 @@ const GuardadoAutomatico = {
 
             // Recopilar porcentajes de adecuación
             const porcentajes = {
-                calorias: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="calorias_kcal"]`).val()) || 0,
-                proteina: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="proteina_g"]`).val()) || 0,
-                grasa: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="grasa_g"]`).val()) || 0,
-                cho: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="cho_g"]`).val()) || 0,
-                calcio: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="calcio_mg"]`).val()) || 0,
-                hierro: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="hierro_mg"]`).val()) || 0,
-                sodio: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="sodio_mg"]`).val()) || 0
+                calorias: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="calorias"]`).val()) || 0,
+                proteina: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="proteina"]`).val()) || 0,
+                grasa: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="grasa"]`).val()) || 0,
+                cho: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="cho"]`).val()) || 0,
+                calcio: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="calcio"]`).val()) || 0,
+                hierro: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="hierro"]`).val()) || 0,
+                sodio: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="sodio"]`).val()) || 0
             };
 
             // Recopilar datos de ingredientes configurados

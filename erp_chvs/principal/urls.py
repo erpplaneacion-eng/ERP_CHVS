@@ -41,4 +41,8 @@ urlpatterns = [
     # APIs para niveles grado escolar
     path('api/niveles-grado/', views.api_niveles_grado, name='api_niveles_grado'),
     path('api/niveles-grado/<str:id_grado_escolar>/', views.api_nivel_grado_detail, name='api_nivel_grado_detail'),
+
+    # Modalidades por Municipio
+    path('municipio-modalidades/', views.municipio_modalidades, name='municipio_modalidades'),
+    path('api/municipio-modalidades/guardar/', views.api_guardar_municipio_modalidades, name='api_guardar_municipio_modalidades'),
 ]

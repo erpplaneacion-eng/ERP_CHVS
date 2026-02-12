@@ -162,9 +162,9 @@ class AnalisisNutricionalManager {
                             <i class="fas fa-graduation-cap"></i>
                             ${nivel.nivel_escolar.nombre}
                             <div class="nivel-summary">
-                                <span class="badge badge-primary">${nivel.totales.calorias_kcal.toFixed(0)} Kcal</span>
-                                <span class="badge badge-success">${nivel.totales.peso_neto_total.toFixed(0)}g neto</span>
-                                <span class="badge badge-warning">${nivel.totales.peso_bruto_total.toFixed(0)}g bruto</span>
+                                <span class="badge badge-primary">${nivel.totales.calorias.toFixed(0)} Kcal</span>
+                                <span class="badge badge-success">${nivel.totales.peso_neto.toFixed(0)}g neto</span>
+                                <span class="badge badge-warning">${nivel.totales.peso_bruto.toFixed(0)}g bruto</span>
                             </div>
                             <i class="fas fa-chevron-down toggle-icon" style="transform: ${isOpen ? 'rotate(180deg)' : 'rotate(0deg)'}"></i>
                         </button>
@@ -222,13 +222,13 @@ class AnalisisNutricionalManager {
      */
     crearGridTotales(totales, porcentajes, index) {
         const nutrientes = [
-            { key: 'calorias_kcal', label: 'Calorías', suffix: 'Kcal', id: `nivel-${index}-calorias` },
-            { key: 'proteina_g', label: 'Proteína', suffix: 'g', id: `nivel-${index}-proteina` },
-            { key: 'grasa_g', label: 'Grasa', suffix: 'g', id: `nivel-${index}-grasa` },
-            { key: 'cho_g', label: 'CHO', suffix: 'g', id: `nivel-${index}-cho` },
-            { key: 'calcio_mg', label: 'Calcio', suffix: 'mg', id: `nivel-${index}-calcio` },
-            { key: 'hierro_mg', label: 'Hierro', suffix: 'mg', id: `nivel-${index}-hierro` },
-            { key: 'sodio_mg', label: 'Sodio', suffix: 'mg', id: `nivel-${index}-sodio` }
+            { key: 'calorias', label: 'Calorías', suffix: 'Kcal', id: `nivel-${index}-calorias` },
+            { key: 'proteina', label: 'Proteína', suffix: 'g', id: `nivel-${index}-proteina` },
+            { key: 'grasa', label: 'Grasa', suffix: 'g', id: `nivel-${index}-grasa` },
+            { key: 'cho', label: 'CHO', suffix: 'g', id: `nivel-${index}-cho` },
+            { key: 'calcio', label: 'Calcio', suffix: 'mg', id: `nivel-${index}-calcio` },
+            { key: 'hierro', label: 'Hierro', suffix: 'mg', id: `nivel-${index}-hierro` },
+            { key: 'sodio', label: 'Sodio', suffix: 'mg', id: `nivel-${index}-sodio` }
         ];
 
         return nutrientes.map(nutriente => `
@@ -246,13 +246,13 @@ class AnalisisNutricionalManager {
      */
     crearGridRequerimientos(requerimientos) {
         const nutrientes = [
-            { key: 'calorias_kcal', label: 'Calorías', suffix: 'Kcal' },
-            { key: 'proteina_g', label: 'Proteína', suffix: 'g' },
-            { key: 'grasa_g', label: 'Grasa', suffix: 'g' },
-            { key: 'cho_g', label: 'CHO', suffix: 'g' },
-            { key: 'calcio_mg', label: 'Calcio', suffix: 'mg' },
-            { key: 'hierro_mg', label: 'Hierro', suffix: 'mg' },
-            { key: 'sodio_mg', label: 'Sodio', suffix: 'mg' }
+            { key: 'calorias', label: 'Calorías', suffix: 'Kcal' },
+            { key: 'proteina', label: 'Proteína', suffix: 'g' },
+            { key: 'grasa', label: 'Grasa', suffix: 'g' },
+            { key: 'cho', label: 'CHO', suffix: 'g' },
+            { key: 'calcio', label: 'Calcio', suffix: 'mg' },
+            { key: 'hierro', label: 'Hierro', suffix: 'mg' },
+            { key: 'sodio', label: 'Sodio', suffix: 'mg' }
         ];
 
         return nutrientes.map(nutriente => `
@@ -271,13 +271,13 @@ class AnalisisNutricionalManager {
      */
     crearGridAdecuacion(porcentajes, index) {
         const nutrientes = [
-            { key: 'calorias_kcal', label: 'Calorías' },
-            { key: 'proteina_g', label: 'Proteína' },
-            { key: 'grasa_g', label: 'Grasa' },
-            { key: 'cho_g', label: 'CHO' },
-            { key: 'calcio_mg', label: 'Calcio' },
-            { key: 'hierro_mg', label: 'Hierro' },
-            { key: 'sodio_mg', label: 'Sodio' }
+            { key: 'calorias', label: 'Calorías' },
+            { key: 'proteina', label: 'Proteína' },
+            { key: 'grasa', label: 'Grasa' },
+            { key: 'cho', label: 'CHO' },
+            { key: 'calcio', label: 'Calcio' },
+            { key: 'hierro', label: 'Hierro' },
+            { key: 'sodio', label: 'Sodio' }
         ];
 
         return nutrientes.map(nutriente => `
@@ -359,25 +359,25 @@ class AnalisisNutricionalManager {
             nutrientesFinales = ingrediente.valores_finales_guardados;
             
             baseNutrientesPor100g = {
-                calorias_kcal: (nutrientesFinales.calorias / pesoNeto) * 100,
-                proteina_g: (nutrientesFinales.proteina / pesoNeto) * 100,
-                grasa_g: (nutrientesFinales.grasa / pesoNeto) * 100,
-                cho_g: (nutrientesFinales.cho / pesoNeto) * 100,
-                calcio_mg: (nutrientesFinales.calcio / pesoNeto) * 100,
-                hierro_mg: (nutrientesFinales.hierro / pesoNeto) * 100,
-                sodio_mg: (nutrientesFinales.sodio / pesoNeto) * 100,
+                calorias: (nutrientesFinales.calorias / pesoNeto) * 100,
+                proteina: (nutrientesFinales.proteina / pesoNeto) * 100,
+                grasa: (nutrientesFinales.grasa / pesoNeto) * 100,
+                cho: (nutrientesFinales.cho / pesoNeto) * 100,
+                calcio: (nutrientesFinales.calcio / pesoNeto) * 100,
+                hierro: (nutrientesFinales.hierro / pesoNeto) * 100,
+                sodio: (nutrientesFinales.sodio / pesoNeto) * 100,
             };
         } else {
             baseNutrientesPor100g = ingrediente.valores_por_100g;
             const factor = pesoNeto / 100;
             nutrientesFinales = {
-                calorias: baseNutrientesPor100g.calorias_kcal * factor,
-                proteina: baseNutrientesPor100g.proteina_g * factor,
-                grasa: baseNutrientesPor100g.grasa_g * factor,
-                cho: baseNutrientesPor100g.cho_g * factor,
-                calcio: baseNutrientesPor100g.calcio_mg * factor,
-                hierro: baseNutrientesPor100g.hierro_mg * factor,
-                sodio: baseNutrientesPor100g.sodio_mg * factor,
+                calorias: baseNutrientesPor100g.calorias * factor,
+                proteina: baseNutrientesPor100g.proteina * factor,
+                grasa: baseNutrientesPor100g.grasa * factor,
+                cho: baseNutrientesPor100g.cho * factor,
+                calcio: baseNutrientesPor100g.calcio * factor,
+                hierro: baseNutrientesPor100g.hierro * factor,
+                sodio: baseNutrientesPor100g.sodio * factor,
             };
         }
 
@@ -398,13 +398,13 @@ class AnalisisNutricionalManager {
                            step="1"
                            data-base="${ingrediente.peso_neto_base}"
                            data-parte-comestible="${ingrediente.parte_comestible}"
-                           data-calorias="${baseNutrientesPor100g.calorias_kcal}"
-                           data-proteina="${baseNutrientesPor100g.proteina_g}"
-                           data-grasa="${baseNutrientesPor100g.grasa_g}"
-                           data-cho="${baseNutrientesPor100g.cho_g}"
-                           data-calcio="${baseNutrientesPor100g.calcio_mg}"
-                           data-hierro="${baseNutrientesPor100g.hierro_mg}"
-                           data-sodio="${baseNutrientesPor100g.sodio_mg}"
+                           data-calorias="${baseNutrientesPor100g.calorias}"
+                           data-proteina="${baseNutrientesPor100g.proteina}"
+                           data-grasa="${baseNutrientesPor100g.grasa}"
+                           data-cho="${baseNutrientesPor100g.cho}"
+                           data-calcio="${baseNutrientesPor100g.calcio}"
+                           data-hierro="${baseNutrientesPor100g.hierro}"
+                           data-sodio="${baseNutrientesPor100g.sodio}"
                            data-prep-id="${ingrediente.id_preparacion_real || prepIndex}"
                            data-ing-id="${ingrediente.id_ingrediente || ingrediente.id_ingrediente_siesa || ingIndex}">
                 </td>
@@ -565,13 +565,13 @@ class AnalisisNutricionalManager {
         console.log(`[DEBUG] Porcentajes calculados:`, porcentajes);
         
         // Actualizar campos de porcentajes en la interfaz
-        $(`#nivel-${nivelIndex}-calorias_kcal-pct`).val(porcentajes.calorias.toFixed(1));
-        $(`#nivel-${nivelIndex}-proteina_g-pct`).val(porcentajes.proteina.toFixed(1));
-        $(`#nivel-${nivelIndex}-grasa_g-pct`).val(porcentajes.grasa.toFixed(1));
-        $(`#nivel-${nivelIndex}-cho_g-pct`).val(porcentajes.cho.toFixed(1));
-        $(`#nivel-${nivelIndex}-calcio_mg-pct`).val(porcentajes.calcio.toFixed(1));
-        $(`#nivel-${nivelIndex}-hierro_mg-pct`).val(porcentajes.hierro.toFixed(1));
-        $(`#nivel-${nivelIndex}-sodio_mg-pct`).val(porcentajes.sodio.toFixed(1));
+        $(`#nivel-${nivelIndex}-calorias-pct`).val(porcentajes.calorias.toFixed(1));
+        $(`#nivel-${nivelIndex}-proteina-pct`).val(porcentajes.proteina.toFixed(1));
+        $(`#nivel-${nivelIndex}-grasa-pct`).val(porcentajes.grasa.toFixed(1));
+        $(`#nivel-${nivelIndex}-cho-pct`).val(porcentajes.cho.toFixed(1));
+        $(`#nivel-${nivelIndex}-calcio-pct`).val(porcentajes.calcio.toFixed(1));
+        $(`#nivel-${nivelIndex}-hierro-pct`).val(porcentajes.hierro.toFixed(1));
+        $(`#nivel-${nivelIndex}-sodio-pct`).val(porcentajes.sodio.toFixed(1));
         
         // Actualizar badges del header del acordeón
         $(`#heading-${nivelIndex} .badge-primary`).text(`${totales.calorias.toFixed(0)} Kcal`);
@@ -591,13 +591,13 @@ class AnalisisNutricionalManager {
      */
     actualizarColoresEstado(nivelIndex, porcentajes) {
         const nutrientes = [
-            { key: 'calorias_kcal', nombre: 'calorias', totalId: 'calorias' },
-            { key: 'proteina_g', nombre: 'proteina', totalId: 'proteina' },
-            { key: 'grasa_g', nombre: 'grasa', totalId: 'grasa' },
-            { key: 'cho_g', nombre: 'cho', totalId: 'cho' },
-            { key: 'calcio_mg', nombre: 'calcio', totalId: 'calcio' },
-            { key: 'hierro_mg', nombre: 'hierro', totalId: 'hierro' },
-            { key: 'sodio_mg', nombre: 'sodio', totalId: 'sodio' }
+            { key: 'calorias', nombre: 'calorias', totalId: 'calorias' },
+            { key: 'proteina', nombre: 'proteina', totalId: 'proteina' },
+            { key: 'grasa', nombre: 'grasa', totalId: 'grasa' },
+            { key: 'cho', nombre: 'cho', totalId: 'cho' },
+            { key: 'calcio', nombre: 'calcio', totalId: 'calcio' },
+            { key: 'hierro', nombre: 'hierro', totalId: 'hierro' },
+            { key: 'sodio', nombre: 'sodio', totalId: 'sodio' }
         ];
 
         nutrientes.forEach(nutriente => {
@@ -769,7 +769,7 @@ class AnalisisNutricionalManager {
         
         nutrientes.forEach(nutriente => {
             const total = totales[nutriente] || 0;
-            const requerimiento = requerimientos[nutriente + '_kcal'] || requerimientos[nutriente + '_g'] || requerimientos[nutriente + '_mg'] || 0;
+            const requerimiento = requerimientos[nutriente] || 0;
             
             if (requerimiento > 0) {
                 porcentajes[nutriente] = Math.min((total / requerimiento) * 100, 100);

@@ -267,15 +267,15 @@ class AnalisisNutricionalService:
             [ing for prep in preparaciones_nivel for ing in prep['ingredientes']]
         )
 
-        # Preparar requerimientos (con sufijos para consistencia con totales)
+        # Preparar requerimientos (estandarizado sin sufijos)
         requerimientos_dict = {
-            'calorias_kcal': float(requerimiento.calorias_kcal),
-            'proteina_g': float(requerimiento.proteina_g),
-            'grasa_g': float(requerimiento.grasa_g),
-            'cho_g': float(requerimiento.cho_g),
-            'calcio_mg': float(requerimiento.calcio_mg),
-            'hierro_mg': float(requerimiento.hierro_mg),
-            'sodio_mg': float(requerimiento.sodio_mg)
+            'calorias': float(requerimiento.calorias_kcal),
+            'proteina': float(requerimiento.proteina_g),
+            'grasa': float(requerimiento.grasa_g),
+            'cho': float(requerimiento.cho_g),
+            'calcio': float(requerimiento.calcio_mg),
+            'hierro': float(requerimiento.hierro_mg),
+            'sodio': float(requerimiento.sodio_mg)
         }
 
         # Calcular porcentajes

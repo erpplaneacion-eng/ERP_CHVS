@@ -32,10 +32,6 @@ class CalculoService:
 
         Returns:
             float: Peso bruto en gramos
-
-        Examples:
-            >>> CalculoService.calcular_peso_bruto(100, 85)
-            117.65
         """
         # Validar que parte_comestible esté en rango válido
         parte_comestible = max(1.0, min(100.0, parte_comestible))
@@ -51,17 +47,6 @@ class CalculoService:
         Calcula el valor de un nutriente para un peso específico.
 
         Fórmula: Nutriente = (Valor por 100g × Peso Neto) / 100
-
-        Args:
-            valor_por_100g: Valor del nutriente por 100g
-            peso_neto: Peso neto en gramos
-
-        Returns:
-            float: Valor del nutriente para el peso dado
-
-        Examples:
-            >>> CalculoService.calcular_nutriente_por_peso(130, 150)
-            195.0
         """
         return (valor_por_100g * peso_neto) / 100
 
@@ -100,23 +85,17 @@ class CalculoService:
         """
         Suma los valores nutricionales de todos los ingredientes.
         Prioritiza el uso de valores pre-calculados si existen.
-
-        Returns:
-            Dict con claves que coinciden con el frontend:
-            - calorias_kcal, proteina_g, grasa_g, cho_g
-            - calcio_mg, hierro_mg, sodio_mg
-            - peso_neto_total, peso_bruto_total
         """
         totales = {
-            'calorias_kcal': 0.0,
-            'proteina_g': 0.0,
-            'grasa_g': 0.0,
-            'cho_g': 0.0,
-            'calcio_mg': 0.0,
-            'hierro_mg': 0.0,
-            'sodio_mg': 0.0,
-            'peso_neto_total': 0.0,
-            'peso_bruto_total': 0.0
+            'calorias': 0.0,
+            'proteina': 0.0,
+            'grasa': 0.0,
+            'cho': 0.0,
+            'calcio': 0.0,
+            'hierro': 0.0,
+            'sodio': 0.0,
+            'peso_neto': 0.0,
+            'peso_bruto': 0.0
         }
 
         for ing in ingredientes:
@@ -125,30 +104,32 @@ class CalculoService:
                 if 'valores_finales_guardados' in ing:
                     # Si existen, úsalos directamente
                     valores_finales = ing['valores_finales_guardados']
-                    totales['calorias_kcal'] += valores_finales.get('calorias', 0)
-                    totales['proteina_g'] += valores_finales.get('proteina', 0)
-                    totales['grasa_g'] += valores_finales.get('grasa', 0)
-                    totales['cho_g'] += valores_finales.get('cho', 0)
-                    totales['calcio_mg'] += valores_finales.get('calcio', 0)
-                    totales['hierro_mg'] += valores_finales.get('hierro', 0)
-                    totales['sodio_mg'] += valores_finales.get('sodio', 0)
+                    totales['calorias'] += valores_finales.get('calorias', 0)
+                    totales['proteina'] += valores_finales.get('proteina', 0)
+                    totales['grasa'] += valores_finales.get('grasa', 0)
+                    totales['cho'] += valores_finales.get('cho', 0)
+                    totales['calcio'] += valores_finales.get('calcio', 0)
+                    totales['hierro'] += valores_finales.get('hierro', 0)
+                    totales['sodio'] += valores_finales.get('sodio', 0)
                 else:
                     # Si no, recalcula desde los datos base del ICBF
+                    # NOTA: Los datos base pueden venir como calorias_kcal o calorias dependiendo del contexto
                     valores = ing.get('valores_por_100g', {})
                     peso_neto = ing.get('peso_neto_base', 0)
                     factor = peso_neto / 100
 
-                    totales['calorias_kcal'] += valores.get('calorias_kcal', 0) * factor
-                    totales['proteina_g'] += valores.get('proteina_g', 0) * factor
-                    totales['grasa_g'] += valores.get('grasa_g', 0) * factor
-                    totales['cho_g'] += valores.get('cho_g', 0) * factor
-                    totales['calcio_mg'] += valores.get('calcio_mg', 0) * factor
-                    totales['hierro_mg'] += valores.get('hierro_mg', 0) * factor
-                    totales['sodio_mg'] += valores.get('sodio_mg', 0) * factor
+                    # Soporta ambos formatos de key temporalmente para robustez
+                    totales['calorias'] += (valores.get('calorias') or valores.get('calorias_kcal', 0)) * factor
+                    totales['proteina'] += (valores.get('proteina') or valores.get('proteina_g', 0)) * factor
+                    totales['grasa'] += (valores.get('grasa') or valores.get('grasa_g', 0)) * factor
+                    totales['cho'] += (valores.get('cho') or valores.get('cho_g', 0)) * factor
+                    totales['calcio'] += (valores.get('calcio') or valores.get('calcio_mg', 0)) * factor
+                    totales['hierro'] += (valores.get('hierro') or valores.get('hierro_mg', 0)) * factor
+                    totales['sodio'] += (valores.get('sodio') or valores.get('sodio_mg', 0)) * factor
 
-                # Sumar los pesos siempre, independientemente de la ruta de cálculo de nutrientes
-                totales['peso_neto_total'] += ing.get('peso_neto_base', 0)
-                totales['peso_bruto_total'] += ing.get('peso_bruto_base', 0)
+                # Sumar los pesos siempre
+                totales['peso_neto'] += ing.get('peso_neto_base', 0)
+                totales['peso_bruto'] += ing.get('peso_bruto_base', 0)
 
         return totales
 
@@ -162,22 +143,6 @@ class CalculoService:
     ) -> float:
         """
         Calcula el porcentaje de adecuación nutricional.
-
-        Fórmula: % Adecuación = (Total Actual / Requerimiento) × 100
-
-        Args:
-            total_actual: Valor total actual del nutriente
-            requerimiento: Valor requerido del nutriente
-            limitar_a_100: Si True, limita el resultado a máximo 100%
-
-        Returns:
-            float: Porcentaje de adecuación (0-100 o sin límite)
-
-        Examples:
-            >>> CalculoService.calcular_porcentaje_adecuacion(400, 800)
-            50.0
-            >>> CalculoService.calcular_porcentaje_adecuacion(900, 800)
-            100.0  # Limitado a 100
         """
         if requerimiento <= 0:
             return 0.0
@@ -196,19 +161,10 @@ class CalculoService:
     ) -> Dict[str, Dict[str, float]]:
         """
         Calcula porcentajes de adecuación para todos los nutrientes.
-
-        Args:
-            totales: Dict con totales de nutrientes
-            requerimientos: Dict con requerimientos nutricionales
-
-        Returns:
-            Dict con porcentaje y estado para cada nutriente
         """
         from ..utils import calcular_estado_adecuacion
 
         porcentajes = {}
-        # Mapeo de claves de totales a claves de requerimientos si fuera necesario, 
-        # pero aquí estandarizamos ambas a nombres simples.
         nutrientes = ['calorias', 'proteina', 'grasa', 'cho',
                      'calcio', 'hierro', 'sodio']
 
@@ -235,19 +191,6 @@ class CalculoService:
     ) -> float:
         """
         Calcula el factor de escala para ajustar pesos proporcionalmente.
-
-        Args:
-            valor_objetivo: Valor que se quiere alcanzar
-            valor_actual: Valor actual
-
-        Returns:
-            float: Factor de escala (multiplicador)
-
-        Examples:
-            >>> CalculoService.calcular_factor_escala(400, 200)
-            2.0
-            >>> CalculoService.calcular_factor_escala(300, 600)
-            0.5
         """
         if valor_actual <= 0:
             return 1.0
@@ -261,13 +204,6 @@ class CalculoService:
     ) -> List[Dict]:
         """
         Ajusta todos los pesos de ingredientes manteniendo proporciones.
-
-        Args:
-            ingredientes: Lista de ingredientes con pesos
-            factor_escala: Factor de escala a aplicar
-
-        Returns:
-            Lista de ingredientes con pesos ajustados
         """
         ingredientes_ajustados = []
 
@@ -290,40 +226,3 @@ class CalculoService:
             ingredientes_ajustados.append(ing_copia)
 
         return ingredientes_ajustados
-
-    @staticmethod
-    def calcular_pesos_desde_porcentaje(
-        ingredientes: List[Dict],
-        nutriente: str,
-        porcentaje_deseado: float,
-        requerimiento: float
-    ) -> Tuple[List[Dict], float]:
-        """
-        Calcula nuevos pesos para alcanzar un porcentaje de adecuación deseado.
-
-        Args:
-            ingredientes: Lista de ingredientes actuales
-            nutriente: Nutriente a ajustar (ej: 'calorias_kcal')
-            porcentaje_deseado: Porcentaje deseado (0-100)
-            requerimiento: Requerimiento del nutriente
-
-        Returns:
-            Tuple de (ingredientes_ajustados, factor_escala_aplicado)
-        """
-        # 1. Calcular valor objetivo
-        valor_objetivo = (porcentaje_deseado * requerimiento) / 100
-
-        # 2. Calcular totales actuales
-        totales = CalculoService.calcular_totales_ingredientes(ingredientes)
-        valor_actual = totales.get(nutriente, 0)
-
-        # 3. Calcular factor de escala
-        factor_escala = CalculoService.calcular_factor_escala(valor_objetivo, valor_actual)
-
-        # 4. Ajustar pesos proporcionalmente
-        ingredientes_ajustados = CalculoService.ajustar_pesos_proporcionalmente(
-            ingredientes,
-            factor_escala
-        )
-
-        return ingredientes_ajustados, factor_escala

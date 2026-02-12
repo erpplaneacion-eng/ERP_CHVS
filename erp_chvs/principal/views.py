@@ -6,8 +6,9 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import IntegrityError
 import json
-from .models import PrincipalDepartamento, PrincipalMunicipio, TipoDocumento, TipoGenero, ModalidadesDeConsumo, NivelGradoEscolar
-from planeacion.models import InstitucionesEducativas, SedesEducativas
+from .models import PrincipalDepartamento, PrincipalMunicipio, TipoDocumento, TipoGenero, ModalidadesDeConsumo, NivelGradoEscolar, MunicipioModalidades
+from planeacion.models import InstitucionesEducativas, SedesEducativas, Programa
+from django.db.models import Count
 
 def home(request):
     # Si el usuario ya está autenticado, redirigirlo al dashboard
@@ -735,3 +736,94 @@ def api_nivel_grado_detail(request, id_grado_escolar):
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
+
+# =================== MODALIDADES POR MUNICIPIO ===================
+
+@login_required
+def municipio_modalidades(request):
+    """Vista para gestionar modalidades por municipio"""
+    from django.db.models import Q
+
+    # Obtener SOLO municipios que tienen programas activos
+    municipios_con_programas = PrincipalMunicipio.objects.filter(
+        programa__estado='activo'
+    ).distinct().order_by('nombre_municipio')
+
+    # Obtener todas las modalidades del sistema
+    modalidades = ModalidadesDeConsumo.objects.all().order_by('modalidad')
+
+    # Para cada municipio, obtener sus modalidades activas
+    municipios_data = []
+    for municipio in municipios_con_programas:
+        modalidades_activas = MunicipioModalidades.objects.filter(
+            municipio=municipio
+        ).values_list('modalidad_id', flat=True)
+
+        programas_count = Programa.objects.filter(
+            municipio=municipio,
+            estado='activo'
+        ).count()
+
+        municipios_data.append({
+            'id': municipio.id,
+            'codigo_municipio': municipio.codigo_municipio,
+            'nombre_municipio': municipio.nombre_municipio,
+            'programas_count': programas_count,
+            'modalidades_activas': list(modalidades_activas),
+            'modalidades_activas_count': len(modalidades_activas)
+        })
+
+    context = {
+        'municipios': municipios_data,
+        'modalidades': modalidades,
+        'modalidades_totales': modalidades.count()
+    }
+
+    return render(request, 'principal/municipio_modalidades.html', context)
+
+
+@login_required
+@csrf_exempt
+def api_guardar_municipio_modalidades(request):
+    """API para guardar cambios de modalidades por municipio"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        cambios = json.loads(request.body)
+        
+        cambios_realizados = 0
+        
+        # Procesar cada municipio
+        for municipio_id, acciones in cambios.items():
+            municipio = PrincipalMunicipio.objects.get(id=municipio_id)
+            
+            # Agregar modalidades
+            for modalidad_id in acciones.get('agregar', []):
+                modalidad = ModalidadesDeConsumo.objects.get(id_modalidades=modalidad_id)
+                MunicipioModalidades.objects.get_or_create(
+                    municipio=municipio,
+                    modalidad=modalidad
+                )
+                cambios_realizados += 1
+            
+            # Eliminar modalidades
+            for modalidad_id in acciones.get('eliminar', []):
+                MunicipioModalidades.objects.filter(
+                    municipio=municipio,
+                    modalidad_id=modalidad_id
+                ).delete()
+                cambios_realizados += 1
+        
+        return JsonResponse({
+            'success': True,
+            'cambios_realizados': cambios_realizados,
+            'message': f'Se guardaron {cambios_realizados} cambio(s) exitosamente'
+        })
+        
+    except PrincipalMunicipio.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Municipio no encontrado'}, status=404)
+    except ModalidadesDeConsumo.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Modalidad no encontrada'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error al guardar: {str(e)}'}, status=500)

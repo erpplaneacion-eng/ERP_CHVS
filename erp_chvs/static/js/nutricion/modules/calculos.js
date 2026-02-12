@@ -67,13 +67,13 @@ const CalculosNutricionales = {
 
         // Recalcular porcentajes de adecuación
         this.recalcularPorcentajesAdecuacion(nivelIndex, {
-            calorias_kcal: totalCalorias,
-            proteina_g: totalProteina,
-            grasa_g: totalGrasa,
-            cho_g: totalCho,
-            calcio_mg: totalCalcio,
-            hierro_mg: totalHierro,
-            sodio_mg: totalSodio
+            calorias: totalCalorias,
+            proteina: totalProteina,
+            grasa: totalGrasa,
+            cho: totalCho,
+            calcio: totalCalcio,
+            hierro: totalHierro,
+            sodio: totalSodio
         });
 
         // Guardado automático después de los cálculos (solo si no se omite)
@@ -89,7 +89,7 @@ const CalculosNutricionales = {
      * Distribuye proporcionalmente el ajuste entre TODOS los ingredientes que aportan el nutriente.
      *
      * @param {number} nivelIndex - Índice del nivel escolar
-     * @param {string} nutriente - Nutriente a ajustar (ej: 'calorias_kcal', 'proteina_g')
+     * @param {string} nutriente - Nutriente a ajustar (ej: 'calorias', 'proteina')
      * @param {number} porcentajeDeseado - Porcentaje de adecuación deseado (0-100)
      */
     calcularPesosDesdeAdecuacion(nivelIndex, nutriente, porcentajeDeseado) {
@@ -103,20 +103,20 @@ const CalculosNutricionales = {
 
         // Mapeo de nombres de nutrientes a claves de requerimientos
         const nutrienteMap = {
-            'calorias_kcal': 'calorias_kcal',
-            'calorias': 'calorias_kcal',
-            'proteina_g': 'proteina_g',
-            'proteina': 'proteina_g',
-            'grasa_g': 'grasa_g',
-            'grasa': 'grasa_g',
-            'cho_g': 'cho_g',
-            'cho': 'cho_g',
-            'calcio_mg': 'calcio_mg',
-            'calcio': 'calcio_mg',
-            'hierro_mg': 'hierro_mg',
-            'hierro': 'hierro_mg',
-            'sodio_mg': 'sodio_mg',
-            'sodio': 'sodio_mg'
+            'calorias': 'calorias',
+            'calorias': 'calorias',
+            'proteina': 'proteina',
+            'proteina': 'proteina',
+            'grasa': 'grasa',
+            'grasa': 'grasa',
+            'cho': 'cho',
+            'cho': 'cho',
+            'calcio': 'calcio',
+            'calcio': 'calcio',
+            'hierro': 'hierro',
+            'hierro': 'hierro',
+            'sodio': 'sodio',
+            'sodio': 'sodio'
         };
 
         const nutrienteKey = nutrienteMap[nutriente];
@@ -147,25 +147,25 @@ const CalculosNutricionales = {
             // Obtener nutriente por 100g del data attribute
             let nutrientePor100g = 0;
             switch (nutrienteKey) {
-                case 'calorias_kcal':
+                case 'calorias':
                     nutrientePor100g = parseFloat(pesoInput.data('calorias')) || 0;
                     break;
-                case 'proteina_g':
+                case 'proteina':
                     nutrientePor100g = parseFloat(pesoInput.data('proteina')) || 0;
                     break;
-                case 'grasa_g':
+                case 'grasa':
                     nutrientePor100g = parseFloat(pesoInput.data('grasa')) || 0;
                     break;
-                case 'cho_g':
+                case 'cho':
                     nutrientePor100g = parseFloat(pesoInput.data('cho')) || 0;
                     break;
-                case 'calcio_mg':
+                case 'calcio':
                     nutrientePor100g = parseFloat(pesoInput.data('calcio')) || 0;
                     break;
-                case 'hierro_mg':
+                case 'hierro':
                     nutrientePor100g = parseFloat(pesoInput.data('hierro')) || 0;
                     break;
-                case 'sodio_mg':
+                case 'sodio':
                     nutrientePor100g = parseFloat(pesoInput.data('sodio')) || 0;
                     break;
             }
@@ -266,13 +266,13 @@ const CalculosNutricionales = {
         }
 
         const nutrientes = [
-            { key: 'calorias_kcal', id: 'calorias' },
-            { key: 'proteina_g', id: 'proteina' },
-            { key: 'grasa_g', id: 'grasa' },
-            { key: 'cho_g', id: 'cho' },
-            { key: 'calcio_mg', id: 'calcio' },
-            { key: 'hierro_mg', id: 'hierro' },
-            { key: 'sodio_mg', id: 'sodio' }
+            { key: 'calorias', id: 'calorias' },
+            { key: 'proteina', id: 'proteina' },
+            { key: 'grasa', id: 'grasa' },
+            { key: 'cho', id: 'cho' },
+            { key: 'calcio', id: 'calcio' },
+            { key: 'hierro', id: 'hierro' },
+            { key: 'sodio', id: 'sodio' }
         ];
 
         nutrientes.forEach(nutriente => {

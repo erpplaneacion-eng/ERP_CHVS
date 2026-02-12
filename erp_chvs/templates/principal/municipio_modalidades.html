@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Modalidades por Municipio - ERP CHVS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/principal/municipio_modalidades.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="modalidades-municipio-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-list-check"></i> Configuración de Modalidades por Municipio</h2>
+            <p>Configura qué modalidades están habilitadas para cada municipio con programas activos.</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-success" id="btnGuardarCambios">
+                <i class="fas fa-save"></i> Guardar Cambios
+            </button>
+            <a href="{% url 'principal:principal_index' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="info-banner">
+        <i class="fas fa-info-circle"></i>
+        <div class="info-banner-text">
+            <h4>¿Qué hace esta configuración?</h4>
+            <p>
+                Aquí puedes configurar qué modalidades de consumo (COMPLEMENTO AM, ALMUERZO, etc.)
+                están disponibles para cada municipio. Solo se muestran municipios que tienen programas activos en el sistema.
+            </p>
+        </div>
+    </div>
+
+    <div class="search-filter">
+        <div class="search-wrapper">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchMunicipio" placeholder="Buscar municipio por nombre o código...">
+        </div>
+    </div>
+
+    <div id="municipiosContainer">
+        {% for municipio in municipios %}
+        <div class="municipio-card" data-municipio-id="{{ municipio.id }}" data-municipio-nombre="{{ municipio.nombre_municipio }}">
+            <div class="municipio-card-header" data-municipio-id="{{ municipio.id }}">
+                <div class="municipio-info">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <div class="municipio-details">
+                        <h3>{{ municipio.nombre_municipio }}</h3>
+                        <p>Código: {{ municipio.codigo_municipio }} | Programas activos: {{ municipio.programas_count }}</p>
+                    </div>
+                </div>
+                <div class="municipio-stats">
+                    <div class="stat-badge">
+                        <span class="modalidades-activas-count">{{ municipio.modalidades_activas_count }}</span> / {{ modalidades_totales }} modalidades
+                    </div>
+                    <i class="fas fa-chevron-down chevron-icon"></i>
+                </div>
+            </div>
+            <div class="municipio-card-body">
+                <div class="modalidades-content">
+                    <div class="modalidades-grid">
+                        {% for modalidad in modalidades %}
+                        <div class="modalidad-item {% if modalidad.id_modalidades in municipio.modalidades_activas %}active{% endif %}"
+                             data-modalidad-id="{{ modalidad.id_modalidades }}">
+                            <div class="modalidad-info">
+                                <div class="modalidad-icon">
+                                    <i class="fas fa-utensils"></i>
+                                </div>
+                                <div class="modalidad-text">
+                                    <h4>{{ modalidad.modalidad }}</h4>
+                                    <p>Código: {{ modalidad.cod_modalidad }}</p>
+                                </div>
+                            </div>
+                            <div class="modalidad-toggle {% if modalidad.id_modalidades in municipio.modalidades_activas %}active{% endif %}"
+                                 data-municipio-id="{{ municipio.id }}"
+                                 data-modalidad-id="{{ modalidad.id_modalidades }}">
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">
+            <i class="fas fa-inbox"></i>
+            <h3>No hay municipios con programas activos</h3>
+            <p>Los municipios solo aparecerán aquí cuando tengan al menos un programa activo en el sistema.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/principal/municipios_modalidades.js' %}"></script>
+{% endblock %}

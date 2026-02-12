@@ -1198,7 +1198,7 @@ function crearAccordionNivelEscolar(nivel, index) {
                         <i class="fas fa-graduation-cap"></i>
                         ${nivel.nivel_escolar.nombre}
                         <div class="nivel-summary">
-                            <span class="badge badge-primary">${nivel.totales.calorias_kcal.toFixed(0)} Kcal</span>
+                            <span class="badge badge-primary">${nivel.totales.calorias.toFixed(0)} Kcal</span>
                             <span class="badge badge-success">${nivel.totales.peso_neto_total.toFixed(0)}g neto</span>
                             <span class="badge badge-warning">${nivel.totales.peso_bruto_total.toFixed(0)}g bruto</span>
                         </div>
@@ -1213,33 +1213,33 @@ function crearAccordionNivelEscolar(nivel, index) {
                     <div class="nivel-totales mb-3">
                         <h6><i class="fas fa-calculator"></i> Totales del Nivel</h6>
                         <div class="totales-grid-mini">
-                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.calorias_kcal.estado}">
+                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.calorias.estado}">
                                 <span>Calorías:</span>
-                                <span class="value" id="nivel-${index}-calorias">${nivel.totales.calorias_kcal.toFixed(1)} Kcal</span>
+                                <span class="value" id="nivel-${index}-calorias">${nivel.totales.calorias.toFixed(1)} Kcal</span>
                             </div>
-                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.proteina_g.estado}">
+                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.proteina.estado}">
                                 <span>Proteína:</span>
-                                <span class="value" id="nivel-${index}-proteina">${nivel.totales.proteina_g.toFixed(1)} g</span>
+                                <span class="value" id="nivel-${index}-proteina">${nivel.totales.proteina.toFixed(1)} g</span>
                             </div>
-                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.grasa_g.estado}">
+                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.grasa.estado}">
                                 <span>Grasa:</span>
-                                <span class="value" id="nivel-${index}-grasa">${nivel.totales.grasa_g.toFixed(1)} g</span>
+                                <span class="value" id="nivel-${index}-grasa">${nivel.totales.grasa.toFixed(1)} g</span>
                             </div>
-                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.cho_g.estado}">
+                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.cho.estado}">
                                 <span>CHO:</span>
-                                <span class="value" id="nivel-${index}-cho">${nivel.totales.cho_g.toFixed(1)} g</span>
+                                <span class="value" id="nivel-${index}-cho">${nivel.totales.cho.toFixed(1)} g</span>
                             </div>
-                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.calcio_mg.estado}">
+                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.calcio.estado}">
                                 <span>Calcio:</span>
-                                <span class="value" id="nivel-${index}-calcio">${nivel.totales.calcio_mg.toFixed(1)} mg</span>
+                                <span class="value" id="nivel-${index}-calcio">${nivel.totales.calcio.toFixed(1)} mg</span>
                             </div>
-                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.hierro_mg.estado}">
+                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.hierro.estado}">
                                 <span>Hierro:</span>
-                                <span class="value" id="nivel-${index}-hierro">${nivel.totales.hierro_mg.toFixed(1)} mg</span>
+                                <span class="value" id="nivel-${index}-hierro">${nivel.totales.hierro.toFixed(1)} mg</span>
                             </div>
-                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.sodio_mg.estado}">
+                            <div class="total-mini" data-estado="${nivel.porcentajes_adecuacion.sodio.estado}">
                                 <span>Sodio:</span>
-                                <span class="value" id="nivel-${index}-sodio">${nivel.totales.sodio_mg.toFixed(1)} mg</span>
+                                <span class="value" id="nivel-${index}-sodio">${nivel.totales.sodio.toFixed(1)} mg</span>
                             </div>
                         </div>
                         
@@ -1247,124 +1247,124 @@ function crearAccordionNivelEscolar(nivel, index) {
                         <div class="requerimientos-grid-mini">
                             <div class="requerimiento-mini">
                                 <span>Calorías:</span>
-                                <span class="value">${nivel.requerimientos.calorias_kcal.toFixed(1)} Kcal</span>
+                                <span class="value">${nivel.requerimientos.calorias.toFixed(1)} Kcal</span>
                             </div>
                             <div class="requerimiento-mini">
                                 <span>Proteína:</span>
-                                <span class="value">${nivel.requerimientos.proteina_g.toFixed(1)} g</span>
+                                <span class="value">${nivel.requerimientos.proteina.toFixed(1)} g</span>
                             </div>
                             <div class="requerimiento-mini">
                                 <span>Grasa:</span>
-                                <span class="value">${nivel.requerimientos.grasa_g.toFixed(1)} g</span>
+                                <span class="value">${nivel.requerimientos.grasa.toFixed(1)} g</span>
                             </div>
                             <div class="requerimiento-mini">
                                 <span>CHO:</span>
-                                <span class="value">${nivel.requerimientos.cho_g.toFixed(1)} g</span>
+                                <span class="value">${nivel.requerimientos.cho.toFixed(1)} g</span>
                             </div>
                             <div class="requerimiento-mini">
                                 <span>Calcio:</span>
-                                <span class="value">${nivel.requerimientos.calcio_mg.toFixed(1)} mg</span>
+                                <span class="value">${nivel.requerimientos.calcio.toFixed(1)} mg</span>
                             </div>
                             <div class="requerimiento-mini">
                                 <span>Hierro:</span>
-                                <span class="value">${nivel.requerimientos.hierro_mg.toFixed(1)} mg</span>
+                                <span class="value">${nivel.requerimientos.hierro.toFixed(1)} mg</span>
                             </div>
                             <div class="requerimiento-mini">
                                 <span>Sodio:</span>
-                                <span class="value">${nivel.requerimientos.sodio_mg.toFixed(1)} mg</span>
+                                <span class="value">${nivel.requerimientos.sodio.toFixed(1)} mg</span>
                             </div>
                         </div>
                         
                         <h6 class="mt-3"><i class="fas fa-percentage"></i> % de Adecuación (Editable)</h6>
                         <div class="adecuacion-grid-mini">
-                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.calorias_kcal.estado}">
+                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.calorias.estado}">
                                 <span>Calorías:</span>
                                 <input type="number" 
                                        class="form-control form-control-sm porcentaje-input" 
                                        id="nivel-${index}-calorias-pct"
-                                       value="${nivel.porcentajes_adecuacion.calorias_kcal.porcentaje}" 
+                                       value="${nivel.porcentajes_adecuacion.calorias.porcentaje}" 
                                        min="0" 
                                        max="100" 
                                        step="0.1"
-                                       data-nutriente="calorias_kcal"
+                                       data-nutriente="calorias"
                                        data-nivel="${index}">
                                 <span class="porcentaje-symbol">%</span>
                             </div>
-                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.proteina_g.estado}">
+                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.proteina.estado}">
                                 <span>Proteína:</span>
                                 <input type="number" 
                                        class="form-control form-control-sm porcentaje-input" 
                                        id="nivel-${index}-proteina-pct"
-                                       value="${nivel.porcentajes_adecuacion.proteina_g.porcentaje}" 
+                                       value="${nivel.porcentajes_adecuacion.proteina.porcentaje}" 
                                        min="0" 
                                        max="100" 
                                        step="0.1"
-                                       data-nutriente="proteina_g"
+                                       data-nutriente="proteina"
                                        data-nivel="${index}">
                                 <span class="porcentaje-symbol">%</span>
                             </div>
-                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.grasa_g.estado}">
+                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.grasa.estado}">
                                 <span>Grasa:</span>
                                 <input type="number" 
                                        class="form-control form-control-sm porcentaje-input" 
                                        id="nivel-${index}-grasa-pct"
-                                       value="${nivel.porcentajes_adecuacion.grasa_g.porcentaje}" 
+                                       value="${nivel.porcentajes_adecuacion.grasa.porcentaje}" 
                                        min="0" 
                                        max="100" 
                                        step="0.1"
-                                       data-nutriente="grasa_g"
+                                       data-nutriente="grasa"
                                        data-nivel="${index}">
                                 <span class="porcentaje-symbol">%</span>
                             </div>
-                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.cho_g.estado}">
+                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.cho.estado}">
                                 <span>CHO:</span>
                                 <input type="number" 
                                        class="form-control form-control-sm porcentaje-input" 
                                        id="nivel-${index}-cho-pct"
-                                       value="${nivel.porcentajes_adecuacion.cho_g.porcentaje}" 
+                                       value="${nivel.porcentajes_adecuacion.cho.porcentaje}" 
                                        min="0" 
                                        max="100" 
                                        step="0.1"
-                                       data-nutriente="cho_g"
+                                       data-nutriente="cho"
                                        data-nivel="${index}">
                                 <span class="porcentaje-symbol">%</span>
                             </div>
-                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.calcio_mg.estado}">
+                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.calcio.estado}">
                                 <span>Calcio:</span>
                                 <input type="number" 
                                        class="form-control form-control-sm porcentaje-input" 
                                        id="nivel-${index}-calcio-pct"
-                                       value="${nivel.porcentajes_adecuacion.calcio_mg.porcentaje}" 
+                                       value="${nivel.porcentajes_adecuacion.calcio.porcentaje}" 
                                        min="0" 
                                        max="100" 
                                        step="0.1"
-                                       data-nutriente="calcio_mg"
+                                       data-nutriente="calcio"
                                        data-nivel="${index}">
                                 <span class="porcentaje-symbol">%</span>
                             </div>
-                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.hierro_mg.estado}">
+                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.hierro.estado}">
                                 <span>Hierro:</span>
                                 <input type="number" 
                                        class="form-control form-control-sm porcentaje-input" 
                                        id="nivel-${index}-hierro-pct"
-                                       value="${nivel.porcentajes_adecuacion.hierro_mg.porcentaje}" 
+                                       value="${nivel.porcentajes_adecuacion.hierro.porcentaje}" 
                                        min="0" 
                                        max="100" 
                                        step="0.1"
-                                       data-nutriente="hierro_mg"
+                                       data-nutriente="hierro"
                                        data-nivel="${index}">
                                 <span class="porcentaje-symbol">%</span>
                             </div>
-                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.sodio_mg.estado}">
+                            <div class="adecuacion-mini" data-estado="${nivel.porcentajes_adecuacion.sodio.estado}">
                                 <span>Sodio:</span>
                                 <input type="number" 
                                        class="form-control form-control-sm porcentaje-input" 
                                        id="nivel-${index}-sodio-pct"
-                                       value="${nivel.porcentajes_adecuacion.sodio_mg.porcentaje}" 
+                                       value="${nivel.porcentajes_adecuacion.sodio.porcentaje}" 
                                        min="0" 
                                        max="100" 
                                        step="0.1"
-                                       data-nutriente="sodio_mg"
+                                       data-nutriente="sodio"
                                        data-nivel="${index}">
                                 <span class="porcentaje-symbol">%</span>
                             </div>
@@ -1428,26 +1428,26 @@ function crearFilaIngrediente(ingrediente, nivelIndex, prepIndex, ingIndex) {
         
         // Back-calculate the "per 100g" values to populate the data-* attributes correctly
         baseNutrientesPor100g = {
-            calorias_kcal: (nutrientesFinales.calorias / pesoNeto) * 100,
-            proteina_g: (nutrientesFinales.proteina / pesoNeto) * 100,
-            grasa_g: (nutrientesFinales.grasa / pesoNeto) * 100,
-            cho_g: (nutrientesFinales.cho / pesoNeto) * 100,
-            calcio_mg: (nutrientesFinales.calcio / pesoNeto) * 100,
-            hierro_mg: (nutrientesFinales.hierro / pesoNeto) * 100,
-            sodio_mg: (nutrientesFinales.sodio / pesoNeto) * 100,
+            calorias: (nutrientesFinales.calorias / pesoNeto) * 100,
+            proteina: (nutrientesFinales.proteina / pesoNeto) * 100,
+            grasa: (nutrientesFinales.grasa / pesoNeto) * 100,
+            cho: (nutrientesFinales.cho / pesoNeto) * 100,
+            calcio: (nutrientesFinales.calcio / pesoNeto) * 100,
+            hierro: (nutrientesFinales.hierro / pesoNeto) * 100,
+            sodio: (nutrientesFinales.sodio / pesoNeto) * 100,
         };
     } else {
         // Fallback to using ICBF data if no saved values or peso is zero
         baseNutrientesPor100g = ingrediente.valores_por_100g;
         const factor = pesoNeto / 100;
         nutrientesFinales = {
-            calorias: baseNutrientesPor100g.calorias_kcal * factor,
-            proteina: baseNutrientesPor100g.proteina_g * factor,
-            grasa: baseNutrientesPor100g.grasa_g * factor,
-            cho: baseNutrientesPor100g.cho_g * factor,
-            calcio: baseNutrientesPor100g.calcio_mg * factor,
-            hierro: baseNutrientesPor100g.hierro_mg * factor,
-            sodio: baseNutrientesPor100g.sodio_mg * factor,
+            calorias: baseNutrientesPor100g.calorias * factor,
+            proteina: baseNutrientesPor100g.proteina * factor,
+            grasa: baseNutrientesPor100g.grasa * factor,
+            cho: baseNutrientesPor100g.cho * factor,
+            calcio: baseNutrientesPor100g.calcio * factor,
+            hierro: baseNutrientesPor100g.hierro * factor,
+            sodio: baseNutrientesPor100g.sodio * factor,
         };
     }
 
@@ -1468,13 +1468,13 @@ function crearFilaIngrediente(ingrediente, nivelIndex, prepIndex, ingIndex) {
                        step="1"
                        data-base="${ingrediente.peso_neto_base}"
                        data-parte-comestible="${ingrediente.parte_comestible}"
-                       data-calorias="${baseNutrientesPor100g.calorias_kcal}"
-                       data-proteina="${baseNutrientesPor100g.proteina_g}"
-                       data-grasa="${baseNutrientesPor100g.grasa_g}"
-                       data-cho="${baseNutrientesPor100g.cho_g}"
-                       data-calcio="${baseNutrientesPor100g.calcio_mg}"
-                       data-hierro="${baseNutrientesPor100g.hierro_mg}"
-                       data-sodio="${baseNutrientesPor100g.sodio_mg}"
+                       data-calorias="${baseNutrientesPor100g.calorias}"
+                       data-proteina="${baseNutrientesPor100g.proteina}"
+                       data-grasa="${baseNutrientesPor100g.grasa}"
+                       data-cho="${baseNutrientesPor100g.cho}"
+                       data-calcio="${baseNutrientesPor100g.calcio}"
+                       data-hierro="${baseNutrientesPor100g.hierro}"
+                       data-sodio="${baseNutrientesPor100g.sodio}"
                        data-prep-id="${ingrediente.id_preparacion_real || prepIndex}"
                        data-ing-id="${ingrediente.id_ingrediente || ingrediente.id_ingrediente_siesa || ingIndex}">
             </td>
