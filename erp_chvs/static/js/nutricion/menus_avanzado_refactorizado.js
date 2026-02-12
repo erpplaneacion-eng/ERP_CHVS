@@ -334,10 +334,10 @@ class MenusAvanzadosController {
      */
     abrirModalMenuIA(modalidadId) {
         document.getElementById('modalidadIdIA').value = modalidadId;
-        document.getElementById('nivelEducativoIA').value = '';
+        // nivelEducativoIA ya no existe - se genera para todos los niveles automáticamente
         document.getElementById('loadingIA').style.display = 'none';
         document.getElementById('formMenuIA').style.display = 'block';
-        
+
         this.modalesManager.abrirModal(this.modalesManager.modales.menuIA);
     }
 
