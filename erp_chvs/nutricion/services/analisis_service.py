@@ -34,6 +34,11 @@ class AnalisisNutricionalService:
         """
         Obtiene el análisis nutricional completo de un menú.
 
+        ACTUALIZACIÓN (Febrero 2025):
+        - Ahora filtra requerimientos por NIVEL ESCOLAR + MODALIDAD
+        - Los requerimientos son específicos para cada tipo de complemento alimentario
+        - Semaforización ajustada según la Minuta Patrón ICBF
+
         Args:
             id_menu: ID del menú a analizar
 
@@ -44,11 +49,24 @@ class AnalisisNutricionalService:
             TablaMenus.DoesNotExist: Si el menú no existe
         """
         # 1. Obtener menú y validar existencia
-        menu = TablaMenus.objects.select_related('id_contrato').get(id_menu=id_menu)
+        menu = TablaMenus.objects.select_related('id_contrato', 'id_modalidad').get(id_menu=id_menu)
 
         # 2. Obtener datos base
         preparaciones_data = AnalisisNutricionalService._obtener_preparaciones_con_ingredientes(menu)
-        requerimientos = TablaRequerimientosNutricionales.objects.all()
+
+        # CAMBIO IMPORTANTE: Filtrar requerimientos por modalidad del menú
+        # Cada modalidad (CAJM/JT, Almuerzo, etc.) tiene requerimientos específicos
+        if menu.id_modalidad:
+            requerimientos = TablaRequerimientosNutricionales.objects.filter(
+                id_modalidad=menu.id_modalidad
+            ).select_related('id_nivel_escolar_uapa', 'id_modalidad')
+        else:
+            # Fallback: Si el menú no tiene modalidad asignada, usar todos los requerimientos
+            # (compatibilidad con datos antiguos)
+            requerimientos = TablaRequerimientosNutricionales.objects.filter(
+                id_modalidad__isnull=True
+            ).select_related('id_nivel_escolar_uapa')
+
         nivel_escolar_programa = menu.id_contrato.get_nivel_escolar_uapa()
 
         # 3. Pre-cargar análisis guardados por nivel

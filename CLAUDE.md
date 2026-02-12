@@ -209,6 +209,8 @@ TablaIngredientesPorNivel (weights + calculated nutrients PER LEVEL)
 - **Static files**: `static/css/` (global + module-specific), `static/js/` (modular architecture)
 - **Stack**: Bootstrap 5.3.3, SweetAlert2, jQuery/DataTables
 - **Pattern**: AJAX-heavy with JSON API endpoints, modal dialogs for forms
+- **Separation of concerns**: HTML/CSS/JS always in separate files, NO inline styles or scripts
+- **Event handling**: Use `addEventListener` in JS files, avoid inline `onclick` attributes
 
 **Nutricion JS architecture** (refactored from 1644-line monolith to modular system):
 
@@ -278,6 +280,22 @@ MenusAvanzadosController (coordinator)
 
 ## Recent Improvements (2025)
 
+### Principal Module - Municipio Modalidades Management
+**New feature** (February 2025):
+- Dashboard card to manage which consumption modalities are enabled per municipality
+- URL: `/principal/municipio-modalidades/`
+- View: `municipio_modalidades(request)` in `principal/views.py`
+- Complete separation of concerns:
+  - Template: `templates/principal/municipio_modalidades.html`
+  - CSS: `static/css/principal/municipio_modalidades.css`
+  - JS: `static/js/principal/municipios_modalidades.js` (event listeners, no inline handlers)
+- Features:
+  - Accordion UI for municipalities with active programs
+  - Toggle switches for enabling/disabling modalities
+  - Pending changes tracking before save
+  - Search/filter by municipality name or code
+  - Bulk save with API endpoint: `/principal/api/municipio-modalidades/guardar/`
+
 ### Nutricion Module - Multi-level AI Menu Generation
 **What was fixed**:
 - ❌ Before: Gemini generated menus for only ONE educational level
@@ -299,6 +317,19 @@ MenusAvanzadosController (coordinator)
 
 **Testing**: `python test_gemini.py` validates multi-level generation with weight storage
 
+### Nutricion Module - UI Performance Optimizations
+**Performance improvements** (February 2025):
+- **Eliminated gradual animations** when loading existing data:
+  - Removed `@keyframes slideIn` and `@keyframes slideDown` animations from `lista_menus.css`
+  - Changed `transition: all` to specific properties to prevent unwanted animations on initial render
+  - Affected classes: `.ingrediente-item`, `.preparacion-accordion-header`, `.fila-ingrediente`
+- **Optimized preparation loading** (`PreparacionesManager.js`):
+  - Uses `Promise.all()` to fetch all ingredient counts in parallel (not sequential)
+  - Creates all DOM elements first, then inserts with `DocumentFragment` (single reflow)
+  - Before: Elements appeared gradually as they were added one-by-one
+  - After: All elements appear instantly
+- **Result**: Faster, more responsive UI when managing menus with many preparations/ingredients
+
 ## Conventions
 
 ### Language
@@ -316,6 +347,19 @@ MenusAvanzadosController (coordinator)
 - **Bulk operations**: Use `bulk_create` for batch database inserts (see `persistence_service.py`)
 - **Excel processing**: Specialized utilities in `excel_utils.py` per module (facturacion, nutricion)
 - **Fuzzy matching**: Configurable threshold for matching external data to official records
+
+### Frontend Performance
+- **CSS transitions**: Use specific properties (e.g., `transition: border-color 0.2s, box-shadow 0.2s`) instead of `transition: all`
+  - `transition: all` causes unwanted animations when elements first appear in DOM
+  - Only animate properties that actually change on interaction (hover, focus, etc.)
+- **DOM insertion**: For multiple elements, use `DocumentFragment` and `appendChild` once
+  - ❌ Bad: Loop with individual `appendChild` calls (causes gradual rendering)
+  - ✅ Good: Create all elements, add to fragment, append fragment once
+- **Parallel async operations**: Use `Promise.all()` for independent API calls
+  - Example: `PreparacionesManager.cargarPreparacionesMenu()` loads all ingredient counts in parallel
+- **Browser cache**: When CSS/JS changes don't appear, instruct users to hard refresh:
+  - Windows/Linux: `Ctrl + Shift + R` or `Ctrl + F5`
+  - Mac: `Cmd + Shift + R`
 
 ### Configuration
 
@@ -609,6 +653,134 @@ python manage.py sync_siesa --sedes
 - **Cause**: Inconsistent naming in `TablaAnalisisNutricionalMenu` model
 - **Correct attributes**: `total_calorias`, `total_proteina`, `total_grasa`, `total_cho`, `total_calcio`, `total_hierro`, `total_sodio`
 - **Solution**: Always use `total_*` prefix, not `*_totales` or `*_total`
+
+### Nutricion Module - Semaforización (Traffic Light System)
+
+**CAMBIO IMPORTANTE (Febrero 2025)**: El sistema de semaforización ahora considera **NIVEL ESCOLAR + MODALIDAD DE CONSUMO**.
+
+#### Sistema Anterior vs Nuevo
+
+**❌ Antes**:
+- Requerimientos solo por nivel escolar
+- Todos los menús (CAJM/JT, Almuerzo, etc.) se comparaban contra requerimientos diarios totales
+- Resultado: Todos los menús aparecían en verde (0-35%) sin importar la modalidad
+
+**✅ Ahora**:
+- Requerimientos por nivel escolar + modalidad de consumo
+- Cada modalidad tiene su propio 100% basado en la Minuta Patrón ICBF
+- Resultado: Semaforización precisa según el tipo de complemento alimentario
+
+#### Rangos de Evaluación (sin cambios)
+
+| Estado | Rango | Color | Significado |
+|--------|-------|-------|-------------|
+| **ÓPTIMO** | 0-35% | 🟢 Verde | Aporte bajo pero seguro para la modalidad |
+| **ACEPTABLE** | 35.1-70% | 🟡 Amarillo | Aporte moderado para la modalidad |
+| **ALTO** | >70% | 🔴 Rojo | Aporte elevado, cerca del límite máximo (100%) |
+
+**Diferencia clave**: El 100% ahora es específico para cada modalidad, no el requerimiento diario total.
+
+#### Ejemplo Práctico
+
+Un menú con **280 Kcal** para Preescolar:
+
+| Modalidad | Requerimiento (100%) | Porcentaje | Estado | Color |
+|-----------|---------------------|------------|--------|-------|
+| CAJM/JT | 276 Kcal | 101% | ALTO | 🔴 |
+| Almuerzo | 417 Kcal | 67% | ACEPTABLE | 🟡 |
+
+#### Valores de Referencia (Minuta Patrón ICBF)
+
+**CAJM/JT (Jornada Mañana/Tarde)**:
+- Preescolar: 276 Kcal, 9.9g prot, 9.6g grasa, 36.5g CHO, 159mg Ca, 1.5mg Fe, 95mg Na
+- Primaria 1-3: 334 Kcal, 11.8g prot, 11.2g grasa, 45.0g CHO, 171mg Ca, 1.9mg Fe, 108mg Na
+- Primaria 4-5: 407 Kcal, 14.9g prot, 13.3g grasa, 54.8g CHO, 191mg Ca, 2.4mg Fe, 139mg Na
+- Secundaria: 509 Kcal, 18.3g prot, 17.0g grasa, 68.2g CHO, 230mg Ca, 3.0mg Fe, 172mg Na
+- Media/Ciclo Comp.: 592 Kcal, 21.1g prot, 19.9g grasa, 79.3g CHO, 245mg Ca, 3.5mg Fe, 191mg Na
+
+**Almuerzo**:
+- Preescolar: 417 Kcal, 15.6g prot, 13.4g grasa, 56.3g CHO, 110mg Ca, 2.9mg Fe, 132mg Na
+- Primaria 1-3: 457 Kcal, 16.8g prot, 14.5g grasa, 61.8g CHO, 126mg Ca, 3.4mg Fe, 144mg Na
+- Primaria 4-5: 550 Kcal, 19.9g prot, 17.2g grasa, 74.8g CHO, 145mg Ca, 4.2mg Fe, 173mg Na
+- Secundaria: 682 Kcal, 24.6g prot, 21.9g grasa, 92.0g CHO, 173mg Ca, 5.2mg Fe, 213mg Na
+- Media/Ciclo Comp.: 791 Kcal, 28.6g prot, 25.7g grasa, 106.6g CHO, 184mg Ca, 6.1mg Fe, 235mg Na
+
+#### Implementación Técnica
+
+**Modelo modificado** (`TablaRequerimientosNutricionales`):
+```python
+class TablaRequerimientosNutricionales(models.Model):
+    id_nivel_escolar_uapa = ForeignKey(...)  # Existente
+    id_modalidad = ForeignKey(ModalidadesDeConsumo, ...)  # NUEVO
+    # ... campos nutricionales ...
+
+    class Meta:
+        unique_together = [['id_nivel_escolar_uapa', 'id_modalidad']]  # Clave compuesta
+```
+
+**Servicio actualizado** (`AnalisisNutricionalService`):
+```python
+# Filtrar requerimientos por modalidad del menú
+if menu.id_modalidad:
+    requerimientos = TablaRequerimientosNutricionales.objects.filter(
+        id_modalidad=menu.id_modalidad
+    )
+```
+
+**Frontend** (sin cambios): La lógica de cálculo y colores permanece igual, solo cambian los valores de referencia del backend.
+
+#### Archivos Relacionados
+
+- **Modelo**: `nutricion/models.py` (línea 277)
+- **Servicio**: `nutricion/services/analisis_service.py` (línea 32)
+- **Migración**: `nutricion/migrations/0002_agregar_modalidad_requerimientos.py`
+- **Script población**: `nutricion/poblar_requerimientos_modalidad.py`
+- **Documentación completa**: `nutricion/README_SEMAFORIZACION_MODALIDAD.md`
+- **Datos fuente**: `nutricion/MINUTA_PATRON_RESOLUCION.md`
+
+#### Pasos para Aplicar
+
+1. Ejecutar migración: `python manage.py migrate nutricion 0002`
+2. Poblar datos: `python manage.py shell < nutricion/poblar_requerimientos_modalidad.py`
+3. Verificar: Los menús ahora muestran semaforización específica por modalidad
+
+**Issue**: Semaforización incorrecta para modalidad
+- **Causa**: Requerimientos no poblados o modalidad no asignada al menú
+- **Solution**: Ejecutar script de población y asignar modalidad a los menús existentes
+- **Verification**: `TablaRequerimientosNutricionales.objects.count()` debe ser ~10 (5 niveles × 2 modalidades)
+
+### Frontend Performance & UI Issues
+
+**Issue**: CSS/JS changes not appearing after editing files
+- **Cause**: Browser cache serving old versions of static files
+- **Solution**: Instruct users to hard refresh:
+  - Windows/Linux: `Ctrl + Shift + R` or `Ctrl + F5`
+  - Mac: `Cmd + Shift + R`
+  - Alternative: Open in incognito/private mode
+- **Prevention**: Consider adding cache-busting query strings in production
+
+**Issue**: Elements appearing gradually/animating when loading existing data
+- **Cause**: CSS animations (`@keyframes`) or `transition: all` applied to elements
+- **Solution**:
+  - Remove `animation` property from CSS classes that render data from API
+  - Change `transition: all` to specific properties (e.g., `transition: border-color 0.2s, box-shadow 0.2s`)
+  - Only use transitions for interactive states (`:hover`, `:focus`, `.active`)
+- **Files to check**: Module-specific CSS files in `static/css/nutricion/`, `static/css/principal/`
+
+**Issue**: UI feels slow when loading many items (e.g., 20+ preparaciones)
+- **Cause**: Sequential DOM manipulation with individual `appendChild` calls in loops
+- **Solution**:
+  - Use `Promise.all()` for parallel async operations
+  - Create `DocumentFragment`, add all elements to it, append once
+  - Example pattern:
+    ```javascript
+    const fragment = document.createDocumentFragment();
+    items.forEach(item => {
+        const element = createItemElement(item);
+        fragment.appendChild(element);
+    });
+    container.appendChild(fragment); // Single DOM operation
+    ```
 
 ### Siesa Integration
 

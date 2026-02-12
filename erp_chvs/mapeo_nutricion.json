@@ -1,0 +1,106 @@
+{
+  "fecha_generacion": "2026-02-12T11:13:22.506712",
+  "modalidades": {
+    "COMPLEMENTO ALIMENTARIO PREPARADO AM": {
+      "id": "mod1",
+      "descripcion": "COMPLEMENTO ALIMENTARIO PREPARADO AM"
+    },
+    "COMPLEMENTO ALIMENTARIO PREPARADO PM": {
+      "id": "mod2",
+      "descripcion": "COMPLEMENTO ALIMENTARIO PREPARADO PM"
+    },
+    "COMPLEMENTO AM/PM INDUSTRIALIZADO": {
+      "id": "mod3",
+      "descripcion": "COMPLEMENTO AM/PM INDUSTRIALIZADO"
+    },
+    "ALMUERZO JORNADA UNICA": {
+      "id": "mod4",
+      "descripcion": "ALMUERZO JORNADA UNICA"
+    },
+    "REFUERZO COMPLEMENTO AM/PM": {
+      "id": "mod5",
+      "descripcion": "REFUERZO COMPLEMENTO AM/PM"
+    },
+    "COMPLEMENTO ALIMENTARIO PREPARADO AM/PM": {
+      "id": "mod6",
+      "descripcion": "COMPLEMENTO ALIMENTARIO PREPARADO AM/PM"
+    }
+  },
+  "componentes": {
+    "Agua": {
+      "id": "com15",
+      "grupo_id": "g7",
+      "grupo_nombre": "Grupo Agua"
+    },
+    "Alimento proteico": {
+      "id": "com2",
+      "grupo_id": "g4",
+      "grupo_nombre": "Grupo IV. Carnes, huevos, leguminosas secas, frutos secos y semillas"
+    },
+    "Azúcares": {
+      "id": "com5",
+      "grupo_id": "g6",
+      "grupo_nombre": "Grupo VI. Azúcares"
+    },
+    "Bebida": {
+      "id": "com14",
+      "grupo_id": "g2",
+      "grupo_nombre": "Grupo II. Fruta y verduras"
+    },
+    "Bebida con leche": {
+      "id": "com1",
+      "grupo_id": "g3",
+      "grupo_nombre": "Grupo III. Leche y productos lácteos"
+    },
+    "Bebida láctea y productos lácteos": {
+      "id": "com10",
+      "grupo_id": "g3",
+      "grupo_nombre": "Grupo III. Leche y productos lácteos"
+    },
+    "Cereal acompañante": {
+      "id": "com3",
+      "grupo_id": "g1",
+      "grupo_nombre": "Grupo I. Cereales, raíces, tubérculos y plátanos"
+    },
+    "Cereales": {
+      "id": "com7",
+      "grupo_id": "g1",
+      "grupo_nombre": "Grupo I. Cereales, raíces, tubérculos y plátanos"
+    },
+    "Ensalada o verdura caliente": {
+      "id": "com9",
+      "grupo_id": "g2",
+      "grupo_nombre": "Grupo II. Fruta y verduras"
+    },
+    "Fruta": {
+      "id": "com4",
+      "grupo_id": "g2",
+      "grupo_nombre": "Grupo II. Fruta y verduras"
+    },
+    "Frutas": {
+      "id": "com12",
+      "grupo_id": "g2",
+      "grupo_nombre": "Grupo II. Fruta y verduras"
+    },
+    "Grasas": {
+      "id": "com6",
+      "grupo_id": "g5",
+      "grupo_nombre": "Grupo V. Grasas"
+    },
+    "Leche y productos lácteos": {
+      "id": "com11",
+      "grupo_id": "g3",
+      "grupo_nombre": "Grupo III. Leche y productos lácteos"
+    },
+    "Postre": {
+      "id": "com13",
+      "grupo_id": "g4",
+      "grupo_nombre": "Grupo IV. Carnes, huevos, leguminosas secas, frutos secos y semillas"
+    },
+    "Tuberculos, raíces, plátanos y derivados de cereal": {
+      "id": "com8",
+      "grupo_id": "g1",
+      "grupo_nombre": "Grupo I. Cereales, raíces, tubérculos y plátanos"
+    }
+  }
+}

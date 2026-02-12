@@ -282,15 +282,25 @@ class PreparacionesManager {
             const data = await response.json();
             const container = document.getElementById('listaPreparacionesAcordeon');
             container.innerHTML = '';
-            
-            if (data.preparaciones && data.preparaciones.length > 0) {
-                for (const prep of data.preparaciones) {
-                    const cantidadIngredientes = await this.obtenerCantidadIngredientes(prep.id_preparacion);
-                    prep.cantidad_ingredientes = cantidadIngredientes;
 
+            if (data.preparaciones && data.preparaciones.length > 0) {
+                // Cargar todas las cantidades de ingredientes en paralelo
+                const cantidadesPromises = data.preparaciones.map(prep =>
+                    this.obtenerCantidadIngredientes(prep.id_preparacion)
+                );
+                const cantidades = await Promise.all(cantidadesPromises);
+
+                // Crear un fragmento de documento para insertar todo de una vez
+                const fragment = document.createDocumentFragment();
+
+                data.preparaciones.forEach((prep, index) => {
+                    prep.cantidad_ingredientes = cantidades[index];
                     const accordion = this.crearAcordeonPreparacion(prep, menuId);
-                    container.appendChild(accordion);
-                }
+                    fragment.appendChild(accordion);
+                });
+
+                // Insertar todo de una vez
+                container.appendChild(fragment);
             } else {
                 container.innerHTML = '<div class="no-ingredientes"><i class="fas fa-info-circle"></i> No hay preparaciones asociadas a este menú</div>';
             }

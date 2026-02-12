@@ -355,20 +355,24 @@ class AnalisisNutricionalManager {
         let nutrientesFinales;
         let baseNutrientesPor100g;
 
+        // ✅ FIX: Siempre usar valores_por_100g del ICBF para los atributos data-*
+        // Esto asegura que los valores sean correctos cuando el usuario ajusta el peso
+        baseNutrientesPor100g = {
+            calorias: ingrediente.valores_por_100g?.calorias_kcal || ingrediente.valores_por_100g?.calorias || 0,
+            proteina: ingrediente.valores_por_100g?.proteina_g || ingrediente.valores_por_100g?.proteina || 0,
+            grasa: ingrediente.valores_por_100g?.grasa_g || ingrediente.valores_por_100g?.grasa || 0,
+            cho: ingrediente.valores_por_100g?.cho_g || ingrediente.valores_por_100g?.cho || 0,
+            calcio: ingrediente.valores_por_100g?.calcio_mg || ingrediente.valores_por_100g?.calcio || 0,
+            hierro: ingrediente.valores_por_100g?.hierro_mg || ingrediente.valores_por_100g?.hierro || 0,
+            sodio: ingrediente.valores_por_100g?.sodio_mg || ingrediente.valores_por_100g?.sodio || 0,
+        };
+
+        // Determinar valores finales para mostrar inicialmente
         if (ingrediente.valores_finales_guardados && pesoNeto > 0) {
+            // Si hay valores guardados, usarlos para mostrar
             nutrientesFinales = ingrediente.valores_finales_guardados;
-            
-            baseNutrientesPor100g = {
-                calorias: (nutrientesFinales.calorias / pesoNeto) * 100,
-                proteina: (nutrientesFinales.proteina / pesoNeto) * 100,
-                grasa: (nutrientesFinales.grasa / pesoNeto) * 100,
-                cho: (nutrientesFinales.cho / pesoNeto) * 100,
-                calcio: (nutrientesFinales.calcio / pesoNeto) * 100,
-                hierro: (nutrientesFinales.hierro / pesoNeto) * 100,
-                sodio: (nutrientesFinales.sodio / pesoNeto) * 100,
-            };
         } else {
-            baseNutrientesPor100g = ingrediente.valores_por_100g;
+            // Si no, calcular desde los valores por 100g
             const factor = pesoNeto / 100;
             nutrientesFinales = {
                 calorias: baseNutrientesPor100g.calorias * factor,
@@ -470,12 +474,17 @@ class AnalisisNutricionalManager {
 
             const pesoNeto = Math.max(0, parseFloat(input.val()) || 0);
             const parteComestible = parseFloat(input.data('parte-comestible')) || 100;
-            
+
             const nutrientes = ['calorias', 'proteina', 'grasa', 'cho', 'calcio', 'hierro', 'sodio'];
             const nutrientesPor100g = {};
             nutrientes.forEach(nutriente => {
                 nutrientesPor100g[nutriente] = parseFloat(input.data(nutriente)) || 0;
             });
+
+            // DEBUG: Verificar que los valores por 100g se lean correctamente
+            console.log(`[DEBUG] Ajustando peso para ingrediente ${nivelIndex}-${prepIndex}-${ingIndex}`);
+            console.log(`[DEBUG] Nuevo peso neto: ${pesoNeto}g`);
+            console.log(`[DEBUG] Valores por 100g:`, nutrientesPor100g);
 
             const pesoBruto = parteComestible > 0 ? (pesoNeto * 100) / parteComestible : pesoNeto;
             $(`#bruto-${nivelIndex}-${prepIndex}-${ingIndex}`).text(pesoBruto.toFixed(0));
@@ -483,7 +492,7 @@ class AnalisisNutricionalManager {
             const factor = pesoNeto / 100;
             nutrientes.forEach(nutriente => {
                 const valor = nutrientesPor100g[nutriente] * factor;
-                const sufijo = nutriente === 'calorias' ? 'cal' : 
+                const sufijo = nutriente === 'calorias' ? 'cal' :
                               nutriente === 'proteina' ? 'prot' :
                               nutriente === 'grasa' ? 'grasa' :
                               nutriente === 'cho' ? 'cho' :
@@ -491,6 +500,8 @@ class AnalisisNutricionalManager {
                               nutriente === 'hierro' ? 'hierro' : 'sodio';
                 $(`#${sufijo}-${nivelIndex}-${prepIndex}-${ingIndex}`).text(valor.toFixed(1));
             });
+
+            console.log(`[DEBUG] Nutrientes calculados: calorias=${nutrientesPor100g.calorias * factor}kcal`);
 
             this.recalcularTotalesNivel(nivelIndex);
             actualizandoPorPeso = false;

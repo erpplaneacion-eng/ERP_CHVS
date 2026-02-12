@@ -22,7 +22,7 @@ class GruposAlimentos(models.Model):
         return self.grupo_alimentos
 
     class Meta:
-        db_table = 'grupos_alimentos'
+        db_table = 'nutricion_grupos_alimento'
         verbose_name = "Grupo de Alimento"
         verbose_name_plural = "Grupos de Alimentos"
         ordering = ['id_grupo_alimentos']
@@ -54,7 +54,7 @@ class ComponentesAlimentos(models.Model):
         return self.componente
 
     class Meta:
-        db_table = 'componentes_alimentos'
+        db_table = 'nutricion_componentes_alimentos'
         verbose_name = "Componente de Alimento"
         verbose_name_plural = "Componentes de Alimentos"
         ordering = ['componente']
@@ -160,7 +160,7 @@ class TablaMenus(models.Model):
         return f"{self.menu} - {self.id_modalidad.modalidad}"
 
     class Meta:
-        db_table = 'tabla_menus'
+        db_table = 'nutricion_tabla_menus'
         verbose_name = "Menú"
         verbose_name_plural = "Menús"
         ordering = ['-fecha_creacion']
@@ -208,7 +208,7 @@ class TablaPreparaciones(models.Model):
         return f"{self.preparacion} ({self.id_menu.menu})"
 
     class Meta:
-        db_table = 'tabla_preparaciones'
+        db_table = 'nutricion_tabla_preparaciones'
         verbose_name = "Preparación/Receta"
         verbose_name_plural = "Preparaciones/Recetas"
         ordering = ['preparacion']
@@ -263,7 +263,7 @@ class TablaPreparacionIngredientes(models.Model):
         return f"{self.id_preparacion.preparacion} - {self.id_ingrediente_siesa.nombre_ingrediente}"
 
     class Meta:
-        db_table = 'tabla_preparacion_ingredientes'
+        db_table = 'nutricion_tabla_preparacion_ingredientes'
         unique_together = ('id_preparacion', 'id_ingrediente_siesa')
         verbose_name = "Ingrediente de Preparación"
         verbose_name_plural = "Ingredientes de Preparaciones"
@@ -276,14 +276,23 @@ class TablaPreparacionIngredientes(models.Model):
 
 class TablaRequerimientosNutricionales(models.Model):
     """
-    Tabla de requerimientos nutricionales por nivel escolar.
+    Tabla de requerimientos nutricionales por nivel escolar y modalidad de consumo.
     Define los límites máximos de macronutrientes y micronutrientes que se deben suministrar.
 
-    Los requerimientos representan el 100% de adecuación nutricional permitido.
+    CAMBIO IMPORTANTE (Febrero 2025):
+    - Ahora considera NIVEL ESCOLAR + MODALIDAD DE CONSUMO
+    - Cada modalidad (CAJM/JT, Almuerzo, etc.) tiene requerimientos específicos
+    - Los requerimientos se basan en la Minuta Patrón ICBF (Resolución UAPA)
+
+    Los requerimientos representan el 100% de adecuación nutricional permitido para esa modalidad.
     Los rangos de evaluación son:
-    - 0-35%: Óptimo (verde)
-    - 35.1-70%: Aceptable (amarillo)
-    - >70%: Alto (rojo)
+    - 0-35%: Óptimo (verde) - Aporte bajo pero seguro
+    - 35.1-70%: Aceptable (amarillo) - Aporte moderado
+    - >70%: Alto (rojo) - Aporte elevado, cerca del límite máximo
+
+    Ejemplo:
+    - CAJM/JT Preescolar: 276 Kcal (20% del requerimiento diario de 1300 Kcal)
+    - Almuerzo Preescolar: 417 Kcal (32% del requerimiento diario de 1300 Kcal)
     """
     id_requerimiento_nutricional = models.CharField(
         max_length=50,
@@ -332,16 +341,111 @@ class TablaRequerimientosNutricionales(models.Model):
         verbose_name="Nivel Escolar UAPA",
         related_name='requerimientos_nutricionales'
     )
+    id_modalidad = models.ForeignKey(
+        ModalidadesDeConsumo,
+        on_delete=models.PROTECT,
+        db_column='id_modalidad',
+        verbose_name="Modalidad de Consumo",
+        related_name='requerimientos_nutricionales',
+        null=True,  # Permitir NULL para compatibilidad con datos existentes
+        blank=True
+    )
 
     class Meta:
-        db_table = 'tabla_requerimientos_nutricionales'
+        db_table = 'nutricion_total_aporte_promedio_diario'
         verbose_name = 'Requerimiento Nutricional'
         verbose_name_plural = 'Requerimientos Nutricionales'
-        ordering = ['id_nivel_escolar_uapa']
-        unique_together = [['id_nivel_escolar_uapa']]
+        ordering = ['id_nivel_escolar_uapa', 'id_modalidad']
+        # Ahora la combinación única es nivel + modalidad
+        unique_together = [['id_nivel_escolar_uapa', 'id_modalidad']]
 
     def __str__(self):
-        return f"{self.id_nivel_escolar_uapa.nivel_escolar_uapa} - {self.calorias_kcal} Kcal"
+        modalidad_str = f" - {self.id_modalidad.modalidad}" if self.id_modalidad else ""
+        return f"{self.id_nivel_escolar_uapa.nivel_escolar_uapa}{modalidad_str} - {self.calorias_kcal} Kcal"
+
+
+class AdecuacionTotalPorcentaje(models.Model):
+    """
+    Tabla de adecuación total en porcentaje por nivel escolar y modalidad de consumo.
+    Almacena los porcentajes de adecuación nutricional calculados comparando
+    los valores reales del menú contra los requerimientos nutricionales.
+
+    Los valores en esta tabla representan el % de cumplimiento de cada nutriente:
+    - 0-35%: Óptimo (verde) - Aporte bajo pero seguro
+    - 35.1-70%: Aceptable (amarillo) - Aporte moderado
+    - >70%: Alto (rojo) - Aporte elevado, cerca del límite máximo (100%)
+
+    Relación con otras tablas:
+    - Se calcula a partir de: TablaAnalisisNutricionalMenu (valores reales)
+    - Se compara contra: TablaRequerimientosNutricionales (valores límite 100%)
+    """
+    id_adecuacion_porcentaje = models.CharField(
+        max_length=50,
+        primary_key=True,
+        verbose_name="ID Adecuación Porcentaje"
+    )
+    calorias_porc = models.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        verbose_name="Calorías (%)"
+    )
+    proteina_porc = models.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        verbose_name="Proteína (%)"
+    )
+    grasa_porc = models.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        verbose_name="Grasa (%)"
+    )
+    cho_porc = models.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        verbose_name="CHO (%)"
+    )
+    calcio_porc = models.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        verbose_name="Calcio (%)"
+    )
+    hierro_porc = models.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        verbose_name="Hierro (%)"
+    )
+    sodio_porc = models.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        verbose_name="Sodio (%)"
+    )
+    id_nivel_escolar_uapa = models.ForeignKey(
+        'principal.TablaGradosEscolaresUapa',
+        on_delete=models.PROTECT,
+        db_column='id_nivel_escolar_uapa',
+        verbose_name="Nivel Escolar UAPA",
+        related_name='adecuaciones_porcentaje'
+    )
+    id_modalidad = models.ForeignKey(
+        ModalidadesDeConsumo,
+        on_delete=models.PROTECT,
+        db_column='id_modalidad',
+        verbose_name="Modalidad de Consumo",
+        related_name='adecuaciones_porcentaje',
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        db_table = 'nutricion_adecuacion_total_porc'
+        verbose_name = 'Adecuación Total Porcentaje'
+        verbose_name_plural = 'Adecuaciones Totales Porcentaje'
+        ordering = ['id_nivel_escolar_uapa', 'id_modalidad']
+        unique_together = [['id_nivel_escolar_uapa', 'id_modalidad']]
+
+    def __str__(self):
+        modalidad_str = f" - {self.id_modalidad.modalidad}" if self.id_modalidad else ""
+        return f"{self.id_nivel_escolar_uapa.nivel_escolar_uapa}{modalidad_str} - {self.calorias_porc}%"
 
 
 class TablaAnalisisNutricionalMenu(models.Model):
@@ -534,7 +638,7 @@ class TablaAnalisisNutricionalMenu(models.Model):
     )
 
     class Meta:
-        db_table = 'tabla_analisis_nutricional_menu'
+        db_table = 'nutricion_tabla_analisis_nutricional_menu'
         verbose_name = 'Análisis Nutricional de Menú'
         verbose_name_plural = 'Análisis Nutricionales de Menús'
         ordering = ['-fecha_actualizacion']
@@ -660,7 +764,7 @@ class TablaIngredientesPorNivel(models.Model):
     )
 
     class Meta:
-        db_table = 'tabla_ingredientes_por_nivel'
+        db_table = 'nutricion_tabla_ingredientes_por_nivel'
         verbose_name = 'Ingrediente Configurado por Nivel'
         verbose_name_plural = 'Ingredientes Configurados por Nivel'
         ordering = ['id_preparacion', 'id_ingrediente_siesa']
@@ -672,3 +776,58 @@ class TablaIngredientesPorNivel(models.Model):
 
     def __str__(self):
         return f"{self.id_ingrediente_siesa.nombre_ingrediente} - {self.peso_neto}g"
+
+
+class RequerimientoSemanal(models.Model):
+    """
+    Modelo para gestionar los requerimientos semanales de componentes por modalidad.
+    Define la frecuencia mínima semanal que debe cumplir cada componente de alimento
+    según la modalidad de consumo.
+
+    Ejemplo: Para modalidad "Almuerzo", el componente "Bebida con leche" debe aparecer
+    mínimo 3 veces por semana.
+    """
+    id = models.AutoField(
+        primary_key=True,
+        verbose_name="ID"
+    )
+    modalidad = models.ForeignKey(
+        ModalidadesDeConsumo,
+        on_delete=models.PROTECT,
+        db_column='modalidad',
+        verbose_name="Modalidad de Consumo",
+        related_name='requerimientos_semanales'
+    )
+    componente = models.ForeignKey(
+        ComponentesAlimentos,
+        on_delete=models.PROTECT,
+        db_column='componente',
+        verbose_name="Componente de Alimento",
+        related_name='requerimientos_semanales'
+    )
+    frecuencia = models.IntegerField(
+        verbose_name="Frecuencia Semanal",
+        help_text="Número de veces que debe aparecer este componente en la semana"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Fecha de Creación"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Fecha de Actualización"
+    )
+
+    class Meta:
+        db_table = 'nutricion_requerimientos_semanales'
+        verbose_name = "Requerimiento Semanal"
+        verbose_name_plural = "Requerimientos Semanales"
+        ordering = ['modalidad', 'componente']
+        unique_together = [['modalidad', 'componente']]
+        indexes = [
+            models.Index(fields=['modalidad']),
+            models.Index(fields=['componente']),
+        ]
+
+    def __str__(self):
+        return f"{self.modalidad.modalidad} - {self.componente.componente} (x{self.frecuencia}/semana)"
