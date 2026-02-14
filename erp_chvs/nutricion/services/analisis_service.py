@@ -157,8 +157,11 @@ class AnalisisNutricionalService:
                     ).first()
 
                 if alimento:
-                    # Calcular peso bruto
-                    peso_neto_base = 100
+                    # ✨ MEJORA: Usar gramaje de preparaciones como peso inicial
+                    # Si existe gramaje guardado en TablaPreparacionIngredientes, usarlo
+                    # Si no, usar 100g como valor por defecto
+                    peso_neto_base = float(ing_prep.gramaje) if ing_prep.gramaje and ing_prep.gramaje > 0 else 100.0
+
                     parte_comestible = float(alimento.parte_comestible_field or 100)
                     parte_comestible = max(1.0, min(100.0, parte_comestible))
 
@@ -190,11 +193,14 @@ class AnalisisNutricionalService:
                     })
                 else:
                     # Alimento no encontrado - usar defaults
+                    # ✨ MEJORA: Usar gramaje de preparaciones como peso inicial
+                    peso_neto_default = float(ing_prep.gramaje) if ing_prep.gramaje and ing_prep.gramaje > 0 else 100.0
+
                     ingredientes_data.append({
                         'id_ingrediente': ingrediente_codigo,
                         'nombre': ingrediente_nombre,
-                        'peso_neto_base': 100,
-                        'peso_bruto_base': 100,
+                        'peso_neto_base': peso_neto_default,
+                        'peso_bruto_base': peso_neto_default,
                         'parte_comestible': 100,
                         'valores_por_100g': {
                             'calorias_kcal': 0, 'proteina_g': 0, 'grasa_g': 0,
@@ -539,4 +545,219 @@ class AnalisisNutricionalService:
             "modalidad_nombre": modalidad.modalidad,
             "analisis_por_nivel": analisis_final_por_nivel
         }
+
+    @staticmethod
+    def sincronizar_pesos_desde_preparaciones(
+        id_menu: int,
+        id_nivel_escolar: str,
+        sobrescribir_existentes: bool = False
+    ) -> Dict:
+        """
+        Sincroniza los pesos desde TablaPreparacionIngredientes.gramaje
+        hacia TablaIngredientesPorNivel para un menú y nivel específico.
+
+        Args:
+            id_menu: ID del menú
+            id_nivel_escolar: ID del nivel escolar
+            sobrescribir_existentes: Si True, sobrescribe pesos ya guardados
+
+        Returns:
+            Dict con resultado de la sincronización
+        """
+        from django.db import transaction
+        from principal.models import TablaGradosEscolaresUapa
+
+        # Validar menú y nivel
+        menu = TablaMenus.objects.get(id_menu=id_menu)
+        nivel_escolar = TablaGradosEscolaresUapa.objects.get(
+            id_grado_escolar_uapa=id_nivel_escolar
+        )
+
+        # Obtener o crear análisis para este nivel
+        analisis, _ = TablaAnalisisNutricionalMenu.objects.get_or_create(
+            id_menu=menu,
+            id_nivel_escolar_uapa=nivel_escolar
+        )
+
+        sincronizados = 0
+        omitidos = 0
+        errores = []
+
+        with transaction.atomic():
+            # Obtener todas las relaciones preparación-ingrediente
+            relaciones = TablaPreparacionIngredientes.objects.filter(
+                id_preparacion__id_menu=menu
+            ).select_related('id_preparacion', 'id_ingrediente_siesa')
+
+            for rel in relaciones:
+                # Solo sincronizar si hay gramaje definido
+                if not rel.gramaje or rel.gramaje <= 0:
+                    omitidos += 1
+                    continue
+
+                try:
+                    # Buscar ingrediente en TablaIngredientesSiesa
+                    ingrediente_siesa = TablaIngredientesSiesa.objects.filter(
+                        id_ingrediente_siesa=rel.id_ingrediente_siesa.codigo
+                    ).first()
+
+                    # Si no existe, crearlo desde ICBF
+                    if not ingrediente_siesa:
+                        ingrediente_siesa, _ = TablaIngredientesSiesa.objects.get_or_create(
+                            id_ingrediente_siesa=rel.id_ingrediente_siesa.codigo,
+                            defaults={
+                                'nombre_ingrediente': rel.id_ingrediente_siesa.nombre_del_alimento
+                            }
+                        )
+
+                    # Buscar registro existente
+                    ingrediente_nivel = TablaIngredientesPorNivel.objects.filter(
+                        id_analisis=analisis,
+                        id_preparacion=rel.id_preparacion,
+                        id_ingrediente_siesa=ingrediente_siesa
+                    ).first()
+
+                    # Calcular valores nutricionales
+                    alimento_icbf = rel.id_ingrediente_siesa
+                    valores = CalculoService.calcular_valores_nutricionales_alimento(
+                        alimento_icbf,
+                        float(rel.gramaje)
+                    )
+
+                    # Calcular peso bruto
+                    parte_comestible = float(alimento_icbf.parte_comestible_field or 100)
+                    peso_bruto = CalculoService.calcular_peso_bruto(
+                        float(rel.gramaje),
+                        parte_comestible
+                    )
+
+                    datos_ingrediente = {
+                        'peso_neto': rel.gramaje,
+                        'peso_bruto': peso_bruto,
+                        'parte_comestible': parte_comestible,
+                        'calorias': valores['calorias'],
+                        'proteina': valores['proteina'],
+                        'grasa': valores['grasa'],
+                        'cho': valores['cho'],
+                        'calcio': valores['calcio'],
+                        'hierro': valores['hierro'],
+                        'sodio': valores['sodio'],
+                        'codigo_icbf': alimento_icbf.codigo
+                    }
+
+                    if ingrediente_nivel:
+                        # Actualizar solo si sobrescribir_existentes es True
+                        if sobrescribir_existentes:
+                            for key, value in datos_ingrediente.items():
+                                setattr(ingrediente_nivel, key, value)
+                            ingrediente_nivel.save()
+                            sincronizados += 1
+                        else:
+                            omitidos += 1
+                    else:
+                        # Crear nuevo registro
+                        TablaIngredientesPorNivel.objects.create(
+                            id_analisis=analisis,
+                            id_preparacion=rel.id_preparacion,
+                            id_ingrediente_siesa=ingrediente_siesa,
+                            **datos_ingrediente
+                        )
+                        sincronizados += 1
+
+                except Exception as e:
+                    errores.append(f"Error con {rel.id_ingrediente_siesa.nombre_del_alimento}: {str(e)}")
+                    continue
+
+            # Recalcular totales del análisis
+            if sincronizados > 0:
+                AnalisisNutricionalService._recalcular_totales_analisis(analisis)
+
+        return {
+            'success': True,
+            'mensaje': f'Sincronización completada',
+            'sincronizados': sincronizados,
+            'omitidos': omitidos,
+            'errores': errores
+        }
+
+    @staticmethod
+    def _recalcular_totales_analisis(analisis: TablaAnalisisNutricionalMenu) -> None:
+        """
+        Recalcula los totales de un análisis basándose en TablaIngredientesPorNivel.
+
+        Args:
+            analisis: Instancia del análisis a recalcular
+        """
+        ingredientes = TablaIngredientesPorNivel.objects.filter(id_analisis=analisis)
+
+        totales = {
+            'calorias': 0.0,
+            'proteina': 0.0,
+            'grasa': 0.0,
+            'cho': 0.0,
+            'calcio': 0.0,
+            'hierro': 0.0,
+            'sodio': 0.0,
+            'peso_neto': 0.0,
+            'peso_bruto': 0.0
+        }
+
+        for ing in ingredientes:
+            totales['calorias'] += float(ing.calorias)
+            totales['proteina'] += float(ing.proteina)
+            totales['grasa'] += float(ing.grasa)
+            totales['cho'] += float(ing.cho)
+            totales['calcio'] += float(ing.calcio)
+            totales['hierro'] += float(ing.hierro)
+            totales['sodio'] += float(ing.sodio)
+            totales['peso_neto'] += float(ing.peso_neto)
+            totales['peso_bruto'] += float(ing.peso_bruto)
+
+        # Actualizar análisis
+        analisis.total_calorias = totales['calorias']
+        analisis.total_proteina = totales['proteina']
+        analisis.total_grasa = totales['grasa']
+        analisis.total_cho = totales['cho']
+        analisis.total_calcio = totales['calcio']
+        analisis.total_hierro = totales['hierro']
+        analisis.total_sodio = totales['sodio']
+        analisis.total_peso_neto = totales['peso_neto']
+        analisis.total_peso_bruto = totales['peso_bruto']
+
+        # Calcular porcentajes si hay requerimientos
+        try:
+            requerimiento = TablaRequerimientosNutricionales.objects.get(
+                id_nivel_escolar_uapa=analisis.id_nivel_escolar_uapa,
+                id_modalidad=analisis.id_menu.id_modalidad
+            )
+
+            analisis.porcentaje_calorias = (totales['calorias'] / float(requerimiento.calorias_kcal)) * 100
+            analisis.porcentaje_proteina = (totales['proteina'] / float(requerimiento.proteina_g)) * 100
+            analisis.porcentaje_grasa = (totales['grasa'] / float(requerimiento.grasa_g)) * 100
+            analisis.porcentaje_cho = (totales['cho'] / float(requerimiento.cho_g)) * 100
+            analisis.porcentaje_calcio = (totales['calcio'] / float(requerimiento.calcio_mg)) * 100
+            analisis.porcentaje_hierro = (totales['hierro'] / float(requerimiento.hierro_mg)) * 100
+            analisis.porcentaje_sodio = (totales['sodio'] / float(requerimiento.sodio_mg)) * 100
+
+            # Actualizar estados de semaforización
+            def clasificar_estado(porcentaje):
+                if porcentaje <= 35:
+                    return 'optimo'
+                elif porcentaje <= 70:
+                    return 'aceptable'
+                else:
+                    return 'alto'
+
+            analisis.estado_calorias = clasificar_estado(analisis.porcentaje_calorias)
+            analisis.estado_proteina = clasificar_estado(analisis.porcentaje_proteina)
+            analisis.estado_grasa = clasificar_estado(analisis.porcentaje_grasa)
+            analisis.estado_cho = clasificar_estado(analisis.porcentaje_cho)
+            analisis.estado_calcio = clasificar_estado(analisis.porcentaje_calcio)
+            analisis.estado_hierro = clasificar_estado(analisis.porcentaje_hierro)
+            analisis.estado_sodio = clasificar_estado(analisis.porcentaje_sodio)
+
+        except TablaRequerimientosNutricionales.DoesNotExist:
+            pass
+
+        analisis.save()
 
