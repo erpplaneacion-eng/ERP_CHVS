@@ -10,9 +10,38 @@ const MENU_CONFIG = {
     apiEndpoint: '/nutricion/api/menus/'
 };
 
+/**
+ * Validar que todos los módulos requeridos estén cargados
+ */
+function validarDependencias() {
+    const dependenciasRequeridas = [
+        { nombre: 'modalManager', objeto: window.modalManager, descripcion: 'Gestor de modales' },
+        { nombre: 'ApiClient', objeto: window.ApiClient, descripcion: 'Cliente API' },
+        { nombre: 'NutricionUtils', objeto: window.NutricionUtils, descripcion: 'Utilidades de nutrición' }
+    ];
+
+    const faltantes = dependenciasRequeridas.filter(dep => !dep.objeto);
+
+    if (faltantes.length > 0) {
+        console.error('❌ [menus.js] Faltan dependencias requeridas:');
+        faltantes.forEach(dep => {
+            console.error(`   - ${dep.nombre}: ${dep.descripcion}`);
+        });
+        console.error('⚠️ El módulo de menús puede no funcionar correctamente.');
+        return false;
+    }
+
+    console.log('✅ [menus.js] Todas las dependencias están cargadas correctamente.');
+    return true;
+}
+
 // Inicialización
 document.addEventListener('DOMContentLoaded', function() {
-    inicializarEventos();
+    if (validarDependencias()) {
+        inicializarEventos();
+    } else {
+        console.warn('⚠️ [menus.js] Inicialización parcial debido a dependencias faltantes.');
+    }
 });
 
 function inicializarEventos() {
@@ -55,14 +84,14 @@ function abrirModalNuevo() {
     if (form) form.reset();
 
     document.getElementById('menuId').value = '';
-    ModalManager.abrir(MENU_CONFIG.modalId);
+    modalManager.abrir(MENU_CONFIG.modalId);
 }
 
 function cerrarModal() {
     const form = document.getElementById(MENU_CONFIG.formId);
     if (form) form.reset();
 
-    ModalManager.cerrar(MENU_CONFIG.modalId);
+    modalManager.cerrar(MENU_CONFIG.modalId);
 }
 
 async function editarMenu(id) {
@@ -76,7 +105,7 @@ async function editarMenu(id) {
         document.getElementById('menuModalidad').value = data.id_modalidad;
         document.getElementById('menuPrograma').value = data.id_contrato;
 
-        ModalManager.abrir(MENU_CONFIG.modalId);
+        modalManager.abrir(MENU_CONFIG.modalId);
 
     } catch (error) {
         NutricionUtils.mostrarNotificacion('error', 'Error al cargar el menú');
@@ -125,7 +154,7 @@ async function guardarMenu(event) {
 }
 
 async function eliminarMenu(id) {
-    const confirmado = await ModalManager.confirmar(
+    const confirmado = await modalManager.confirmar(
         '¿Está seguro de eliminar este menú?',
         'Esta acción eliminará también todas las preparaciones asociadas.'
     );

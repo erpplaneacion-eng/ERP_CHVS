@@ -1,9 +1,53 @@
 
 
 /**
+ * Estado global centralizado del módulo de nutrición
+ * Reemplaza variables globales dispersas por un objeto único
+ */
+window.NutricionState = {
+    // Menú actual
+    menuActual: null,           // Objeto completo del menú seleccionado
+    menuActualId: null,         // ID del menú actual
+
+    // Datos nutricionales
+    datosNutricionales: null,   // Datos de análisis nutricional del menú actual
+    requerimientosNiveles: {},  // Requerimientos por nivel educativo
+
+    // Programa y contexto
+    programaActual: null,       // Programa seleccionado
+    municipioActual: null,      // Municipio seleccionado
+    modalidadActual: null,      // Modalidad de consumo actual
+
+    // Datos de modalidades y menús
+    modalidadesData: [],        // Lista de modalidades disponibles
+    menusData: {},              // Diccionario de menús por modalidad
+
+    // Métodos helper para actualizar estado
+    setMenuActual(menu) {
+        this.menuActual = menu;
+        this.menuActualId = menu ? menu.id : null;
+    },
+
+    setDatosNutricionales(datos) {
+        this.datosNutricionales = datos;
+    },
+
+    setRequerimientosNiveles(requerimientos) {
+        this.requerimientosNiveles = requerimientos;
+    },
+
+    reset() {
+        this.menuActual = null;
+        this.menuActualId = null;
+        this.datosNutricionales = null;
+        this.requerimientosNiveles = {};
+    }
+};
+
+/**
  * MenusAvanzadosController.js - ARCHIVO PRINCIPAL REFACTORIZADO
  * Coordinador principal que integra todos los módulos del sistema de menús avanzados
- * 
+ *
  * MÓDULOS INTEGRADOS:
  * - PreparacionesManager: Gestión de preparaciones
  * - IngredientesManager: Gestión de ingredientes
@@ -13,13 +57,19 @@
 
 class MenusAvanzadosController {
     constructor() {
-        // Variables globales del sistema
+        // Variables globales del sistema (sincronizadas con window.NutricionState)
         this.programaActual = null;
         this.municipioActual = null;
         this.modalidadesData = [];
         this.menusData = {};
         this.menuActualId = null;
         this.menuActualAnalisis = null;
+
+        // Sincronizar con estado global
+        window.NutricionState.programaActual = this.programaActual;
+        window.NutricionState.municipioActual = this.municipioActual;
+        window.NutricionState.modalidadesData = this.modalidadesData;
+        window.NutricionState.menusData = this.menusData;
 
         // Managers de módulos
         this.filtrosManager = null;
@@ -38,6 +88,9 @@ class MenusAvanzadosController {
      */
     async init() {
         try {
+            // Validar dependencias globales
+            this.validarDependenciasGlobales();
+
             // Inicializar managers en orden de dependencia
             this.modalesManager = new ModalesManager();
             this.filtrosManager = new FiltrosManager();
@@ -56,6 +109,42 @@ class MenusAvanzadosController {
             }
         } catch (error) {
             console.error('❌ Error al inicializar MenusAvanzadosController:', error);
+        }
+    }
+
+    /**
+     * Validar que las dependencias globales estén disponibles
+     */
+    validarDependenciasGlobales() {
+        const dependenciasRequeridas = [
+            { nombre: 'window.NutricionState', objeto: window.NutricionState, critico: true },
+            { nombre: 'window.nutricionAPI', objeto: window.nutricionAPI, critico: false }, // Se carga dinámicamente por main.js
+            { nombre: 'window.NutricionUtils', objeto: window.NutricionUtils, critico: false }
+        ];
+
+        const faltantes = dependenciasRequeridas.filter(dep => !dep.objeto);
+
+        if (faltantes.length > 0) {
+            const criticasFaltantes = faltantes.filter(dep => dep.critico);
+
+            if (criticasFaltantes.length > 0) {
+                console.error('❌ [MenusAvanzadosController] Faltan dependencias críticas:');
+                criticasFaltantes.forEach(dep => {
+                    console.error(`   - ${dep.nombre}`);
+                });
+                throw new Error(`Faltan dependencias críticas: ${criticasFaltantes.map(d => d.nombre).join(', ')}`);
+            }
+
+            // Solo advertencias para dependencias no críticas
+            const noCriticasFaltantes = faltantes.filter(dep => !dep.critico);
+            if (noCriticasFaltantes.length > 0) {
+                console.info('ℹ️ [MenusAvanzadosController] Dependencias opcionales que se cargarán después:');
+                noCriticasFaltantes.forEach(dep => {
+                    console.info(`   - ${dep.nombre} (se cargará dinámicamente)`);
+                });
+            }
+        } else {
+            console.log('✅ [MenusAvanzadosController] Todas las dependencias están disponibles');
         }
     }
 

@@ -12,60 +12,71 @@ const GuardadoAutomatico = {
      * @param {number} menuId - ID del menú
      */
     async guardarAnalisis(nivelIndex, menuId) {
+        // Validar dependencias
+        if (!window.NutricionState) {
+            console.error('❌ [GuardadoAutomatico] window.NutricionState no está disponible');
+            return;
+        }
+        if (!window.NutricionUtils) {
+            console.error('❌ [GuardadoAutomatico] window.NutricionUtils no está disponible');
+            return;
+        }
+
         try {
             // Recopilar totales actuales del nivel
             const totales = {
-                calorias: parseFloat($(`#nivel-${nivelIndex}-calorias`).text().replace(' Kcal', '')) || 0,
-                proteina: parseFloat($(`#nivel-${nivelIndex}-proteina`).text().replace(' g', '')) || 0,
-                grasa: parseFloat($(`#nivel-${nivelIndex}-grasa`).text().replace(' g', '')) || 0,
-                cho: parseFloat($(`#nivel-${nivelIndex}-cho`).text().replace(' g', '')) || 0,
-                calcio: parseFloat($(`#nivel-${nivelIndex}-calcio`).text().replace(' mg', '')) || 0,
-                hierro: parseFloat($(`#nivel-${nivelIndex}-hierro`).text().replace(' mg', '')) || 0,
-                sodio: parseFloat($(`#nivel-${nivelIndex}-sodio`).text().replace(' mg', '')) || 0,
+                calorias: parseFloat(document.getElementById(`nivel-${nivelIndex}-calorias`).textContent.replace(' Kcal', '')) || 0,
+                proteina: parseFloat(document.getElementById(`nivel-${nivelIndex}-proteina`).textContent.replace(' g', '')) || 0,
+                grasa: parseFloat(document.getElementById(`nivel-${nivelIndex}-grasa`).textContent.replace(' g', '')) || 0,
+                cho: parseFloat(document.getElementById(`nivel-${nivelIndex}-cho`).textContent.replace(' g', '')) || 0,
+                calcio: parseFloat(document.getElementById(`nivel-${nivelIndex}-calcio`).textContent.replace(' mg', '')) || 0,
+                hierro: parseFloat(document.getElementById(`nivel-${nivelIndex}-hierro`).textContent.replace(' mg', '')) || 0,
+                sodio: parseFloat(document.getElementById(`nivel-${nivelIndex}-sodio`).textContent.replace(' mg', '')) || 0,
                 peso_neto: 0,  // Se calculará sumando ingredientes
                 peso_bruto: 0  // Se calculará sumando ingredientes
             };
 
             // Recopilar porcentajes de adecuación
             const porcentajes = {
-                calorias: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="calorias"]`).val()) || 0,
-                proteina: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="proteina"]`).val()) || 0,
-                grasa: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="grasa"]`).val()) || 0,
-                cho: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="cho"]`).val()) || 0,
-                calcio: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="calcio"]`).val()) || 0,
-                hierro: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="hierro"]`).val()) || 0,
-                sodio: parseFloat($(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="sodio"]`).val()) || 0
+                calorias: parseFloat(document.querySelector(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="calorias"]`).value) || 0,
+                proteina: parseFloat(document.querySelector(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="proteina"]`).value) || 0,
+                grasa: parseFloat(document.querySelector(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="grasa"]`).value) || 0,
+                cho: parseFloat(document.querySelector(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="cho"]`).value) || 0,
+                calcio: parseFloat(document.querySelector(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="calcio"]`).value) || 0,
+                hierro: parseFloat(document.querySelector(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="hierro"]`).value) || 0,
+                sodio: parseFloat(document.querySelector(`.porcentaje-input[data-nivel="${nivelIndex}"][data-nutriente="sodio"]`).value) || 0
             };
 
             // Recopilar datos de ingredientes configurados
             const ingredientes = [];
-            $(`.ingrediente-row[data-nivel="${nivelIndex}"]`).each(function() {
-                const row = $(this);
-                const prepIndex = row.data('prep');
-                const ingIndex = row.data('ing');
-                const pesoInput = row.find('.peso-input');
+            const ingredienteRows = document.querySelectorAll(`.ingrediente-row[data-nivel="${nivelIndex}"]`);
+
+            ingredienteRows.forEach(row => {
+                const prepIndex = row.dataset.prep;
+                const ingIndex = row.dataset.ing;
+                const pesoInput = row.querySelector('.peso-input');
 
                 // Obtener IDs reales desde data attributes
-                const prepIdReal = row.data('prep-id') || pesoInput.data('prep-id');
-                const ingIdReal = row.data('ing-id') || pesoInput.data('ing-id');
+                const prepIdReal = row.dataset.prepId || pesoInput.dataset.prepId;
+                const ingIdReal = row.dataset.ingId || pesoInput.dataset.ingId;
 
                 console.log(`[DEBUG] Guardando ingrediente - Índices: prep=${prepIndex}, ing=${ingIndex}, IDs reales: prepId=${prepIdReal}, ingId=${ingIdReal}`);
 
-                const pesoNeto = parseFloat(pesoInput.val()) || 0;
-                const pesoBruto = parseFloat($(`#bruto-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0;
+                const pesoNeto = parseFloat(pesoInput.value) || 0;
+                const pesoBruto = parseFloat(document.getElementById(`bruto-${nivelIndex}-${prepIndex}-${ingIndex}`).textContent) || 0;
 
                 const ingrediente = {
                     id_preparacion: prepIdReal,
                     id_ingrediente_siesa: ingIdReal,
                     peso_neto: pesoNeto,
                     peso_bruto: pesoBruto,
-                    calorias: parseFloat($(`#cal-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
-                    proteina: parseFloat($(`#prot-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
-                    grasa: parseFloat($(`#grasa-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
-                    cho: parseFloat($(`#cho-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
-                    calcio: parseFloat($(`#calcio-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
-                    hierro: parseFloat($(`#hierro-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0,
-                    sodio: parseFloat($(`#sodio-${nivelIndex}-${prepIndex}-${ingIndex}`).text()) || 0
+                    calorias: parseFloat(document.getElementById(`cal-${nivelIndex}-${prepIndex}-${ingIndex}`).textContent) || 0,
+                    proteina: parseFloat(document.getElementById(`prot-${nivelIndex}-${prepIndex}-${ingIndex}`).textContent) || 0,
+                    grasa: parseFloat(document.getElementById(`grasa-${nivelIndex}-${prepIndex}-${ingIndex}`).textContent) || 0,
+                    cho: parseFloat(document.getElementById(`cho-${nivelIndex}-${prepIndex}-${ingIndex}`).textContent) || 0,
+                    calcio: parseFloat(document.getElementById(`calcio-${nivelIndex}-${prepIndex}-${ingIndex}`).textContent) || 0,
+                    hierro: parseFloat(document.getElementById(`hierro-${nivelIndex}-${prepIndex}-${ingIndex}`).textContent) || 0,
+                    sodio: parseFloat(document.getElementById(`sodio-${nivelIndex}-${prepIndex}-${ingIndex}`).textContent) || 0
                 };
 
                 // Acumular pesos totales
@@ -76,22 +87,22 @@ const GuardadoAutomatico = {
             });
 
             // Obtener ID del nivel escolar desde los datos almacenados
-            const idNivelEscolar = datosNutricionales &&
-                                  datosNutricionales.analisis_por_nivel &&
-                                  datosNutricionales.analisis_por_nivel[nivelIndex] &&
-                                  datosNutricionales.analisis_por_nivel[nivelIndex].nivel_escolar &&
-                                  datosNutricionales.analisis_por_nivel[nivelIndex].nivel_escolar.id;
+            const idNivelEscolar = window.NutricionState.datosNutricionales &&
+                                  window.NutricionState.datosNutricionales.analisis_por_nivel &&
+                                  window.NutricionState.datosNutricionales.analisis_por_nivel[nivelIndex] &&
+                                  window.NutricionState.datosNutricionales.analisis_por_nivel[nivelIndex].nivel_escolar &&
+                                  window.NutricionState.datosNutricionales.analisis_por_nivel[nivelIndex].nivel_escolar.id;
 
             console.log('[DEBUG] ID Nivel Escolar obtenido:', {
                 nivelIndex,
                 idNivelEscolar,
-                nivel_escolar_completo: datosNutricionales?.analisis_por_nivel?.[nivelIndex]?.nivel_escolar,
-                existe_datos: !!datosNutricionales
+                nivel_escolar_completo: window.NutricionState.datosNutricionales?.analisis_por_nivel?.[nivelIndex]?.nivel_escolar,
+                existe_datos: !!window.NutricionState.datosNutricionales
             });
 
             if (!idNivelEscolar || idNivelEscolar === '-1' || idNivelEscolar === -1) {
                 console.error('ID de nivel escolar inválido:', idNivelEscolar);
-                console.error('Datos completos:', datosNutricionales?.analisis_por_nivel?.[nivelIndex]);
+                console.error('Datos completos:', window.NutricionState.datosNutricionales?.analisis_por_nivel?.[nivelIndex]);
                 NutricionUtils.mostrarNotificacion('error', 'No se puede guardar: nivel escolar inválido');
                 return;
             }

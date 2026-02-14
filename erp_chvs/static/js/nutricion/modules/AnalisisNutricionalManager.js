@@ -85,7 +85,11 @@ class AnalisisNutricionalManager {
     renderizarAnalisisNutricional(data) {
         this.menuActual = data.menu;
         this.datosNutricionales = data;
-        
+
+        // Sincronizar con estado global
+        window.NutricionState.setMenuActual(data.menu);
+        window.NutricionState.setDatosNutricionales(data);
+
         const contenidoAnalisis = document.getElementById('contenidoAnalisis');
 
         if (!data.success) {
@@ -99,11 +103,15 @@ class AnalisisNutricionalManager {
         }
 
         const { menu, analisis_por_nivel } = data;
-        
+
         this.requerimientosNiveles = {};
+        // Será sincronizado después del loop de niveles
         analisis_por_nivel.forEach((nivel, index) => {
             this.requerimientosNiveles[index] = nivel.requerimientos;
         });
+
+        // Sincronizar requerimientos con estado global
+        window.NutricionState.setRequerimientosNiveles(this.requerimientosNiveles);
 
         contenidoAnalisis.innerHTML = `
             <div class="menu-info-header">

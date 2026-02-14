@@ -85,15 +85,43 @@
 }
 
 .accordion-content.active {
-    max-height: 3000px;
+    max-height: 10000px; /* Aumentado para contenido más grande */
+    overflow: visible; /* Permitir que el contenido sea visible completamente */
 }
 
 /* Grid de menús */
 .menus-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(5, 1fr);  /* Fixed: 5 columnas siempre */
     gap: 16px;
     padding: 24px;
+    max-width: 100%;
+    overflow: hidden;  /* Prevenir desbordamiento */
+    box-sizing: border-box;
+}
+
+@media (max-width: 1400px) {
+    .menus-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 1024px) {
+    .menus-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .menus-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .menus-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Tarjetas de menú */
@@ -103,7 +131,7 @@
     border-radius: 12px;
     padding: 20px;
     text-align: center;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s, z-index 0s;  /* Transiciones específicas */
     cursor: pointer;
     position: relative;
     display: flex;
@@ -111,12 +139,14 @@
     align-items: center;
     justify-content: center;
     min-height: 140px;
+    z-index: 1;  /* AGREGADO */
 }
 
 .menu-card:hover {
     border-color: var(--primary-color);
     transform: translateY(-4px);
     box-shadow: 0 12px 20px -8px rgba(16, 185, 129, 0.3);
+    z-index: 10;  /* AGREGADO: elevar en hover */
 }
 
 .menu-card.has-preparaciones {
@@ -1588,6 +1618,9 @@
     background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     transition: box-shadow 0.3s ease;
+    width: 100%;  /* AGREGADO */
+    box-sizing: border-box;  /* AGREGADO */
+    overflow: visible;  /* AGREGADO: permitir sombras de tarjetas */
 }
 
 .semana-container:hover {
@@ -1621,6 +1654,9 @@
     padding: 20px;
     background: white;
     border-radius: 12px;
+    max-width: 100%;  /* AGREGADO */
+    overflow: visible;  /* AGREGADO: permitir sombras en hover */
+    box-sizing: border-box;  /* AGREGADO */
 }
 
 @media (max-width: 1400px) {

@@ -266,46 +266,97 @@ class ModalManager {
 
     /**
      * Confirma una acción con modal
+     * Soporta dos patrones:
+     * 1. Legacy con callbacks: confirmar(mensaje, onConfirm, onCancel)
+     * 2. Moderno con Promise: await confirmar(mensaje, subtitulo)
      * @param {string} mensaje - Mensaje de confirmación
-     * @param {Function} onConfirm - Callback de confirmación
-     * @param {Function} onCancel - Callback de cancelación
+     * @param {string|Function} subtituloOrCallback - Subtítulo o callback (legacy)
+     * @param {Function} onCancel - Callback de cancelación (legacy)
+     * @returns {Promise<boolean>|undefined} - True si confirma, false si cancela
      */
-    confirmar(mensaje, onConfirm, onCancel = null) {
-        const modalId = 'modal-confirmacion-' + Date.now();
-        
-        const modal = this.crear({
-            id: modalId,
-            titulo: 'Confirmación',
-            contenido: `<p>${mensaje}</p>`,
-            ancho: '400px',
-            botones: [
-                {
-                    texto: 'Cancelar',
-                    clase: 'btn btn-secondary',
-                    onclick: () => {
-                        this.cerrar(modalId);
-                        if (onCancel) onCancel();
+    confirmar(mensaje, subtituloOrCallback = '', onCancel = null) {
+        // Soporte para patrón legacy con callbacks
+        if (typeof subtituloOrCallback === 'function') {
+            const onConfirm = subtituloOrCallback;
+            const modalId = 'modal-confirmacion-' + Date.now();
+
+            const modal = this.crear({
+                id: modalId,
+                titulo: 'Confirmación',
+                contenido: `<p>${mensaje}</p>`,
+                ancho: '400px',
+                botones: [
+                    {
+                        texto: 'Cancelar',
+                        clase: 'btn btn-secondary',
+                        onclick: () => {
+                            this.cerrar(modalId);
+                            if (onCancel) onCancel();
+                        }
+                    },
+                    {
+                        texto: 'Confirmar',
+                        clase: 'btn btn-danger',
+                        onclick: () => {
+                            this.cerrar(modalId);
+                            if (onConfirm) onConfirm();
+                        }
                     }
-                },
-                {
-                    texto: 'Confirmar',
-                    clase: 'btn btn-danger',
-                    onclick: () => {
-                        this.cerrar(modalId);
-                        if (onConfirm) onConfirm();
-                    }
+                ]
+            });
+
+            this.abrir(modalId);
+
+            setTimeout(() => {
+                if (modal.parentNode) {
+                    modal.parentNode.removeChild(modal);
                 }
-            ]
+            }, 500);
+            return;
+        }
+
+        // Patrón moderno con Promise
+        return new Promise((resolve) => {
+            const modalId = 'modal-confirmacion-' + Date.now();
+            const subtitulo = subtituloOrCallback;
+
+            const contenido = subtitulo
+                ? `<p><strong>${mensaje}</strong></p><p class="text-muted">${subtitulo}</p>`
+                : `<p>${mensaje}</p>`;
+
+            const modal = this.crear({
+                id: modalId,
+                titulo: 'Confirmación',
+                contenido: contenido,
+                ancho: '400px',
+                botones: [
+                    {
+                        texto: 'Cancelar',
+                        clase: 'btn btn-secondary',
+                        onclick: () => {
+                            this.cerrar(modalId);
+                            resolve(false);
+                        }
+                    },
+                    {
+                        texto: 'Confirmar',
+                        clase: 'btn btn-danger',
+                        onclick: () => {
+                            this.cerrar(modalId);
+                            resolve(true);
+                        }
+                    }
+                ]
+            });
+
+            this.abrir(modalId);
+
+            setTimeout(() => {
+                if (modal.parentNode) {
+                    modal.parentNode.removeChild(modal);
+                }
+            }, 1000);
         });
-
-        this.abrir(modalId);
-
-        // Auto-remover después de cerrar
-        setTimeout(() => {
-            if (modal.parentNode) {
-                modal.parentNode.removeChild(modal);
-            }
-        }, 500);
     }
 
     /**

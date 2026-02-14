@@ -321,7 +321,10 @@
 <!-- SweetAlert2 para confirmaciones -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<!-- Utilidades de Nutrición -->
+<!-- NOTA: modal-manager.js y api-client.js se cargan dinámicamente desde main.js -->
+<!-- NO cargarlos aquí para evitar duplicados -->
+
+<!-- Utilidades de Nutrición (requerido por calculos.js y guardado-automatico.js) -->
 <script src="{% static 'js/nutricion/core/utils.js' %}"></script>
 
 <!-- Módulos de Análisis Nutricional -->
