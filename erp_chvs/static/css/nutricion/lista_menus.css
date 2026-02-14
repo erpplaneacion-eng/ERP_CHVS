@@ -1575,3 +1575,424 @@
 .btn-download-excel:hover {
     color: #104524;
 }
+/* ============================================
+   VALIDADOR SEMANAL DE MENÚS
+   ============================================ */
+
+/* Contenedor de semana */
+.semana-container {
+    margin-bottom: 50px;
+    border: 2px solid #e9ecef;
+    border-radius: 16px;
+    padding: 30px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: box-shadow 0.3s ease;
+}
+
+.semana-container:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+
+/* Título de semana */
+.semana-titulo {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 15px;
+    border-bottom: 3px solid #007bff;
+}
+
+.semana-titulo i {
+    color: #007bff;
+    font-size: 1.5rem;
+}
+
+/* Grid de menús de la semana */
+.semana-menus-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 18px;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+}
+
+@media (max-width: 1400px) {
+    .semana-menus-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 992px) {
+    .semana-menus-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 576px) {
+    .semana-menus-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Validador semanal */
+.validador-semanal {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    border-left: 5px solid #007bff;
+}
+
+.validador-titulo {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #34495e;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.validador-titulo i {
+    color: #007bff;
+    font-size: 1.3rem;
+}
+
+/* Loading del validador */
+.loading-validador {
+    text-align: center;
+    padding: 30px;
+    color: #6c757d;
+    font-size: 1rem;
+}
+
+.loading-validador i {
+    margin-right: 10px;
+    color: #007bff;
+}
+
+/* Lista de componentes */
+.validador-lista {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px 0;
+}
+
+.validador-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.validador-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Estados de cumplimiento */
+.validador-item.cumple {
+    background: linear-gradient(135deg, #d4edda 0%, #e9f7ef 100%);
+    border-left: 5px solid #28a745;
+}
+
+.validador-item.no-cumple {
+    background: linear-gradient(135deg, #f8d7da 0%, #fce8ea 100%);
+    border-left: 5px solid #dc3545;
+}
+
+/* Íconos de estado */
+.estado-icono {
+    font-size: 1.4rem;
+    margin-right: 10px;
+}
+
+.estado-icono.cumple {
+    color: #28a745;
+}
+
+.estado-icono.no-cumple {
+    color: #dc3545;
+}
+
+/* Badge de frecuencia */
+.frecuencia-badge {
+    background: #007bff;
+    color: white;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0,123,255,0.3);
+    transition: transform 0.2s ease;
+}
+
+.frecuencia-badge:hover {
+    transform: scale(1.05);
+}
+
+.frecuencia-badge.error {
+    background: #dc3545;
+    box-shadow: 0 2px 6px rgba(220,53,69,0.3);
+}
+
+/* Resumen final del validador */
+.validador-resumen {
+    margin-top: 20px;
+    padding: 18px 25px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.validador-resumen i {
+    font-size: 1.3rem;
+}
+
+.validador-resumen.cumple {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    color: #155724;
+    border: 2px solid #28a745;
+}
+
+.validador-resumen.no-cumple {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    color: #721c24;
+    border: 2px solid #dc3545;
+}
+
+/* Sección de menús especiales */
+.menus-especiales-section {
+    margin-top: 60px;
+    padding-top: 40px;
+    border-top: 4px dashed #dee2e6;
+}
+
+.menus-especiales-titulo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #6c757d;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.menus-especiales-titulo i {
+    color: #ffc107;
+    font-size: 1.7rem;
+}
+
+/* Grid para menús especiales */
+.menus-especiales-section .menus-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+/* Animación suave para elementos */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.semana-container {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.validador-item {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+/* Ajustes responsivos */
+@media (max-width: 768px) {
+    .semana-container {
+        padding: 20px;
+    }
+
+    .semana-titulo {
+        font-size: 1.2rem;
+    }
+
+    .validador-semanal {
+        padding: 20px;
+    }
+
+    .validador-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .frecuencia-badge {
+        align-self: flex-end;
+    }
+}
+
+/* ============================================
+   Clases adicionales del validador semanal
+   ============================================ */
+
+/* Contenedor de componentes del validador */
+.validador-componentes {
+    margin-bottom: 15px;
+}
+
+/* Mensajes de estado del validador */
+.validador-vacio {
+    text-align: center;
+    padding: 25px;
+    color: #6c757d;
+    font-style: italic;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #dee2e6;
+}
+
+.validador-error {
+    text-align: center;
+    padding: 20px;
+    color: #721c24;
+    background: #f8d7da;
+    border-radius: 8px;
+    border: 2px solid #f5c6cb;
+    font-weight: 600;
+}
+
+.validador-error i {
+    margin-right: 8px;
+    color: #dc3545;
+}
+
+/* Spinner de carga del validador */
+.validador-loading {
+    text-align: center;
+    padding: 30px;
+    color: #6c757d;
+    font-size: 1rem;
+}
+
+.validador-loading .spinner-border {
+    margin-bottom: 10px;
+}
+
+/* Elementos internos del validador */
+.validador-icono {
+    font-size: 1.3rem;
+    margin-right: 8px;
+}
+
+.validador-componente {
+    font-weight: 600;
+    color: #2c3e50;
+    flex: 1;
+}
+
+.validador-frecuencias {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.frecuencia-mensaje {
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Estados del resumen del validador */
+.validador-estado-ok {
+    color: #155724;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.validador-estado-ok i {
+    color: #28a745;
+    font-size: 1.2rem;
+}
+
+.validador-estado-error {
+    color: #721c24;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.validador-estado-error i {
+    color: #dc3545;
+    font-size: 1.2rem;
+}
+
+/* Clases de validación general */
+.valido {
+    border-color: #28a745 !important;
+}
+
+.invalido {
+    border-color: #dc3545 !important;
+}
+
+/* Grid de menús especiales */
+.menus-especiales-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .menus-especiales-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .menus-especiales-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Placeholder para menús pendientes */
+.menu-card-placeholder {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px dashed #ced4da;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.menu-card-placeholder:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.menu-placeholder-text {
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-style: italic;
+    margin-top: 10px;
+}

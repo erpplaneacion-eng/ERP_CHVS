@@ -178,6 +178,11 @@ class ModalidadesManager {
 
         if (tieneMenus) {
             grid.innerHTML = this.generarTarjetasMenus(menusModalidad);
+
+            // Cargar validadores semanales de forma asíncrona
+            setTimeout(() => {
+                this.cargarValidadoresSemana(modalidadId);
+            }, 100);
         } else {
             grid.innerHTML = `<p style="padding: 20px;" id="placeholder-${modalidadId}">Genere los menús para esta modalidad</p>`;
         }
@@ -185,81 +190,168 @@ class ModalidadesManager {
         content.appendChild(grid);
         accordionDiv.appendChild(header);
         accordionDiv.appendChild(content);
-        
+
         return accordionDiv;
     }
 
     /**
-     * Generar tarjetas de menús
+     * Generar tarjetas de menús con agrupación semanal
      * @param {Array} menus - Array de menús
      * @param {boolean} animate - Si se deben animar las tarjetas
      * @returns {string} HTML de las tarjetas
      */
     generarTarjetasMenus(menus, animate = false) {
-        const tarjetasMenus = menus.map((menu, index) => {
-            const esNumerico = !isNaN(menu.menu) && parseInt(menu.menu) >= 1 && parseInt(menu.menu) <= 20;
-            const esEspecial = !esNumerico;
+        // Separar menús regulares (1-20) de menús especiales
+        const menusRegulares = menus.filter(menu => {
+            const num = parseInt(menu.menu);
+            return !isNaN(num) && num >= 1 && num <= 20;
+        });
+
+        const menusEspeciales = menus.filter(menu => {
+            const num = parseInt(menu.menu);
+            return isNaN(num) || num < 1 || num > 20;
+        });
+
+        const modalidadId = menus.length > 0 ? menus[0].id_modalidad__id_modalidades : '';
+
+        let html = '';
+
+        // Generar 4 semanas de 5 menús cada una
+        for (let semana = 1; semana <= 4; semana++) {
+            const inicio = (semana - 1) * 5;
+            const fin = inicio + 5;
+            const menusSemana = menusRegulares.slice(inicio, fin);
+
+            html += this.generarSeccionSemana(semana, menusSemana, modalidadId, animate);
+        }
+
+        // Sección de menús especiales al final
+        html += this.generarSeccionEspeciales(menusEspeciales, modalidadId, animate);
+
+        return html;
+    }
+
+    /**
+     * Generar sección de una semana con validador
+     * @param {number} numSemana - Número de semana (1-4)
+     * @param {Array} menus - Menús de la semana
+     * @param {string} modalidadId - ID de la modalidad
+     * @param {boolean} animate - Si se deben animar las tarjetas
+     * @returns {string} HTML de la sección de semana
+     */
+    generarSeccionSemana(numSemana, menus, modalidadId, animate) {
+        const menuIds = menus.map(m => m.id_menu).join(',');
+        const containerId = `validador-semana-${modalidadId}-${numSemana}`;
+
+        let tarjetasMenus = menus.map((menu, index) => {
             const menuEscaped = String(menu.menu).replace(/'/g, "\\'");
             const downloadUrl = `/nutricion/exportar-excel/${menu.id_menu}/`;
-            
-            // Estilo de animación escalonada
             const animStyle = animate ? `style="animation-delay: ${index * 0.05}s"` : '';
             const animClass = animate ? 'menu-card-anim' : '';
 
-            if (esEspecial) {
-                return `
-                    <div class="menu-card menu-card-especial ${animClass} ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
-                         ${animStyle}
-                         onclick="abrirGestionPreparaciones(${menu.id_menu}, '${menuEscaped}')">
-                        <a href="${downloadUrl}" class="btn-download-excel" onclick="event.stopPropagation();" title="Descargar Excel">
-                            <i class="fas fa-file-excel"></i>
-                        </a>
-                        <div class="menu-numero-especial">
-                            ${menu.menu}
-                        </div>
-                        <div class="menu-actions" style="flex-direction: column;">
-                            <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); abrirGestionPreparaciones(${menu.id_menu}, '${menuEscaped}')">
-                                <i class="fas fa-utensils"></i> Preparaciones
-                            </button>
-                            <button class="btn btn-sm btn-warning" onclick="event.stopPropagation(); abrirEditarMenuEspecial(${menu.id_menu}, '${menuEscaped}')">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                        </div>
+            return `
+                <div class="menu-card ${animClass} ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
+                     ${animStyle}
+                     onclick="abrirGestionPreparaciones(${menu.id_menu}, '${menu.menu}')">
+                    <a href="${downloadUrl}" class="btn-download-excel" onclick="event.stopPropagation();" title="Descargar Excel">
+                        <i class="fas fa-file-excel"></i>
+                    </a>
+                    <div class="menu-numero">${menu.menu}</div>
+                    <div class="menu-actions">
+                        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); abrirGestionPreparaciones(${menu.id_menu}, '${menu.menu}')">
+                            <i class="fas fa-utensils"></i> Preparaciones
+                        </button>
                     </div>
-                `;
-            } else {
-                return `
-                    <div class="menu-card ${animClass} ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
-                         ${animStyle}
-                         onclick="abrirGestionPreparaciones(${menu.id_menu}, '${menu.menu}')">
-                        <a href="${downloadUrl}" class="btn-download-excel" onclick="event.stopPropagation();" title="Descargar Excel">
-                            <i class="fas fa-file-excel"></i>
-                        </a>
-                        <div class="menu-numero">${menu.menu}</div>
-                        <div class="menu-actions">
-                            <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); abrirGestionPreparaciones(${menu.id_menu}, '${menu.menu}')">
-                                <i class="fas fa-utensils"></i> Preparaciones
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
+                </div>
+            `;
         }).join('');
 
-        const modalidadId = menus.length > 0 ? menus[0].id_modalidad__id_modalidades : '';
-        const delayBase = animate ? menus.length * 0.05 : 0;
-        
-        const tarjetaEspecial = `
-            <div class="menu-card menu-card-especial ${animate ? 'menu-card-anim' : ''}" 
-                 ${animate ? `style="animation-delay: ${delayBase + 0.1}s"` : ''}
+        // Si no hay 5 menús, rellenar con placeholders
+        const faltantes = 5 - menus.length;
+        for (let i = 0; i < faltantes; i++) {
+            const numeroMenu = (numSemana - 1) * 5 + menus.length + i + 1;
+            tarjetasMenus += `
+                <div class="menu-card menu-card-placeholder">
+                    <div class="menu-numero">${numeroMenu}</div>
+                    <div class="menu-placeholder-text">Pendiente</div>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="semana-container" data-semana="${numSemana}">
+                <div class="semana-titulo">
+                    <span>Semana ${numSemana}</span>
+                </div>
+
+                <div class="semana-menus-grid">
+                    ${tarjetasMenus}
+                </div>
+
+                <div class="validador-semanal" id="${containerId}" data-modalidad-id="${modalidadId}" data-menu-ids="${menuIds}">
+                    <div class="validador-loading">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <span>Validando semana...</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Generar sección de menús especiales
+     * @param {Array} menusEspeciales - Menús especiales existentes
+     * @param {string} modalidadId - ID de la modalidad
+     * @param {boolean} animate - Si se deben animar las tarjetas
+     * @returns {string} HTML de la sección de menús especiales
+     */
+    generarSeccionEspeciales(menusEspeciales, modalidadId, animate) {
+        const delayBase = animate ? 20 * 0.05 : 0; // Delay después de los 20 menús regulares
+
+        const tarjetasEspeciales = menusEspeciales.map((menu, index) => {
+            const menuEscaped = String(menu.menu).replace(/'/g, "\\'");
+            const downloadUrl = `/nutricion/exportar-excel/${menu.id_menu}/`;
+            const animStyle = animate ? `style="animation-delay: ${delayBase + index * 0.05}s"` : '';
+            const animClass = animate ? 'menu-card-anim' : '';
+
+            return `
+                <div class="menu-card menu-card-especial ${animClass} ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
+                     ${animStyle}
+                     onclick="abrirGestionPreparaciones(${menu.id_menu}, '${menuEscaped}')">
+                    <a href="${downloadUrl}" class="btn-download-excel" onclick="event.stopPropagation();" title="Descargar Excel">
+                        <i class="fas fa-file-excel"></i>
+                    </a>
+                    <div class="menu-numero-especial">
+                        ${menu.menu}
+                    </div>
+                    <div class="menu-actions" style="flex-direction: column;">
+                        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); abrirGestionPreparaciones(${menu.id_menu}, '${menuEscaped}')">
+                            <i class="fas fa-utensils"></i> Preparaciones
+                        </button>
+                        <button class="btn btn-sm btn-warning" onclick="event.stopPropagation(); abrirEditarMenuEspecial(${menu.id_menu}, '${menuEscaped}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        const tarjetaCrear = `
+            <div class="menu-card menu-card-especial ${animate ? 'menu-card-anim' : ''}"
+                 ${animate ? `style="animation-delay: ${delayBase + menusEspeciales.length * 0.05 + 0.1}s"` : ''}
                  onclick="abrirModalMenuEspecial('${modalidadId}')">
                 <div class="menu-numero-especial">
                     <i class="fas fa-plus-circle"></i>
                 </div>
                 <div class="menu-label-especial">Crear Especial</div>
             </div>
-            <div class="menu-card menu-card-ia ${animate ? 'menu-card-anim' : ''}" 
-                 ${animate ? `style="animation-delay: ${delayBase + 0.2}s"` : ''}
+        `;
+
+        const tarjetaIA = `
+            <div class="menu-card menu-card-ia ${animate ? 'menu-card-anim' : ''}"
+                 ${animate ? `style="animation-delay: ${delayBase + menusEspeciales.length * 0.05 + 0.2}s"` : ''}
                  onclick="abrirModalMenuIA('${modalidadId}')">
                 <div class="menu-numero-ia">
                     <i class="fas fa-robot"></i>
@@ -268,7 +360,92 @@ class ModalidadesManager {
             </div>
         `;
 
-        return tarjetasMenus + tarjetaEspecial;
+        return `
+            <div class="menus-especiales-section">
+                <div class="menus-especiales-titulo">
+                    <i class="fas fa-star"></i>
+                    <span>Menús Especiales</span>
+                </div>
+                <div class="menus-especiales-grid">
+                    ${tarjetasEspeciales}
+                    ${tarjetaCrear}
+                    ${tarjetaIA}
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Cargar validadores semanales para una modalidad
+     * @param {string} modalidadId - ID de la modalidad
+     */
+    async cargarValidadoresSemana(modalidadId) {
+        // Buscar todos los contenedores de validadores para esta modalidad
+        const validadores = document.querySelectorAll(`[id^="validador-semana-${modalidadId}-"]`);
+
+        for (const validador of validadores) {
+            const menuIds = validador.getAttribute('data-menu-ids');
+
+            if (!menuIds || menuIds === '') {
+                validador.innerHTML = '<div class="validador-vacio">No hay menús para validar</div>';
+                continue;
+            }
+
+            try {
+                const response = await fetch(`/nutricion/api/validar-semana/?menu_ids=${menuIds}&modalidad_id=${modalidadId}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    validador.innerHTML = `<div class="validador-error">${data.error}</div>`;
+                    continue;
+                }
+
+                // Generar HTML del validador
+                const componentesHtml = data.componentes.map(comp => {
+                    const cumple = comp.actual === comp.requerido;
+                    const icono = cumple ? '✅' : '❌';
+                    const claseEstado = cumple ? 'cumple' : 'no-cumple';
+
+                    let mensaje = '';
+                    if (comp.actual > comp.requerido) {
+                        mensaje = `(Excede por ${comp.actual - comp.requerido})`;
+                    } else if (comp.actual < comp.requerido) {
+                        mensaje = `(Falta ${comp.requerido - comp.actual})`;
+                    }
+
+                    return `
+                        <div class="validador-item ${claseEstado}">
+                            <span class="validador-icono">${icono}</span>
+                            <span class="validador-componente">${comp.componente}</span>
+                            <div class="validador-frecuencias">
+                                <span class="frecuencia-badge ${claseEstado}">
+                                    ${comp.actual} / ${comp.requerido}
+                                </span>
+                                ${mensaje ? `<span class="frecuencia-mensaje">${mensaje}</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                const cumpleGeneral = data.cumple;
+                const estadoGeneral = cumpleGeneral
+                    ? '<span class="validador-estado-ok"><i class="fas fa-check-circle"></i> Semana completa</span>'
+                    : '<span class="validador-estado-error"><i class="fas fa-exclamation-circle"></i> Semana incompleta</span>';
+
+                validador.innerHTML = `
+                    <div class="validador-componentes">
+                        ${componentesHtml}
+                    </div>
+                    <div class="validador-resumen ${cumpleGeneral ? 'valido' : 'invalido'}">
+                        ${estadoGeneral}
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Error al validar semana:', error);
+                validador.innerHTML = '<div class="validador-error">Error al cargar validación</div>';
+            }
+        }
     }
 
     /**
@@ -357,8 +534,13 @@ class ModalidadesManager {
                 
                 // 4. Renderizar con animación escalonada
                 grid.innerHTML = this.generarTarjetasMenus(menusNuevos, true);
-                
-                // 5. Cerrar modal de carga y mostrar éxito
+
+                // 5. Cargar validadores semanales
+                setTimeout(() => {
+                    this.cargarValidadoresSemana(modalidadId);
+                }, 500);
+
+                // 6. Cerrar modal de carga y mostrar éxito
                 Swal.fire({
                     title: '¡Éxito!',
                     text: `Se han generado ${data.menus_creados} menús correctamente.`,
@@ -414,11 +596,16 @@ class ModalidadesManager {
      */
     actualizarMenusModalidad(modalidadId, menus) {
         this.menusData[modalidadId] = menus;
-        
+
         // Actualizar el grid si existe
         const grid = document.getElementById(`grid-${modalidadId}`);
         if (grid) {
             grid.innerHTML = this.generarTarjetasMenus(menus);
+
+            // Recargar validadores semanales
+            setTimeout(() => {
+                this.cargarValidadoresSemana(modalidadId);
+            }, 100);
         }
     }
 

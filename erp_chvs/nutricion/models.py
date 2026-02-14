@@ -803,14 +803,12 @@ class RequerimientoSemanal(models.Model):
     modalidad = models.ForeignKey(
         ModalidadesDeConsumo,
         on_delete=models.PROTECT,
-        db_column='modalidad',
         verbose_name="Modalidad de Consumo",
         related_name='requerimientos_semanales'
     )
     componente = models.ForeignKey(
         ComponentesAlimentos,
         on_delete=models.PROTECT,
-        db_column='componente',
         verbose_name="Componente de Alimento",
         related_name='requerimientos_semanales'
     )
