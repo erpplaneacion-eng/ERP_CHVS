@@ -261,22 +261,29 @@ class TablaPreparacionIngredientes(models.Model):
         related_name='ingredientes'
     )
     id_ingrediente_siesa = models.ForeignKey(
-        TablaIngredientesSiesa,
+        TablaAlimentos2018Icbf,
         on_delete=models.CASCADE,
         db_column='id_ingrediente_siesa',
-        verbose_name="Ingrediente",
+        verbose_name="Ingrediente (ICBF 2018)",
         related_name='preparaciones'
+    )
+    gramaje = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Gramaje (g)"
     )
 
     def __str__(self):
-        return f"{self.id_preparacion.preparacion} - {self.id_ingrediente_siesa.nombre_ingrediente}"
+        return f"{self.id_preparacion.preparacion} - {self.id_ingrediente_siesa.nombre_del_alimento}"
 
     class Meta:
         db_table = 'nutricion_tabla_preparacion_ingredientes'
         unique_together = ('id_preparacion', 'id_ingrediente_siesa')
         verbose_name = "Ingrediente de Preparación"
         verbose_name_plural = "Ingredientes de Preparaciones"
-        ordering = ['id_preparacion__preparacion', 'id_ingrediente_siesa__nombre_ingrediente']
+        ordering = ['id_preparacion__preparacion', 'id_ingrediente_siesa__nombre_del_alimento']
         indexes = [
             models.Index(fields=['id_preparacion']),
             models.Index(fields=['id_ingrediente_siesa']),

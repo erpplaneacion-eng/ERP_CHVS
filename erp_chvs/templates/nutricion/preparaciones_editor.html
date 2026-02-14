@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Editor de Preparaciones{% endblock %}
+
+{% block extra_css %}
+<style>
+    .prep-editor-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+    .prep-editor-card {
+        background: #fff;
+        border-radius: 10px;
+        padding: 16px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    .prep-editor-toolbar {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    .prep-editor-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .prep-editor-table th,
+    .prep-editor-table td {
+        border: 1px solid #e5e7eb;
+        padding: 8px;
+        vertical-align: middle;
+    }
+    .prep-editor-table th {
+        background: #f8fafc;
+        font-size: 13px;
+    }
+    .input-gramaje {
+        width: 110px;
+    }
+    .estado-ok { color: #15803d; font-weight: 600; }
+    .estado-error { color: #b91c1c; font-weight: 600; }
+    .grupo-cell, .rango-cell, .estado-cell {
+        white-space: nowrap;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="prep-editor-header">
+    <div>
+        <h2 style="margin:0;">Preparaciones - Menú {{ menu.menu }}</h2>
+        <small>Modalidad: {{ menu.id_modalidad.modalidad }} | Programa: {{ menu.id_contrato.programa }}</small>
+    </div>
+    <a href="{% url 'nutricion:lista_menus' %}" class="btn btn-secondary">Volver</a>
+</div>
+
+<div class="prep-editor-card" data-menu-id="{{ menu.id_menu }}" id="prepEditorRoot">
+    <div class="prep-editor-toolbar">
+        <button type="button" id="btnAgregarFila" class="btn btn-primary btn-sm">Agregar fila</button>
+        <button type="button" id="btnGuardarEditor" class="btn btn-success btn-sm">Guardar cambios</button>
+    </div>
+
+    <div style="overflow:auto;">
+        <table class="prep-editor-table">
+            <thead>
+                <tr>
+                    <th>Preparación</th>
+                    <th>Ingrediente (ICBF 2018)</th>
+                    <th>Grupo</th>
+                    <th>Rango min/max (g)</th>
+                    <th>Gramaje (g)</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tablaPreparacionesBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script id="filas-data" type="application/json">{{ filas_json|safe }}</script>
+<script id="ingredientes-data" type="application/json">{{ ingredientes_json|safe }}</script>
+<script id="preparaciones-data" type="application/json">{{ preparaciones_json|safe }}</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/nutricion/preparaciones_editor.js' %}"></script>
+{% endblock %}
+

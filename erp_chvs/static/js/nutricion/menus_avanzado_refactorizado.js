@@ -549,10 +549,13 @@ class MenusAvanzadosController {
 // Los managers NO deben definir funciones globales en setupGlobalFunctions()
 
 // ========== GESTIÓN DE MENÚS ==========
+window.abrirPaginaPreparaciones = function(menuId) {
+    window.location.href = `/nutricion/menus/${menuId}/preparaciones-editor/`;
+};
+
 window.abrirGestionPreparaciones = function(menuId, menuNumero) {
-    if (window.menusController) {
-        window.menusController.abrirGestionPreparaciones(menuId, menuNumero);
-    }
+    // Compatibilidad legacy: ahora redirige a la nueva vista tabular
+    window.abrirPaginaPreparaciones(menuId);
 };
 
 // ========== ANÁLISIS NUTRICIONAL ==========

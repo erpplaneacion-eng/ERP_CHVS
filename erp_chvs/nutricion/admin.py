@@ -83,7 +83,7 @@ class TablaIngredientesSiesaAdmin(admin.ModelAdmin):
 class TablaPreparacionIngredientesAdmin(admin.ModelAdmin):
     """Administración de la relación preparaciones-ingredientes."""
     list_display = ('id_preparacion', 'id_ingrediente_siesa')
-    search_fields = ('id_preparacion__preparacion', 'id_ingrediente_siesa__nombre_ingrediente')
+    search_fields = ('id_preparacion__preparacion', 'id_ingrediente_siesa__nombre_del_alimento', 'id_ingrediente_siesa__codigo')
     autocomplete_fields = ['id_preparacion', 'id_ingrediente_siesa']
     list_per_page = 25
 

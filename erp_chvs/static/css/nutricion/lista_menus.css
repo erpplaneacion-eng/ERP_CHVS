@@ -82,6 +82,8 @@
     overflow: hidden;
     transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     background: var(--bg-light);
+    display: block;  /* AGREGADO: Asegurar apilamiento vertical */
+    width: 100%;  /* AGREGADO: Ocupar todo el ancho */
 }
 
 .accordion-content.active {
@@ -98,6 +100,22 @@
     max-width: 100%;
     overflow: hidden;  /* Prevenir desbordamiento */
     box-sizing: border-box;
+}
+
+/* Stack vertical de semanas dentro de cada modalidad */
+.semanas-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: 100%;
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+    .semanas-stack {
+        padding: 16px;
+    }
 }
 
 @media (max-width: 1400px) {
@@ -124,22 +142,22 @@
     }
 }
 
-/* Tarjetas de menú */
+/* Tarjetas de menú - OPTIMIZADAS */
 .menu-card {
     background: white;
     border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 20px;
+    border-radius: 8px;  /* Reducido de 12px */
+    padding: 15px;  /* Reducido de 20px */
     text-align: center;
-    transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s, z-index 0s;  /* Transiciones específicas */
+    transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s, z-index 0s;
     cursor: pointer;
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 140px;
-    z-index: 1;  /* AGREGADO */
+    min-height: 120px;  /* Reducido de 140px */
+    z-index: 1;
 }
 
 .menu-card:hover {
@@ -1609,54 +1627,54 @@
    VALIDADOR SEMANAL DE MENÚS
    ============================================ */
 
-/* Contenedor de semana */
+/* Contenedor de semana - OPTIMIZADO */
 .semana-container {
-    margin-bottom: 50px;
+    margin-bottom: 0;
     border: 2px solid #e9ecef;
-    border-radius: 16px;
-    padding: 30px;
+    border-radius: 12px;  /* Reducido de 16px */
+    padding: 20px;  /* Reducido de 30px */
     background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.06);  /* Sombra más sutil */
     transition: box-shadow 0.3s ease;
-    width: 100%;  /* AGREGADO */
-    box-sizing: border-box;  /* AGREGADO */
-    overflow: visible;  /* AGREGADO: permitir sombras de tarjetas */
+    width: 100%;
+    box-sizing: border-box;
+    overflow: visible;
 }
 
 .semana-container:hover {
-    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);  /* Sombra menos intensa */
 }
 
-/* Título de semana */
+/* Título de semana - COMPACTO */
 .semana-titulo {
-    font-size: 1.4rem;
-    font-weight: 700;
+    font-size: 1.1rem;  /* Reducido de 1.4rem */
+    font-weight: 600;  /* Reducido de 700 */
     color: #2c3e50;
-    margin-bottom: 20px;
+    margin-bottom: 15px;  /* Reducido de 20px */
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding-bottom: 15px;
-    border-bottom: 3px solid #007bff;
+    gap: 8px;  /* Reducido de 12px */
+    padding-bottom: 10px;  /* Reducido de 15px */
+    border-bottom: 2px solid #007bff;  /* Reducido de 3px */
 }
 
 .semana-titulo i {
     color: #007bff;
-    font-size: 1.5rem;
+    font-size: 1.2rem;  /* Reducido de 1.5rem */
 }
 
-/* Grid de menús de la semana */
+/* Grid de menús de la semana - OPTIMIZADO */
 .semana-menus-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 18px;
-    margin-bottom: 30px;
-    padding: 20px;
+    gap: 15px;  /* Reducido de 18px */
+    margin-bottom: 15px;  /* Reducido de 30px */
+    padding: 15px;  /* Reducido de 20px */
     background: white;
-    border-radius: 12px;
-    max-width: 100%;  /* AGREGADO */
-    overflow: visible;  /* AGREGADO: permitir sombras en hover */
-    box-sizing: border-box;  /* AGREGADO */
+    border-radius: 8px;  /* Reducido de 12px */
+    max-width: 100%;
+    overflow: visible;
+    box-sizing: border-box;
 }
 
 @media (max-width: 1400px) {
@@ -1677,28 +1695,30 @@
     }
 }
 
-/* Validador semanal */
+/* Validador semanal - COMPACTO */
 .validador-semanal {
     background: white;
-    border-radius: 12px;
-    padding: 25px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
-    border-left: 5px solid #007bff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);  /* Sombra más sutil */
+    border-left: 3px solid #007bff;  /* Borde más delgado */
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .validador-titulo {
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin-bottom: 20px;
+    font-size: 0.95rem;  /* Reducido de 1.2rem */
+    font-weight: 600;  /* Menos bold */
+    margin-bottom: 10px;  /* Reducido de 20px */
     color: #34495e;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;  /* Reducido de 10px */
 }
 
 .validador-titulo i {
     color: #007bff;
-    font-size: 1.3rem;
+    font-size: 1rem;  /* Reducido de 1.3rem */
 }
 
 /* Loading del validador */
@@ -1714,27 +1734,28 @@
     color: #007bff;
 }
 
-/* Lista de componentes */
+/* Lista de componentes - COMPACTA */
 .validador-lista {
     list-style: none;
     padding: 0;
-    margin: 0 0 20px 0;
+    margin: 0 0 8px 0;  /* Reducido de 20px */
 }
 
 .validador-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 14px 18px;
-    border-radius: 8px;
-    margin-bottom: 10px;
+    padding: 8px 12px;  /* Reducido de 14px 18px */
+    border-radius: 6px;  /* Reducido de 8px */
+    margin-bottom: 6px;  /* Reducido de 10px */
     transition: all 0.2s ease;
     border: 1px solid transparent;
+    font-size: 0.9rem;  /* Texto más pequeño */
 }
 
 .validador-item:hover {
-    transform: translateX(5px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: translateX(3px);  /* Reducido de 5px */
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);  /* Sombra más sutil */
 }
 
 /* Estados de cumplimiento */
@@ -1748,10 +1769,10 @@
     border-left: 5px solid #dc3545;
 }
 
-/* Íconos de estado */
+/* Íconos de estado - COMPACTOS */
 .estado-icono {
-    font-size: 1.4rem;
-    margin-right: 10px;
+    font-size: 1.1rem;  /* Reducido de 1.4rem */
+    margin-right: 6px;  /* Reducido de 10px */
 }
 
 .estado-icono.cumple {
@@ -1762,20 +1783,20 @@
     color: #dc3545;
 }
 
-/* Badge de frecuencia */
+/* Badge de frecuencia - COMPACTO */
 .frecuencia-badge {
     background: #007bff;
     color: white;
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: 700;
-    box-shadow: 0 2px 6px rgba(0,123,255,0.3);
+    padding: 4px 10px;  /* Reducido de 6px 16px */
+    border-radius: 12px;  /* Reducido de 20px */
+    font-size: 0.8rem;  /* Reducido de 0.9rem */
+    font-weight: 600;  /* Reducido de 700 */
+    box-shadow: 0 1px 3px rgba(0,123,255,0.2);  /* Sombra más sutil */
     transition: transform 0.2s ease;
 }
 
 .frecuencia-badge:hover {
-    transform: scale(1.05);
+    transform: scale(1.03);  /* Reducido de 1.05 */
 }
 
 .frecuencia-badge.error {
@@ -1873,17 +1894,14 @@
     }
 
     .validador-semanal {
-        padding: 20px;
+        padding: 10px;
     }
 
     .validador-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-
-    .frecuencia-badge {
-        align-self: flex-end;
+        display: grid;
+        grid-template-columns: 16px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 6px;
     }
 }
 
@@ -1893,7 +1911,10 @@
 
 /* Contenedor de componentes del validador */
 .validador-componentes {
-    margin-bottom: 15px;
+    margin-bottom: 8px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
 }
 
 /* Mensajes de estado del validador */
@@ -1936,26 +1957,65 @@
 
 /* Elementos internos del validador */
 .validador-icono {
-    font-size: 1.3rem;
-    margin-right: 8px;
+    font-size: 0.95rem;
+    margin-right: 0;
+    line-height: 1;
 }
 
 .validador-componente {
     font-weight: 600;
     color: #2c3e50;
     flex: 1;
+    min-width: 0;
+    font-size: 0.8rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .validador-frecuencias {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
+    justify-self: end;
 }
 
 .frecuencia-mensaje {
-    font-size: 0.85rem;
+    font-size: 0.72rem;
     color: #6c757d;
     font-style: italic;
+    white-space: nowrap;
+}
+
+.validador-item {
+    display: grid;
+    grid-template-columns: 16px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+}
+
+.frecuencia-badge {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.1;
+}
+
+@media (max-width: 1200px) {
+    .validador-componentes {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .validador-componente {
+        white-space: normal;
+    }
 }
 
 /* Estados del resumen del validador */

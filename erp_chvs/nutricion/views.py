@@ -1,12 +1,13 @@
-from django.shortcuts import render, redirect, get_object_or_404
+﻿from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, Min, Max
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.db import IntegrityError, transaction
 from django.utils import timezone
+from decimal import Decimal, InvalidOperation
 import json
 
 from .excel_generator import (
@@ -19,8 +20,8 @@ from .models import (
     TablaAlimentos2018Icbf,
     TablaMenus,
     TablaPreparaciones,
-    TablaIngredientesSiesa,
     TablaPreparacionIngredientes,
+    MinutaPatronMeta,
     TablaRequerimientosNutricionales,
     TablaAnalisisNutricionalMenu,
     TablaIngredientesPorNivel,
@@ -37,11 +38,11 @@ from .services import AnalisisNutricionalService, MenuService
 @csrf_exempt
 def api_generar_menu_ia(request):
     """
-    API para generar un menú usando Inteligencia Artificial (Gemini).
-    Genera automáticamente el menú con pesos específicos para TODOS los niveles educativos.
+    API para generar un menÃº usando Inteligencia Artificial (Gemini).
+    Genera automÃ¡ticamente el menÃº con pesos especÃ­ficos para TODOS los niveles educativos.
     """
     if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
+        return JsonResponse({'error': 'MÃ©todo no permitido'}, status=405)
 
     try:
         data = json.loads(request.body)
@@ -49,7 +50,7 @@ def api_generar_menu_ia(request):
         modalidad_id = data.get('modalidad_id')
 
         if not all([programa_id, modalidad_id]):
-            return JsonResponse({'error': 'Faltan parámetros (programa_id, modalidad_id)'}, status=400)
+            return JsonResponse({'error': 'Faltan parÃ¡metros (programa_id, modalidad_id)'}, status=400)
 
         # Delegar al servicio - None genera para TODOS los niveles educativos
         menu = MenuService.generar_menu_con_ia(
@@ -59,7 +60,7 @@ def api_generar_menu_ia(request):
         )
 
         if not menu:
-            return JsonResponse({'error': 'La IA no pudo generar una propuesta válida. Intente nuevamente.'}, status=500)
+            return JsonResponse({'error': 'La IA no pudo generar una propuesta vÃ¡lida. Intente nuevamente.'}, status=500)
 
         return JsonResponse({
             'success': True,
@@ -68,7 +69,7 @@ def api_generar_menu_ia(request):
                 'nombre': menu.menu,
                 'modalidad': menu.id_modalidad.modalidad
             },
-            'mensaje': 'Menú generado exitosamente con análisis nutricional para todos los niveles educativos'
+            'mensaje': 'MenÃº generado exitosamente con anÃ¡lisis nutricional para todos los niveles educativos'
         })
 
     except ValueError as e:
@@ -81,7 +82,7 @@ def api_generar_menu_ia(request):
 
 @login_required
 def nutricion_index(request):
-    """Vista principal del módulo de nutrición"""
+    """Vista principal del mÃ³dulo de nutriciÃ³n"""
     return render(request, 'nutricion/index.html')
 
 
@@ -135,8 +136,8 @@ def editar_alimento(request, codigo):
             return redirect('nutricion:lista_alimentos')
         else:
             # Si hay errores, mostrarlos en consola del servidor para debugging
-            print("❌ ERROR: Formulario no válido al editar alimento")
-            print(f"Código: {codigo}")
+            print("âŒ ERROR: Formulario no vÃ¡lido al editar alimento")
+            print(f"CÃ³digo: {codigo}")
             print(f"Errores: {form.errors}")
             messages.error(request, f'Error al actualizar el alimento. Por favor, revise los datos ingresados.')
             return redirect('nutricion:lista_alimentos')
@@ -157,11 +158,11 @@ def eliminar_alimento(request, codigo):
         return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
 
 
-# =================== MENÚS ===================
+# =================== MENÃšS ===================
 
 @login_required
 def lista_menus(request):
-    """Vista para listar y gestionar menús por municipio/programa/modalidad"""
+    """Vista para listar y gestionar menÃºs por municipio/programa/modalidad"""
     # Obtener SOLO municipios que tienen programas activos
     from principal.models import PrincipalMunicipio
     municipios = PrincipalMunicipio.objects.filter(
@@ -174,7 +175,7 @@ def lista_menus(request):
 
     # Contexto inicial
     context = {
-        'municipios': municipios,  # Cambio aquí
+        'municipios': municipios,  # Cambio aquÃ­
         'municipio_seleccionado': municipio_id,
         'programa_seleccionado': programa_id,
     }
@@ -187,24 +188,24 @@ def lista_menus(request):
         ).order_by('-fecha_inicial')
         context['programas'] = programas_activos
 
-        # Si hay programa seleccionado, obtener modalidades y menús
+        # Si hay programa seleccionado, obtener modalidades y menÃºs
         if programa_id:
             try:
                 programa = Programa.objects.get(id=programa_id)
                 context['programa_obj'] = programa
 
                 # Obtener modalidades del municipio
-                # Esto requiere saber qué modalidades están configuradas para ese municipio
+                # Esto requiere saber quÃ© modalidades estÃ¡n configuradas para ese municipio
                 # Por ahora, traemos todas las modalidades
                 modalidades = ModalidadesDeConsumo.objects.all().order_by('modalidad')
                 context['modalidades'] = modalidades
 
-                # Obtener menús existentes del programa
+                # Obtener menÃºs existentes del programa
                 menus_existentes = TablaMenus.objects.filter(
                     id_contrato=programa
                 ).select_related('id_modalidad').order_by('id_modalidad', 'menu')
 
-                # Agrupar menús por modalidad
+                # Agrupar menÃºs por modalidad
                 from collections import defaultdict
                 menus_por_modalidad = defaultdict(list)
                 for menu in menus_existentes:
@@ -216,6 +217,179 @@ def lista_menus(request):
                 context['error'] = 'Programa no encontrado'
 
     return render(request, 'nutricion/lista_menus.html', context)
+
+
+def _resolver_grupo_y_rango(menu, preparacion, ingrediente_icbf):
+    """
+    Resuelve grupo de alimentos y rango [min, max] para un ingrediente dentro de una preparación.
+    Usa MinutaPatronMeta por modalidad + componente + grupo.
+    """
+    grupo = None
+    componente_ingrediente = getattr(ingrediente_icbf, 'id_componente', None)
+    if componente_ingrediente and componente_ingrediente.id_grupo_alimentos:
+        grupo = componente_ingrediente.id_grupo_alimentos
+    elif preparacion.id_componente and preparacion.id_componente.id_grupo_alimentos:
+        grupo = preparacion.id_componente.id_grupo_alimentos
+
+    if not grupo:
+        return {
+            'grupo_id': None,
+            'grupo_nombre': 'SIN GRUPO',
+            'minimo': None,
+            'maximo': None
+        }
+
+    metas = MinutaPatronMeta.objects.filter(
+        id_modalidad=menu.id_modalidad,
+        id_grupo_alimentos=grupo
+    )
+    if preparacion.id_componente:
+        metas = metas.filter(id_componente=preparacion.id_componente)
+
+    agregados = metas.aggregate(
+        minimo=Min('peso_neto_minimo'),
+        maximo=Max('peso_neto_maximo')
+    )
+
+    return {
+        'grupo_id': grupo.id_grupo_alimentos,
+        'grupo_nombre': grupo.grupo_alimentos,
+        'minimo': float(agregados['minimo']) if agregados['minimo'] is not None else None,
+        'maximo': float(agregados['maximo']) if agregados['maximo'] is not None else None
+    }
+
+
+@login_required
+def vista_preparaciones_editor(request, id_menu):
+    """Vista tabular para gestionar preparaciones e ingredientes con validación de gramaje."""
+    menu = get_object_or_404(
+        TablaMenus.objects.select_related('id_modalidad', 'id_contrato'),
+        id_menu=id_menu
+    )
+    preparaciones = list(
+        TablaPreparaciones.objects.filter(id_menu=menu).select_related('id_componente').order_by('preparacion')
+    )
+
+    relaciones = TablaPreparacionIngredientes.objects.filter(
+        id_preparacion__in=preparaciones
+    ).select_related(
+        'id_preparacion',
+        'id_ingrediente_siesa',
+        'id_ingrediente_siesa__id_componente',
+        'id_ingrediente_siesa__id_componente__id_grupo_alimentos'
+    )
+
+    filas = []
+    for rel in relaciones:
+        rango = _resolver_grupo_y_rango(menu, rel.id_preparacion, rel.id_ingrediente_siesa)
+        filas.append({
+            'id_preparacion': rel.id_preparacion.id_preparacion,
+            'preparacion': rel.id_preparacion.preparacion,
+            'id_ingrediente': rel.id_ingrediente_siesa.codigo,
+            'ingrediente': rel.id_ingrediente_siesa.nombre_del_alimento,
+            'grupo': rango['grupo_nombre'],
+            'minimo': rango['minimo'],
+            'maximo': rango['maximo'],
+            'gramaje': float(rel.gramaje) if rel.gramaje is not None else None,
+        })
+
+    ingredientes_catalogo = list(
+        TablaAlimentos2018Icbf.objects.values('codigo', 'nombre_del_alimento').order_by('nombre_del_alimento')
+    )
+    preparaciones_catalogo = [
+        {'id_preparacion': p.id_preparacion, 'preparacion': p.preparacion}
+        for p in preparaciones
+    ]
+
+    context = {
+        'menu': menu,
+        'filas_json': json.dumps(filas),
+        'ingredientes_json': json.dumps(ingredientes_catalogo),
+        'preparaciones_json': json.dumps(preparaciones_catalogo),
+    }
+    return render(request, 'nutricion/preparaciones_editor.html', context)
+
+
+@login_required
+def api_rango_ingrediente_preparacion(request, id_menu):
+    """Retorna grupo y rango permitido para una combinación preparación + ingrediente."""
+    id_preparacion = request.GET.get('id_preparacion')
+    id_ingrediente = request.GET.get('id_ingrediente')
+    if not id_preparacion or not id_ingrediente:
+        return JsonResponse({'success': False, 'error': 'Parámetros requeridos: id_preparacion, id_ingrediente'}, status=400)
+
+    menu = get_object_or_404(TablaMenus, id_menu=id_menu)
+    preparacion = get_object_or_404(TablaPreparaciones, id_preparacion=id_preparacion, id_menu=menu)
+    ingrediente = get_object_or_404(TablaAlimentos2018Icbf, codigo=id_ingrediente)
+
+    rango = _resolver_grupo_y_rango(menu, preparacion, ingrediente)
+    return JsonResponse({'success': True, **rango})
+
+
+@login_required
+@csrf_exempt
+def api_guardar_preparaciones_editor(request, id_menu):
+    """Guarda filas del editor de preparaciones validando gramajes por rango."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+
+    menu = get_object_or_404(TablaMenus, id_menu=id_menu)
+    try:
+        payload = json.loads(request.body)
+        filas = payload.get('filas', [])
+    except Exception:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+
+    errores = []
+    guardadas = 0
+
+    with transaction.atomic():
+        for idx, fila in enumerate(filas):
+            try:
+                id_preparacion = int(fila.get('id_preparacion'))
+                id_ingrediente = str(fila.get('id_ingrediente', '')).strip()
+                gramaje_raw = fila.get('gramaje')
+                if not id_ingrediente:
+                    continue
+
+                preparacion = TablaPreparaciones.objects.get(id_preparacion=id_preparacion, id_menu=menu)
+                ingrediente = TablaAlimentos2018Icbf.objects.get(codigo=id_ingrediente)
+
+                gramaje = None
+                if gramaje_raw not in (None, '', 'null'):
+                    gramaje = Decimal(str(gramaje_raw))
+                    if gramaje < 0:
+                        raise InvalidOperation('Gramaje negativo')
+
+                rango = _resolver_grupo_y_rango(menu, preparacion, ingrediente)
+                minimo = Decimal(str(rango['minimo'])) if rango['minimo'] is not None else None
+                maximo = Decimal(str(rango['maximo'])) if rango['maximo'] is not None else None
+
+                if gramaje is not None and minimo is not None and gramaje < minimo:
+                    errores.append(f"Fila {idx + 1}: gramaje {gramaje}g por debajo del mínimo {minimo}g")
+                    continue
+                if gramaje is not None and maximo is not None and gramaje > maximo:
+                    errores.append(f"Fila {idx + 1}: gramaje {gramaje}g por encima del máximo {maximo}g")
+                    continue
+
+                rel, _ = TablaPreparacionIngredientes.objects.get_or_create(
+                    id_preparacion=preparacion,
+                    id_ingrediente_siesa=ingrediente
+                )
+                rel.gramaje = gramaje
+                rel.save(update_fields=['gramaje'])
+                guardadas += 1
+
+            except (ValueError, InvalidOperation):
+                errores.append(f"Fila {idx + 1}: gramaje inválido")
+            except TablaPreparaciones.DoesNotExist:
+                errores.append(f"Fila {idx + 1}: preparación no encontrada")
+            except TablaAlimentos2018Icbf.DoesNotExist:
+                errores.append(f"Fila {idx + 1}: ingrediente no encontrado")
+
+    if errores:
+        return JsonResponse({'success': False, 'guardadas': guardadas, 'errores': errores}, status=400)
+    return JsonResponse({'success': True, 'guardadas': guardadas})
 
 
 @login_required
@@ -249,7 +423,7 @@ def api_modalidades_por_programa(request):
     try:
         programa = Programa.objects.get(id=programa_id)
 
-        # Importar el modelo de relación municipio-modalidades
+        # Importar el modelo de relaciÃ³n municipio-modalidades
         from principal.models import MunicipioModalidades
 
         # Obtener modalidades configuradas para el municipio del programa
@@ -260,7 +434,7 @@ def api_modalidades_por_programa(request):
             'modalidad__modalidad'
         ).order_by('modalidad__modalidad')
 
-        # Si no hay configuración específica, retornar todas las modalidades
+        # Si no hay configuraciÃ³n especÃ­fica, retornar todas las modalidades
         if not modalidades_configuradas.exists():
             modalidades = ModalidadesDeConsumo.objects.all().values(
                 'id_modalidades', 'modalidad'
@@ -291,9 +465,9 @@ def api_modalidades_por_programa(request):
 @login_required
 @csrf_exempt
 def api_generar_menus_automaticos(request):
-    """API para generar automáticamente los 20 menús de una modalidad"""
+    """API para generar automÃ¡ticamente los 20 menÃºs de una modalidad"""
     if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
+        return JsonResponse({'error': 'MÃ©todo no permitido'}, status=405)
 
     try:
         data = json.loads(request.body)
@@ -301,12 +475,12 @@ def api_generar_menus_automaticos(request):
         modalidad_id = data.get('modalidad_id')
 
         if not programa_id or not modalidad_id:
-            return JsonResponse({'error': 'Faltan parámetros'}, status=400)
+            return JsonResponse({'error': 'Faltan parÃ¡metros'}, status=400)
 
         programa = Programa.objects.get(id=programa_id)
         modalidad = ModalidadesDeConsumo.objects.get(id_modalidades=modalidad_id)
 
-        # Verificar si ya existen menús
+        # Verificar si ya existen menÃºs
         menus_existentes = TablaMenus.objects.filter(
             id_contrato=programa,
             id_modalidad=modalidad
@@ -314,11 +488,11 @@ def api_generar_menus_automaticos(request):
 
         if menus_existentes > 0:
             return JsonResponse({
-                'error': f'Ya existen {menus_existentes} menús para esta modalidad',
+                'error': f'Ya existen {menus_existentes} menÃºs para esta modalidad',
                 'menus_existentes': menus_existentes
             }, status=400)
 
-        # Crear los 20 menús automáticamente
+        # Crear los 20 menÃºs automÃ¡ticamente
         menus_creados = []
 
         with transaction.atomic():
@@ -351,9 +525,9 @@ def api_generar_menus_automaticos(request):
 @login_required
 @csrf_exempt
 def api_crear_menu_especial(request):
-    """API para crear un menú especial con nombre personalizado"""
+    """API para crear un menÃº especial con nombre personalizado"""
     if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
+        return JsonResponse({'error': 'MÃ©todo no permitido'}, status=405)
 
     try:
         data = json.loads(request.body)
@@ -362,12 +536,12 @@ def api_crear_menu_especial(request):
         nombre_menu = data.get('nombre_menu', '').strip()
 
         if not programa_id or not modalidad_id or not nombre_menu:
-            return JsonResponse({'error': 'Faltan parámetros'}, status=400)
+            return JsonResponse({'error': 'Faltan parÃ¡metros'}, status=400)
 
         programa = Programa.objects.get(id=programa_id)
         modalidad = ModalidadesDeConsumo.objects.get(id_modalidades=modalidad_id)
 
-        # Verificar si ya existe un menú con ese nombre
+        # Verificar si ya existe un menÃº con ese nombre
         menu_existente = TablaMenus.objects.filter(
             id_contrato=programa,
             id_modalidad=modalidad,
@@ -376,10 +550,10 @@ def api_crear_menu_especial(request):
 
         if menu_existente:
             return JsonResponse({
-                'error': f'Ya existe un menú con el nombre "{nombre_menu}"'
+                'error': f'Ya existe un menÃº con el nombre "{nombre_menu}"'
             }, status=400)
 
-        # Crear el menú especial
+        # Crear el menÃº especial
         menu = TablaMenus.objects.create(
             menu=nombre_menu,
             id_modalidad=modalidad,
@@ -406,7 +580,7 @@ def api_crear_menu_especial(request):
 @login_required
 @csrf_exempt
 def api_menus(request):
-    """API para manejar menús via AJAX"""
+    """API para manejar menÃºs via AJAX"""
     if request.method == 'GET':
         # Filtrar por programa si se proporciona
         programa_id = request.GET.get('programa_id')
@@ -452,7 +626,7 @@ def api_menus(request):
 @login_required
 @csrf_exempt
 def api_menu_detail(request, id_menu):
-    """API para manejar un menú específico"""
+    """API para manejar un menÃº especÃ­fico"""
     menu = get_object_or_404(TablaMenus, id_menu=id_menu)
 
     if request.method == 'GET':
@@ -466,7 +640,7 @@ def api_menu_detail(request, id_menu):
     elif request.method == 'PUT':
         try:
             data = json.loads(request.body)
-            # Actualizar solo los campos que se envían
+            # Actualizar solo los campos que se envÃ­an
             if 'menu' in data:
                 menu.menu = data['menu']
             if 'id_modalidad' in data:
@@ -510,7 +684,7 @@ def lista_preparaciones(request):
 def api_preparaciones(request):
     """API para manejar preparaciones via AJAX"""
     if request.method == 'GET':
-        # Filtrar por menú si se proporciona
+        # Filtrar por menÃº si se proporciona
         menu_id = request.GET.get('menu_id')
 
         preparaciones_query = TablaPreparaciones.objects.select_related('id_menu')
@@ -556,7 +730,7 @@ def api_preparaciones(request):
 @login_required
 @csrf_exempt
 def api_preparacion_detail(request, id_preparacion):
-    """API para manejar una preparación específica"""
+    """API para manejar una preparaciÃ³n especÃ­fica"""
     preparacion = get_object_or_404(TablaPreparaciones, id_preparacion=id_preparacion)
 
     if request.method == 'GET':
@@ -588,9 +762,9 @@ def api_preparacion_detail(request, id_preparacion):
 @csrf_exempt
 @transaction.atomic
 def api_copiar_preparacion(request):
-    """API para copiar una preparación completa a un nuevo menú."""
+    """API para copiar una preparaciÃ³n completa a un nuevo menÃº."""
     if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
+        return JsonResponse({'error': 'MÃ©todo no permitido'}, status=405)
 
     try:
         data = json.loads(request.body)
@@ -598,20 +772,20 @@ def api_copiar_preparacion(request):
         target_menu_id = data.get('target_menu_id')
 
         if not source_preparacion_id or not target_menu_id:
-            return JsonResponse({'error': 'Faltan parámetros requeridos.'}, status=400)
+            return JsonResponse({'error': 'Faltan parÃ¡metros requeridos.'}, status=400)
 
         # Obtener los objetos de la base de datos
         source_preparacion = get_object_or_404(TablaPreparaciones, pk=source_preparacion_id)
         target_menu = get_object_or_404(TablaMenus, pk=target_menu_id)
 
-        # Crear la nueva preparación (la copia)
+        # Crear la nueva preparaciÃ³n (la copia)
         new_preparacion = TablaPreparaciones.objects.create(
             preparacion=source_preparacion.preparacion, # Copia el nombre
-            id_menu=target_menu, # Asigna al nuevo menú
+            id_menu=target_menu, # Asigna al nuevo menÃº
             id_componente=source_preparacion.id_componente # Copia el componente
         )
 
-        # Obtener los ingredientes de la preparación original
+        # Obtener los ingredientes de la preparaciÃ³n original
         source_ingredientes = TablaPreparacionIngredientes.objects.filter(
             id_preparacion=source_preparacion
         )
@@ -631,7 +805,7 @@ def api_copiar_preparacion(request):
 
         return JsonResponse({
             'success': True,
-            'message': f'Preparación "{new_preparacion.preparacion}" copiada exitosamente.',
+            'message': f'PreparaciÃ³n "{new_preparacion.preparacion}" copiada exitosamente.',
             'nueva_preparacion': {
                 'id_preparacion': new_preparacion.id_preparacion,
                 'preparacion': new_preparacion.preparacion,
@@ -640,28 +814,28 @@ def api_copiar_preparacion(request):
         })
 
     except (TablaPreparaciones.DoesNotExist, TablaMenus.DoesNotExist):
-        return JsonResponse({'error': 'La preparación o el menú de destino no existen.'}, status=404)
+        return JsonResponse({'error': 'La preparaciÃ³n o el menÃº de destino no existen.'}, status=404)
     except Exception as e:
-        return JsonResponse({'error': f'Ocurrió un error inesperado: {str(e)}'}, status=500)
+        return JsonResponse({'error': f'OcurriÃ³ un error inesperado: {str(e)}'}, status=500)
 
 
 @login_required
 def api_preparaciones_por_modalidad(request, modalidad_id):
-    """API para listar todas las preparaciones únicas dentro de una modalidad."""
+    """API para listar todas las preparaciones Ãºnicas dentro de una modalidad."""
     if request.method != 'GET':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
+        return JsonResponse({'error': 'MÃ©todo no permitido'}, status=405)
 
     try:
-        # Encontrar todos los menús de esa modalidad
+        # Encontrar todos los menÃºs de esa modalidad
         menus_en_modalidad = TablaMenus.objects.filter(id_modalidad_id=modalidad_id)
 
-        # Encontrar todas las preparaciones en esos menús, obteniendo solo nombres únicos
+        # Encontrar todas las preparaciones en esos menÃºs, obteniendo solo nombres Ãºnicos
         preparaciones = TablaPreparaciones.objects.filter(
             id_menu__in=menus_en_modalidad
         ).order_by('preparacion').distinct('preparacion')
 
         # Formatear la respuesta
-        # Se devuelve el ID de la *primera* preparación encontrada con ese nombre.
+        # Se devuelve el ID de la *primera* preparaciÃ³n encontrada con ese nombre.
         # Esto es suficiente para que la API de copiado encuentre el original.
         preparaciones_data = [
             {
@@ -674,15 +848,15 @@ def api_preparaciones_por_modalidad(request, modalidad_id):
         return JsonResponse({'preparaciones': preparaciones_data})
 
     except Exception as e:
-        return JsonResponse({'error': f'Ocurrió un error inesperado: {str(e)}'}, status=500)
+        return JsonResponse({'error': f'OcurriÃ³ un error inesperado: {str(e)}'}, status=500)
 
 
 # =================== INGREDIENTES SIESA ===================
 
 @login_required
 def lista_ingredientes(request):
-    """Vista para listar ingredientes de inventario"""
-    ingredientes = TablaIngredientesSiesa.objects.all().order_by('nombre_ingrediente')
+    """Vista para listar ingredientes ICBF 2018"""
+    ingredientes = TablaAlimentos2018Icbf.objects.all().order_by('nombre_del_alimento')
     paginator = Paginator(ingredientes, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -696,64 +870,43 @@ def lista_ingredientes(request):
 @login_required
 @csrf_exempt
 def api_ingredientes(request):
-    """API para manejar ingredientes via AJAX"""
+    """API para obtener ingredientes desde tabla ICBF 2018."""
     if request.method == 'GET':
-        ingredientes = TablaIngredientesSiesa.objects.all().values(
-            'id_ingrediente_siesa', 'nombre_ingrediente'
-        )
-        return JsonResponse({'ingredientes': list(ingredientes)})
+        ingredientes = TablaAlimentos2018Icbf.objects.all().values(
+            'codigo', 'nombre_del_alimento'
+        ).order_by('nombre_del_alimento')
 
-    elif request.method == 'POST':
-        try:
-            data = json.loads(request.body)
+        data = [
+            {
+                # claves legacy para compatibilidad con frontend actual
+                'id_ingrediente_siesa': ing['codigo'],
+                'nombre_ingrediente': ing['nombre_del_alimento'],
+                # claves explÃ­citas ICBF
+                'codigo': ing['codigo'],
+                'nombre_del_alimento': ing['nombre_del_alimento'],
+            }
+            for ing in ingredientes
+        ]
+        return JsonResponse({'ingredientes': data})
 
-            ingrediente = TablaIngredientesSiesa.objects.create(
-                id_ingrediente_siesa=data['id_ingrediente_siesa'],
-                nombre_ingrediente=data['nombre_ingrediente']
-            )
-
-            return JsonResponse({
-                'success': True,
-                'ingrediente': {
-                    'id_ingrediente_siesa': ingrediente.id_ingrediente_siesa,
-                    'nombre_ingrediente': ingrediente.nombre_ingrediente
-                }
-            })
-
-        except IntegrityError as e:
-            return JsonResponse({'success': False, 'error': f'Error de integridad: {str(e)}'})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})
+    return JsonResponse({'error': 'MÃ©todo no permitido para catÃ¡logo ICBF'}, status=405)
 
 
 @login_required
 @csrf_exempt
 def api_ingrediente_detail(request, id_ingrediente):
-    """API para manejar un ingrediente específico"""
-    ingrediente = get_object_or_404(TablaIngredientesSiesa, id_ingrediente_siesa=id_ingrediente)
+    """API para manejar un ingrediente especifico del catalogo ICBF."""
+    ingrediente = get_object_or_404(TablaAlimentos2018Icbf, codigo=id_ingrediente)
 
     if request.method == 'GET':
         return JsonResponse({
-            'id_ingrediente_siesa': ingrediente.id_ingrediente_siesa,
-            'nombre_ingrediente': ingrediente.nombre_ingrediente
+            'id_ingrediente_siesa': ingrediente.codigo,
+            'nombre_ingrediente': ingrediente.nombre_del_alimento,
+            'codigo': ingrediente.codigo,
+            'nombre_del_alimento': ingrediente.nombre_del_alimento
         })
 
-    elif request.method == 'PUT':
-        try:
-            data = json.loads(request.body)
-            ingrediente.nombre_ingrediente = data['nombre_ingrediente']
-            ingrediente.save()
-            return JsonResponse({'success': True})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': f'Error al actualizar: {str(e)}'})
-
-    elif request.method == 'DELETE':
-        try:
-            ingrediente.delete()
-            return JsonResponse({'success': True})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
-
+    return JsonResponse({'error': 'Metodo no permitido para catalogo ICBF'}, status=405)
 
 # =================== COMPONENTES DE ALIMENTOS ===================
 
@@ -772,20 +925,20 @@ def api_componentes_alimentos(request):
 
         return JsonResponse({'componentes': list(componentes)})
 
-    return JsonResponse({'error': 'Método no permitido'}, status=405)
+    return JsonResponse({'error': 'MÃ©todo no permitido'}, status=405)
 
 
-# =================== PREPARACIÓN - INGREDIENTES ===================
+# =================== PREPARACIÃ“N - INGREDIENTES ===================
 
 @login_required
 def detalle_preparacion(request, id_preparacion):
-    """Vista para ver y gestionar ingredientes de una preparación"""
+    """Vista para ver y gestionar ingredientes de una preparaciÃ³n"""
     preparacion = get_object_or_404(TablaPreparaciones, id_preparacion=id_preparacion)
     ingredientes_preparacion = TablaPreparacionIngredientes.objects.filter(
         id_preparacion=preparacion
     ).select_related('id_ingrediente_siesa')
 
-    ingredientes_disponibles = TablaIngredientesSiesa.objects.all().order_by('nombre_ingrediente')
+    ingredientes_disponibles = TablaAlimentos2018Icbf.objects.all().order_by('nombre_del_alimento')
 
     return render(request, 'nutricion/detalle_preparacion.html', {
         'preparacion': preparacion,
@@ -797,23 +950,32 @@ def detalle_preparacion(request, id_preparacion):
 @login_required
 @csrf_exempt
 def api_preparacion_ingredientes(request, id_preparacion):
-    """API para manejar ingredientes de una preparación"""
+    """API para manejar ingredientes de una preparaciÃ³n"""
     preparacion = get_object_or_404(TablaPreparaciones, id_preparacion=id_preparacion)
 
     if request.method == 'GET':
-        ingredientes = TablaPreparacionIngredientes.objects.filter(
+        relaciones = TablaPreparacionIngredientes.objects.filter(
             id_preparacion=preparacion
-        ).select_related('id_ingrediente_siesa').values(
-            'id_ingrediente_siesa__id_ingrediente_siesa',
-            'id_ingrediente_siesa__nombre_ingrediente'
-        )
-        return JsonResponse({'ingredientes': list(ingredientes)})
+        ).select_related('id_ingrediente_siesa')
+
+        ingredientes = []
+        for rel in relaciones:
+            ingredientes.append({
+                # claves legacy para el frontend actual
+                'id_ingrediente_siesa__id_ingrediente_siesa': rel.id_ingrediente_siesa.codigo,
+                'id_ingrediente_siesa__nombre_ingrediente': rel.id_ingrediente_siesa.nombre_del_alimento,
+                # claves explícitas ICBF
+                'codigo': rel.id_ingrediente_siesa.codigo,
+                'nombre_del_alimento': rel.id_ingrediente_siesa.nombre_del_alimento,
+                'gramaje': float(rel.gramaje) if rel.gramaje is not None else None,
+            })
+        return JsonResponse({'ingredientes': ingredientes})
 
     elif request.method == 'POST':
         try:
             data = json.loads(request.body)
 
-            # Soporte para agregar múltiples ingredientes
+            # Soporte para agregar mÃºltiples ingredientes
             if 'ingredientes' in data:
                 ingredientes_creados = []
                 for ing_data in data['ingredientes']:
@@ -821,8 +983,12 @@ def api_preparacion_ingredientes(request, id_preparacion):
                         id_preparacion=preparacion,
                         id_ingrediente_siesa_id=ing_data['id_ingrediente_siesa']
                     )
+                    gramaje_raw = ing_data.get('gramaje')
+                    if gramaje_raw not in (None, '', 'null'):
+                        ingrediente.gramaje = Decimal(str(gramaje_raw))
+                        ingrediente.save(update_fields=['gramaje'])
                     if created:
-                        ingredientes_creados.append(ingrediente.id_ingrediente_siesa.nombre_ingrediente)
+                        ingredientes_creados.append(ingrediente.id_ingrediente_siesa.nombre_del_alimento)
 
                 return JsonResponse({
                     'success': True,
@@ -832,7 +998,8 @@ def api_preparacion_ingredientes(request, id_preparacion):
                 # Soporte para agregar un solo ingrediente
                 ingrediente = TablaPreparacionIngredientes.objects.create(
                     id_preparacion=preparacion,
-                    id_ingrediente_siesa_id=data['id_ingrediente_siesa']
+                    id_ingrediente_siesa_id=data['id_ingrediente_siesa'],
+                    gramaje=Decimal(str(data['gramaje'])) if data.get('gramaje') not in (None, '', 'null') else None
                 )
 
                 return JsonResponse({
@@ -841,7 +1008,7 @@ def api_preparacion_ingredientes(request, id_preparacion):
                 })
 
         except IntegrityError:
-            return JsonResponse({'success': False, 'error': 'Este ingrediente ya está en la preparación'})
+            return JsonResponse({'success': False, 'error': 'Este ingrediente ya estÃ¡ en la preparaciÃ³n'})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})
 
@@ -849,7 +1016,7 @@ def api_preparacion_ingredientes(request, id_preparacion):
 @login_required
 @csrf_exempt
 def api_preparacion_ingrediente_delete(request, id_preparacion, id_ingrediente):
-    """API para eliminar un ingrediente de una preparación"""
+    """API para eliminar un ingrediente de una preparaciÃ³n"""
     if request.method == 'DELETE':
         try:
             ingrediente = get_object_or_404(
@@ -865,31 +1032,31 @@ def api_preparacion_ingrediente_delete(request, id_preparacion, id_ingrediente):
 
 
 
-# =================== ANÁLISIS NUTRICIONAL ===================
+# =================== ANÃLISIS NUTRICIONAL ===================
 
 @login_required
 def api_analisis_nutricional_menu(request, id_menu):
     """
-    API para obtener análisis nutricional completo de un menú por niveles escolares.
-    ✨ REFACTORIZADO: Usa AnalisisNutricionalService para lógica de negocio.
+    API para obtener anÃ¡lisis nutricional completo de un menÃº por niveles escolares.
+    âœ¨ REFACTORIZADO: Usa AnalisisNutricionalService para lÃ³gica de negocio.
     """
     from .services import AnalisisNutricionalService
 
     try:
-        # Delegar toda la lógica al servicio
+        # Delegar toda la lÃ³gica al servicio
         resultado = AnalisisNutricionalService.obtener_analisis_completo(id_menu)
         return JsonResponse(resultado)
 
     except TablaMenus.DoesNotExist:
         return JsonResponse({
             'success': False,
-            'error': 'Menú no encontrado'
+            'error': 'MenÃº no encontrado'
         }, status=404)
 
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'error': f'Error al obtener análisis: {str(e)}'
+            'error': f'Error al obtener anÃ¡lisis: {str(e)}'
         }, status=500)
 
 
@@ -897,13 +1064,13 @@ def api_analisis_nutricional_menu(request, id_menu):
 @csrf_exempt
 def guardar_analisis_nutricional(request):
     """
-    API para guardar automáticamente el análisis nutricional editado por el usuario.
-    ✨ REFACTORIZADO: Usa AnalisisNutricionalService.guardar_analisis()
+    API para guardar automÃ¡ticamente el anÃ¡lisis nutricional editado por el usuario.
+    âœ¨ REFACTORIZADO: Usa AnalisisNutricionalService.guardar_analisis()
     """
     from .services import AnalisisNutricionalService
 
     if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
+        return JsonResponse({'error': 'MÃ©todo no permitido'}, status=405)
 
     try:
         data = json.loads(request.body)
@@ -932,13 +1099,13 @@ def guardar_analisis_nutricional(request):
     except json.JSONDecodeError:
         return JsonResponse({
             'success': False,
-            'error': 'Datos JSON inválidos'
+            'error': 'Datos JSON invÃ¡lidos'
         }, status=400)
 
     except TablaMenus.DoesNotExist:
         return JsonResponse({
             'success': False,
-            'error': 'Menú no encontrado'
+            'error': 'MenÃº no encontrado'
         }, status=404)
 
     except Exception as e:
@@ -953,7 +1120,7 @@ def download_menu_excel(request, menu_id):
     View to download an Excel file for a specific menu with advanced data integration.
     """
     try:
-        # Usar el generador avanzado que detecta automáticamente datos reales vs guardados
+        # Usar el generador avanzado que detecta automÃ¡ticamente datos reales vs guardados
         excel_stream = generate_advanced_nutritional_excel(menu_id, use_saved_analysis=True)
 
         response = HttpResponse(
@@ -995,7 +1162,7 @@ def download_menu_excel_with_nivel(request, menu_id, nivel_escolar_id):
     View to download an Excel file for a specific menu and school level with advanced data integration.
     """
     try:
-        # Usar el generador avanzado con nivel específico
+        # Usar el generador avanzado con nivel especÃ­fico
         excel_stream = generate_advanced_nutritional_excel(menu_id, nivel_escolar_id, use_saved_analysis=True)
 
         response = HttpResponse(
@@ -1012,7 +1179,7 @@ def download_menu_excel_with_nivel(request, menu_id, nivel_escolar_id):
 @login_required
 def download_modalidad_excel(request, programa_id, modalidad_id):
     """
-    Descarga el reporte maestro de Excel para todos los menús de una modalidad.
+    Descarga el reporte maestro de Excel para todos los menÃºs de una modalidad.
     """
     try:
         # 1. Llamar al nuevo servicio para obtener los datos masivos
@@ -1046,7 +1213,7 @@ def api_validar_semana(request):
     Valida si una semana cumple con las frecuencias requeridas.
     
     GET params:
-    - menu_ids: IDs de los 5 menús separados por coma
+    - menu_ids: IDs de los 5 menÃºs separados por coma
     - modalidad_id: ID de la modalidad
     
     Returns:
@@ -1069,13 +1236,13 @@ def api_validar_semana(request):
         modalidad_id = request.GET.get('modalidad_id')
 
         if not menu_ids_str or not modalidad_id:
-            return JsonResponse({'error': 'Faltan parámetros: menu_ids y modalidad_id son requeridos'}, status=400)
+            return JsonResponse({'error': 'Faltan parÃ¡metros: menu_ids y modalidad_id son requeridos'}, status=400)
 
         # Convertir string de IDs a lista
         menu_ids = [int(id.strip()) for id in menu_ids_str.split(',') if id.strip()]
 
         if not menu_ids:
-            return JsonResponse({'error': 'No se proporcionaron IDs de menús válidos'}, status=400)
+            return JsonResponse({'error': 'No se proporcionaron IDs de menÃºs vÃ¡lidos'}, status=400)
 
         # Obtener requerimientos de la modalidad
         requerimientos = RequerimientoSemanal.objects.filter(
@@ -1089,9 +1256,9 @@ def api_validar_semana(request):
                 'mensaje': 'No hay requerimientos definidos para esta modalidad'
             })
 
-        # Contar componentes en los menús de la semana
-        # Usamos sets para contar DÍAS únicos, no preparaciones totales
-        # Ejemplo: Si Menú 1 tiene 2 preparaciones con "Bebida", cuenta como 1 día
+        # Contar componentes en los menÃºs de la semana
+        # Usamos sets para contar DÃAS Ãºnicos, no preparaciones totales
+        # Ejemplo: Si MenÃº 1 tiene 2 preparaciones con "Bebida", cuenta como 1 dÃ­a
         menus_por_componente = {}
 
         for menu_id in menu_ids:
@@ -1099,19 +1266,19 @@ def api_validar_semana(request):
                 id_menu_id=menu_id
             ).select_related('id_componente')
 
-            # Componentes presentes en este menú (día)
+            # Componentes presentes en este menÃº (dÃ­a)
             componentes_del_menu = set()
             for prep in preparaciones:
                 comp_id = prep.id_componente.id_componente
                 componentes_del_menu.add(comp_id)
 
-            # Registrar este menú (día) para cada componente encontrado
+            # Registrar este menÃº (dÃ­a) para cada componente encontrado
             for comp_id in componentes_del_menu:
                 if comp_id not in menus_por_componente:
                     menus_por_componente[comp_id] = set()
                 menus_por_componente[comp_id].add(menu_id)
 
-        # Convertir sets a conteos (número de días únicos)
+        # Convertir sets a conteos (nÃºmero de dÃ­as Ãºnicos)
         conteo_componentes = {
             comp_id: len(menus_set)
             for comp_id, menus_set in menus_por_componente.items()
@@ -1145,7 +1312,7 @@ def api_validar_semana(request):
         })
 
     except ValueError as e:
-        return JsonResponse({'error': f'Error en formato de parámetros: {str(e)}'}, status=400)
+        return JsonResponse({'error': f'Error en formato de parÃ¡metros: {str(e)}'}, status=400)
     except Exception as e:
         return JsonResponse({'error': f'Error al validar semana: {str(e)}'}, status=500)
 
@@ -1175,7 +1342,7 @@ def api_requerimientos_modalidad(request):
         modalidad_id = request.GET.get('modalidad_id')
 
         if not modalidad_id:
-            return JsonResponse({'error': 'Falta parámetro: modalidad_id es requerido'}, status=400)
+            return JsonResponse({'error': 'Falta parÃ¡metro: modalidad_id es requerido'}, status=400)
 
         requerimientos = RequerimientoSemanal.objects.filter(
             modalidad__id_modalidades=modalidad_id
@@ -1196,3 +1363,4 @@ def api_requerimientos_modalidad(request):
 
     except Exception as e:
         return JsonResponse({'error': f'Error al obtener requerimientos: {str(e)}'}, status=500)
+

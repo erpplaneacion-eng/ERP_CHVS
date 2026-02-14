@@ -11,7 +11,7 @@ from django.db import transaction, IntegrityError
 from ..models import (
     TablaPreparaciones,
     TablaMenus,
-    TablaIngredientesSiesa,
+    TablaAlimentos2018Icbf,
     TablaPreparacionIngredientes
 )
 
@@ -84,9 +84,9 @@ class PreparacionService:
         for ing_prep in ingredientes_prep:
             ingrediente = ing_prep.id_ingrediente_siesa
             ingredientes.append({
-                'id_ingrediente': ingrediente.id_ingrediente_siesa,
-                'nombre': ingrediente.nombre_ingrediente,
-                'codigo': ingrediente.id_ingrediente_siesa
+                'id_ingrediente': ingrediente.codigo,
+                'nombre': ingrediente.nombre_del_alimento,
+                'codigo': ingrediente.codigo
             })
 
         return ingredientes
@@ -141,11 +141,11 @@ class PreparacionService:
 
         Raises:
             TablaPreparaciones.DoesNotExist: Si la preparación no existe
-            TablaIngredientesSiesa.DoesNotExist: Si el ingrediente no existe
+            TablaAlimentos2018Icbf.DoesNotExist: Si el ingrediente no existe
         """
         preparacion = TablaPreparaciones.objects.get(id_preparacion=id_preparacion)
-        ingrediente = TablaIngredientesSiesa.objects.get(
-            id_ingrediente_siesa=id_ingrediente
+        ingrediente = TablaAlimentos2018Icbf.objects.get(
+            codigo=id_ingrediente
         )
 
         try:
@@ -160,8 +160,8 @@ class PreparacionService:
                     'success': True,
                     'message': 'Ingrediente agregado exitosamente',
                     'ingrediente': {
-                        'id': ingrediente.id_ingrediente_siesa,
-                        'nombre': ingrediente.nombre_ingrediente
+                        'id': ingrediente.codigo,
+                        'nombre': ingrediente.nombre_del_alimento
                     }
                 }
             else:
@@ -169,8 +169,8 @@ class PreparacionService:
                     'success': False,
                     'message': 'El ingrediente ya está en esta preparación',
                     'ingrediente': {
-                        'id': ingrediente.id_ingrediente_siesa,
-                        'nombre': ingrediente.nombre_ingrediente
+                        'id': ingrediente.codigo,
+                        'nombre': ingrediente.nombre_del_alimento
                     }
                 }
 
@@ -274,8 +274,8 @@ class PreparacionService:
             return False, 'La preparación no existe'
 
         # Verificar que ingrediente existe
-        if not TablaIngredientesSiesa.objects.filter(
-            id_ingrediente_siesa=id_ingrediente
+        if not TablaAlimentos2018Icbf.objects.filter(
+            codigo=id_ingrediente
         ).exists():
             return False, 'El ingrediente no existe'
 
@@ -329,8 +329,8 @@ class PreparacionService:
         with transaction.atomic():
             for id_ingrediente in ids_ingredientes:
                 try:
-                    ingrediente = TablaIngredientesSiesa.objects.get(
-                        id_ingrediente_siesa=id_ingrediente
+                    ingrediente = TablaAlimentos2018Icbf.objects.get(
+                        codigo=id_ingrediente
                     )
 
                     _, created = TablaPreparacionIngredientes.objects.get_or_create(
@@ -343,7 +343,7 @@ class PreparacionService:
                     else:
                         ya_existentes += 1
 
-                except TablaIngredientesSiesa.DoesNotExist:
+                except TablaAlimentos2018Icbf.DoesNotExist:
                     errores.append(f'Ingrediente {id_ingrediente} no encontrado')
 
         return {

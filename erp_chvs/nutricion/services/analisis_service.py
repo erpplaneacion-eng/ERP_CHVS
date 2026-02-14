@@ -145,15 +145,15 @@ class AnalisisNutricionalService:
 
             for ing_prep in ingredientes_prep:
                 ingrediente = ing_prep.id_ingrediente_siesa
+                ingrediente_codigo = getattr(ingrediente, 'codigo', None) or getattr(ingrediente, 'id_ingrediente_siesa', None)
+                ingrediente_nombre = getattr(ingrediente, 'nombre_del_alimento', None) or getattr(ingrediente, 'nombre_ingrediente', '')
 
                 # Buscar alimento en tabla ICBF
-                alimento = TablaAlimentos2018Icbf.objects.filter(
-                    codigo=ingrediente.id_ingrediente_siesa
-                ).first()
+                alimento = TablaAlimentos2018Icbf.objects.filter(codigo=ingrediente_codigo).first()
 
                 if not alimento:
                     alimento = TablaAlimentos2018Icbf.objects.filter(
-                        nombre_del_alimento__icontains=ingrediente.nombre_ingrediente
+                        nombre_del_alimento__icontains=ingrediente_nombre
                     ).first()
 
                 if alimento:
@@ -179,8 +179,8 @@ class AnalisisNutricionalService:
                     }
 
                     ingredientes_data.append({
-                        'id_ingrediente': ingrediente.id_ingrediente_siesa,
-                        'nombre': ingrediente.nombre_ingrediente,
+                        'id_ingrediente': ingrediente_codigo,
+                        'nombre': ingrediente_nombre,
                         'codigo_icbf': alimento.codigo,
                         'peso_neto_base': peso_neto_base,
                         'peso_bruto_base': round(peso_bruto_base, 1),
@@ -191,8 +191,8 @@ class AnalisisNutricionalService:
                 else:
                     # Alimento no encontrado - usar defaults
                     ingredientes_data.append({
-                        'id_ingrediente': ingrediente.id_ingrediente_siesa,
-                        'nombre': ingrediente.nombre_ingrediente,
+                        'id_ingrediente': ingrediente_codigo,
+                        'nombre': ingrediente_nombre,
                         'peso_neto_base': 100,
                         'peso_bruto_base': 100,
                         'parte_comestible': 100,
@@ -431,9 +431,21 @@ class AnalisisNutricionalService:
                     preparacion = TablaPreparaciones.objects.get(
                         id_preparacion=ing_data['id_preparacion']
                     )
-                    ingrediente = TablaIngredientesSiesa.objects.get(
-                        id_ingrediente_siesa=ing_data['id_ingrediente_siesa']
-                    )
+                    ingrediente_codigo = ing_data.get('id_ingrediente_siesa') or ing_data.get('id_ingrediente')
+                    ingrediente = TablaIngredientesSiesa.objects.filter(
+                        id_ingrediente_siesa=ingrediente_codigo
+                    ).first()
+
+                    # Compatibilidad: si no existe en SIESA, crearlo a partir de ICBF
+                    if not ingrediente and ingrediente_codigo:
+                        alimento_icbf = TablaAlimentos2018Icbf.objects.filter(codigo=ingrediente_codigo).first()
+                        if alimento_icbf:
+                            ingrediente, _ = TablaIngredientesSiesa.objects.get_or_create(
+                                id_ingrediente_siesa=alimento_icbf.codigo,
+                                defaults={'nombre_ingrediente': alimento_icbf.nombre_del_alimento}
+                            )
+                    if not ingrediente:
+                        continue
 
                     TablaIngredientesPorNivel.objects.create(
                         id_analisis=analisis,

@@ -14,8 +14,11 @@ urlpatterns = [
 
     # Menús
     path('menus/', views.lista_menus, name='lista_menus'),
+    path('menus/<int:id_menu>/preparaciones-editor/', views.vista_preparaciones_editor, name='preparaciones_editor'),
     path('api/menus/', views.api_menus, name='api_menus'),
     path('api/menus/<int:id_menu>/', views.api_menu_detail, name='api_menu_detail'),
+    path('api/menus/<int:id_menu>/rango-ingrediente/', views.api_rango_ingrediente_preparacion, name='api_rango_ingrediente_preparacion'),
+    path('api/menus/<int:id_menu>/guardar-preparaciones-editor/', views.api_guardar_preparaciones_editor, name='api_guardar_preparaciones_editor'),
     path('api/programas-por-municipio/', views.api_programas_por_municipio, name='api_programas_por_municipio'),
     path('api/modalidades-por-programa/', views.api_modalidades_por_programa, name='api_modalidades_por_programa'),
     path('api/generar-menus-automaticos/', views.api_generar_menus_automaticos, name='api_generar_menus_automaticos'),

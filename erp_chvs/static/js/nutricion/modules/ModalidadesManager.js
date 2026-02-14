@@ -173,7 +173,8 @@ class ModalidadesManager {
         content.id = `content-${modalidadId}`;
         
         const grid = document.createElement('div');
-        grid.className = 'menus-grid';
+        // Contenedor vertical para semanas (evita distribución horizontal por grid global)
+        grid.className = 'semanas-stack';
         grid.id = `grid-${modalidadId}`;
 
         if (tieneMenus) {
@@ -252,13 +253,13 @@ class ModalidadesManager {
             return `
                 <div class="menu-card ${animClass} ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
                      ${animStyle}
-                     onclick="abrirGestionPreparaciones(${menu.id_menu}, '${menu.menu}')">
+                     onclick="abrirPaginaPreparaciones(${menu.id_menu})">
                     <a href="${downloadUrl}" class="btn-download-excel" onclick="event.stopPropagation();" title="Descargar Excel">
                         <i class="fas fa-file-excel"></i>
                     </a>
                     <div class="menu-numero">${menu.menu}</div>
                     <div class="menu-actions">
-                        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); abrirGestionPreparaciones(${menu.id_menu}, '${menu.menu}')">
+                        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); abrirPaginaPreparaciones(${menu.id_menu})">
                             <i class="fas fa-utensils"></i> Preparaciones
                         </button>
                     </div>
@@ -319,7 +320,7 @@ class ModalidadesManager {
             return `
                 <div class="menu-card menu-card-especial ${animClass} ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
                      ${animStyle}
-                     onclick="abrirGestionPreparaciones(${menu.id_menu}, '${menuEscaped}')">
+                     onclick="abrirPaginaPreparaciones(${menu.id_menu})">
                     <a href="${downloadUrl}" class="btn-download-excel" onclick="event.stopPropagation();" title="Descargar Excel">
                         <i class="fas fa-file-excel"></i>
                     </a>
@@ -327,7 +328,7 @@ class ModalidadesManager {
                         ${menu.menu}
                     </div>
                     <div class="menu-actions" style="flex-direction: column;">
-                        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); abrirGestionPreparaciones(${menu.id_menu}, '${menuEscaped}')">
+                        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); abrirPaginaPreparaciones(${menu.id_menu})">
                             <i class="fas fa-utensils"></i> Preparaciones
                         </button>
                         <button class="btn btn-sm btn-warning" onclick="event.stopPropagation(); abrirEditarMenuEspecial(${menu.id_menu}, '${menuEscaped}')">

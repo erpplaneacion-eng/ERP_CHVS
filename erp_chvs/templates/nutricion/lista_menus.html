@@ -129,6 +129,7 @@
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-save"></i> Guardar
                 </button>
+            </div>
         </form>
 
         <hr>
@@ -234,7 +235,7 @@
                     <thead>
                         <tr>
                             <th style="width: 80%;">
-                                <i class="fas fa-apple-alt"></i> Ingrediente (Materia Prima SIESA)
+                                <i class="fas fa-apple-alt"></i> Ingrediente (Tabla ICBF 2018)
                             </th>
                             <th style="width: 20%; text-align: center;">
                                 <i class="fas fa-cog"></i> Acciones
@@ -314,12 +315,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- jQuery (requerido por Select2) -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <!-- Select2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<!-- SweetAlert2 para confirmaciones -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- NOTA: modal-manager.js y api-client.js se cargan dinámicamente desde main.js -->
 <!-- NO cargarlos aquí para evitar duplicados -->
