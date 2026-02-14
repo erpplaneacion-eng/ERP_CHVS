@@ -110,7 +110,7 @@
 
         // Actualizar clases del input
         input.classList.remove('fuera-rango', 'en-rango');
-        if (minimo && maximo) {
+        if (minimo || maximo) {
             if (resultado.valido) {
                 input.classList.add('en-rango');
             } else {
@@ -139,6 +139,10 @@
         } else {
             if (minimo && maximo) {
                 badge.setAttribute('title', `Fuera de rango (${minimo}-${maximo}g)`);
+            } else if (minimo) {
+                badge.setAttribute('title', `Fuera de rango (>= ${minimo}g)`);
+            } else if (maximo) {
+                badge.setAttribute('title', `Fuera de rango (<= ${maximo}g)`);
             } else {
                 badge.setAttribute('title', 'Sin rango definido');
             }

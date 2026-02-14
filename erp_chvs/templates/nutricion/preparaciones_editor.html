@@ -658,22 +658,24 @@
                             </td>
                             <td class="col-grupo">{{ fila.grupo }}</td>
                             <td class="col-rango">
-                                {% if fila.minimo and fila.maximo %}
+                                {% if fila.minimo != None and fila.maximo != None %}
                                 <span class="badge-rango">{{ fila.minimo|floatformat:0 }} - {{ fila.maximo|floatformat:0 }}</span>
+                                {% elif fila.minimo != None %}
+                                <span class="badge-rango">{{ fila.minimo|floatformat:0 }}+</span>
                                 {% else %}
                                 <span style="color: #9ca3af; font-size: 11px;">Sin rango</span>
                                 {% endif %}
                             </td>
                             <td class="col-peso">
                                 <div class="peso-control-container">
-                                    {% if fila.minimo and fila.maximo %}
+                                    {% if fila.minimo != None %}
                                     <!-- Slider visual con rango -->
                                     <div class="slider-container">
                                         <input
                                             type="range"
                                             class="slider-peso"
                                             min="{{ fila.minimo }}"
-                                            max="{{ fila.maximo }}"
+                                            max="{{ fila.maximo|default:9999 }}"
                                             step="1"
                                             value="{{ fila.peso_neto|floatformat:0 }}"
                                             data-minimo="{{ fila.minimo }}"
@@ -682,7 +684,7 @@
                                         />
                                         <div class="slider-labels">
                                             <span class="slider-label-min">{{ fila.minimo|floatformat:0 }}</span>
-                                            <span class="slider-label-max">{{ fila.maximo|floatformat:0 }}</span>
+                                            <span class="slider-label-max">{% if fila.maximo != None %}{{ fila.maximo|floatformat:0 }}{% else %}9999{% endif %}</span>
                                         </div>
                                     </div>
                                     {% endif %}

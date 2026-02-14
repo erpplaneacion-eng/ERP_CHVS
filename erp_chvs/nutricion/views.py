@@ -278,7 +278,7 @@ def _resolver_grupo_y_rango_por_nivel(menu, preparacion, ingrediente_icbf, nivel
         nivel_escolar: Instancia de TablaGradosEscolaresUapa
 
     Returns:
-        Dict con grupo_id, grupo_nombre, minimo, maximo
+        Dict con grupo_id, grupo_nombre, minimo, maximo, rango_abierto
     """
     grupo = None
     componente_ingrediente = getattr(ingrediente_icbf, 'id_componente', None)
@@ -292,7 +292,8 @@ def _resolver_grupo_y_rango_por_nivel(menu, preparacion, ingrediente_icbf, nivel
             'grupo_id': None,
             'grupo_nombre': 'SIN GRUPO',
             'minimo': None,
-            'maximo': None
+            'maximo': None,
+            'rango_abierto': False
         }
 
     # ✨ MEJORA: Ahora filtra por nivel escolar específico
@@ -308,11 +309,19 @@ def _resolver_grupo_y_rango_por_nivel(menu, preparacion, ingrediente_icbf, nivel
     meta = metas.first()
 
     if meta:
+        minimo = float(meta.peso_neto_minimo) if meta.peso_neto_minimo is not None else None
+        maximo = float(meta.peso_neto_maximo) if meta.peso_neto_maximo is not None else None
+
+        # NULL o 0 significa "sin límite superior"
+        if maximo == 0:
+            maximo = None
+
         return {
             'grupo_id': grupo.id_grupo_alimentos,
             'grupo_nombre': grupo.grupo_alimentos,
-            'minimo': float(meta.peso_neto_minimo) if meta.peso_neto_minimo is not None else None,
-            'maximo': float(meta.peso_neto_maximo) if meta.peso_neto_maximo is not None else None
+            'minimo': minimo,
+            'maximo': maximo,
+            'rango_abierto': minimo is not None and maximo is None
         }
     else:
         # Si no hay meta para este nivel, retornar sin rangos
@@ -320,7 +329,8 @@ def _resolver_grupo_y_rango_por_nivel(menu, preparacion, ingrediente_icbf, nivel
             'grupo_id': grupo.id_grupo_alimentos,
             'grupo_nombre': grupo.grupo_alimentos,
             'minimo': None,
-            'maximo': None
+            'maximo': None,
+            'rango_abierto': False
         }
 
 
@@ -443,6 +453,7 @@ def vista_preparaciones_editor(request, id_menu):
                 'grupo': rango['grupo_nombre'],
                 'minimo': rango['minimo'],
                 'maximo': rango['maximo'],
+                'rango_abierto': rango.get('rango_abierto', False),
                 'peso_neto': peso_neto,
                 'parte_comestible': float(rel.id_ingrediente_siesa.parte_comestible_field or 100),
                 **valores_nutricionales
