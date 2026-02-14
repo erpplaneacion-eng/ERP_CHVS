@@ -282,13 +282,14 @@
     }
 
     function recalcularNivel(nivelId) {
-        const nivelData = nivelesData.find(n => n.nivel.id === nivelId);
+        const nivelIdNormalizado = Number.isNaN(Number(nivelId)) ? String(nivelId) : Number(nivelId);
+        const nivelData = nivelesData.find(n => String(n.nivel.id) === String(nivelIdNormalizado));
         if (!nivelData) return;
 
-        const totales = calcularTotalesNivel(nivelId);
+        const totales = calcularTotalesNivel(nivelIdNormalizado);
         if (!totales) return;
 
-        actualizarPanelTotales(nivelId, totales, nivelData.requerimientos);
+        actualizarPanelTotales(nivelIdNormalizado, totales, nivelData.requerimientos);
     }
 
     // ========================================

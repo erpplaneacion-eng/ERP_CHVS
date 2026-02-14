@@ -436,8 +436,8 @@ def vista_preparaciones_editor(request, id_menu):
                 peso_neto = ingredientes_configurados[key]['peso_neto']
                 valores_nutricionales = ingredientes_configurados[key]
             else:
-                # Usar gramaje base o 100g
-                peso_neto = float(rel.gramaje) if rel.gramaje else 100.0
+                # Usar gramaje base; si no existe, usar mínimo del rango o 100g
+                peso_neto = float(rel.gramaje) if rel.gramaje else (float(rango['minimo']) if rango['minimo'] is not None else 100.0)
                 # Calcular valores nutricionales para este peso
                 valores_nutricionales = CalculoService.calcular_valores_nutricionales_alimento(
                     rel.id_ingrediente_siesa,

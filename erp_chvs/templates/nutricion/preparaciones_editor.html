@@ -667,27 +667,7 @@
                                 {% endif %}
                             </td>
                             <td class="col-peso">
-                                <div class="peso-control-container">
-                                    {% if fila.minimo != None %}
-                                    <!-- Slider visual con rango -->
-                                    <div class="slider-container">
-                                        <input
-                                            type="range"
-                                            class="slider-peso"
-                                            min="{{ fila.minimo }}"
-                                            max="{{ fila.maximo|default:9999 }}"
-                                            step="1"
-                                            value="{{ fila.peso_neto|floatformat:0 }}"
-                                            data-minimo="{{ fila.minimo }}"
-                                            data-maximo="{{ fila.maximo }}"
-                                            data-id-ingrediente="{{ fila.id_ingrediente }}"
-                                        />
-                                        <div class="slider-labels">
-                                            <span class="slider-label-min">{{ fila.minimo|floatformat:0 }}</span>
-                                            <span class="slider-label-max">{% if fila.maximo != None %}{{ fila.maximo|floatformat:0 }}{% else %}9999{% endif %}</span>
-                                        </div>
-                                    </div>
-                                    {% endif %}
+                                <div class="peso-control-container">                                    
                                     <!-- Input numérico -->
                                     <input
                                         type="number"
@@ -893,3 +873,5 @@
 {% block extra_js %}
 <script src="{% static 'js/nutricion/preparaciones_editor.js' %}"></script>
 {% endblock %}
+
+
