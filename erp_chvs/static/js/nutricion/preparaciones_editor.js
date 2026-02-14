@@ -343,6 +343,11 @@
         });
     }
 
+    const btnAgregarFila = document.getElementById('btnAgregarFila');
+    if (btnAgregarFila) {
+        btnAgregarFila.addEventListener('click', agregarIngredienteATodosLosNiveles);
+    }
+
     // ========================================
     // GUARDAR CAMBIOS
     // ========================================
@@ -423,6 +428,172 @@
     // ========================================
     // FUNCIONES AUXILIARES DE OPTIMIZACIÓN (PASO 5)
     // ========================================
+
+    function escaparHtml(texto) {
+        const div = document.createElement('div');
+        div.textContent = texto == null ? '' : String(texto);
+        return div.innerHTML;
+    }
+
+    async function agregarIngredienteATodosLosNiveles() {
+        let resultadoFormulario = null;
+
+        if (typeof Swal !== 'undefined') {
+            const opcionesPreparaciones = preparacionesCatalogo.map((prep) => (
+                `<option value="${prep.id_preparacion}">${escaparHtml(prep.preparacion)}</option>`
+            )).join('');
+
+            const opcionesIngredientes = ingredientesCatalogo.map((ing) => (
+                `<option value="${escaparHtml(ing.codigo)}">${escaparHtml(ing.codigo)} - ${escaparHtml(ing.nombre_del_alimento)}</option>`
+            )).join('');
+
+            const result = await Swal.fire({
+                title: 'Agregar ingrediente',
+                width: 680,
+                showCancelButton: true,
+                confirmButtonText: 'Agregar',
+                cancelButtonText: 'Cancelar',
+                html: `
+                    <div style="text-align:left;display:grid;gap:10px;">
+                        <label style="font-size:13px;font-weight:600;">Preparacion</label>
+                        <select id="agregarModoPrep" class="swal2-input" style="margin:0;">
+                            <option value="existente">Usar preparacion existente</option>
+                            <option value="nueva">Crear nueva preparacion</option>
+                        </select>
+
+                        <div id="bloquePrepExistente">
+                            <select id="agregarPreparacionExistente" class="swal2-input" style="margin:0;">
+                                <option value="">Seleccione una preparacion...</option>
+                                ${opcionesPreparaciones}
+                            </select>
+                        </div>
+
+                        <div id="bloquePrepNueva" style="display:none;">
+                            <input id="agregarPreparacionNueva" class="swal2-input" style="margin:0;" placeholder="Nombre de nueva preparacion" />
+                            <small style="color:#6b7280;">Se crea con componente vacio.</small>
+                        </div>
+
+                        <label style="font-size:13px;font-weight:600;">Ingrediente</label>
+                        <select id="agregarIngredienteId" class="swal2-input" style="margin:0;">
+                            <option value="">Seleccione un ingrediente...</option>
+                            ${opcionesIngredientes}
+                        </select>
+
+                        <label style="font-size:13px;font-weight:600;">Gramaje base (opcional)</label>
+                        <input id="agregarGramaje" class="swal2-input" type="number" min="0" step="0.1" style="margin:0;" placeholder="Ej: 150" />
+                    </div>
+                `,
+                didOpen: () => {
+                    const modo = document.getElementById('agregarModoPrep');
+                    const bloqueExistente = document.getElementById('bloquePrepExistente');
+                    const bloqueNueva = document.getElementById('bloquePrepNueva');
+                    if (!modo || !bloqueExistente || !bloqueNueva) return;
+                    modo.addEventListener('change', () => {
+                        const usarNueva = modo.value === 'nueva';
+                        bloqueExistente.style.display = usarNueva ? 'none' : 'block';
+                        bloqueNueva.style.display = usarNueva ? 'block' : 'none';
+                    });
+                },
+                preConfirm: () => {
+                    const modo = document.getElementById('agregarModoPrep')?.value || 'existente';
+                    const idPreparacion = document.getElementById('agregarPreparacionExistente')?.value || '';
+                    const preparacionNueva = (document.getElementById('agregarPreparacionNueva')?.value || '').trim();
+                    const idIngrediente = document.getElementById('agregarIngredienteId')?.value || '';
+                    const gramajeRaw = (document.getElementById('agregarGramaje')?.value || '').trim();
+
+                    if (!idIngrediente) {
+                        Swal.showValidationMessage('Debes seleccionar un ingrediente.');
+                        return false;
+                    }
+
+                    if (modo === 'existente' && !idPreparacion) {
+                        Swal.showValidationMessage('Debes seleccionar una preparacion existente.');
+                        return false;
+                    }
+
+                    if (modo === 'nueva' && !preparacionNueva) {
+                        Swal.showValidationMessage('Debes escribir el nombre de la nueva preparacion.');
+                        return false;
+                    }
+
+                    let gramaje = null;
+                    if (gramajeRaw !== '') {
+                        gramaje = parseFloat(gramajeRaw);
+                        if (Number.isNaN(gramaje) || gramaje < 0) {
+                            Swal.showValidationMessage('El gramaje debe ser un numero mayor o igual a 0.');
+                            return false;
+                        }
+                    }
+
+                    return {
+                        id_preparacion: modo === 'existente' ? parseInt(idPreparacion, 10) : null,
+                        preparacion_nombre: modo === 'nueva' ? preparacionNueva : '',
+                        id_ingrediente: idIngrediente,
+                        gramaje: gramaje
+                    };
+                }
+            });
+
+            if (!result.isConfirmed || !result.value) {
+                return;
+            }
+            resultadoFormulario = result.value;
+        } else {
+            showNotification('Esta funcion requiere SweetAlert2 para seleccionar preparacion e ingrediente.', 'info');
+            return;
+        }
+
+        const overlay = mostrarOverlayGuardando('Agregando ingrediente en todos los niveles...');
+        const btnAgregar = document.getElementById('btnAgregarFila');
+
+        try {
+            if (btnAgregar) {
+                btnAgregar.disabled = true;
+            }
+
+            const payloadFila = {
+                id_ingrediente: resultadoFormulario.id_ingrediente,
+                gramaje: resultadoFormulario.gramaje
+            };
+
+            if (resultadoFormulario.id_preparacion) {
+                payloadFila.id_preparacion = resultadoFormulario.id_preparacion;
+            } else {
+                payloadFila.preparacion_nombre = resultadoFormulario.preparacion_nombre;
+            }
+
+            const response = await fetch(`/nutricion/api/menus/${menuId}/guardar-preparaciones-editor/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ filas: [payloadFila] })
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                const mensaje = Array.isArray(data.errores) && data.errores.length > 0
+                    ? data.errores.join(' | ')
+                    : (data.error || 'No se pudo agregar el ingrediente');
+                throw new Error(mensaje);
+            }
+
+            ocultarOverlayGuardando();
+            showNotification('Ingrediente agregado. Se aplicara para todos los niveles al recargar.', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } catch (error) {
+            console.error('Error al agregar ingrediente:', error);
+            ocultarOverlayGuardando();
+            showNotification(error.message || 'Error al agregar ingrediente', 'error');
+        } finally {
+            if (btnAgregar) {
+                btnAgregar.disabled = false;
+            }
+        }
+    }
 
     // Copiar pesos a otros niveles
     async function copiarPesosAOtrosNiveles(nivelOrigenId) {
