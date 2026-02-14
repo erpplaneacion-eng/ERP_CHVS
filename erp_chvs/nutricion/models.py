@@ -60,6 +60,41 @@ class ComponentesAlimentos(models.Model):
         ordering = ['componente']
 
 
+class ComponentesModalidades(models.Model):
+    """
+    Tabla puente para asociar componentes de alimentos con modalidades de consumo.
+    Permite relación muchos-a-muchos sin duplicados.
+    """
+    id_componente = models.ForeignKey(
+        ComponentesAlimentos,
+        on_delete=models.CASCADE,
+        db_column='id_componente',
+        related_name='componentes_modalidades',
+        verbose_name="Componente de Alimento"
+    )
+    id_modalidad = models.ForeignKey(
+        ModalidadesDeConsumo,
+        on_delete=models.CASCADE,
+        db_column='id_modalidad',
+        related_name='componentes_modalidades',
+        verbose_name="Modalidad de Consumo"
+    )
+
+    class Meta:
+        db_table = 'nutricion_componentes_modalidades'
+        verbose_name = "Componente por Modalidad"
+        verbose_name_plural = "Componentes por Modalidad"
+        unique_together = [['id_componente', 'id_modalidad']]
+        ordering = ['id_componente', 'id_modalidad']
+        indexes = [
+            models.Index(fields=['id_componente']),
+            models.Index(fields=['id_modalidad']),
+        ]
+
+    def __str__(self):
+        return f"{self.id_componente.componente} - {self.id_modalidad.modalidad}"
+
+
 class PermisosNutricion(models.Model):
     """
     Modelo para gestionar permisos específicos del módulo de nutrición.
