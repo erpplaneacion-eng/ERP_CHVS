@@ -108,10 +108,19 @@ class TablaAlimentos2018Icbf(models.Model):
     grasa_poliinsaturada_g = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Grasa Poliinsaturada (g)")
     colesterol_mg = models.IntegerField(blank=True, null=True, verbose_name="Colesterol (mg)")
     parte_comestible_field = models.IntegerField(db_column='parte_comestible_porcentaje', blank=True, null=True, verbose_name="Parte Comestible (%)")
+    id_componente = models.ForeignKey(
+        ComponentesAlimentos,
+        on_delete=models.PROTECT,
+        db_column='id_componente',
+        verbose_name="Componente de Alimento",
+        related_name='alimentos_icbf',
+        null=True,
+        blank=True
+    )
 
     class Meta:
         managed = True
-        db_table = 'TABLA_ALIMENTOS_2018_ICBF'
+        db_table = 'nutricion_tabla_alimentos_2018_icb'
         verbose_name = 'Alimento ICBF 2018'
         verbose_name_plural = 'Alimentos ICBF 2018'
         ordering = ['nombre_del_alimento']
@@ -831,3 +840,62 @@ class RequerimientoSemanal(models.Model):
 
     def __str__(self):
         return f"{self.modalidad.modalidad} - {self.componente.componente} (x{self.frecuencia}/semana)"
+
+
+class MinutaPatronMeta(models.Model):
+    """
+    Metas de peso neto por componente, grupo, nivel y modalidad según la resolución.
+    Esta tabla normalizada permite validar si las preparaciones cumplen con los rangos
+    de peso establecidos en la Minuta Patrón.
+    """
+    id_modalidad = models.ForeignKey(
+        ModalidadesDeConsumo,
+        on_delete=models.CASCADE,
+        db_column='id_modalidad',
+        verbose_name="Modalidad de Consumo",
+        related_name='metas_minuta'
+    )
+    id_grado_escolar_uapa = models.ForeignKey(
+        TablaGradosEscolaresUapa,
+        on_delete=models.CASCADE,
+        db_column='id_grado_escolar_uapa',
+        verbose_name="Grado Escolar UAPA",
+        related_name='metas_minuta'
+    )
+    id_componente = models.ForeignKey(
+        ComponentesAlimentos,
+        on_delete=models.CASCADE,
+        db_column='id_componente',
+        verbose_name="Componente de Alimento",
+        related_name='metas_minuta'
+    )
+    id_grupo_alimentos = models.ForeignKey(
+        GruposAlimentos,
+        on_delete=models.CASCADE,
+        db_column='id_grupo_alimentos',
+        verbose_name="Grupo de Alimentos",
+        related_name='metas_minuta'
+    )
+    peso_neto_minimo = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Peso Neto Mínimo (g)"
+    )
+    peso_neto_maximo = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Peso Neto Máximo (g)"
+    )
+
+    class Meta:
+        db_table = 'nutricion_minuta_patron_rangos'
+        verbose_name = "Meta de Minuta Patrón"
+        verbose_name_plural = "Metas de Minuta Patrón"
+        unique_together = [['id_modalidad', 'id_grado_escolar_uapa', 'id_componente', 'id_grupo_alimentos']]
+
+    def __str__(self):
+        return f"{self.id_modalidad.modalidad} - {self.id_grado_escolar_uapa.nivel_escolar_uapa} - {self.id_componente.componente}"

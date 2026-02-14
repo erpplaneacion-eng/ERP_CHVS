@@ -2,321 +2,348 @@
 /* ESTILOS PARA GESTIÓN DE MENÚS        */
 /* ===================================== */
 
+:root {
+    --primary-color: #10b981; /* Emerald 500 */
+    --primary-hover: #059669; /* Emerald 600 */
+    --secondary-color: #334155; /* Slate 700 */
+    --accent-color: #f59e0b; /* Amber 500 */
+    --danger-color: #ef4444; /* Red 500 */
+    --success-color: #22c55e; /* Green 500 */
+    --bg-light: #f8fafc; /* Slate 50 */
+    --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --card-shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.3);
+}
+
 /* Filtros */
 .filtros-container {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background: var(--glass-bg);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 24px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    box-shadow: var(--card-shadow);
+    border: 1px solid var(--glass-border);
 }
 
 .filtros-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 15px;
+    gap: 20px;
     align-items: end;
 }
 
 /* Acordeones */
 .accordion {
     background: white;
-    margin-bottom: 10px;
-    border-radius: 8px;
+    margin-bottom: 16px;
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: var(--card-shadow);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid #e2e8f0;
+}
+
+.accordion:hover {
+    box-shadow: var(--card-shadow-hover);
 }
 
 .accordion-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 15px 20px;
+    background: white;
+    color: var(--secondary-color);
+    padding: 20px 24px;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
+    border-bottom: 1px solid transparent;
 }
 
 .accordion-header:hover {
-    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    background: #f1f5f9;
 }
 
 .accordion-header.active {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    color: var(--primary-color);
+}
+
+.accordion-header strong {
+    font-size: 1.1rem;
+    letter-spacing: -0.01em;
 }
 
 .accordion-content {
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.3s ease;
-    background: #f8f9fa;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--bg-light);
 }
 
 .accordion-content.active {
-    max-height: 2000px;
+    max-height: 3000px;
 }
 
 /* Grid de menús */
 .menus-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 10px;
-    padding: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+    padding: 24px;
 }
 
 /* Tarjetas de menú */
 .menu-card {
     background: white;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
     text-align: center;
-    transition: all 0.3s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     position: relative;
-}
-
-.menu-card:hover {
-    border-color: #667eea;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
-}
-
-.menu-card.has-preparaciones {
-    border-color: #28a745;
-    background: #f0fff4;
-}
-
-.menu-numero {
-    font-size: 32px;
-    font-weight: bold;
-    color: #667eea;
-    margin-bottom: 10px;
-}
-
-.menu-card.has-preparaciones .menu-numero {
-    color: #28a745;
-}
-
-.menu-actions {
-    margin-top: 10px;
-    display: flex;
-    gap: 5px;
-    justify-content: center;
-}
-
-/* Badge de estado nutricional */
-.menu-estado-badge {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-.menu-estado-badge.optimo {
-    background: #28a745;
-}
-
-.menu-estado-badge.en-limite {
-    background: #ffc107;
-}
-
-.menu-estado-badge.excedido {
-    background: #dc3545;
-    animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-/* Botones */
-.btn-generar-auto {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 25px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: all 0.3s;
-}
-
-.btn-generar-auto:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
-}
-
-.btn-warning {
-    background: #ffc107;
-    color: #212529;
-}
-
-.btn-warning:hover {
-    background: #e0a800;
-    color: white;
-}
-
-.btn-danger {
-    background: #dc3545;
-    color: white;
-}
-
-.btn-danger:hover {
-    background: #c82333;
-}
-
-/* Información del programa */
-.info-programa {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-}
-
-.preparacion-badge {
-    background: #28a745;
-    color: white;
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 10px;
-}
-
-/* Menús especiales */
-.menu-card-especial {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: 2px dashed #667eea;
-    color: white;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    min-height: 140px;
+}
+
+.menu-card:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 20px -8px rgba(16, 185, 129, 0.3);
+}
+
+.menu-card.has-preparaciones {
+    border-color: var(--primary-color);
+    background: #ecfdf5;
+}
+
+.menu-numero {
+    font-size: 40px;
+    font-weight: 800;
+    color: var(--secondary-color);
+    margin-bottom: 8px;
+    transition: color 0.3s;
+}
+
+.menu-card.has-preparaciones .menu-numero {
+    color: var(--primary-color);
+}
+
+.menu-card:hover .menu-numero {
+    color: var(--primary-color);
+}
+
+.menu-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    opacity: 0.8;
+    flex-wrap: wrap; /* Permitir que los botones se envuelvan si es necesario */
+}
+
+/* Animación de entrada escalonada */
+.menu-card-anim {
+    animation: menuFadeIn 0.5s ease backwards;
+}
+
+@keyframes menuFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Botones */
+.btn-generar-auto {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 6px 14px; /* Más pequeño */
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem; /* Fuente más pequeña */
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.3s;
+}
+
+.btn-generar-auto:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.accordion-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px; /* Más espacio entre botones */
+}
+
+/* Información del programa */
+.info-programa {
+    background: var(--secondary-color);
+    color: white;
+    padding: 24px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    box-shadow: var(--card-shadow);
+    border-left: 6px solid var(--primary-color);
+}
+
+.preparacion-badge {
+    background: #f1f5f9;
+    color: var(--secondary-color);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+    margin-left: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.menu-card.has-preparaciones .preparacion-badge {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* Menús especiales */
+.menu-card-especial {
+    background: var(--bg-light);
+    border: 2px dashed #cbd5e1;
+    color: var(--secondary-color);
 }
 
 .menu-card-especial:hover {
-    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-    border-color: #764ba2;
-    transform: translateY(-2px) scale(1.02);
+    background: white;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
 }
 
 .menu-numero-especial {
-    font-size: 48px;
-    color: white;
-    margin-bottom: 5px;
+    font-size: 32px;
+    color: inherit;
+    margin-bottom: 8px;
 }
 
 .menu-label-especial {
-    font-size: 12px;
-    font-weight: bold;
+    font-size: 11px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.05em;
 }
 
-/* Estilos personalizados para Select2 */
-.select2-container {
-    width: 100% !important;
+/* IA Card */
+.menu-card-ia {
+    background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+    border: none;
+    color: white;
 }
 
-.select2-container--default .select2-selection--single {
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    height: 38px;
-    padding: 6px 12px;
+.menu-card-ia:hover {
+    background: linear-gradient(135deg, #059669 0%, #2563eb 100%);
+    box-shadow: 0 12px 24px -10px rgba(59, 130, 246, 0.5);
 }
 
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-    line-height: 24px;
-    color: #333;
+.menu-numero-ia {
+    font-size: 32px;
+    margin-bottom: 8px;
 }
 
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 36px;
+.menu-label-ia {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
 }
 
-.select2-dropdown {
-    border: 1px solid #667eea;
-    border-radius: 4px;
+/* Efecto de carga para generación - Ahora como tarjeta pequeña centrada */
+.generating-overlay {
+    margin: 40px auto;
+    width: 300px;
+    max-width: 90%;
+    background: white;
+    padding: 32px;
+    border-radius: 20px;
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    border: 1px solid #e2e8f0;
+    animation: cardPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-.select2-container--default .select2-results__option--highlighted[aria-selected] {
-    background-color: #667eea;
+@keyframes cardPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
 }
 
-.select2-search--dropdown .select2-search__field {
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 6px 12px;
+.generating-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f1f5f9;
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
 }
 
-/* Acordeones de preparaciones */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Resto de estilos existentes (preparaciones, análisis, etc.) con retoques de color */
 .preparacion-accordion {
     background: white;
-    margin-bottom: 10px;
-    border-radius: 8px;
-    border: 1px solid #ddd;
+    margin-bottom: 12px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
     overflow: hidden;
+    transition: all 0.3s;
 }
 
 .preparacion-accordion-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 15px 20px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: background 0.3s;
-}
-
-.preparacion-accordion-header:hover {
-    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    background: white;
+    color: var(--secondary-color);
+    padding: 16px 20px;
+    border-bottom: 1px solid transparent;
 }
 
 .preparacion-accordion-header.active {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: #f8fafc;
+    border-bottom-color: #e2e8f0;
 }
 
-.preparacion-info {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    flex: 1;
+.btn-download-excel {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: #166534;
+    font-size: 1.1rem;
+    padding: 4px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.8);
+    transition: all 0.2s;
 }
 
-.preparacion-nombre {
-    font-weight: bold;
-    font-size: 16px;
-}
-
-.ingredientes-badge {
-    background: rgba(255,255,255,0.3);
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-}
-
-.preparacion-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.preparacion-accordion-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease;
-    background: #f8f9fa;
-}
-
-.preparacion-accordion-content.active {
-    max-height: 600px;
-    overflow-y: auto;
+.btn-download-excel:hover {
+    background: #166534;
+    color: white;
 }
 
 .ingredientes-container {

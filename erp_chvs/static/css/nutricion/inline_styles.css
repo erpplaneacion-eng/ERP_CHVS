@@ -95,7 +95,7 @@
 /* Header */
 #modalAgregarIngredientes .modal-header-ingredientes {
     padding: 20px 30px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #10b981; /* Emerald 500 */
     color: white;
     border-radius: 12px 12px 0 0;
     display: flex;
@@ -119,7 +119,7 @@
 }
 
 #modalAgregarIngredientes .modal-header-ingredientes .close:hover {
-    color: #ff6b6b;
+    color: #ef4444; /* Red 500 */
     transform: scale(1.2);
 }
 
@@ -128,7 +128,7 @@
     padding: 25px 30px;
     flex: 1;
     overflow-y: auto;
-    background-color: #f8f9fa;
+    background-color: #f8fafc; /* Slate 50 */
 }
 
 #modalAgregarIngredientes .ingredientes-toolbar {
@@ -149,7 +149,7 @@
 }
 
 #modalAgregarIngredientes .table thead th {
-    background: #667eea;
+    background: #334155; /* Slate 700 */
     color: white;
     padding: 15px;
     font-weight: 600;
@@ -168,18 +168,18 @@
 
 #modalAgregarIngredientes .select2-selection {
     min-height: 42px !important;
-    border: 2px solid #e0e0e0 !important;
+    border: 2px solid #e2e8f0 !important;
     border-radius: 6px !important;
 }
 
 #modalAgregarIngredientes .select2-selection:focus {
-    border-color: #667eea !important;
+    border-color: #10b981 !important;
 }
 
 /* Dropdown de Select2 dentro del modal de ingredientes */
 #modalAgregarIngredientes .select2-dropdown {
     z-index: 9999 !important;
-    border: 2px solid #667eea !important;
+    border: 2px solid #10b981 !important;
     border-radius: 6px !important;
 }
 
@@ -192,14 +192,14 @@
 }
 
 #modalAgregarIngredientes .select2-results__option--highlighted {
-    background-color: #667eea !important;
+    background-color: #10b981 !important;
 }
 
 /* Footer */
 #modalAgregarIngredientes .modal-footer-ingredientes {
     padding: 20px 30px;
     background-color: white;
-    border-top: 2px solid #e0e0e0;
+    border-top: 2px solid #e2e8f0;
     border-radius: 0 0 12px 12px;
     display: flex;
     gap: 15px;
@@ -220,7 +220,7 @@
 
 /* Texto de ayuda */
 .help-text {
-    color: #666;
+    color: #64748b;
     margin-top: 5px;
     display: block;
 }
@@ -234,7 +234,7 @@
     padding-right: 15px;
     /* Mejorar el scroll en diferentes navegadores */
     scrollbar-width: thin;
-    scrollbar-color: #0a8f17 #f1f1f1;
+    scrollbar-color: #10b981 #f1f5f9;
 }
 
 /* Estilos personalizados para scrollbar (Webkit) */
@@ -243,20 +243,31 @@
 }
 
 .modal-alimentos-scroll::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: #f1f5f9;
     border-radius: 10px;
 }
 
 .modal-alimentos-scroll::-webkit-scrollbar-thumb {
-    background: #0a8f17;
+    background: #10b981;
     border-radius: 10px;
 }
 
 .modal-alimentos-scroll::-webkit-scrollbar-thumb:hover {
-    background: #087d14;
+    background: #059669;
 }
 
 /* Centrado de texto para celdas vacías */
 .text-center {
     text-align: center;
+}
+
+/* Contenedor de carga para IA */
+.loading-ia-container {
+    display: none;
+    text-align: center;
+    margin-top: 20px;
+    padding: 20px;
+    background: #f0fdf4;
+    border-radius: 12px;
+    border: 1px dashed #10b981;
 }

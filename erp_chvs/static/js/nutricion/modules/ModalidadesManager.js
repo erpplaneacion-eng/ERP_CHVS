@@ -127,6 +127,7 @@ class ModalidadesManager {
         
         const accordionDiv = document.createElement('div');
         accordionDiv.className = 'accordion';
+        accordionDiv.id = `accordion-${modalidadId}`;
 
         // Crear header
         const header = document.createElement('div');
@@ -138,9 +139,9 @@ class ModalidadesManager {
         header.innerHTML = `
             <div>
                 <strong>${modalidad.modalidad}</strong>
-                <span class="preparacion-badge">${menusModalidad.length} / 20 menús</span>
+                <span class="preparacion-badge" id="badge-${modalidadId}">${menusModalidad.length} / 20 menús</span>
             </div>
-            <div class="accordion-header-actions">
+            <div class="accordion-header-actions" id="actions-${modalidadId}">
                 <a href="${downloadUrl}" class="btn btn-success btn-sm" onclick="event.stopPropagation();" title="Descargar Reporte Maestro para ${modalidad.modalidad}">
                     <i class="fas fa-file-excel"></i> Descargar Modalidad
                 </a>
@@ -178,7 +179,7 @@ class ModalidadesManager {
         if (tieneMenus) {
             grid.innerHTML = this.generarTarjetasMenus(menusModalidad);
         } else {
-            grid.innerHTML = '<p style="padding: 20px;">Genere los menús para esta modalidad</p>';
+            grid.innerHTML = `<p style="padding: 20px;" id="placeholder-${modalidadId}">Genere los menús para esta modalidad</p>`;
         }
 
         content.appendChild(grid);
@@ -191,41 +192,45 @@ class ModalidadesManager {
     /**
      * Generar tarjetas de menús
      * @param {Array} menus - Array de menús
+     * @param {boolean} animate - Si se deben animar las tarjetas
      * @returns {string} HTML de las tarjetas
      */
-    generarTarjetasMenus(menus) {
-        const tarjetasMenus = menus.map(menu => {
+    generarTarjetasMenus(menus, animate = false) {
+        const tarjetasMenus = menus.map((menu, index) => {
             const esNumerico = !isNaN(menu.menu) && parseInt(menu.menu) >= 1 && parseInt(menu.menu) <= 20;
             const esEspecial = !esNumerico;
-            const menuEscaped = String(menu.menu).replace(/'/g, "\'");
+            const menuEscaped = String(menu.menu).replace(/'/g, "\\'");
             const downloadUrl = `/nutricion/exportar-excel/${menu.id_menu}/`;
+            
+            // Estilo de animación escalonada
+            const animStyle = animate ? `style="animation-delay: ${index * 0.05}s"` : '';
+            const animClass = animate ? 'menu-card-anim' : '';
 
             if (esEspecial) {
                 return `
-                    <div class="menu-card menu-card-especial ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
+                    <div class="menu-card menu-card-especial ${animClass} ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
+                         ${animStyle}
                          onclick="abrirGestionPreparaciones(${menu.id_menu}, '${menuEscaped}')">
                         <a href="${downloadUrl}" class="btn-download-excel" onclick="event.stopPropagation();" title="Descargar Excel">
                             <i class="fas fa-file-excel"></i>
                         </a>
-                        <div class="menu-numero-especial" style="font-size: 14px; margin-bottom: 8px;">
+                        <div class="menu-numero-especial">
                             ${menu.menu}
                         </div>
-                        <div class="menu-actions" style="flex-direction: column; gap: 5px;">
+                        <div class="menu-actions" style="flex-direction: column;">
                             <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); abrirGestionPreparaciones(${menu.id_menu}, '${menuEscaped}')">
                                 <i class="fas fa-utensils"></i> Preparaciones
                             </button>
                             <button class="btn btn-sm btn-warning" onclick="event.stopPropagation(); abrirEditarMenuEspecial(${menu.id_menu}, '${menuEscaped}')">
-                                <i class="fas fa-edit"></i> Editar
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); eliminarMenuEspecial(${menu.id_menu}, '${menuEscaped}')">
-                                <i class="fas fa-trash"></i> Eliminar
+                                <i class="fas fa-edit"></i>
                             </button>
                         </div>
                     </div>
                 `;
             } else {
                 return `
-                    <div class="menu-card ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
+                    <div class="menu-card ${animClass} ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
+                         ${animStyle}
                          onclick="abrirGestionPreparaciones(${menu.id_menu}, '${menu.menu}')">
                         <a href="${downloadUrl}" class="btn-download-excel" onclick="event.stopPropagation();" title="Descargar Excel">
                             <i class="fas fa-file-excel"></i>
@@ -242,14 +247,20 @@ class ModalidadesManager {
         }).join('');
 
         const modalidadId = menus.length > 0 ? menus[0].id_modalidad__id_modalidades : '';
+        const delayBase = animate ? menus.length * 0.05 : 0;
+        
         const tarjetaEspecial = `
-            <div class="menu-card menu-card-especial" onclick="abrirModalMenuEspecial('${modalidadId}')">
+            <div class="menu-card menu-card-especial ${animate ? 'menu-card-anim' : ''}" 
+                 ${animate ? `style="animation-delay: ${delayBase + 0.1}s"` : ''}
+                 onclick="abrirModalMenuEspecial('${modalidadId}')">
                 <div class="menu-numero-especial">
                     <i class="fas fa-plus-circle"></i>
                 </div>
-                <div class="menu-label-especial">Crear Menú Especial</div>
+                <div class="menu-label-especial">Crear Especial</div>
             </div>
-            <div class="menu-card menu-card-ia" onclick="abrirModalMenuIA('${modalidadId}')">
+            <div class="menu-card menu-card-ia ${animate ? 'menu-card-anim' : ''}" 
+                 ${animate ? `style="animation-delay: ${delayBase + 0.2}s"` : ''}
+                 onclick="abrirModalMenuIA('${modalidadId}')">
                 <div class="menu-numero-ia">
                     <i class="fas fa-robot"></i>
                 </div>
@@ -283,9 +294,34 @@ class ModalidadesManager {
      * @param {string} modalidadNombre - Nombre de la modalidad
      */
     async generarMenusAutomaticos(modalidadId, modalidadNombre) {
-        if (!confirm(`¿Generar automáticamente 20 menús para ${modalidadNombre}?`)) {
-            return;
-        }
+        const result = await Swal.fire({
+            title: '¿Generar 20 menús?',
+            text: `Se crearán automáticamente los menús regulares para ${modalidadNombre}`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Sí, generar',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!result.isConfirmed) return;
+        
+        const grid = document.getElementById(`grid-${modalidadId}`);
+        const originalContent = grid.innerHTML;
+        
+        // 1. Mostrar Modal de Carga Global (Solo con nuestro spinner esmeralda)
+        Swal.fire({
+            title: 'Generando ciclo de 20 menús...',
+            html: `
+                <div class="generating-spinner" style="margin: 20px auto;"></div>
+                <p style="font-weight: 500; color: #334155;">Por favor, espere un momento.</p>
+                <p style="font-size: 0.85rem; color: #64748b;">Estamos preparando el plan nutricional...</p>
+            `,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false
+        });
         
         try {
             const response = await fetch('/nutricion/api/generar-menus-automaticos/', {
@@ -303,18 +339,39 @@ class ModalidadesManager {
             const data = await response.json();
             
             if (data.success) {
-                alert(`✓ Se generaron ${data.menus_creados} menús exitosamente`);
+                // Actualizar datos localmente
+                await this.cargarMenusExistentes(this.programaActual.id);
+                const menusNuevos = this.menusData[modalidadId] || [];
                 
-                // Recargar modalidades
-                if (this.onModalidadesRecargadas) {
-                    this.onModalidadesRecargadas(this.programaActual.id);
+                // 2. Actualizar Badge reactivamente
+                const badge = document.getElementById(`badge-${modalidadId}`);
+                if (badge) {
+                    badge.textContent = `${menusNuevos.length} / 20 menús`;
                 }
+
+                // 3. Ocultar botón de generación
+                const btnGenerar = document.querySelector(`#actions-${modalidadId} .btn-generar-auto`);
+                if (btnGenerar) {
+                    btnGenerar.style.display = 'none';
+                }
+                
+                // 4. Renderizar con animación escalonada
+                grid.innerHTML = this.generarTarjetasMenus(menusNuevos, true);
+                
+                // 5. Cerrar modal de carga y mostrar éxito
+                Swal.fire({
+                    title: '¡Éxito!',
+                    text: `Se han generado ${data.menus_creados} menús correctamente.`,
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
             } else {
-                alert('Error: ' + (data.error || 'No se pudieron generar los menús'));
+                Swal.fire('Error', data.error || 'No se pudieron generar los menús', 'error');
             }
         } catch (error) {
             console.error('Error al generar menús automáticos:', error);
-            alert('Error al generar menús automáticos');
+            Swal.fire('Error', 'Hubo un problema en la conexión con el servidor', 'error');
         }
     }
 

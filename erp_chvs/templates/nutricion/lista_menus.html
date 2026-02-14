@@ -270,22 +270,22 @@
 
             <div class="alert alert-info">
                 <i class="fas fa-lightbulb"></i> <strong>Generación Multi-nivel Automática</strong>
-                <p style="margin-top: 10px; margin-bottom: 0;">
+                <p class="mt-2 mb-0">
                     La IA generará un menú diario completo con <strong>pesos específicos para todos los niveles educativos</strong>:
                 </p>
-                <ul style="margin-top: 8px; margin-bottom: 0; padding-left: 20px;">
+                <ul class="mt-2 mb-0 pl-4">
                     <li>Preescolar</li>
                     <li>Primaria (1°, 2° y 3°)</li>
                     <li>Primaria (4° y 5°)</li>
                     <li>Secundaria</li>
                     <li>Media y Ciclo Complementario</li>
                 </ul>
-                <p style="margin-top: 10px; margin-bottom: 0; font-size: 0.9em; color: #666;">
+                <p class="mt-2 mb-0 text-muted small">
                     ⏱️ Este proceso puede tardar 15-30 segundos. El menú incluirá preparaciones, ingredientes y análisis nutricional completo.
                 </p>
             </div>
 
-            <div class="alert alert-warning" style="margin-top: 15px;">
+            <div class="alert alert-warning mt-3">
                 <i class="fas fa-exclamation-triangle"></i> <strong>Importante:</strong>
                 Asegúrese de tener configurada la clave API de Gemini en las variables de entorno (.env).
             </div>
@@ -300,10 +300,10 @@
             </div>
         </form>
 
-        <div id="loadingIA" style="display: none; text-align: center; margin-top: 20px;">
+        <div id="loadingIA" class="loading-ia-container">
             <div class="spinner"></div>
             <p><strong>Gemini está generando su menú...</strong></p>
-            <p style="font-size: 0.9em; color: #666;">
+            <p class="small text-muted">
                 Creando preparaciones y calculando porciones para los 5 niveles educativos.<br>
                 Por favor espere, esto puede tardar hasta 30 segundos.
             </p>

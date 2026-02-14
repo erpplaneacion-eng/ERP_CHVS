@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
                 ('hierro_porc', models.DecimalField(decimal_places=1, max_digits=5, verbose_name='Hierro (%)')),
                 ('sodio_porc', models.DecimalField(decimal_places=1, max_digits=5, verbose_name='Sodio (%)')),
                 ('id_nivel_escolar_uapa', models.ForeignKey(db_column='id_nivel_escolar_uapa', on_delete=django.db.models.deletion.PROTECT, related_name='adecuaciones_porcentaje', to='principal.tablagradosescolaresUapa', verbose_name='Nivel Escolar UAPA')),
-                ('id_modalidad', models.ForeignKey(blank=True, db_column='id_modalidad', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='adecuaciones_porcentaje', to='nutricion.modalidadesdeconsumo', verbose_name='Modalidad de Consumo')),
+                ('id_modalidad', models.ForeignKey(blank=True, db_column='id_modalidad', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='adecuaciones_porcentaje', to='principal.modalidadesdeconsumo', verbose_name='Modalidad de Consumo')),
             ],
             options={
                 'verbose_name': 'Adecuación Total Porcentaje',
