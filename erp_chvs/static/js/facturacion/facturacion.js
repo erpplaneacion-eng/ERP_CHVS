@@ -297,9 +297,13 @@ async function transferirGradosDesdeSede(nombreSede, programaId, focalizacion) {
     document.getElementById('transferTitle').textContent = `Transferir grados a: ${nombreSede} (Focalización: ${focalizacion})`;
 
     // Limpiar y deshabilitar mientras carga
-    const sedeOrigenSelect = document.getElementById('sedeOrigen');
-    sedeOrigenSelect.innerHTML = '<option value="">Cargando sedes...</option>';
-    sedeOrigenSelect.disabled = true;
+    const sedeOrigenInput = document.getElementById('sedeOrigen');
+    const sedeOrigenDatalist = document.getElementById('sedeOrigen-list');
+    sedeOrigenInput.value = '';
+    sedeOrigenInput.placeholder = 'Cargando sedes...';
+    sedeOrigenInput.disabled = true;
+    sedeOrigenInput.classList.remove('is-valid', 'is-invalid');
+    sedeOrigenDatalist.innerHTML = '';
 
     document.getElementById('gradosDisponibles').innerHTML = '<p class="empty-message"><i class="fas fa-spinner fa-spin"></i> Cargando...</p>';
     document.getElementById('gradosSeleccionados').innerHTML = '<p class="empty-message">Ningún grado seleccionado</p>';
@@ -325,20 +329,20 @@ async function transferirGradosDesdeSede(nombreSede, programaId, focalizacion) {
             const sedesOrigen = gradosDisponiblesData.filter(s => s.sede !== nombreSede);
 
             if (sedesOrigen.length === 0) {
-                sedeOrigenSelect.innerHTML = '<option value="">No hay sedes disponibles para transferir</option>';
+                sedeOrigenInput.placeholder = 'No hay sedes disponibles para transferir';
+                sedeOrigenInput.disabled = true;
                 document.getElementById('gradosDisponibles').innerHTML = '<p class="empty-message"><i class="fas fa-info-circle"></i> No hay sedes origen disponibles</p>';
             } else {
                 cargarSedesOrigen(sedesOrigen);
                 document.getElementById('gradosDisponibles').innerHTML = '<p class="empty-message"><i class="fas fa-info-circle"></i> Selecciona una sede de origen para ver sus grados</p>';
             }
-
-            sedeOrigenSelect.disabled = false;
         } else {
             throw new Error(data.error || 'Error desconocido');
         }
     } catch (error) {
         console.error('Error al cargar sedes:', error);
-        sedeOrigenSelect.innerHTML = '<option value="">Error al cargar sedes</option>';
+        sedeOrigenInput.placeholder = 'Error al cargar sedes';
+        sedeOrigenInput.disabled = true;
         document.getElementById('gradosDisponibles').innerHTML = `<p class="empty-message" style="color: #dc3545;"><i class="fas fa-exclamation-triangle"></i> Error: ${error.message}</p>`;
         alert('Error al cargar las sedes disponibles: ' + error.message);
     }
@@ -377,40 +381,67 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Función para cargar sedes disponibles en el selector
+// Función para cargar sedes disponibles en el datalist
 function cargarSedesOrigen(sedesDisponibles) {
-    const select = document.getElementById('sedeOrigen');
-    select.innerHTML = '<option value="">Selecciona una sede...</option>';
+    const input = document.getElementById('sedeOrigen');
+    const datalist = document.getElementById('sedeOrigen-list');
+
+    // Limpiar input y datalist
+    input.value = '';
+    input.placeholder = sedesDisponibles && sedesDisponibles.length > 0
+        ? 'Buscar sede por nombre...'
+        : 'No hay sedes disponibles';
+    input.disabled = !sedesDisponibles || sedesDisponibles.length === 0;
+    datalist.innerHTML = '';
 
     if (sedesDisponibles && sedesDisponibles.length > 0) {
         sedesDisponibles.forEach(sedeData => {
             const option = document.createElement('option');
             option.value = sedeData.sede;
             option.textContent = `${sedeData.sede} (${sedeData.total_estudiantes} estudiantes, ${sedeData.total_grados} grados)`;
-            select.appendChild(option);
+            datalist.appendChild(option);
         });
-    } else {
-        select.innerHTML = '<option value="">No hay sedes disponibles</option>';
+
+        // Agregar evento change para detectar cuando se selecciona una sede
+        if (!input.hasAttribute('data-listener-added')) {
+            input.addEventListener('change', cambiarSedeOrigen);
+            input.addEventListener('blur', cambiarSedeOrigen);
+            input.setAttribute('data-listener-added', 'true');
+        }
     }
 }
 
 // Función para cambiar sede de origen
 function cambiarSedeOrigen() {
-    const select = document.getElementById('sedeOrigen');
-    sedeOrigenActual = select.value;
+    const input = document.getElementById('sedeOrigen');
+    const valorIngresado = input.value.trim();
     gradosSeleccionados = [];
 
-    if (sedeOrigenActual) {
-        // Buscar los grados de la sede seleccionada
-        const sedeSeleccionada = gradosDisponiblesData.find(s => s.sede === sedeOrigenActual);
+    if (valorIngresado) {
+        // Verificar si la sede ingresada existe en las sedes disponibles
+        const sedeSeleccionada = gradosDisponiblesData.find(s => s.sede === valorIngresado);
+
         if (sedeSeleccionada) {
+            sedeOrigenActual = valorIngresado;
             cargarGradosDisponibles(sedeSeleccionada.grados);
+            input.classList.remove('is-invalid');
+            input.classList.add('is-valid');
+        } else {
+            // Sede no válida o no encontrada
+            sedeOrigenActual = '';
+            document.getElementById('gradosDisponibles').innerHTML = '<p class="empty-message" style="color: #dc3545;"><i class="fas fa-exclamation-triangle"></i> Sede no encontrada en la lista disponible</p>';
+            document.getElementById('gradosSeleccionados').innerHTML = '<p class="empty-message">Ningún grado seleccionado</p>';
+            document.getElementById('transferBtn').disabled = true;
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
         }
     } else {
         // Limpiar grados si no hay sede seleccionada
-        document.getElementById('gradosDisponibles').innerHTML = '<p class="empty-message">Selecciona una sede de origen para ver sus grados</p>';
+        sedeOrigenActual = '';
+        document.getElementById('gradosDisponibles').innerHTML = '<p class="empty-message"><i class="fas fa-info-circle"></i> Selecciona una sede de origen para ver sus grados</p>';
         document.getElementById('gradosSeleccionados').innerHTML = '<p class="empty-message">Ningún grado seleccionado</p>';
         document.getElementById('transferBtn').disabled = true;
+        input.classList.remove('is-valid', 'is-invalid');
     }
 }
 

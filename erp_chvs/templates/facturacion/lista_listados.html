@@ -218,11 +218,18 @@
                     <label style="font-size: 16px; font-weight: 600; color: #2c3e50; margin-bottom: 10px; display: block;">
                         <i class="fas fa-school"></i> Sede de Origen:
                     </label>
-                    <select id="sedeOrigen" class="form-control" onchange="cambiarSedeOrigen()" style="font-size: 15px; padding: 12px 15px;">
-                        <option value="">Selecciona una sede...</option>
-                    </select>
+                    <input
+                        type="text"
+                        id="sedeOrigen"
+                        class="form-control"
+                        placeholder="Buscar sede por nombre..."
+                        list="sedeOrigen-list"
+                        autocomplete="off"
+                        style="font-size: 15px; padding: 12px 15px;"
+                    >
+                    <datalist id="sedeOrigen-list"></datalist>
                     <small class="text-muted" style="display: block; margin-top: 8px;">
-                        <i class="fas fa-info-circle"></i> Selecciona la sede desde donde transferir los estudiantes
+                        <i class="fas fa-info-circle"></i> Escribe para buscar la sede desde donde transferir los estudiantes
                     </small>
                 </div>
 
