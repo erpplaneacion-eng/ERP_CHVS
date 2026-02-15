@@ -42,11 +42,27 @@ if RAILWAY_STATIC_URL:
     if railway_domain not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(railway_domain)
 
+def _normalize_csrf_origin(origin: str) -> str:
+    origin = origin.strip()
+    if not origin:
+        return ''
+    if origin.startswith(('http://', 'https://')):
+        return origin
+    # Django 4+ exige esquema en CSRF_TRUSTED_ORIGINS.
+    if origin.startswith(('localhost', '127.0.0.1', '0.0.0.0')):
+        return f'http://{origin}'
+    return f'https://{origin}'
+
+
 # CSRF Trusted Origins (para Railway y dominios externos)
-CSRF_TRUSTED_ORIGINS = os.environ.get(
+_csrf_env = os.environ.get(
     'CSRF_TRUSTED_ORIGINS',
     'http://localhost:8000,http://127.0.0.1:8000'
-).split(',')
+)
+CSRF_TRUSTED_ORIGINS = [
+    normalized for normalized in (_normalize_csrf_origin(item) for item in _csrf_env.split(','))
+    if normalized
+]
 
 # Agregar Railway URL si existe
 if RAILWAY_STATIC_URL and RAILWAY_STATIC_URL not in CSRF_TRUSTED_ORIGINS:
