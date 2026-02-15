@@ -36,14 +36,17 @@ class PerfilUsuario(models.Model):
 @receiver(post_save, sender=User)
 def crear_perfil_usuario(sender, instance, created, **kwargs):
     if created:
-        PerfilUsuario.objects.create(user=instance)
+        # Usamos get_or_create para evitar el error si el Admin ya está gestionando la creación
+        PerfilUsuario.objects.get_or_create(user=instance)
 
 @receiver(post_save, sender=User)
 def guardar_perfil_usuario(sender, instance, **kwargs):
+    # Solo intentamos guardar si el perfil ya existe
     if hasattr(instance, 'perfil'):
         instance.perfil.save()
     else:
-        PerfilUsuario.objects.create(user=instance)
+        # Si por alguna razón no existe (ej. usuarios viejos), lo creamos de forma segura
+        PerfilUsuario.objects.get_or_create(user=instance)
 
 class PrincipalDepartamento(models.Model):
     codigo_departamento = models.CharField(max_length=100, primary_key=True)

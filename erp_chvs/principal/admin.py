@@ -17,10 +17,19 @@ class PerfilUsuarioInline(admin.StackedInline):
     model = PerfilUsuario
     can_delete = False
     verbose_name_plural = 'Perfil de Usuario'
+    extra = 0
+    max_num = 1
 
 # Extender el UserAdmin nativo
 class UserAdmin(BaseUserAdmin):
     inlines = (PerfilUsuarioInline,)
+
+    def get_inline_instances(self, request, obj=None):
+        # En la vista de creación, el perfil lo crea la señal post_save.
+        # Evitamos que el inline intente crear un segundo PerfilUsuario.
+        if obj is None:
+            return []
+        return super().get_inline_instances(request, obj)
 
 # Re-registrar User
 admin.site.unregister(User)
