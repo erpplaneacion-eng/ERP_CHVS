@@ -43,7 +43,7 @@ class ExcelProcessor:
     @staticmethod
     def leer_excel(archivo: UploadedFile) -> pd.DataFrame:
         """
-        Lee un archivo Excel y retorna un DataFrame.
+        Lee un archivo Excel y retorna un DataFrame con limpieza de espacios.
         
         Args:
             archivo: Archivo Excel subido
@@ -57,6 +57,26 @@ class ExcelProcessor:
         try:
             # Leer el archivo Excel
             df = pd.read_excel(archivo)
+
+            # --- LIMPIEZA DE ESPACIOS ---
+            # 1. Limpiar nombres de columnas y manejar duplicados
+            nuevas_columnas = []
+            conteos = {}
+            for col in df.columns:
+                nombre_limpio = str(col).strip()
+                if nombre_limpio in conteos:
+                    conteos[nombre_limpio] += 1
+                    nuevas_columnas.append(f"{nombre_limpio}_{conteos[nombre_limpio]}")
+                else:
+                    conteos[nombre_limpio] = 0
+                    nuevas_columnas.append(nombre_limpio)
+            
+            df.columns = nuevas_columnas
+
+            # 2. Limpiar espacios en celdas de tipo texto
+            # select_dtypes(include=['object']) selecciona solo las columnas que contienen strings
+            for col in df.select_dtypes(include=['object']):
+                df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
 
             # Validar que no esté vacío
             if df.empty:

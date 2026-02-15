@@ -58,6 +58,10 @@ class DataTransformer:
         """
         try:
             # --- PASO 1: FILTRADO INICIAL ---
+            # Asegurar que LOTE sea numérico para la comparación, manejando posibles errores
+            if 'LOTE' in df.columns:
+                df['LOTE'] = pd.to_numeric(df['LOTE'], errors='coerce')
+            
             df = df[df['LOTE'] == 3].copy()  # .copy() evita SettingWithCopyWarning
 
             if len(df) == 0:
