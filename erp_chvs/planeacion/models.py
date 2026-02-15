@@ -160,13 +160,20 @@ class Programa(models.Model):
 
         return None
 
-    def __str__(self):
-        return self.programa
-
-    class Meta:
-        verbose_name = "Programa"
-        verbose_name_plural = "Programas"
-
+        def __str__(self):
+            return self.programa
+    
+        def save(self, *args, **kwargs):
+            # Normalizar campos de texto a mayúsculas
+            if self.programa:
+                self.programa = self.programa.upper().strip()
+            if self.contrato:
+                self.contrato = self.contrato.upper().strip()
+            super().save(*args, **kwargs)
+    
+        class Meta:
+            verbose_name = "Programa"
+            verbose_name_plural = "Programas"
 
 class PlanificacionRaciones(models.Model):
     """

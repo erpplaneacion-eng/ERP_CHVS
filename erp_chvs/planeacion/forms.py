@@ -45,7 +45,7 @@ class ProgramaForm(forms.ModelForm):
         if not re.match(r'^[a-zA-ZáéíóúñÑ0-9\s\-_().,]+$', programa):
             raise ValidationError("El nombre del programa contiene caracteres no válidos.")
         
-        return programa.strip()
+        return programa.strip().upper()
 
     def clean_fecha_inicial(self):
         fecha_inicial = self.cleaned_data.get('fecha_inicial')
