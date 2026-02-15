@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 from django.db.models import QuerySet
 
 from ..models import (
+    MinutaPatronMeta,
     TablaMenus,
     TablaPreparaciones,
     TablaAlimentos2018Icbf,
@@ -51,9 +52,6 @@ class AnalisisNutricionalService:
         # 1. Obtener menú y validar existencia
         menu = TablaMenus.objects.select_related('id_contrato', 'id_modalidad').get(id_menu=id_menu)
 
-        # 2. Obtener datos base
-        preparaciones_data = AnalisisNutricionalService._obtener_preparaciones_con_ingredientes(menu)
-
         # CAMBIO IMPORTANTE: Filtrar requerimientos por modalidad del menú
         # Cada modalidad (CAJM/JT, Almuerzo, etc.) tiene requerimientos específicos
         if menu.id_modalidad:
@@ -66,6 +64,13 @@ class AnalisisNutricionalService:
             requerimientos = TablaRequerimientosNutricionales.objects.filter(
                 id_modalidad__isnull=True
             ).select_related('id_nivel_escolar_uapa')
+
+        # 2. Obtener datos base (pasamos el primer nivel para obtener valores mínimos por defecto)
+        primer_nivel = requerimientos.first().id_nivel_escolar_uapa if requerimientos else None
+        nivel_para_defecto = primer_nivel.id_grado_escolar_uapa if primer_nivel else None
+        preparaciones_data = AnalisisNutricionalService._obtener_preparaciones_con_ingredientes(
+            menu, nivel_para_defecto
+        )
 
         nivel_escolar_programa = menu.id_contrato.get_nivel_escolar_uapa()
 
@@ -117,12 +122,13 @@ class AnalisisNutricionalService:
         }
 
     @staticmethod
-    def _obtener_preparaciones_con_ingredientes(menu: TablaMenus) -> List[Dict]:
+    def _obtener_preparaciones_con_ingredientes(menu: TablaMenus, nivel_escolar=None) -> List[Dict]:
         """
         Obtiene todas las preparaciones del menú con sus ingredientes.
 
         Args:
             menu: Instancia del menú
+            nivel_escolar: Nivel escolar opcional para obtener rango mínimo como valor por defecto
 
         Returns:
             Lista de preparaciones con ingredientes
@@ -159,8 +165,26 @@ class AnalisisNutricionalService:
                 if alimento:
                     # ✨ MEJORA: Usar gramaje de preparaciones como peso inicial
                     # Si existe gramaje guardado en TablaPreparacionIngredientes, usarlo
-                    # Si no, usar 100g como valor por defecto
-                    peso_neto_base = float(ing_prep.gramaje) if ing_prep.gramaje and ing_prep.gramaje > 0 else 100.0
+                    # Si no, usar el valor mínimo del rango como valor por defecto
+                    if ing_prep.gramaje and ing_prep.gramaje > 0:
+                        peso_neto_base = float(ing_prep.gramaje)
+                    elif nivel_escolar and menu.id_modalidad:
+                        # Obtener el mínimo del rango para este nivel y componente
+                        componente = getattr(preparacion, 'id_componente', None)
+                        if componente:
+                            meta = MinutaPatronMeta.objects.filter(
+                                id_modalidad=menu.id_modalidad,
+                                id_grado_escolar_uapa=nivel_escolar,
+                                id_componente=componente
+                            ).first()
+                            if meta and meta.peso_neto_minimo:
+                                peso_neto_base = float(meta.peso_neto_minimo)
+                            else:
+                                peso_neto_base = 100.0
+                        else:
+                            peso_neto_base = 100.0
+                    else:
+                        peso_neto_base = 100.0
 
                     parte_comestible = float(alimento.parte_comestible_field or 100)
                     parte_comestible = max(1.0, min(100.0, parte_comestible))
@@ -194,7 +218,25 @@ class AnalisisNutricionalService:
                 else:
                     # Alimento no encontrado - usar defaults
                     # ✨ MEJORA: Usar gramaje de preparaciones como peso inicial
-                    peso_neto_default = float(ing_prep.gramaje) if ing_prep.gramaje and ing_prep.gramaje > 0 else 100.0
+                    if ing_prep.gramaje and ing_prep.gramaje > 0:
+                        peso_neto_default = float(ing_prep.gramaje)
+                    elif nivel_escolar and menu.id_modalidad:
+                        # Obtener el mínimo del rango para este nivel
+                        componente = getattr(preparacion, 'id_componente', None)
+                        if componente:
+                            meta = MinutaPatronMeta.objects.filter(
+                                id_modalidad=menu.id_modalidad,
+                                id_grado_escolar_uapa=nivel_escolar,
+                                id_componente=componente
+                            ).first()
+                            if meta and meta.peso_neto_minimo:
+                                peso_neto_default = float(meta.peso_neto_minimo)
+                            else:
+                                peso_neto_default = 100.0
+                        else:
+                            peso_neto_default = 100.0
+                    else:
+                        peso_neto_default = 100.0
 
                     ingredientes_data.append({
                         'id_ingrediente': ingrediente_codigo,
