@@ -118,7 +118,7 @@ WSGI_APPLICATION = 'erp_chvs.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Railway provee DATABASE_URL automáticamente
+# Railway suele proveer DATABASE_URL; algunos entornos exponen solo variables PG*
 if os.environ.get('DATABASE_URL'):
     DATABASES = {
         'default': dj_database_url.config(
@@ -128,15 +128,16 @@ if os.environ.get('DATABASE_URL'):
         )
     }
 else:
-    # Configuración local usando variables individuales
+    # Configuración local/alterna usando variables individuales
+    # Soporta nombres DB_* y también PG* (Railway/Postgres estándar).
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('DB_NAME', 'erp_chvs'),
-            'USER': os.environ.get('DB_USER', 'postgres'),
-            'PASSWORD': os.environ.get('DB_PASSWORD', 'chvs2025'),
-            'HOST': os.environ.get('DB_HOST', 'localhost'),
-            'PORT': os.environ.get('DB_PORT', '5432'),
+            'NAME': os.environ.get('DB_NAME') or os.environ.get('PGDATABASE', 'erp_chvs'),
+            'USER': os.environ.get('DB_USER') or os.environ.get('PGUSER', 'postgres'),
+            'PASSWORD': os.environ.get('DB_PASSWORD') or os.environ.get('PGPASSWORD', 'chvs2025'),
+            'HOST': os.environ.get('DB_HOST') or os.environ.get('PGHOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT') or os.environ.get('PGPORT', '5432'),
             'OPTIONS': {
                 'connect_timeout': 10,
             },
