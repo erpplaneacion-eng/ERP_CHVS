@@ -507,6 +507,17 @@ def lista_listados(request):
     if focalizacion_filter:
         listados_grouped = listados_grouped.filter(focalizacion=focalizacion_filter)
 
+    # Calcular total de raciones (beneficiarios) con los filtros aplicados
+    total_raciones_query = ListadosFocalizacion.objects.all()
+    if programa_filter_id:
+        total_raciones_query = total_raciones_query.filter(programa_id=programa_filter_id)
+    if sede_filter:
+        total_raciones_query = total_raciones_query.filter(sede__icontains=sede_filter)
+    if focalizacion_filter:
+        total_raciones_query = total_raciones_query.filter(focalizacion=focalizacion_filter)
+
+    total_raciones = total_raciones_query.count()
+
     # Paginación
     paginator = Paginator(listados_grouped, 20)  # 20 grupos por página
     page_number = request.GET.get('page')
@@ -593,7 +604,7 @@ def lista_listados(request):
 
     context = {
         'listados': page_obj,
-        'total_listados': listados_grouped.count(),
+        'total_raciones': total_raciones,
         'programas': programas,
         'sede_values': sede_values,
         'focalizacion_values': focalizacion_values,

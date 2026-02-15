@@ -22,10 +22,10 @@
     </div>
 
     <!-- Estadísticas -->
-    {% if total_listados %}
+    {% if total_raciones %}
     <div class="stats-box">
         <strong><i class="fas fa-info-circle"></i> Estadísticas:</strong>
-        Total de registros: <strong>{{ total_listados }}</strong>
+        Total de raciones: <strong>{{ total_raciones }}</strong>
         {% if filtros_aplicados.programa %}
         | Programa: <strong>{{ filtros_aplicados.programa_nombre }}</strong>
         {% endif %}
