@@ -6,20 +6,20 @@ from datetime import datetime
 import os
 
 # Estructura de datos para los días hábiles de cada mes.
-# Aquí puedes agregar o modificar los días para cada mes del año.
+# Calendario hábil de Colombia 2026 (excluye fines de semana y festivos nacionales)
 DIAS_HABILES_POR_MES = {
-    "ENERO": [],
-    "FEBRERO": [],
-    "MARZO": [],
-    "ABRIL": [],
-    "MAYO": [],
-    "JUNIO": [],
-    "JULIO": [],
-    "AGOSTO": [],
-    "SEPTIEMBRE": [],
-    "OCTUBRE": [1, 2, 3, 6, 7, 8, 9, 10, 14, 15, 16, 17, 20, 21, 22, 23, 24, 27, 28, 29, 30, 31],
-    "NOVIEMBRE": [4, 5, 6, 7, 10, 11, 12, 13, 14, 18, 19, 20, 21, 24, 25, 26, 27, 28],
-    "DICIEMBRE": []
+    "ENERO": [],  # No definido para 2026
+    "FEBRERO": [2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 23, 24, 25, 26, 27],
+    "MARZO": [2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 24, 25, 26, 27, 30, 31],
+    "ABRIL": [1, 6, 7, 8, 13, 14, 15, 16, 17, 20, 21, 22, 23, 24, 27, 28, 29, 30],
+    "MAYO": [4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 19, 20, 21, 22, 25, 26, 27, 28, 29],
+    "JUNIO": [2, 3, 4, 5, 9, 10, 11, 12, 16, 17, 18, 19, 23, 24, 25, 26, 30],
+    "JULIO": [1, 2, 3, 7, 8, 9, 10, 13, 14, 15, 16, 17, 21, 22, 23, 24, 27, 28, 29, 31],
+    "AGOSTO": [3, 4, 5, 6, 11, 12, 13, 14, 18, 19, 20, 21, 24, 25, 26, 27, 28, 31],
+    "SEPTIEMBRE": [1, 2, 3, 4, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25, 28, 29, 30],
+    "OCTUBRE": [1, 2, 5, 6, 7, 8, 9, 13, 14, 15, 16, 19, 20, 21, 22, 23, 26, 27, 28, 29, 30],
+    "NOVIEMBRE": [3, 4, 5, 6, 10, 11, 12, 13, 17, 18, 19, 20, 23, 24, 25, 26, 27, 30],
+    "DICIEMBRE": [1, 2, 3, 4, 7, 9, 10, 11, 14, 15, 16, 17, 18, 21, 22, 23, 24, 28, 29, 30, 31]
 }
 
 class AsistenciaPDFGenerator:
@@ -215,8 +215,12 @@ class AsistenciaPDFGenerator:
             dias_habiles = dias_personalizados
         else:
             dias_habiles = DIAS_HABILES_POR_MES.get(mes_actual, [])
-        
-        num_dias = len(dias_habiles) if dias_habiles else 22 # Usar 22 como default si no hay días definidos
+
+        # Si no hay días definidos, generar lista del 1 al 22 por defecto
+        if not dias_habiles:
+            dias_habiles = list(range(1, 23))  # Del 1 al 22
+
+        num_dias = len(dias_habiles)
         casilla_ancho = (ancho_disponible_dias / num_dias) if num_dias > 0 else 0
 
         # Reducir grosor de línea para las casillas de días
@@ -274,7 +278,11 @@ class AsistenciaPDFGenerator:
         else:
             dias_habiles_del_mes = DIAS_HABILES_POR_MES.get(mes_actual, [])
 
-        num_dias_habiles = len(dias_habiles_del_mes) if dias_habiles_del_mes else 22
+        # Si no hay días definidos, generar lista del 1 al 22 por defecto
+        if not dias_habiles_del_mes:
+            dias_habiles_del_mes = list(range(1, 23))  # Del 1 al 22
+
+        num_dias_habiles = len(dias_habiles_del_mes)
         raciones_mensuales = total_estudiantes * num_dias_habiles
 
         # 2. Determinar en qué fila va el valor
@@ -388,8 +396,12 @@ class AsistenciaPDFGenerator:
             dias_habiles_del_mes = dias_personalizados
         else:
             dias_habiles_del_mes = DIAS_HABILES_POR_MES.get(mes_actual, [])
-            
-        num_dias_habiles = len(dias_habiles_del_mes) if dias_habiles_del_mes else 22
+
+        # Si no hay días definidos, generar lista del 1 al 22 por defecto
+        if not dias_habiles_del_mes:
+            dias_habiles_del_mes = list(range(1, 23))  # Del 1 al 22
+
+        num_dias_habiles = len(dias_habiles_del_mes)
         raciones_mensuales = raciones_diarias * num_dias_habiles
 
         texto1_mensual = f"RACIONES MENSUALES PROGRAMADAS {codigo_complemento}:"
@@ -683,7 +695,11 @@ class AsistenciaPDFGenerator:
                     else:
                         dias_habiles = DIAS_HABILES_POR_MES.get(mes_actual, [])
 
-                    num_dias = len(dias_habiles) if dias_habiles else 22
+                    # Si no hay días definidos, generar lista del 1 al 22 por defecto
+                    if not dias_habiles:
+                        dias_habiles = list(range(1, 23))  # Del 1 al 22
+
+                    num_dias = len(dias_habiles)
                     casilla_ancho = (ancho_col13_fijo - ancho_total_dias) / num_dias if num_dias > 0 else 0
 
                     # Reducir grosor de línea para casillas de días

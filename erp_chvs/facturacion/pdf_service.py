@@ -317,10 +317,18 @@ class PDFAsistenciaService:
 
 
 
+        # Obtener el año del primer estudiante, pero validar que sea razonable
         ano = estudiantes_sede[0].ano
 
-        if not ano:
+        # Validar que el año sea razonable (entre 2020 y año actual + 5)
+        from datetime import datetime
+        ano_actual = datetime.now().year
 
+        if not ano or ano < 2020 or ano > ano_actual + 5:
+            # Si el año no es válido, usar el año actual
+            ano = ano_actual
+
+        if not ano:
             return None
 
 
