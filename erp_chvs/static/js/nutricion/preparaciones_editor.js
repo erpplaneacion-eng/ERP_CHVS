@@ -295,102 +295,11 @@
     });
 
     // ========================================
-    // LÓGICA DE SUGERENCIAS
+    // LÓGICA DE SUGERENCIAS - ELIMINADA
     // ========================================
 
-    function generarSugerencias(nivelId) {
-        const nivelIdNormalizado = String(nivelId);
-        const nivelData = nivelesData.find(n => String(n.nivel.id) === nivelIdNormalizado);
-        if (!nivelData || !nivelData.totales) return;
-
-        const panelSugerencias = document.querySelector(`#sugerencias-${nivelIdNormalizado}`);
-        if (!panelSugerencias) return;
-
-        const content = panelSugerencias.querySelector('.sugerencias-content');
-        const totales = nivelData.totales;
-        const req = nivelData.requerimientos;
-        
-        const sugerencias = [];
-
-        // 1. Análisis de Energía
-        const percCal = (totales.calorias / req.calorias) * 100;
-        if (percCal < 80) {
-            sugerencias.push({
-                icon: 'bi-lightning',
-                title: 'Bajo aporte energético',
-                text: `Falta un ${(80 - percCal).toFixed(1)}% para alcanzar el mínimo. Intenta aumentar ligeramente el gramaje de acompañantes (arroz, tubérculos) o fuentes de grasa saludable.`
-            });
-        }
-
-        // 2. Análisis de Proteína
-        const percProt = (totales.proteina / req.proteina) * 100;
-        if (percProt < 80) {
-            sugerencias.push({
-                icon: 'bi-egg',
-                title: 'Proteína insuficiente',
-                text: 'El aporte proteico está por debajo del rango óptimo. Considera aumentar el gramaje de la fuente principal de proteína (carne, pollo, huevo).'
-            });
-        }
-
-        // 3. Análisis de Grasas
-        const percGrasa = (totales.grasa / req.grasa) * 100;
-        if (percGrasa > 100) {
-            sugerencias.push({
-                icon: 'bi-exclamation-triangle',
-                title: 'Exceso de grasas',
-                text: 'El aporte de grasas supera el 100% de la recomendación. Revisa si hay gramajes elevados en aceites o alimentos procesados.'
-            });
-        }
-
-        // 4. Análisis de Micronutrientes (Calcio/Hierro)
-        if ((totales.calcio / req.calcio) < 0.8) {
-            sugerencias.push({
-                icon: 'bi-heart-pulse',
-                title: 'Bajo en Calcio',
-                text: 'Aumenta gramajes en lácteos o vegetales de hoja verde si están presentes.'
-            });
-        }
-
-        // Mostrar sugerencias
-        if (sugerencias.length === 0) {
-            content.innerHTML = `
-                <div class="sugerencia-item" style="border-left-color: #10b981;">
-                    <div class="sugerencia-icon" style="color: #10b981;"><i class="bi bi-check-circle-fill"></i></div>
-                    <div class="sugerencia-text">
-                        <strong>¡Todo en orden!</strong> El análisis nutricional actual cumple con los parámetros generales.
-                    </div>
-                </div>
-            `;
-        } else {
-            content.innerHTML = sugerencias.map(s => `
-                <div class="sugerencia-item">
-                    <div class="sugerencia-icon"><i class="bi ${s.icon}"></i></div>
-                    <div class="sugerencia-text">
-                        <strong>${s.title}</strong>
-                        ${s.text}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        panelSugerencias.style.display = 'block';
-    }
-
-    // Event Delegation para botones de sugerencias por nivel
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest('.btn-sugerencias');
-        if (btn) {
-            const nivelId = btn.dataset.nivelId;
-            generarSugerencias(nivelId);
-        }
-
-        const btnCerrar = e.target.closest('.btn-close-sugerencias');
-        if (btnCerrar) {
-            const panel = btnCerrar.closest('.panel-sugerencias');
-            if (panel) panel.style.display = 'none';
-        }
-    });
-
+    // Event Delegation para botones de sugerencias por nivel (ELIMINADO)
+    
     const btnAgregarFila = document.getElementById('btnAgregarFila');
     if (btnAgregarFila) {
         btnAgregarFila.addEventListener('click', agregarIngredienteATodosLosNiveles);
