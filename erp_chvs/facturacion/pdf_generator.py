@@ -5,6 +5,35 @@ from reportlab.lib.units import cm
 from datetime import datetime
 import os
 
+# Cache para mapeos de géneros (evitar consultas repetidas)
+_genero_cache = None
+
+def obtener_id_genero_por_codigo(codigo_genero):
+    """
+    Obtiene el id_genero de la tabla tipo_genero basado en el codigo_genero.
+
+    Args:
+        codigo_genero: Código numérico del género (1, 2, etc.) o string
+
+    Returns:
+        str: id_genero (ej: "GEN01", "GEN02") o string vacío si no se encuentra
+    """
+    global _genero_cache
+
+    # Cargar cache si no existe
+    if _genero_cache is None:
+        from principal.models import TipoGenero
+        _genero_cache = {
+            str(g.codigo_genero): g.id_genero
+            for g in TipoGenero.objects.all()
+        }
+
+    # Convertir a string para buscar
+    codigo_str = str(codigo_genero).strip() if codigo_genero else ''
+
+    # Buscar en cache
+    return _genero_cache.get(codigo_str, '')
+
 # Estructura de datos para los días hábiles de cada mes.
 # Calendario hábil de Colombia 2026 (excluye fines de semana y festivos nacionales)
 DIAS_HABILES_POR_MES = {
@@ -658,6 +687,9 @@ class AsistenciaPDFGenerator:
                             # Para otros tipos, convertir a string y tomar primera parte
                             fecha_nac_str = str(fecha_nac).split('T')[0].split(' ')[0]
                     
+                    # Obtener id_genero en lugar del código numérico
+                    id_genero = obtener_id_genero_por_codigo(estudiante.genero)
+
                     datos_fila = [
                         str(estudiante_index + 1),
                         estudiante.tipodoc or '',
@@ -668,7 +700,7 @@ class AsistenciaPDFGenerator:
                         estudiante.apellido2 or '',
                         fecha_nac_str,
                         estudiante.etnia or '',
-                        estudiante.genero or '',
+                        id_genero,
                         estudiante.grado_grupos or '',
                         self.datos_encabezado.get('codigo_complemento', '')
                     ]
