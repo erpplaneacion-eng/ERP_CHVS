@@ -1,0 +1,16 @@
+[build]
+builder = "nixpacks"
+buildCommand = "pip install -r erp_chvs/requirements.txt"
+
+[deploy]
+startCommand = "cd erp_chvs && gunicorn erp_chvs.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --timeout 120"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+
+[healthcheck]
+path = "/"
+timeout = 100
+interval = 60
+
+[env]
+PYTHON_VERSION = "3.13.1"

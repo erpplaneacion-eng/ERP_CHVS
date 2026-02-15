@@ -34,6 +34,23 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 # Configuración de hosts permitidos
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
+# Railway.app domain automático
+RAILWAY_STATIC_URL = os.environ.get('RAILWAY_STATIC_URL')
+if RAILWAY_STATIC_URL:
+    railway_domain = RAILWAY_STATIC_URL.replace('https://', '').replace('http://', '')
+    if railway_domain not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(railway_domain)
+
+# CSRF Trusted Origins (para Railway y dominios externos)
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    'CSRF_TRUSTED_ORIGINS',
+    'http://localhost:8000,http://127.0.0.1:8000'
+).split(',')
+
+# Agregar Railway URL si existe
+if RAILWAY_STATIC_URL and RAILWAY_STATIC_URL not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(RAILWAY_STATIC_URL)
+
 # Configuración de seguridad adicional
 if not DEBUG:
     # Configuraciones de seguridad para producción
@@ -67,6 +84,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Servir archivos estáticos en producción
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -158,8 +176,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / "static"] # Directorio para archivos estáticos durante el desarrollo
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [BASE_DIR / "static"]  # Directorio para archivos estáticos durante el desarrollo
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Directorio donde se recopilan archivos estáticos para producción
+
+# Configuración de WhiteNoise para servir archivos estáticos eficientemente
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

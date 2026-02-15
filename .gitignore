@@ -243,7 +243,7 @@ Thumbs.db
 # Claude Code / AI Assistant settings
 # ===========================================
 .claude/
-CLAUDE.md
+# CLAUDE.md se mantiene en el repo (es documentación útil)
 
 # ===========================================
 # Secrets and credentials
@@ -324,3 +324,22 @@ local/
 dev_notes.txt
 TODO.txt
 notas.txt
+
+# ===========================================
+# Railway / Production
+# ===========================================
+.railway/
+railway-data/
+.nixpacks/
+
+# ===========================================
+# Otros archivos específicos del proyecto
+# ===========================================
+
+.claude/
+.vscode/
+.agents/
+.kiocode/
+archivos excel/
+gemini.md
+claude.md
