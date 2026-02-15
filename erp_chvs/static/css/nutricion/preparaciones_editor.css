@@ -366,7 +366,11 @@
 }
 
 .nutriente-card.alto {
-    border-left-color: #ef4444;
+    border-left-color: #dc2626;
+}
+
+.nutriente-card.info {
+    border-left-color: #358bf5;
 }
 
 .nutriente-label {
@@ -392,7 +396,8 @@
 
 .nutriente-porcentaje.optimo { color: #10b981; }
 .nutriente-porcentaje.aceptable { color: #f59e0b; }
-.nutriente-porcentaje.alto { color: #ef4444; }
+.nutriente-porcentaje.alto { color: #dc2626; }
+.nutriente-porcentaje.info { color: #2563eb; }
 
 .nutriente-requerimiento {
     font-size: 11px;

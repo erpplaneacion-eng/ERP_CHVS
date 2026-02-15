@@ -248,10 +248,14 @@
             }
 
             let estado = 'optimo';
-            if (porcentaje > 70) {
-                estado = 'alto';
-            } else if (porcentaje > 35) {
-                estado = 'aceptable';
+            if (porcentaje > 100) {
+                estado = 'alto'; // Rojo
+            } else if (porcentaje >= 80) {
+                estado = 'optimo'; // Verde
+            } else if (porcentaje >= 50) {
+                estado = 'aceptable'; // Amarillo
+            } else {
+                estado = 'info'; // Azul
             }
 
             card.className = `nutriente-card ${estado}`;
