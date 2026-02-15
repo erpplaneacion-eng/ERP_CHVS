@@ -41,7 +41,7 @@ class ProcesamientoConfig:
     MODELOS_EXCLUIDOS = ['PROGRAMA PARA JÓVENES EN EXTRAEDAD Y ADULTOS']
     
     # Valores fijos para nuevo formato
-    AÑO_FIJO = 2025
+    AÑO_FIJO = 2026
     ETC_CALI = 'CALI'
     ESTADO_MATRICULADO_NUEVO = 'MATRICULADO'
     SECTOR_OFICIAL_NUEVO = 'OFICIAL'

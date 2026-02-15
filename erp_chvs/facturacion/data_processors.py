@@ -65,14 +65,46 @@ class DataTransformer:
             # Transformación de TIPODOC usando el modelo de 'principal'
             if 'TIPODOC' in df.columns:
                 tipos_documento = TipoDocumento.objects.all()
-                mapeo_modalidades = {m.tipo_documento: m.codigo_documento for m in tipos_documento}
+
+                # Crear múltiples variaciones de mapeo para manejar diferencias de espacios
+                mapeo_modalidades = {}
+                for tipo in tipos_documento:
+                    codigo = tipo.codigo_documento
+                    valor_bd = tipo.tipo_documento.strip().upper()
+
+                    # Variación 1: Valor original normalizado
+                    mapeo_modalidades[valor_bd] = codigo
+
+                    # Variación 2: Sin espacio después de ':'
+                    valor_sin_espacio = valor_bd.replace(': ', ':')
+                    mapeo_modalidades[valor_sin_espacio] = codigo
+
+                    # Variación 3: Con espacio después de ':'
+                    valor_con_espacio = valor_bd.replace(':', ': ')
+                    mapeo_modalidades[valor_con_espacio] = codigo
+
+                    # Variación 4: Normalizar espacios extras (múltiples espacios → uno)
+                    valor_norm_espacios = ' '.join(valor_bd.split())
+                    mapeo_modalidades[valor_norm_espacios] = codigo
+
+                # Normalizar valores del DataFrame
+                df['TIPODOC'] = df['TIPODOC'].astype(str).str.strip().str.upper()
+
+                # Aplicar mapeo
                 df['TIPODOC'] = df['TIPODOC'].map(mapeo_modalidades)
                 transformaciones_aplicadas.append("TIPODOC")
             
             # Transformación de GENERO usando el modelo de 'principal'
             if 'GENERO' in df.columns:
+                # Normalizar valores: quitar espacios y convertir a mayúsculas
+                df['GENERO'] = df['GENERO'].astype(str).str.strip().str.upper()
+                
                 generos = TipoGenero.objects.all()
-                mapeo_generos = {g.genero: g.codigo_genero for g in generos}
+                # Crear mapeo con valores normalizados
+                mapeo_generos = {
+                    g.genero.strip().upper(): g.codigo_genero 
+                    for g in generos
+                }
                 df['GENERO'] = df['GENERO'].map(mapeo_generos)
                 transformaciones_aplicadas.append("GENERO")
             
