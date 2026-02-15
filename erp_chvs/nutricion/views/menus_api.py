@@ -2,6 +2,8 @@ import json
 
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction
+from django.db.models import Case, IntegerField, Value, When
+from django.db.models.functions import Cast
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
@@ -199,10 +201,20 @@ def api_menus(request):
         if programa_id:
             menus_query = menus_query.filter(id_contrato_id=programa_id)
 
-        menus = menus_query.values(
+        # Ordenar numéricamente: convertir campo 'menu' (texto) a entero
+        # Para menús especiales (no numéricos), asignar un valor alto (9999)
+        menus = menus_query.annotate(
+            menu_numerico=Case(
+                # Si el campo puede convertirse a entero, usar ese valor
+                When(menu__regex=r'^\d+$', then=Cast('menu', IntegerField())),
+                # Si no, asignar 9999 para que aparezcan al final
+                default=Value(9999),
+                output_field=IntegerField()
+            )
+        ).values(
             'id_menu', 'menu', 'id_modalidad__id_modalidades', 'id_modalidad__modalidad',
             'id_contrato__id', 'id_contrato__programa', 'fecha_creacion'
-        ).order_by('id_modalidad__id_modalidades', 'menu')
+        ).order_by('id_modalidad__id_modalidades', 'menu_numerico')
 
         return JsonResponse({'menus': list(menus)})
 

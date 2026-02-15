@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 from principal.models import ModalidadesDeConsumo, TablaGradosEscolaresUapa
 from planeacion.models import Programa
 
@@ -199,9 +200,41 @@ class TablaMenus(models.Model):
         auto_now=True,
         verbose_name="Fecha de Actualización"
     )
+    semana = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(4)],
+        verbose_name="Semana del Ciclo",
+        help_text="Semana 1-4, calculada automáticamente para menús 1-20"
+    )
 
     def __str__(self):
         return f"{self.menu} - {self.id_modalidad.modalidad}"
+
+    def save(self, *args, **kwargs):
+        """
+        Sobrescribe el método save para auto-calcular la semana
+        basándose en el número de menú (1-20).
+
+        Menús 1-5: Semana 1
+        Menús 6-10: Semana 2
+        Menús 11-15: Semana 3
+        Menús 16-20: Semana 4
+        Menús especiales (no numéricos): Semana None
+        """
+        if self.menu:
+            try:
+                num = int(self.menu)
+                if 1 <= num <= 20:
+                    # Fórmula: ((num - 1) // 5) + 1
+                    # Ejemplos: 1-5 → 1, 6-10 → 2, 11-15 → 3, 16-20 → 4
+                    self.semana = ((num - 1) // 5) + 1
+                else:
+                    self.semana = None  # Menús fuera del rango 1-20
+            except (ValueError, TypeError):
+                self.semana = None  # Menús especiales (texto no numérico)
+
+        super().save(*args, **kwargs)
 
     class Meta:
         db_table = 'nutricion_tabla_menus'
