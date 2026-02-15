@@ -92,10 +92,15 @@ def _resolver_grupo_y_rango_por_nivel(menu, preparacion, ingrediente_icbf, nivel
         id_grado_escolar_uapa=nivel_escolar,
         id_grupo_alimentos=grupo
     )
-    if preparacion.id_componente:
-        metas = metas.filter(id_componente=preparacion.id_componente)
 
-    meta = metas.first()
+    # Primero intentamos buscar una meta específica para el componente
+    meta = None
+    if preparacion.id_componente:
+        meta = metas.filter(id_componente=preparacion.id_componente).first()
+
+    # Si no hay meta específica o no hay componente, buscamos la primera disponible para el grupo
+    if not meta:
+        meta = metas.first()
 
     if meta:
         minimo = float(meta.peso_neto_minimo) if meta.peso_neto_minimo is not None else None
@@ -193,7 +198,18 @@ def _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados
             peso_neto = ingredientes_configurados[key]['peso_neto']
             valores_nutricionales = ingredientes_configurados[key]
         else:
-            peso_neto = float(rel.gramaje) if rel.gramaje else (float(rango['minimo']) if rango['minimo'] is not None else 100.0)
+            # Si no hay configuración específica para el nivel, intentamos usar el gramaje de la preparación
+            # Pero si el gramaje es 0 o no existe, usamos el mínimo del rango
+            gramaje_base = float(rel.gramaje) if rel.gramaje else 0
+            minimo_rango = float(rango['minimo']) if rango['minimo'] is not None else 0
+
+            if gramaje_base > 0:
+                peso_neto = gramaje_base
+            elif minimo_rango > 0:
+                peso_neto = minimo_rango
+            else:
+                peso_neto = 100.0
+
             valores_nutricionales = CalculoService.calcular_valores_nutricionales_alimento(
                 rel.id_ingrediente_siesa,
                 peso_neto

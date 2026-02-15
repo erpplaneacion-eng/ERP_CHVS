@@ -299,39 +299,40 @@
     // Listener global para cambios en inputs de peso
     document.addEventListener('input', (e) => {
         if (e.target.classList.contains('input-peso')) {
-            const row = e.target.closest('tr');
-            if (row) {
-                // Sincronizar con slider
-                sincronizarSliderConInput(row);
-
-                // Validar rango
+            const input = e.target;
+            const row = input.closest('tr');
+            const tbody = input.closest('.tbody-ingredientes');
+            
+            if (row && tbody) {
+                const nivelId = tbody.dataset.nivelId;
+                
+                // 1. Validar visualmente el rango
                 actualizarEstadoFila(row);
-
-                // Recalcular totales del nivel actual
-                const panel = e.target.closest('[data-nivel-id]');
-                if (panel) {
-                    const nivelId = panel.dataset.nivelId;
-                    recalcularNivel(nivelId);
-                }
+                
+                // 2. Sincronizar slider si existe
+                sincronizarSliderConInput(row);
+                
+                // 3. Recalcular totales nutricionales del nivel
+                recalcularNivel(nivelId);
             }
         }
-
-        // Listener para sliders
+        
         if (e.target.classList.contains('slider-peso')) {
-            const row = e.target.closest('tr');
-            if (row) {
-                // Sincronizar con input
+            const slider = e.target;
+            const row = slider.closest('tr');
+            const tbody = slider.closest('.tbody-ingredientes');
+            
+            if (row && tbody) {
+                const nivelId = tbody.dataset.nivelId;
+                
+                // 1. Sincronizar input numérico
                 sincronizarInputConSlider(row);
-
-                // Validar rango
+                
+                // 2. Validar visualmente el rango
                 actualizarEstadoFila(row);
-
-                // Recalcular totales del nivel actual
-                const panel = e.target.closest('[data-nivel-id]');
-                if (panel) {
-                    const nivelId = panel.dataset.nivelId;
-                    recalcularNivel(nivelId);
-                }
+                
+                // 3. Recalcular totales nutricionales del nivel
+                recalcularNivel(nivelId);
             }
         }
     });
