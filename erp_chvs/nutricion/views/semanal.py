@@ -41,8 +41,10 @@ def api_validar_semana(request):
 
             componentes_del_menu = set()
             for prep in preparaciones:
-                comp_id = prep.id_componente.id_componente
-                componentes_del_menu.add(comp_id)
+                # Validar que la preparación tenga un componente asignado
+                if prep.id_componente:
+                    comp_id = prep.id_componente.id_componente
+                    componentes_del_menu.add(comp_id)
 
             for comp_id in componentes_del_menu:
                 if comp_id not in menus_por_componente:
