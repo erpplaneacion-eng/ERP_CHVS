@@ -369,6 +369,7 @@ MenusAvanzadosController (coordinator)
 - `DJANGO_SECRET_KEY`: Secret key for cryptographic signing
 - `DJANGO_DEBUG`: Set to `True` for development, `False` for production
 - `DJANGO_ALLOWED_HOSTS`: Comma-separated list of allowed hosts
+- `CSRF_TRUSTED_ORIGINS`: Comma-separated list of trusted origins (scheme auto-added if missing)
 
 *Database (PostgreSQL)*:
 - `DB_NAME`: Database name (default: `erp_chvs`)
@@ -626,6 +627,21 @@ python manage.py sync_siesa --sedes
 - `Api/models.py`: `SyncLog`, `SyncError` for audit trail
 
 ## Common Issues & Solutions
+
+### Django Configuration
+
+**Issue**: `SystemCheckError: (4_0.E001) CSRF_TRUSTED_ORIGINS must start with a scheme`
+- **Cause**: Django 4+ requires all CSRF_TRUSTED_ORIGINS values to have `http://` or `https://` scheme
+- **Solution**: Values are now automatically normalized in `settings.py` via `_normalize_csrf_origin()`
+  - Localhost/127.0.0.1/0.0.0.0 → adds `http://`
+  - Production domains → adds `https://`
+- **Configuration**: Can configure with or without scheme in environment variables:
+  ```bash
+  # Both formats work:
+  CSRF_TRUSTED_ORIGINS=erpchvs-production.up.railway.app
+  CSRF_TRUSTED_ORIGINS=https://erpchvs-production.up.railway.app
+  ```
+- **Fixed in**: February 2025 - added normalization to `RAILWAY_STATIC_URL` handling
 
 ### Nutricion Module - AI Menu Generation
 

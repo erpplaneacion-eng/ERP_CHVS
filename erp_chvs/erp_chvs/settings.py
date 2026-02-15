@@ -43,14 +43,33 @@ if RAILWAY_STATIC_URL:
         ALLOWED_HOSTS.append(railway_domain)
 
 def _normalize_csrf_origin(origin: str) -> str:
+    """
+    Normaliza un origen para CSRF_TRUSTED_ORIGINS agregando esquema si falta.
+
+    Django 4+ requiere que todos los valores en CSRF_TRUSTED_ORIGINS tengan esquema (http:// o https://).
+    Esta función agrega automáticamente:
+    - http:// para localhost, 127.0.0.1, 0.0.0.0
+    - https:// para dominios de producción (*.railway.app, etc.)
+
+    Args:
+        origin: URL con o sin esquema (ej: "localhost:8000" o "https://example.com")
+
+    Returns:
+        URL normalizada con esquema (ej: "http://localhost:8000" o "https://example.com")
+    """
     origin = origin.strip()
     if not origin:
         return ''
+
+    # Si ya tiene esquema, devolverlo tal cual
     if origin.startswith(('http://', 'https://')):
         return origin
-    # Django 4+ exige esquema en CSRF_TRUSTED_ORIGINS.
+
+    # Agregar http:// para hosts locales
     if origin.startswith(('localhost', '127.0.0.1', '0.0.0.0')):
         return f'http://{origin}'
+
+    # Agregar https:// para dominios de producción
     return f'https://{origin}'
 
 
@@ -64,9 +83,11 @@ CSRF_TRUSTED_ORIGINS = [
     if normalized
 ]
 
-# Agregar Railway URL si existe
-if RAILWAY_STATIC_URL and RAILWAY_STATIC_URL not in CSRF_TRUSTED_ORIGINS:
-    CSRF_TRUSTED_ORIGINS.append(RAILWAY_STATIC_URL)
+# Agregar Railway URL si existe (normalizado)
+if RAILWAY_STATIC_URL:
+    normalized_railway_url = _normalize_csrf_origin(RAILWAY_STATIC_URL)
+    if normalized_railway_url and normalized_railway_url not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(normalized_railway_url)
 
 # Configuración de seguridad adicional
 if not DEBUG:
