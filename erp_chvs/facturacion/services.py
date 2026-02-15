@@ -55,6 +55,9 @@ class ProcesamientoService:
             # 2. Leer archivo Excel
             df = self.excel_processor.leer_excel(archivo)
             
+            # 2.1. Normalizar columnas (Alias y Mayúsculas)
+            df = self.data_transformer.normalizar_columnas(df)
+            
             # 3. Validar estructura del nuevo formato
             es_valido, errores = self.excel_processor.validar_estructura_nuevo_formato(df)
             if not es_valido:

@@ -11,6 +11,43 @@ from .exceptions import DatosInvalidosException, ProcesamientoException
 class DataTransformer:
     """Clase para transformación y procesamiento de datos."""
     
+    # Mapeo de alias para normalización de columnas
+    ALIAS_COLUMNAS = {
+        'FECHA DE NACIMIENTO': 'FECHA_NACIMIENTO',
+        'FECHA NACIMIENTO': 'FECHA_NACIMIENTO',
+        'FECH NACIMIENTO': 'FECHA_NACIMIENTO',
+        'FECHA_NACIM': 'FECHA_NACIMIENTO',
+        'DOCUMENTO': 'NRO_DOCUMENTO',
+        'NUMERO DOCUMENTO': 'NRO_DOCUMENTO',
+        'NRO DOCUMENTO': 'NRO_DOCUMENTO',
+        'IDENTIFICACION': 'NRO_DOCUMENTO',
+        'NUMERO_DOCUMENTO': 'NRO_DOCUMENTO',
+        'INSTITUCION EDUCATIVA': 'NOMBRE INSTITUCION',
+        'COLEGIO': 'NOMBRE INSTITUCION',
+        'ESTUDIANTE': 'NOMBRE1', # A veces viene consolidado, pero es mejor tener alias
+        'PRIMER APELLIDO': 'APELLIDO1',
+        'SEGUNDO APELLIDO': 'APELLIDO2',
+        'PRIMER NOMBRE': 'NOMBRE1',
+        'SEGUNDO NOMBRE': 'NOMBRE2',
+        'GRADO_COD': 'GRADO',
+    }
+
+    @staticmethod
+    def normalizar_columnas(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Normaliza los nombres de las columnas usando un mapa de alias.
+        """
+        # Convertir todo a mayúsculas para comparar mejor
+        mapeo_actual = {col: col.upper() for col in df.columns}
+        df = df.rename(columns=mapeo_actual)
+        
+        # Aplicar alias conocidos
+        for alias, estandar in DataTransformer.ALIAS_COLUMNAS.items():
+            if alias.upper() in df.columns and estandar not in df.columns:
+                df = df.rename(columns={alias.upper(): estandar})
+        
+        return df
+    
     @staticmethod
     def aplicar_mapeos_datos(df: pd.DataFrame) -> pd.DataFrame:
         """
