@@ -490,28 +490,45 @@ def lista_listados(request):
     sede_filter = request.GET.get('sede', '').strip()
     focalizacion_filter = request.GET.get('focalizacion', '').strip()
 
-    # Query base
-    listados = ListadosFocalizacion.objects.all().order_by('-fecha_creacion')
+    # Query base con agregación
+    from django.db.models import Count
+    
+    listados_grouped = ListadosFocalizacion.objects.values('sede', 'grado_grupos', 'programa__programa', 'focalizacion').annotate(
+        total_raciones=Count('id_listados')
+    ).order_by('sede', 'grado_grupos')
 
-    # Aplicar filtros
+    # Aplicar filtros a la consulta agrupada
     if programa_filter_id:
-        listados = listados.filter(programa_id=programa_filter_id)
+        listados_grouped = listados_grouped.filter(programa_id=programa_filter_id)
 
     if sede_filter:
-        listados = listados.filter(sede__icontains=sede_filter)
+        listados_grouped = listados_grouped.filter(sede__icontains=sede_filter)
 
     if focalizacion_filter:
-        listados = listados.filter(focalizacion=focalizacion_filter)
+        listados_grouped = listados_grouped.filter(focalizacion=focalizacion_filter)
 
     # Paginación
-    paginator = Paginator(listados, 15)  # 15 registros por página
+    paginator = Paginator(listados_grouped, 20)  # 20 grupos por página
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
     # Obtener valores únicos para filtros
     programas = Programa.objects.all().order_by('municipio__nombre_municipio', 'programa')
-    sede_values = ListadosFocalizacion.objects.values_list('sede', flat=True).distinct().order_by('sede')
-    focalizacion_values = ListadosFocalizacion.objects.values_list('focalizacion', flat=True).distinct().order_by('focalizacion')
+
+    # Filtrar sedes y focalizaciones según el programa seleccionado
+    if programa_filter_id:
+        # Si hay programa seleccionado, mostrar solo sedes y focalizaciones de ese programa
+        sede_values = ListadosFocalizacion.objects.filter(
+            programa_id=programa_filter_id
+        ).values_list('sede', flat=True).distinct().order_by('sede')
+
+        focalizacion_values = ListadosFocalizacion.objects.filter(
+            programa_id=programa_filter_id
+        ).values_list('focalizacion', flat=True).distinct().order_by('focalizacion')
+    else:
+        # Si no hay programa seleccionado, mostrar todas
+        sede_values = ListadosFocalizacion.objects.values_list('sede', flat=True).distinct().order_by('sede')
+        focalizacion_values = ListadosFocalizacion.objects.values_list('focalizacion', flat=True).distinct().order_by('focalizacion')
 
     # Lógica para Sedes Faltantes
     sedes_faltantes = []
@@ -576,7 +593,7 @@ def lista_listados(request):
 
     context = {
         'listados': page_obj,
-        'total_listados': listados.count(),
+        'total_listados': listados_grouped.count(),
         'programas': programas,
         'sede_values': sede_values,
         'focalizacion_values': focalizacion_values,

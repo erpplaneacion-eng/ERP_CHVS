@@ -1,15 +1,15 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Listados Niño a Niño - Facturación{% endblock %}
+{% block title %}Ajuste de Raciones por Sedes - Facturación{% endblock %}
 
 {% block content %}
 <div class="sedes-container">
     <!-- Header -->
     <div class="page-header">
         <div class="header-left">
-            <h2><i class="fas fa-child"></i> Listados Niño a Niño</h2>
-            <p>Gestión de beneficiarios individuales del programa PAE</p>
+            <h2><i class="fas fa-school"></i> Ajuste de Raciones por Sedes</h2>
+            <p>Transferencia de raciones por grado en sedes no establecidas por la entidad.</p>
         </div>
         <div class="header-actions">
             <button onclick="openReplaceModal()" class="btn btn-warning">
@@ -78,14 +78,20 @@
 
                 <div class="filter-group">
                     <label for="sede">Sede:</label>
-                    <select name="sede" id="sede" class="form-control">
-                        <option value="">Todas las sedes</option>
+                    <input
+                        type="text"
+                        name="sede"
+                        id="sede"
+                        class="form-control"
+                        placeholder="Buscar sede por nombre..."
+                        value="{{ filtros_aplicados.sede }}"
+                        list="sede-list"
+                    >
+                    <datalist id="sede-list">
                         {% for sede in sede_values %}
-                        <option value="{{ sede }}" {% if filtros_aplicados.sede == sede %}selected{% endif %}>
-                            {{ sede }}
-                        </option>
+                        <option value="{{ sede }}">
                         {% endfor %}
-                    </select>
+                    </datalist>
                 </div>
 
                 <div class="filter-group">
@@ -130,27 +136,30 @@
         <table class="listados-table" id="listadosTable">
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Año</th>
                     <th>Sede</th>
-                    <th>Documento</th>
-                    <th>Nombre Completo</th>
                     <th>Grado</th>
                     <th>Focalización</th>
-                    <th>Fecha Creación</th>
+                    <th>Programa</th>
+                    <th>Total Raciones</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                {% for listado in listados %}
+                {% for item in listados %}
                 <tr>
-                    <td>{{ listado.id_listados|truncatechars:15 }}</td>
-                    <td>{{ listado.ano }}</td>
-                    <td>{{ listado.sede|truncatechars:30 }}</td>
-                    <td>{{ listado.tipodoc }} {{ listado.doc }}</td>
-                    <td>{{ listado.nombre1 }} {{ listado.apellido1 }}</td>
-                    <td>{{ listado.grado_grupos }}</td>
-                    <td><span class="badge badge-info">{{ listado.focalizacion }}</span></td>
-                    <td>{{ listado.fecha_creacion|date:"d/m/Y" }}</td>
+                    <td><strong>{{ item.sede }}</strong></td>
+                    <td>{{ item.grado_grupos }}</td>
+                    <td><span class="badge badge-info">{{ item.focalizacion }}</span></td>
+                    <td>{{ item.programa__programa }}</td>
+                    <td style="text-align: center;">
+                        <span class="badge badge-success" style="font-size: 14px;">{{ item.total_raciones }}</span>
+                    </td>
+                    <td>
+                        <button onclick="transferirGradosDesdeSede('{{ item.sede }}', '{{ filtros_aplicados.programa }}', '{{ item.focalizacion }}')"
+                                class="btn btn-sm btn-primary">
+                            <i class="fas fa-exchange-alt"></i> Transferir
+                        </button>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
