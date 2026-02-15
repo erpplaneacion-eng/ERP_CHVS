@@ -486,8 +486,9 @@
                         <option value="">Seleccione un ingrediente...</option>
                         ${opcionesIngredientes}
                     </select>
-                    <label style="font-size:13px;font-weight:600;">Gramaje base</label>
-                    <input id="agregarGramaje" class="swal2-input" type="number" min="0" step="0.1" style="margin:0;" placeholder="Ej: 100" />
+                    <label style="font-size:13px;font-weight:600;">Gramaje base (opcional)</label>
+                    <input id="agregarGramaje" class="swal2-input" type="number" min="0" step="0.1" style="margin:0;" placeholder="Ej: 100 (dejar vacío para valor por defecto)" />
+                    <small style="color:#6b7280;font-size:11px;">Si no especificas gramaje, se aplicarán los valores predeterminados por nivel.</small>
                 </div>
             `,
             didOpen: () => {
@@ -505,38 +506,74 @@
                 const idPrep = document.getElementById('agregarPreparacionExistente').value;
                 const nomPrep = document.getElementById('agregarPreparacionNueva').value.trim();
                 const idIng = document.getElementById('agregarIngredienteId').value;
-                const gramaje = document.getElementById('agregarGramaje').value;
+                const gramajeInput = document.getElementById('agregarGramaje').value;
 
-                if (!idIng) return Swal.showValidationMessage('Selecciona un ingrediente');
-                if (modo === 'existente' && !idPrep) return Swal.showValidationMessage('Selecciona preparación');
-                if (modo === 'nueva' && !nomPrep) return Swal.showValidationMessage('Escribe el nombre');
+                // Validaciones
+                if (!idIng) {
+                    return Swal.showValidationMessage('Debes seleccionar un ingrediente');
+                }
+
+                if (modo === 'existente' && !idPrep) {
+                    return Swal.showValidationMessage('Debes seleccionar una preparación existente');
+                }
+
+                if (modo === 'nueva' && !nomPrep) {
+                    return Swal.showValidationMessage('Debes escribir el nombre de la nueva preparación');
+                }
+
+                // Validar gramaje (permitir vacío para usar valores por defecto)
+                let gramaje = null;
+                if (gramajeInput && gramajeInput.trim() !== '') {
+                    const gramajeNum = parseFloat(gramajeInput);
+                    if (isNaN(gramajeNum)) {
+                        return Swal.showValidationMessage('El gramaje debe ser un número válido');
+                    }
+                    if (gramajeNum < 0) {
+                        return Swal.showValidationMessage('El gramaje debe ser mayor o igual a cero');
+                    }
+                    gramaje = gramajeNum;
+                }
 
                 return {
                     id_preparacion: modo === 'existente' ? parseInt(idPrep) : null,
                     preparacion_nombre: modo === 'nueva' ? nomPrep : '',
                     id_ingrediente: idIng,
-                    gramaje: parseFloat(gramaje) || 0
+                    gramaje: gramaje
                 };
             }
         });
 
         if (!result.isConfirmed) return;
 
-        const overlay = mostrarOverlayGuardando();
+        const overlay = mostrarOverlayGuardando('Agregando ingrediente...');
         try {
             const response = await fetch(`/nutricion/api/menus/${menuId}/guardar-preparaciones-editor/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
                 body: JSON.stringify({ filas: [result.value] })
             });
+
             const data = await response.json();
-            if (!data.success) throw new Error(data.error || 'Error al agregar');
-            showNotification('Ingrediente agregado', 'success');
+
+            if (!response.ok || !data.success) {
+                // Construir mensaje de error detallado
+                let errorMsg = data.error || 'Error al agregar ingrediente';
+
+                // Si hay errores específicos, agregarlos
+                if (data.errores && data.errores.length > 0) {
+                    errorMsg += ':\n' + data.errores.join('\n');
+                }
+
+                throw new Error(errorMsg);
+            }
+
+            ocultarOverlayGuardando();
+            showNotification('✅ Ingrediente agregado exitosamente', 'success');
             setTimeout(() => window.location.reload(), 1000);
         } catch (error) {
-            showNotification(error.message, 'error');
-        } finally {
+            console.error('Error al agregar ingrediente:', error);
             ocultarOverlayGuardando();
+            showNotification(error.message || 'Error desconocido al agregar ingrediente', 'error');
         }
     }
 

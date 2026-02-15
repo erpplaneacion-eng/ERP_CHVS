@@ -35,16 +35,24 @@ def api_validar_semana(request):
         menus_por_componente = {}
 
         for menu_id in menu_ids:
+            # Obtener preparaciones con sus ingredientes y el componente del ingrediente
             preparaciones = TablaPreparaciones.objects.filter(
                 id_menu_id=menu_id
-            ).select_related('id_componente')
+            ).prefetch_related('ingredientes__id_ingrediente_siesa__id_componente')
 
             componentes_del_menu = set()
+            
             for prep in preparaciones:
-                # Validar que la preparación tenga un componente asignado
+                # 1. Intentar usar el componente asignado a la preparación (prioridad manual)
                 if prep.id_componente:
-                    comp_id = prep.id_componente.id_componente
-                    componentes_del_menu.add(comp_id)
+                    componentes_del_menu.add(prep.id_componente.id_componente)
+                
+                # 2. Si no tiene, buscar en sus ingredientes
+                else:
+                    for ingrediente_rel in prep.ingredientes.all():
+                        alimento = ingrediente_rel.id_ingrediente_siesa
+                        if alimento and alimento.id_componente:
+                            componentes_del_menu.add(alimento.id_componente.id_componente)
 
             for comp_id in componentes_del_menu:
                 if comp_id not in menus_por_componente:
