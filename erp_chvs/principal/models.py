@@ -1,6 +1,49 @@
 from django.db import models
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 # Create your models here.
+
+class PerfilUsuario(models.Model):
+    SEDE_CHOICES = [
+        ('CALI', 'Cali'),
+        ('YUMBO', 'Yumbo'),
+        ('AMBAS', 'Ambas'),
+    ]
+    
+    MODULO_CHOICES = [
+        ('NUTRICION', 'Nutrición'),
+        ('FACTURACION', 'Facturación'),
+        ('PLANEACION', 'Planeación'),
+        ('ADMINISTRACION', 'Administración'),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
+    sede = models.CharField(max_length=10, choices=SEDE_CHOICES, default='AMBAS', verbose_name="Sede Asignada")
+    modulo_defecto = models.CharField(max_length=20, choices=MODULO_CHOICES, default='ADMINISTRACION', verbose_name="Módulo Principal")
+    telefono = models.CharField(max_length=20, blank=True, null=True, verbose_name="Teléfono")
+
+    def __str__(self):
+        return f"Perfil de {self.user.username}"
+
+    class Meta:
+        db_table = 'perfil_usuario'
+        verbose_name = 'Perfil de Usuario'
+        verbose_name_plural = 'Perfiles de Usuarios'
+
+# Señales para crear/actualizar el perfil automáticamente al crear un usuario
+@receiver(post_save, sender=User)
+def crear_perfil_usuario(sender, instance, created, **kwargs):
+    if created:
+        PerfilUsuario.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def guardar_perfil_usuario(sender, instance, **kwargs):
+    if hasattr(instance, 'perfil'):
+        instance.perfil.save()
+    else:
+        PerfilUsuario.objects.create(user=instance)
 
 class PrincipalDepartamento(models.Model):
     codigo_departamento = models.CharField(max_length=100, primary_key=True)

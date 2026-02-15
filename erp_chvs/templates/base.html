@@ -41,18 +41,30 @@
                     <li><a href="{% url 'dashboard:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                         <i class="fas fa-tachometer-alt"></i><span>Dashboard</span>
                     </a></li>
+                    
+                    {% if user.is_superuser or user.groups.all.0.name == 'ADMINISTRACION' %}
                     <li><a href="{% url 'principal:principal_index' %}" class="{% if request.resolver_match.url_name == 'principal_index' %}active{% endif %}">
                         <i class="fas fa-cog"></i><span>Configuración</span>
                     </a></li>
+                    {% endif %}
+
+                    {% if user.is_superuser or user.groups.all.0.name == 'ADMINISTRACION' or user.groups.all.0.name == 'NUTRICION' %}
                     <li><a href="{% url 'nutricion:nutricion_index' %}" class="{% if request.resolver_match.url_name == 'nutricion_index' %}active{% endif %}">
                         <i class="fas fa-apple-alt"></i><span>Nutrición</span>
                     </a></li>
+                    {% endif %}
+
+                    {% if user.is_superuser or user.groups.all.0.name == 'ADMINISTRACION' or user.groups.all.0.name == 'PLANEACION' %}
                     <li><a href="{% url 'planeacion:planeacion_index' %}" class="{% if request.resolver_match.url_name == 'planeacion_index' %}active{% endif %}">
                         <i class="fas fa-calendar-alt"></i><span>Planeación</span>
                     </a></li>
+                    {% endif %}
+
+                    {% if user.is_superuser or user.groups.all.0.name == 'ADMINISTRACION' or user.groups.all.0.name == 'FACTURACION' %}
                     <li><a href="{% url 'facturacion:facturacion_index' %}" class="{% if request.resolver_match.url_name == 'facturacion_index' %}active{% endif %}">
                         <i class="fas fa-file-invoice-dollar"></i><span>Facturación</span>
                     </a></li>
+                    {% endif %}
                 </ul>
             </nav>
             <!-- La sección user-info se ha movido al header -->
@@ -110,6 +122,20 @@
     <!-- Archivo principal del sitio -->
     <script src="{% static 'js/principal/main.js' %}"></script>
     
+    <!-- Lógica de mensajes del sistema -->
+    {% if messages %}
+    <script>
+        {% for message in messages %}
+            Swal.fire({
+                icon: "{% if message.tags == 'error' %}error{% else %}success{% endif %}",
+                title: "Notificación",
+                text: "{{ message }}",
+                confirmButtonColor: '#1e3a8a'
+            });
+        {% endfor %}
+    </script>
+    {% endif %}
+
     <!-- Archivos específicos según módulo y página -->
     {% if request.resolver_match.app_name == 'dashboard' or request.path == '/' %}
         <script src="{% static 'js/dashboard/dashboard.js' %}"></script>

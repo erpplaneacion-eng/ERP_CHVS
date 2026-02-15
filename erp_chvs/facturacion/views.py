@@ -944,7 +944,9 @@ def get_focalizaciones_for_programa(request):
         return JsonResponse({'error': 'No se proporcionó el ID del programa'}, status=400)
 
     try:
-        focalizaciones = ListadosFocalizacion.objects.filter(programa_id=programa_id).values_list('focalizacion', flat=True).distinct()
+        focalizaciones = ListadosFocalizacion.objects.filter(
+            programa_id=programa_id
+        ).values_list('focalizacion', flat=True).order_by('focalizacion').distinct()
         return JsonResponse({'focalizaciones': list(focalizaciones)})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
