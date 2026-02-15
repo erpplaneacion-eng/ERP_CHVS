@@ -155,8 +155,9 @@
                         <span class="badge badge-success" style="font-size: 14px;">{{ item.total_raciones }}</span>
                     </td>
                     <td>
-                        <button onclick="transferirGradosDesdeSede('{{ item.sede }}', '{{ filtros_aplicados.programa }}', '{{ item.focalizacion }}')"
-                                class="btn btn-sm btn-primary">
+                        <button onclick="transferirGradoEspecifico('{{ item.sede }}', '{{ item.grado_base }}', '{{ item.focalizacion }}', '{{ filtros_aplicados.programa }}', {{ item.total_raciones }})"
+                                class="btn btn-sm btn-primary"
+                                title="Transferir estudiantes de este grado específico">
                             <i class="fas fa-exchange-alt"></i> Transferir
                         </button>
                     </td>
@@ -274,6 +275,64 @@
                 </button>
                 <button type="button" class="btn btn-primary" id="transferBtn" onclick="confirmarTransferencia()" disabled style="padding: 10px 25px; font-size: 15px;">
                     <i class="fas fa-exchange-alt"></i> Transferir Grados
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Simplificado para Transferencia Específica (desde tabla) -->
+<div class="modal-overlay" id="transferEspecificoModal" style="display: none;">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="transferEspecificoTitle">
+                    <i class="fas fa-exchange-alt"></i> Transferir Grado Específico
+                </h3>
+                <span class="modal-close" onclick="closeTransferEspecificoModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <!-- Información de transferencia -->
+                <div class="alert alert-info" style="margin-bottom: 20px;">
+                    <h5 style="margin-top: 0;"><i class="fas fa-info-circle"></i> Detalles de la Transferencia</h5>
+                    <p style="margin-bottom: 5px;"><strong>Sede destino:</strong> <span id="infoSedeDestino"></span></p>
+                    <p style="margin-bottom: 5px;"><strong>Grado:</strong> <span id="infoGrado"></span></p>
+                    <p style="margin-bottom: 5px;"><strong>Focalización:</strong> <span id="infoFocalizacion"></span></p>
+                    <p style="margin-bottom: 0;"><strong>Estudiantes actuales:</strong> <span id="infoRaciones"></span></p>
+                </div>
+
+                <!-- Selector de Sede de Origen -->
+                <div class="form-group" style="margin-bottom: 25px;">
+                    <label style="font-size: 16px; font-weight: 600; color: #2c3e50; margin-bottom: 10px; display: block;">
+                        <i class="fas fa-school"></i> ¿De cuál sede deseas traer los estudiantes?
+                    </label>
+                    <input
+                        type="text"
+                        id="sedeOrigenEspecifica"
+                        class="form-control"
+                        placeholder="Buscar sede por nombre..."
+                        list="sedeOrigenEspecifica-list"
+                        autocomplete="off"
+                        style="font-size: 15px; padding: 12px 15px;"
+                    >
+                    <datalist id="sedeOrigenEspecifica-list"></datalist>
+                    <small class="text-muted" style="display: block; margin-top: 8px;">
+                        <i class="fas fa-info-circle"></i> Solo se mostrarán sedes que tienen estudiantes en este mismo grado y focalización
+                    </small>
+                </div>
+
+                <!-- Información de sede origen seleccionada -->
+                <div id="infoSedeOrigenSeleccionada" style="display: none;" class="alert alert-success">
+                    <h6><i class="fas fa-check-circle"></i> Sede de origen seleccionada</h6>
+                    <p style="margin-bottom: 0;"><strong>Estudiantes a transferir:</strong> <span id="cantidadEstudiantes"></span></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeTransferEspecificoModal()" style="padding: 10px 20px; font-size: 15px;">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" id="transferEspecificoBtn" onclick="confirmarTransferenciaEspecifica()" disabled style="padding: 10px 25px; font-size: 15px;">
+                    <i class="fas fa-exchange-alt"></i> Transferir Estudiantes
                 </button>
             </div>
         </div>

@@ -1397,3 +1397,65 @@ def generar_pdf_asistencia_prediligenciada(request):
             "generar_pdf_asistencia_prediligenciada", str(e)
         )
         return HttpResponse(f"Error al generar el PDF prediligenciado: {str(e)}", status=500)
+
+
+@login_required
+def api_obtener_sedes_con_grado_especifico(request):
+    """
+    API para obtener sedes que tienen un grado específico.
+
+    Usado en el modal de transferencia específica (desde tabla).
+    Retorna solo las sedes que tienen registros para un programa, grado y focalización específicos.
+    """
+    from django.db.models import Count, Func, CharField
+
+    try:
+        programa_id = request.GET.get('programa_id')
+        grado = request.GET.get('grado')
+        focalizacion = request.GET.get('focalizacion')
+
+        if not all([programa_id, grado, focalizacion]):
+            return JsonResponse({
+                'success': False,
+                'error': 'Parámetros incompletos. Se requiere programa_id, grado y focalizacion'
+            })
+
+        # Función personalizada para extraer el grado base usando regex de PostgreSQL
+        class ExtractGradoBase(Func):
+            """Extrae el grado base (todo antes del último guión) usando regex de PostgreSQL"""
+            function = 'REGEXP_REPLACE'
+            template = "%(function)s(%(expressions)s, '-[^-]*$', '', 'g')"
+
+            def __init__(self, expression, **extra):
+                super().__init__(expression, output_field=CharField(), **extra)
+
+        # Obtener sedes que tienen este grado específico
+        sedes_query = ListadosFocalizacion.objects.filter(
+            programa_id=programa_id,
+            focalizacion=focalizacion
+        ).annotate(
+            grado_base=ExtractGradoBase('grado_grupos')
+        ).filter(
+            grado_base=grado
+        ).values('sede').annotate(
+            total_estudiantes=Count('id_listados')
+        ).order_by('sede')
+
+        sedes_con_grado = []
+        for sede_data in sedes_query:
+            sedes_con_grado.append({
+                'sede': sede_data['sede'],
+                'total_estudiantes': sede_data['total_estudiantes']
+            })
+
+        return JsonResponse({
+            'success': True,
+            'sedes': sedes_con_grado,
+            'total_sedes': len(sedes_con_grado)
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al obtener sedes: {str(e)}'
+        })

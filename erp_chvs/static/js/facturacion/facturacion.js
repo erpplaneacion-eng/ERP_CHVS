@@ -671,6 +671,230 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// ===== TRANSFERENCIA ESPECÍFICA DE GRADO (desde tabla) =====
+
+// Variables para transferencia específica
+let transferEspecificoData = {
+    sedeDestino: '',
+    grado: '',
+    focalizacion: '',
+    programaId: '',
+    racionesActuales: 0,
+    sedeOrigen: '',
+    sedesDisponibles: []
+};
+
+// Función para transferir grado específico (llamada desde la tabla)
+async function transferirGradoEspecifico(sedeDestino, grado, focalizacion, programaId, racionesActuales) {
+    // Guardar datos
+    transferEspecificoData.sedeDestino = sedeDestino;
+    transferEspecificoData.grado = grado;
+    transferEspecificoData.focalizacion = focalizacion;
+    transferEspecificoData.programaId = programaId;
+    transferEspecificoData.racionesActuales = racionesActuales;
+    transferEspecificoData.sedeOrigen = '';
+    transferEspecificoData.sedesDisponibles = [];
+
+    // Actualizar información en el modal
+    document.getElementById('infoSedeDestino').textContent = sedeDestino;
+    document.getElementById('infoGrado').textContent = grado;
+    document.getElementById('infoFocalizacion').textContent = focalizacion;
+    document.getElementById('infoRaciones').textContent = racionesActuales;
+
+    // Limpiar y preparar input de sede origen
+    const sedeOrigenInput = document.getElementById('sedeOrigenEspecifica');
+    const sedeOrigenDatalist = document.getElementById('sedeOrigenEspecifica-list');
+    sedeOrigenInput.value = '';
+    sedeOrigenInput.placeholder = 'Cargando sedes disponibles...';
+    sedeOrigenInput.disabled = true;
+    sedeOrigenInput.classList.remove('is-valid', 'is-invalid');
+    sedeOrigenDatalist.innerHTML = '';
+
+    document.getElementById('infoSedeOrigenSeleccionada').style.display = 'none';
+    document.getElementById('transferEspecificoBtn').disabled = true;
+
+    // Abrir modal
+    document.getElementById('transferEspecificoModal').style.display = 'flex';
+
+    // Cargar sedes disponibles desde el servidor
+    try {
+        const response = await fetch(`/facturacion/api/obtener-sedes-con-grado-especifico/?programa_id=${programaId}&grado=${encodeURIComponent(grado)}&focalizacion=${encodeURIComponent(focalizacion)}`);
+
+        if (!response.ok) {
+            throw new Error('Error al obtener sedes disponibles');
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Filtrar la sede destino de las opciones
+            transferEspecificoData.sedesDisponibles = (data.sedes || []).filter(s => s.sede !== sedeDestino);
+
+            if (transferEspecificoData.sedesDisponibles.length === 0) {
+                sedeOrigenInput.placeholder = 'No hay otras sedes con este grado y focalización';
+                sedeOrigenInput.disabled = true;
+            } else {
+                cargarSedesOrigenEspecificas(transferEspecificoData.sedesDisponibles);
+                sedeOrigenInput.disabled = false;
+            }
+        } else {
+            throw new Error(data.error || 'Error desconocido');
+        }
+    } catch (error) {
+        console.error('Error al cargar sedes:', error);
+        sedeOrigenInput.placeholder = 'Error al cargar sedes';
+        sedeOrigenInput.disabled = true;
+        alert('Error al cargar las sedes disponibles: ' + error.message);
+    }
+}
+
+// Función para cargar sedes disponibles en el datalist específico
+function cargarSedesOrigenEspecificas(sedesDisponibles) {
+    const input = document.getElementById('sedeOrigenEspecifica');
+    const datalist = document.getElementById('sedeOrigenEspecifica-list');
+
+    input.placeholder = 'Buscar sede por nombre...';
+    datalist.innerHTML = '';
+
+    sedesDisponibles.forEach(sedeData => {
+        const option = document.createElement('option');
+        option.value = sedeData.sede;
+        option.textContent = `${sedeData.sede} (${sedeData.total_estudiantes} estudiantes)`;
+        datalist.appendChild(option);
+    });
+
+    // Agregar eventos si no existen
+    if (!input.hasAttribute('data-listener-added-especifico')) {
+        input.addEventListener('change', validarSedeOrigenEspecifica);
+        input.addEventListener('blur', validarSedeOrigenEspecifica);
+        input.setAttribute('data-listener-added-especifico', 'true');
+    }
+}
+
+// Función para validar la sede origen seleccionada
+function validarSedeOrigenEspecifica() {
+    const input = document.getElementById('sedeOrigenEspecifica');
+    const valorIngresado = input.value.trim();
+    const infoDiv = document.getElementById('infoSedeOrigenSeleccionada');
+    const transferBtn = document.getElementById('transferEspecificoBtn');
+
+    if (valorIngresado) {
+        // Verificar si la sede existe en las disponibles
+        const sedeEncontrada = transferEspecificoData.sedesDisponibles.find(s => s.sede === valorIngresado);
+
+        if (sedeEncontrada) {
+            transferEspecificoData.sedeOrigen = valorIngresado;
+            input.classList.remove('is-invalid');
+            input.classList.add('is-valid');
+
+            // Mostrar información de la sede seleccionada
+            document.getElementById('cantidadEstudiantes').textContent = sedeEncontrada.total_estudiantes;
+            infoDiv.style.display = 'block';
+            transferBtn.disabled = false;
+        } else {
+            transferEspecificoData.sedeOrigen = '';
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
+            infoDiv.style.display = 'none';
+            transferBtn.disabled = true;
+        }
+    } else {
+        transferEspecificoData.sedeOrigen = '';
+        input.classList.remove('is-valid', 'is-invalid');
+        infoDiv.style.display = 'none';
+        transferBtn.disabled = true;
+    }
+}
+
+// Función para cerrar modal de transferencia específica
+function closeTransferEspecificoModal() {
+    const modal = document.getElementById('transferEspecificoModal');
+    if (modal) {
+        modal.style.display = 'none';
+        transferEspecificoData = {
+            sedeDestino: '',
+            grado: '',
+            focalizacion: '',
+            programaId: '',
+            racionesActuales: 0,
+            sedeOrigen: '',
+            sedesDisponibles: []
+        };
+    }
+}
+
+// Cerrar modal específico al hacer clic fuera y con ESC
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('transferEspecificoModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target.id === 'transferEspecificoModal') {
+                closeTransferEspecificoModal();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal.style.display === 'flex') {
+                closeTransferEspecificoModal();
+            }
+        });
+    }
+});
+
+// Función para confirmar transferencia específica
+function confirmarTransferenciaEspecifica() {
+    if (!transferEspecificoData.sedeOrigen) {
+        alert('Selecciona una sede de origen');
+        return;
+    }
+
+    const mensaje = `¿Confirmas transferir los estudiantes de Grado ${transferEspecificoData.grado} (Focalización ${transferEspecificoData.focalizacion})?
+
+Desde: ${transferEspecificoData.sedeOrigen}
+Hacia: ${transferEspecificoData.sedeDestino}`;
+
+    if (confirm(mensaje)) {
+        // Deshabilitar botón mientras procesa
+        const btn = document.getElementById('transferEspecificoBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+
+        // Enviar petición usando el endpoint existente
+        fetch('/facturacion/api/transferir-grados/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                sede_destino: transferEspecificoData.sedeDestino,
+                sede_origen: transferEspecificoData.sedeOrigen,
+                grados_seleccionados: [transferEspecificoData.grado], // Array con un solo grado
+                focalizacion: transferEspecificoData.focalizacion
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`✅ ${data.mensaje}`);
+                closeTransferEspecificoModal();
+                location.reload(); // Recargar para ver los cambios
+            } else {
+                alert('❌ Error: ' + data.error);
+                // Rehabilitar botón
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-exchange-alt"></i> Transferir Estudiantes';
+            }
+        })
+        .catch(error => {
+            alert('❌ Error de conexión: ' + error);
+            // Rehabilitar botón
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-exchange-alt"></i> Transferir Estudiantes';
+        });
+    }
+}
+
 // Funciones de utilidad globales
 window.FacturacionUtils = {
     formatFileSize: function(bytes) {
