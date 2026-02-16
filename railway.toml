@@ -3,7 +3,7 @@ builder = "nixpacks"
 buildCommand = "pip install -r requirements.txt"
 
 [deploy]
-startCommand = "cd erp_chvs && python manage.py migrate --noinput && python manage.py collectstatic --noinput --clear && gunicorn erp_chvs.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --timeout 120"
+startCommand = "cd erp_chvs && mkdir -p staticfiles && python manage.py migrate --noinput && python manage.py collectstatic --noinput --clear && gunicorn erp_chvs.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --timeout 120"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
 
