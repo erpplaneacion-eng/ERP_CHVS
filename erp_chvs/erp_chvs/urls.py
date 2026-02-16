@@ -35,5 +35,8 @@ urlpatterns = [
     path('facturacion/', include(('facturacion.urls', 'facturacion'), namespace='facturacion')),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Servir archivos media en desarrollo Y producción
+# ADVERTENCIA: Railway NO tiene almacenamiento persistente
+# Los archivos se perderán al reiniciar el contenedor
+# TODO: Migrar a Cloudinary o AWS S3 para producción
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -120,12 +120,11 @@ INSTALLED_APPS = [
     'facturacion',
 ]
 
-# DESACTIVADO TEMPORALMENTE: Cloudinary causa conflicto con Django 5.2
-# django-cloudinary-storage 0.3.0 no es compatible con STORAGES (solo con STATICFILES_STORAGE)
-# TODO: Actualizar a versión compatible o migrar a otro storage para media files
-# if not DEBUG:
-#     INSTALLED_APPS.insert(5, 'cloudinary_storage')  # Antes de staticfiles
-#     INSTALLED_APPS.append('cloudinary')
+# Cloudinary para MEDIA files (imágenes subidas por usuarios)
+# Solo se activa en producción para tener almacenamiento persistente
+if not DEBUG:
+    INSTALLED_APPS.insert(5, 'cloudinary_storage')  # Antes de staticfiles
+    INSTALLED_APPS.append('cloudinary')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -240,19 +239,19 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Directorio donde se recop
 # Configuración de almacenamiento para Django 5.2+ (SOLO usar STORAGES, NO STATICFILES_STORAGE)
 STORAGES = {
     "default": {
-        # Sistema de archivos para media (Cloudinary desactivado temporalmente)
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        # Cloudinary para MEDIA en producción (almacenamiento persistente)
+        # FileSystemStorage en desarrollo (local)
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if not DEBUG else "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        # Usar StaticFilesStorage básico de Django (sin manifest, sin compresión)
-        # WhiteNoise middleware se encarga de servir los archivos en producción
-        # Es la opción más confiable para Railway (sin race conditions)
+        # StaticFilesStorage de Django (sin Cloudinary)
+        # WhiteNoise middleware sirve archivos estáticos en producción
         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
 
 # NO definir STATICFILES_STORAGE (incompatible con STORAGES en Django 5.2)
-# django-cloudinary-storage desactivado temporalmente
+# Cloudinary SOLO maneja MEDIA files, NO static files
 
 # Credenciales de Cloudinary
 CLOUDINARY_STORAGE = {
