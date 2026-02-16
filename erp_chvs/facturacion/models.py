@@ -160,11 +160,12 @@ class ListadosFocalizacion(models.Model):
         verbose_name_plural = "Listados de Focalización"
         ordering = ['-ano', 'etc', 'institucion', 'sede']
         indexes = [
-            models.Index(fields=['ano', 'etc']),
-            models.Index(fields=['focalizacion']),
-            models.Index(fields=['sede']),
-            models.Index(fields=['doc']),
-            models.Index(fields=['fecha_creacion']),
+            # Nombres de índices que YA existen en la BD (no cambiar)
+            models.Index(fields=['ano', 'etc'], name='listados_fo_ano_e04e90_idx'),
+            models.Index(fields=['focalizacion'], name='listados_fo_focaliz_52f98e_idx'),
+            models.Index(fields=['sede'], name='listados_fo_sede_1c7c6d_idx'),
+            models.Index(fields=['doc'], name='listados_fo_doc_2f8909_idx'),
+            models.Index(fields=['fecha_creacion'], name='listados_fo_fecha_c_ef0e38_idx'),
         ]
         # constraints = [
         #     models.UniqueConstraint(
