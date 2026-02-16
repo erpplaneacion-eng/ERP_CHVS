@@ -1,4 +1,5 @@
 {% load static %}
+{% load group_tags %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -41,26 +42,26 @@
                     <li><a href="{% url 'dashboard:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                         <i class="fas fa-tachometer-alt"></i><span>Dashboard</span>
                     </a></li>
-                    
-                    {% if user.is_superuser or user.groups.all.0.name == 'ADMINISTRACION' %}
+
+                    {% if user|has_group:"ADMINISTRACION" %}
                     <li><a href="{% url 'principal:principal_index' %}" class="{% if request.resolver_match.url_name == 'principal_index' %}active{% endif %}">
                         <i class="fas fa-cog"></i><span>Configuración</span>
                     </a></li>
                     {% endif %}
 
-                    {% if user.is_superuser or user.groups.all.0.name == 'ADMINISTRACION' or user.groups.all.0.name == 'NUTRICION' %}
+                    {% if user|has_group:"ADMINISTRACION,NUTRICION" %}
                     <li><a href="{% url 'nutricion:nutricion_index' %}" class="{% if request.resolver_match.url_name == 'nutricion_index' %}active{% endif %}">
                         <i class="fas fa-apple-alt"></i><span>Nutrición</span>
                     </a></li>
                     {% endif %}
 
-                    {% if user.is_superuser or user.groups.all.0.name == 'ADMINISTRACION' or user.groups.all.0.name == 'PLANEACION' %}
+                    {% if user|has_group:"ADMINISTRACION,PLANEACION" %}
                     <li><a href="{% url 'planeacion:planeacion_index' %}" class="{% if request.resolver_match.url_name == 'planeacion_index' %}active{% endif %}">
                         <i class="fas fa-calendar-alt"></i><span>Planeación</span>
                     </a></li>
                     {% endif %}
 
-                    {% if user.is_superuser or user.groups.all.0.name == 'ADMINISTRACION' or user.groups.all.0.name == 'FACTURACION' %}
+                    {% if user|has_group:"ADMINISTRACION,FACTURACION" %}
                     <li><a href="{% url 'facturacion:facturacion_index' %}" class="{% if request.resolver_match.url_name == 'facturacion_index' %}active{% endif %}">
                         <i class="fas fa-file-invoice-dollar"></i><span>Facturación</span>
                     </a></li>
