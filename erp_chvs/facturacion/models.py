@@ -5,7 +5,7 @@ from django.core.validators import MinValueValidator
 class ListadosFocalizacion(models.Model):
     """
     Modelo para almacenar los listados de focalización procesados.
-    Corresponde a la tabla listados_focalizacion en la base de datos.
+    Corresponde a la tabla facturacion_Listados_Focalizacion en la base de datos.
     """
 
     # Campos principales
@@ -154,7 +154,7 @@ class ListadosFocalizacion(models.Model):
     )
 
     class Meta:
-        db_table = 'listados_focalizacion'
+        db_table = 'facturacion_Listados_Focalizacion'
         verbose_name = "Listado de Focalización"
         verbose_name_plural = "Listados de Focalización"
         ordering = ['-ano', 'etc', 'institucion', 'sede']
