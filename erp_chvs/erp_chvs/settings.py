@@ -236,7 +236,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]  # Directorio para archivos estáticos durante el desarrollo
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Directorio donde se recopilan archivos estáticos para producción
 
-# Configuración de almacenamiento para Django 5.2+ (SOLO usar STORAGES, NO STATICFILES_STORAGE)
+# Configuración de almacenamiento para Django 5.2+
 STORAGES = {
     "default": {
         # Cloudinary para MEDIA en producción (almacenamiento persistente)
@@ -250,8 +250,12 @@ STORAGES = {
     },
 }
 
-# NO definir STATICFILES_STORAGE (incompatible con STORAGES en Django 5.2)
-# Cloudinary SOLO maneja MEDIA files, NO static files
+# Compatibilidad con django-cloudinary-storage durante collectstatic.
+# Aunque STORAGES es el mecanismo principal en Django 5.2, este paquete aún
+# consulta STATICFILES_STORAGE/DEFAULT_FILE_STORAGE directamente.
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+if not DEBUG:
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 # Credenciales de Cloudinary
 CLOUDINARY_STORAGE = {
