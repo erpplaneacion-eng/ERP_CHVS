@@ -248,6 +248,12 @@ STORAGES = {
     },
 }
 
+# Variables de compatibilidad para cloudinary_storage (requiere estas variables antiguas)
+# Aunque Django 5.2 usa STORAGES, cloudinary_storage aún busca estas variables
+STATICFILES_STORAGE = 'whitenoise.storage.ManifestStaticFilesStorage'
+if not DEBUG:
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
 # Credenciales de Cloudinary
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
