@@ -2,8 +2,11 @@ from reportlab.lib.pagesizes import landscape, A4
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.lib.units import cm
+from reportlab.lib.utils import ImageReader
 from datetime import datetime
 import os
+from io import BytesIO
+import requests
 
 # Cache para mapeos de géneros (evitar consultas repetidas)
 _genero_cache = None
@@ -87,6 +90,26 @@ class AsistenciaPDFGenerator:
         anchos.append(ancho_col13) # Añadir el ancho de la columna 13 a la lista
         return anchos # Ahora la lista tiene 13 elementos
 
+    def _resolver_fuente_logo(self, ruta_imagen):
+        """
+        Resuelve una fuente válida para ReportLab desde ruta local o URL remota.
+        """
+        if not ruta_imagen:
+            return None
+
+        if isinstance(ruta_imagen, str) and ruta_imagen.startswith(("http://", "https://")):
+            try:
+                response = requests.get(ruta_imagen, timeout=10)
+                response.raise_for_status()
+                return ImageReader(BytesIO(response.content))
+            except Exception:
+                return None
+
+        if os.path.exists(ruta_imagen):
+            return ruta_imagen
+
+        return None
+
     def _dibujar_encabezado_pagina(self):
         c = self.c
         margen = self.margen
@@ -103,8 +126,9 @@ class AsistenciaPDFGenerator:
 
         ruta_imagen = self.datos_encabezado.get('ruta_logo')
         try:
-            if ruta_imagen and os.path.exists(ruta_imagen):
-                c.drawImage(ruta_imagen, margen + 5, y_linea_logo + 2, width=170, height=45, preserveAspectRatio=True, mask="auto")
+            logo_fuente = self._resolver_fuente_logo(ruta_imagen)
+            if logo_fuente:
+                c.drawImage(logo_fuente, margen + 5, y_linea_logo + 2, width=170, height=45, preserveAspectRatio=True, mask="auto")
             else:
                 raise FileNotFoundError("Logo no encontrado")
         except:

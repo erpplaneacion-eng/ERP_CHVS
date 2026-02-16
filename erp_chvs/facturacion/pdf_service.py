@@ -396,8 +396,10 @@ class PDFAsistenciaService:
                 ruta_logo_final = None
 
                 if programa_obj and programa_obj.imagen:
-
-                    ruta_logo_final = programa_obj.imagen.path
+                    try:
+                        ruta_logo_final = programa_obj.imagen.path
+                    except Exception:
+                        ruta_logo_final = programa_obj.imagen.url
 
 
 
