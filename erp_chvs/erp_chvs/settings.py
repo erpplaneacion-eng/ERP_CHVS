@@ -120,10 +120,12 @@ INSTALLED_APPS = [
     'facturacion',
 ]
 
-# Agregar Cloudinary solo en producción (cuando DEBUG=False)
-if not DEBUG:
-    INSTALLED_APPS.insert(5, 'cloudinary_storage')  # Antes de staticfiles
-    INSTALLED_APPS.append('cloudinary')
+# DESACTIVADO TEMPORALMENTE: Cloudinary causa conflicto con Django 5.2
+# django-cloudinary-storage 0.3.0 no es compatible con STORAGES (solo con STATICFILES_STORAGE)
+# TODO: Actualizar a versión compatible o migrar a otro storage para media files
+# if not DEBUG:
+#     INSTALLED_APPS.insert(5, 'cloudinary_storage')  # Antes de staticfiles
+#     INSTALLED_APPS.append('cloudinary')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -238,8 +240,8 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Directorio donde se recop
 # Configuración de almacenamiento para Django 5.2+ (SOLO usar STORAGES, NO STATICFILES_STORAGE)
 STORAGES = {
     "default": {
-        # En producción usar Cloudinary, en desarrollo usar sistema de archivos
-        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if not DEBUG else "django.core.files.storage.FileSystemStorage",
+        # Sistema de archivos para media (Cloudinary desactivado temporalmente)
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
         # Usar StaticFilesStorage básico de Django (sin manifest, sin compresión)
@@ -249,14 +251,8 @@ STORAGES = {
     },
 }
 
-# Variables de compatibilidad para django-cloudinary-storage
-# Cloudinary sobrescribe collectstatic y REQUIERE que STATICFILES_STORAGE exista (busca en línea 27)
-# Definimos con valor estándar de Django para que Cloudinary NO lo procese
-# Django 5.2 da prioridad a STORAGES, así que esta variable solo es para compatibilidad
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
-
-if not DEBUG:
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# NO definir STATICFILES_STORAGE (incompatible con STORAGES en Django 5.2)
+# django-cloudinary-storage desactivado temporalmente
 
 # Credenciales de Cloudinary
 CLOUDINARY_STORAGE = {
