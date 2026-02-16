@@ -13,6 +13,17 @@ _genero_cache = None
 # Cache de logos para evitar descargas repetidas desde Cloudinary
 _logo_cache = {}
 
+
+def _safe_pdf_text(value):
+    """
+    Convierte texto a un formato seguro para fuentes base de ReportLab.
+    Evita errores de codificación 'extpdfdoc' con caracteres no soportados.
+    """
+    if value is None:
+        return ""
+    text = str(value)
+    return text.encode("latin-1", errors="replace").decode("latin-1")
+
 def obtener_id_genero_por_codigo(codigo_genero):
     """
     Obtiene el id_genero de la tabla tipo_genero basado en el codigo_genero.
@@ -154,55 +165,55 @@ class AsistenciaPDFGenerator:
 
         # --- Primera Fila ---
         c.drawString(margen + 2, y_actual, "DEPARTAMENTO:")
-        c.drawString(margen + 70, y_actual, self.datos_encabezado.get('departamento', 'N/A'))
+        c.drawString(margen + 70, y_actual, _safe_pdf_text(self.datos_encabezado.get('departamento', 'N/A')))
         c.line(margen + 70, y_actual - 2, margen + 170, y_actual - 2) # Línea acortada
 
         # Nuevo campo CODIGO DANE para Departamento
         c.drawString(margen + 180, y_actual, "CODIGO DANE:")
-        c.drawString(margen + 225, y_actual, self.datos_encabezado.get('dane_departamento', 'N/A'))
+        c.drawString(margen + 225, y_actual, _safe_pdf_text(self.datos_encabezado.get('dane_departamento', 'N/A')))
         c.line(margen + 225, y_actual - 2, margen + 265, y_actual - 2) # Línea corta
 
         x_der = margen + 500
         c.drawString(x_der, y_actual, "NOMBRE DE INSTITUCIÓN O CENTRO EDUCATIVO:")
-        c.drawString(x_der + 150, y_actual, self.datos_encabezado.get('institucion', 'N/A'))
+        c.drawString(x_der + 150, y_actual, _safe_pdf_text(self.datos_encabezado.get('institucion', 'N/A')))
         c.line(x_der + 150, y_actual - 2, width - margen - 10, y_actual - 2)
         y_actual -= 10
 
         # --- Segunda Fila ---
         c.drawString(margen + 2, y_actual, "MUNICIPIO:")
-        c.drawString(margen + 70, y_actual, self.datos_encabezado.get('municipio', 'N/A'))
+        c.drawString(margen + 70, y_actual, _safe_pdf_text(self.datos_encabezado.get('municipio', 'N/A')))
         c.line(margen + 70, y_actual - 2, margen + 170, y_actual - 2) # Línea acortada
 
         # Nuevo campo CODIGO DANE para Municipio
         c.drawString(margen + 180, y_actual, "CODIGO DANE:")
-        c.drawString(margen + 225, y_actual, self.datos_encabezado.get('dane_municipio', 'N/A'))
+        c.drawString(margen + 225, y_actual, _safe_pdf_text(self.datos_encabezado.get('dane_municipio', 'N/A')))
         c.line(margen + 225, y_actual - 2, margen + 265, y_actual - 2) # Línea corta
 
         c.drawString(x_der, y_actual, "CÓDIGO DANE DE INSTITUCIÓN O CENTRO EDUCATIVO:")
-        c.drawString(x_der + 150, y_actual, self.datos_encabezado.get('dane_ie', 'N/A'))
+        c.drawString(x_der + 150, y_actual, _safe_pdf_text(self.datos_encabezado.get('dane_ie', 'N/A')))
         c.line(x_der + 150, y_actual - 2, width - margen - 10, y_actual - 2)
         y_actual -= 10
 
         # --- Filas restantes (sin cambios) ---
         c.drawString(margen + 2, y_actual, "OPERADOR:")
-        c.drawString(margen + 70, y_actual, self.datos_encabezado.get('operador', 'N/A'))
+        c.drawString(margen + 70, y_actual, _safe_pdf_text(self.datos_encabezado.get('operador', 'N/A')))
         c.line(margen + 70, y_actual - 2, margen + 180, y_actual - 2)
         x_mes = margen + 500
         c.drawString(x_mes, y_actual, "MES DE ATENCIÓN:")
-        c.drawString(x_mes + 50, y_actual, self.datos_encabezado.get('mes', 'N/A'))
+        c.drawString(x_mes + 50, y_actual, _safe_pdf_text(self.datos_encabezado.get('mes', 'N/A')))
         c.line(x_mes + 50, y_actual - 2, width - margen - 220, y_actual - 2) # Acortamos la línea
         x_ano = x_mes + 120
         c.drawString(x_ano, y_actual, "AÑO:")
-        c.drawString(x_ano + 15, y_actual, str(self.datos_encabezado.get('ano', 'N/A')))
+        c.drawString(x_ano + 15, y_actual, _safe_pdf_text(self.datos_encabezado.get('ano', 'N/A')))
         c.line(x_ano + 15, y_actual - 2, width - margen - 120, y_actual - 2)
         y_actual -= 12
 
         c.drawString(margen + 2, y_actual, "CONTRATO No:")
-        c.drawString(margen + 70, y_actual, self.datos_encabezado.get('contrato', 'N/A'))
+        c.drawString(margen + 70, y_actual, _safe_pdf_text(self.datos_encabezado.get('contrato', 'N/A')))
         c.line(margen + 70, y_actual - 2, margen + 180, y_actual - 2)
         x_tipo = margen + 500
         c.drawString(x_tipo, y_actual, "TIPO COMPLEMENTO:")
-        c.drawString(x_tipo + 60, y_actual, self.datos_encabezado.get('codigo_complemento', 'N/A'))
+        c.drawString(x_tipo + 60, y_actual, _safe_pdf_text(self.datos_encabezado.get('codigo_complemento', 'N/A')))
         c.line(x_tipo + 60, y_actual - 2, width - margen - 100, y_actual - 2)
         
         self.y_actual = y_actual - 5
@@ -740,7 +751,7 @@ class AsistenciaPDFGenerator:
                     c.setFont("Helvetica", 5)
                     for j, (ancho, dato) in enumerate(zip(self.anchos_cols, datos_fila)):
                         c.rect(x, y_fila, ancho, self.alto_fila)
-                        c.drawString(x + 2, y_fila + 3, str(dato))
+                        c.drawString(x + 2, y_fila + 3, _safe_pdf_text(dato))
                         x += ancho
                     
                     # Dibujar casillas de asistencia
