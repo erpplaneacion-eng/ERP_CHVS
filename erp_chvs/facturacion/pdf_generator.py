@@ -7,6 +7,9 @@ from datetime import datetime
 import os
 from io import BytesIO
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Cache para mapeos de géneros (evitar consultas repetidas)
 _genero_cache = None
@@ -119,9 +122,11 @@ class AsistenciaPDFGenerator:
         if ruta_str.startswith(("http://", "https://")):
             # Verificar cache primero
             if ruta_str in _logo_cache:
+                logger.debug(f"      💾 Logo encontrado en CACHE (sin descargar)")
                 return _logo_cache[ruta_str]
 
             # Intentar descargar con retry logic
+            logger.debug(f"      ⏳ Logo NO en cache, descargando...")
             max_intentos = 3
             timeout = 30  # Aumentado de 10 a 30 segundos
 
@@ -134,16 +139,22 @@ class AsistenciaPDFGenerator:
                     logo = ImageReader(image_content)
                     # Guardar en cache para reutilizar
                     _logo_cache[ruta_str] = logo
+                    logger.debug(f"      ✅ Logo descargado ({len(response.content)} bytes)")
                     return logo
                 except requests.exceptions.Timeout:
+                    logger.warning(f"      ⚠️ Timeout en intento {intento + 1}/{max_intentos}")
                     if intento < max_intentos - 1:
                         continue  # Reintentar
+                    logger.error(f"      ❌ Descarga falló después de {max_intentos} intentos (Timeout)")
                     return None
-                except requests.exceptions.RequestException:
+                except requests.exceptions.RequestException as e:
+                    logger.warning(f"      ⚠️ Error de red en intento {intento + 1}/{max_intentos}: {e}")
                     if intento < max_intentos - 1:
                         continue  # Reintentar
+                    logger.error(f"      ❌ Descarga falló después de {max_intentos} intentos (RequestException)")
                     return None
-                except Exception:
+                except Exception as e:
+                    logger.error(f"      ❌ Error inesperado: {e}")
                     return None
 
         # Si es ruta que comienza con /media/ (URL relativa en desarrollo)

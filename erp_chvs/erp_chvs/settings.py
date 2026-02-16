@@ -278,3 +278,43 @@ LOGIN_REDIRECT_URL = '/dashboard/'
 
 # A dónde redirigir al usuario después de cerrar sesión.
 LOGOUT_REDIRECT_URL = '/'
+
+# Configuración de logging para ver el proceso de generación de PDFs
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'file_facturacion': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'facturacion.log'),
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'facturacion': {
+            'handlers': ['console', 'file_facturacion'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        # Para debugging detallado, cambiar a DEBUG
+        # 'facturacion.pdf_generator': {
+        #     'handlers': ['console'],
+        #     'level': 'DEBUG',
+        #     'propagate': False,
+        # },
+    },
+}

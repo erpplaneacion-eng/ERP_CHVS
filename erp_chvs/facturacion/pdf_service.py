@@ -10,6 +10,9 @@ from principal.models import PrincipalDepartamento, PrincipalMunicipio
 from planeacion.models import SedesEducativas, Programa
 from .pdf_generator import crear_formato_asistencia
 from .utils import _extraer_grado_base # Importar la función de ayuda
+import logging
+
+logger = logging.getLogger(__name__)
 
 class PDFAsistenciaService:
 
@@ -97,6 +100,12 @@ class PDFAsistenciaService:
 
             # PRE-CARGAR EL LOGO UNA SOLA VEZ para evitar múltiples descargas desde Cloudinary
             # Esto es crítico en generación masiva para evitar timeouts
+            logger.info("="*70)
+            logger.info("🚀 INICIO GENERACIÓN ZIP MASIVO")
+            logger.info(f"   Programa: {programa_obj.programa}")
+            logger.info(f"   Focalización: {focalizacion}")
+            logger.info(f"   Mes: {mes}")
+
             ruta_logo_precargado = None
             if programa_obj and programa_obj.imagen:
                 from django.conf import settings
@@ -105,42 +114,70 @@ class PDFAsistenciaService:
                 from io import BytesIO
                 from reportlab.lib.utils import ImageReader
 
+                logger.info("📸 Iniciando pre-carga del logo del programa...")
+
                 # Determinar la URL del logo
                 if hasattr(settings, 'DEBUG') and not settings.DEBUG:
                     # Producción: usar URL de Cloudinary
                     logo_url = programa_obj.imagen.url
+                    logger.info(f"   Entorno: PRODUCCIÓN (Cloudinary)")
                 else:
                     # Desarrollo: intentar path local primero
                     try:
                         logo_url = programa_obj.imagen.path
+                        logger.info(f"   Entorno: DESARROLLO (FileSystem)")
                     except (AttributeError, ValueError):
                         logo_url = programa_obj.imagen.url
+                        logger.info(f"   Entorno: DESARROLLO (URL)")
+
+                logger.info(f"   URL del logo: {logo_url[:80]}...")
 
                 # Si es URL remota (Cloudinary), descargarla UNA VEZ y cachearla
                 if isinstance(logo_url, str) and logo_url.startswith(("http://", "https://")):
                     if logo_url not in _logo_cache:
+                        logger.info("   ⏳ Logo NO está en cache, descargando desde Cloudinary...")
                         try:
                             # Descargar con timeout generoso y reintentos
                             for intento in range(3):
                                 try:
+                                    logger.info(f"      Intento {intento + 1}/3 de descarga...")
                                     response = requests.get(logo_url, timeout=30, stream=True)
                                     response.raise_for_status()
                                     image_content = BytesIO(response.content)
                                     logo_reader = ImageReader(image_content)
                                     _logo_cache[logo_url] = logo_reader
                                     ruta_logo_precargado = logo_url
+                                    logger.info(f"   ✅ Logo descargado exitosamente ({len(response.content)} bytes)")
+                                    logger.info(f"   💾 Logo guardado en cache global")
+                                    logger.info(f"   📦 Cache contiene {len(_logo_cache)} entrada(s)")
                                     break
-                                except (requests.exceptions.Timeout, requests.exceptions.RequestException):
+                                except requests.exceptions.Timeout as e:
+                                    logger.warning(f"      ⚠️ Timeout en intento {intento + 1}: {e}")
                                     if intento < 2:
                                         continue
-                        except Exception:
-                            pass  # Si falla, continuar sin logo
+                                    else:
+                                        logger.error("   ❌ Falló descarga después de 3 intentos (Timeout)")
+                                except requests.exceptions.RequestException as e:
+                                    logger.warning(f"      ⚠️ Error de red en intento {intento + 1}: {e}")
+                                    if intento < 2:
+                                        continue
+                                    else:
+                                        logger.error("   ❌ Falló descarga después de 3 intentos (RequestException)")
+                        except Exception as e:
+                            logger.error(f"   ❌ Error inesperado descargando logo: {e}")
                     else:
                         # Ya está en cache
                         ruta_logo_precargado = logo_url
+                        logger.info("   ✅ Logo YA está en cache (reutilizando)")
+                        logger.info(f"   📦 Cache contiene {len(_logo_cache)} entrada(s)")
                 else:
                     # Es ruta local
                     ruta_logo_precargado = logo_url
+                    logger.info(f"   ✅ Logo local listo: {logo_url}")
+            else:
+                logger.warning("   ⚠️ Programa sin imagen asignada, PDFs se generarán sin logo")
+
+            logger.info("="*70)
 
             # Obtener todas las sedes que tienen estudiantes para este programa y focalización
 
@@ -174,11 +211,15 @@ class PDFAsistenciaService:
 
             
 
+            logger.info(f"\n📂 Procesando {sedes_del_programa.count()} sede(s)...\n")
+
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED, False) as zip_file_principal:
 
-                
+
 
                 for sede_obj in sedes_del_programa:
+
+                    logger.info(f"📍 Procesando sede: {sede_obj.nombre_sede_educativa}")
 
                     estudiantes_sede = ListadosFocalizacion.objects.filter(
 
@@ -214,6 +255,7 @@ class PDFAsistenciaService:
 
                     estudiantes_sede_sorted = sorted(list(estudiantes_sede), key=clave_ordenamiento_grado)
 
+                    logger.info(f"   👥 {len(estudiantes_sede_sorted)} estudiante(s) encontrado(s)")
 
 
                     zip_sede_buffer = PDFAsistenciaService._crear_zip_interno_para_sede(
@@ -222,15 +264,17 @@ class PDFAsistenciaService:
 
                     )
 
-                    
+
 
                     if zip_sede_buffer:
 
                         nombre_carpeta_sede = f"{sede_obj.nombre_sede_educativa.replace(' ', '_').replace('/', '_')}"
 
-                        
+
 
                         with zipfile.ZipFile(zip_sede_buffer, 'r') as zip_sede:
+                            num_pdfs = len(zip_sede.namelist())
+                            logger.info(f"   📄 {num_pdfs} PDF(s) generado(s) para esta sede")
 
                             for nombre_archivo in zip_sede.namelist():
 
@@ -240,17 +284,24 @@ class PDFAsistenciaService:
 
                                 zip_file_principal.writestr(ruta_en_zip_principal, contenido_pdf)
 
-                        
+
 
                         sedes_procesadas += 1
+                        logger.info(f"   ✅ Sede procesada exitosamente ({sedes_procesadas}/{sedes_del_programa.count()})\n")
 
 
 
             if sedes_procesadas == 0:
-
+                logger.warning("⚠️ No se generaron reportes (sin sedes con estudiantes)")
                 return HttpResponse(f"No se generaron reportes. Verifique que las sedes tengan estudiantes con complementos asignados para la focalización '{focalizacion}'.", status=404)
 
 
+            logger.info("="*70)
+            logger.info("✅ GENERACIÓN ZIP MASIVO COMPLETADA")
+            logger.info(f"   Sedes procesadas: {sedes_procesadas}")
+            logger.info(f"   Archivo: {nombre_archivo_zip}")
+            logger.info(f"   Tamaño: {zip_buffer.tell() / (1024*1024):.2f} MB")
+            logger.info("="*70)
 
             zip_buffer.seek(0)
 
