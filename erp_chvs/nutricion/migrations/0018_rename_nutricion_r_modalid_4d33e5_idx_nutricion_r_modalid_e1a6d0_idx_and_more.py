@@ -5,6 +5,19 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def column_exists(schema_editor, table_name, column_name):
+    """
+    Verifica si una columna existe en una tabla.
+    """
+    connection = schema_editor.connection
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = %s AND column_name = %s
+        """, [table_name, column_name])
+        return cursor.fetchone() is not None
+
+
 def rename_index_if_exists(apps, schema_editor, model_name, old_name, new_name):
     """
     Renombra un índice solo si existe. Útil para bases de datos nuevas donde
@@ -25,6 +38,44 @@ def rename_index_if_exists(apps, schema_editor, model_name, old_name, new_name):
         # Renombrar el índice
         with connection.cursor() as cursor:
             cursor.execute(f'ALTER INDEX {old_name} RENAME TO {new_name}')
+
+
+def add_semana_field_if_not_exists(apps, schema_editor):
+    """
+    Agrega el campo 'semana' a la tabla nutricion_tabla_menus solo si no existe.
+    """
+    if not column_exists(schema_editor, 'nutricion_tabla_menus', 'semana'):
+        TablaMenus = apps.get_model('nutricion', 'TablaMenus')
+        from django.db import models
+        import django.core.validators
+
+        field = models.IntegerField(
+            blank=True,
+            help_text='Semana 1-4, calculada automáticamente para menús 1-20',
+            null=True,
+            validators=[
+                django.core.validators.MinValueValidator(1),
+                django.core.validators.MaxValueValidator(4)
+            ],
+            verbose_name='Semana del Ciclo'
+        )
+        field.set_attributes_from_name('semana')
+
+        with schema_editor.connection.cursor() as cursor:
+            cursor.execute("""
+                ALTER TABLE nutricion_tabla_menus
+                ADD COLUMN semana INTEGER NULL
+                CHECK (semana >= 1 AND semana <= 4)
+            """)
+
+
+def remove_semana_field_if_exists(apps, schema_editor):
+    """
+    Elimina el campo 'semana' si existe (para reversión).
+    """
+    if column_exists(schema_editor, 'nutricion_tabla_menus', 'semana'):
+        with schema_editor.connection.cursor() as cursor:
+            cursor.execute("ALTER TABLE nutricion_tabla_menus DROP COLUMN semana")
 
 
 def rename_indexes_forward(apps, schema_editor):
@@ -72,10 +123,10 @@ class Migration(migrations.Migration):
             rename_indexes_forward,
             rename_indexes_backward,
         ),
-        migrations.AddField(
-            model_name='tablamenus',
-            name='semana',
-            field=models.IntegerField(blank=True, help_text='Semana 1-4, calculada automáticamente para menús 1-20', null=True, validators=[django.core.validators.MinValueValidator(1), django.core.validators.MaxValueValidator(4)], verbose_name='Semana del Ciclo'),
+        # Agregar campo 'semana' solo si no existe
+        migrations.RunPython(
+            add_semana_field_if_not_exists,
+            remove_semana_field_if_exists,
         ),
         migrations.AlterField(
             model_name='requerimientosemanal',
