@@ -111,9 +111,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'cloudinary_storage',
     'django.contrib.staticfiles',
-    'cloudinary',
     # 'django_extensions',  # Temporalmente comentado para crear migraciones
     'principal', # aplicación principal, cuando se ejecuta el servidor
     'dashboard',
@@ -121,6 +119,11 @@ INSTALLED_APPS = [
     'planeacion',
     'facturacion',
 ]
+
+# Agregar Cloudinary solo en producción (cuando DEBUG=False)
+if not DEBUG:
+    INSTALLED_APPS.insert(5, 'cloudinary_storage')  # Antes de staticfiles
+    INSTALLED_APPS.append('cloudinary')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -235,16 +238,15 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Directorio donde se recop
 # Configuración de almacenamiento para Django 4.2+ (Static y Media)
 STORAGES = {
     "default": {
-        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+        # En producción usar Cloudinary, en desarrollo usar sistema de archivos
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if not DEBUG else "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        # Usar ManifestStaticFilesStorage en lugar de Compressed para evitar errores
+        # con archivos faltantes del admin de Django
+        "BACKEND": "whitenoise.storage.ManifestStaticFilesStorage",
     },
 }
-
-# Compatibilidad con librerías que buscan las variables antiguas
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Credenciales de Cloudinary
 CLOUDINARY_STORAGE = {
