@@ -235,23 +235,23 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]  # Directorio para archivos estáticos durante el desarrollo
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Directorio donde se recopilan archivos estáticos para producción
 
-# Configuración de almacenamiento para Django 4.2+ (Static y Media)
+# Configuración de almacenamiento para Django 5.2+ (SOLO usar STORAGES, NO STATICFILES_STORAGE)
 STORAGES = {
     "default": {
         # En producción usar Cloudinary, en desarrollo usar sistema de archivos
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if not DEBUG else "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        # WhiteNoise sin compresión (más estable en Railway)
-        # Usa StaticFilesStorage básico de WhiteNoise para evitar problemas
-        # de compresión paralela que pueden fallar intermitentemente en deploy
-        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+        # WhiteNoise SIN compresión en build time (más confiable en Railway/Docker)
+        # La compresión ocurre en runtime via middleware (más eficiente para despliegues)
+        # CompressedStaticFilesStorage con --clear causa race conditions en Railway
+        "BACKEND": "whitenoise.storage.StaticFilesStorage",
     },
 }
 
-# Variables de compatibilidad para cloudinary_storage (requiere estas variables antiguas)
-# Aunque Django 5.2 usa STORAGES, cloudinary_storage aún busca estas variables
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+# IMPORTANTE: NO definir STATICFILES_STORAGE aquí
+# Django 5.2 requiere usar SOLO STORAGES, no ambos (causa ImproperlyConfigured)
+# Variables de compatibilidad para cloudinary_storage (solo DEFAULT_FILE_STORAGE)
 if not DEBUG:
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
