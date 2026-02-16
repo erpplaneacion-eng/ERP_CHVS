@@ -50,18 +50,27 @@
                     <!-- ========================================================== -->
                     <!-- BOTÓN DE EDITAR MODIFICADO                             -->
                     <!-- ========================================================== -->
-                    <button class="btn-edit edit-program-btn"
-                            style="margin-top: 10px; display: inline-block;"
-                            data-id="{{ programa.pk }}"
-                            data-programa="{{ programa.programa }}"
-                            data-municipio="{{ programa.municipio.pk|default:'' }}"
-                            data-fecha-inicial="{{ programa.fecha_inicial|date:'Y-m-d' }}"
-                            data-fecha-final="{{ programa.fecha_final|date:'Y-m-d' }}"
-                            data-estado="{{ programa.estado }}"
-                            data-contrato="{{ programa.contrato }}"
-                            data-imagen-url="{% if programa.imagen and programa.imagen.name %}{{ programa.imagen.url }}{% endif %}">
-                        Ver / Editar
-                    </button>
+                    <div class="d-flex justify-content-between align-items-center" style="margin-top: 15px;">
+                        <button class="btn-edit edit-program-btn"
+                                style="margin: 0; flex-grow: 1; margin-right: 10px;"
+                                data-id="{{ programa.pk }}"
+                                data-programa="{{ programa.programa }}"
+                                data-municipio="{{ programa.municipio.pk|default:'' }}"
+                                data-fecha-inicial="{{ programa.fecha_inicial|date:'Y-m-d' }}"
+                                data-fecha-final="{{ programa.fecha_final|date:'Y-m-d' }}"
+                                data-estado="{{ programa.estado }}"
+                                data-contrato="{{ programa.contrato }}"
+                                data-imagen-url="{% if programa.imagen and programa.imagen.name %}{{ programa.imagen.url }}{% endif %}">
+                            Ver / Editar
+                        </button>
+                        
+                        <button class="btn btn-danger btn-delete-program" 
+                                style="margin: 0; padding: 8px 15px;"
+                                data-id="{{ programa.pk }}"
+                                data-nombre="{{ programa.programa }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         {% empty %}

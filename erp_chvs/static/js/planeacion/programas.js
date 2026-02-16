@@ -81,6 +81,42 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        // ===== ELIMINAR PROGRAMA =====
+        const deleteBtns = document.querySelectorAll('.btn-delete-program');
+        deleteBtns.forEach(button => {
+            button.addEventListener('click', function() {
+                const programId = this.dataset.id;
+                const programNombre = this.dataset.nombre;
+
+                Swal.fire({
+                    title: '¿Estás seguro?',
+                    text: `Vas a eliminar el programa "${programNombre}". Esta acción no se puede deshacer y también eliminará la imagen asociada.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Crear un formulario temporal para enviar el POST de eliminación
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = `/planeacion/programas/eliminar/${programId}/`;
+                        
+                        const csrfInput = document.createElement('input');
+                        csrfInput.type = 'hidden';
+                        csrfInput.name = 'csrfmiddlewaretoken';
+                        csrfInput.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                        
+                        form.appendChild(csrfInput);
+                        document.body.appendChild(form);
+                        form.submit();
+                    }
+                });
+            });
+        });
+
         // Validación antes de enviar
         modalForm.addEventListener('submit', function(e) {
             let isValid = true;

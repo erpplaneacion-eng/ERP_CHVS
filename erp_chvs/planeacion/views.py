@@ -67,6 +67,27 @@ def editar_programa(request, pk):
 
 
 @login_required
+@require_http_methods(["POST"])
+def eliminar_programa(request, pk):
+    """
+    Vista para eliminar un programa y su imagen asociada en Cloudinary.
+    """
+    programa = get_object_or_404(Programa, pk=pk)
+    
+    # Intentar eliminar la imagen de Cloudinary si existe
+    if programa.imagen:
+        try:
+            # El name del campo suele ser el public_id en Cloudinary
+            from .services import CloudinaryService
+            CloudinaryService.eliminar_imagen(programa.imagen.name)
+        except Exception as e:
+            print(f"Error al eliminar imagen de Cloudinary: {e}")
+
+    programa.delete()
+    return redirect('planeacion:lista_programas')
+
+
+@login_required
 def ciclos_menus_view(request):
     """
     Vista principal para planificar ciclos de menús.

@@ -8,6 +8,7 @@ urlpatterns = [
     path('', views.planeacion_index, name='planeacion_index'),
     path('programas/', views.lista_programas, name='lista_programas'),
     path('programas/editar/<int:pk>/', views.editar_programa, name='editar_programa'),
+    path('programas/eliminar/<int:pk>/', views.eliminar_programa, name='eliminar_programa'),
 
     # Ciclos de menús
     path('ciclos-menus/', views.ciclos_menus_view, name='ciclos_menus'),
