@@ -249,9 +249,12 @@ STORAGES = {
     },
 }
 
-# IMPORTANTE: NO definir STATICFILES_STORAGE aquí
-# Django 5.2 requiere usar SOLO STORAGES, no ambos (causa ImproperlyConfigured)
-# Variables de compatibilidad para cloudinary_storage (solo DEFAULT_FILE_STORAGE)
+# Variables de compatibilidad para django-cloudinary-storage
+# Cloudinary sobrescribe collectstatic y REQUIERE que STATICFILES_STORAGE exista (busca en línea 27)
+# Definimos con valor estándar de Django para que Cloudinary NO lo procese
+# Django 5.2 da prioridad a STORAGES, así que esta variable solo es para compatibilidad
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+
 if not DEBUG:
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
