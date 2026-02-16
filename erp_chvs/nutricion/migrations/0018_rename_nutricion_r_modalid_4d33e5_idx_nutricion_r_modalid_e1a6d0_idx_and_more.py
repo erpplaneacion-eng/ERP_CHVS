@@ -5,6 +5,60 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def rename_index_if_exists(apps, schema_editor, model_name, old_name, new_name):
+    """
+    Renombra un índice solo si existe. Útil para bases de datos nuevas donde
+    los índices autogenerados pueden no existir aún.
+    """
+    db_alias = schema_editor.connection.alias
+    connection = schema_editor.connection
+
+    # Verificar si el índice existe
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT 1 FROM pg_indexes
+            WHERE indexname = %s
+        """, [old_name])
+        index_exists = cursor.fetchone() is not None
+
+    if index_exists:
+        # Renombrar el índice
+        with connection.cursor() as cursor:
+            cursor.execute(f'ALTER INDEX {old_name} RENAME TO {new_name}')
+
+
+def rename_indexes_forward(apps, schema_editor):
+    """Renombra los índices si existen"""
+    rename_index_if_exists(
+        apps, schema_editor,
+        'requerimientosemanal',
+        'nutricion_r_modalid_4d33e5_idx',
+        'nutricion_r_modalid_e1a6d0_idx'
+    )
+    rename_index_if_exists(
+        apps, schema_editor,
+        'requerimientosemanal',
+        'nutricion_r_compone_f7553a_idx',
+        'nutricion_r_compone_94b87e_idx'
+    )
+
+
+def rename_indexes_backward(apps, schema_editor):
+    """Revierte el renombrado de índices"""
+    rename_index_if_exists(
+        apps, schema_editor,
+        'requerimientosemanal',
+        'nutricion_r_modalid_e1a6d0_idx',
+        'nutricion_r_modalid_4d33e5_idx'
+    )
+    rename_index_if_exists(
+        apps, schema_editor,
+        'requerimientosemanal',
+        'nutricion_r_compone_94b87e_idx',
+        'nutricion_r_compone_f7553a_idx'
+    )
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -13,15 +67,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RenameIndex(
-            model_name='requerimientosemanal',
-            new_name='nutricion_r_modalid_e1a6d0_idx',
-            old_name='nutricion_r_modalid_4d33e5_idx',
-        ),
-        migrations.RenameIndex(
-            model_name='requerimientosemanal',
-            new_name='nutricion_r_compone_94b87e_idx',
-            old_name='nutricion_r_compone_f7553a_idx',
+        # Ejecutar renombrado condicional de índices
+        migrations.RunPython(
+            rename_indexes_forward,
+            rename_indexes_backward,
         ),
         migrations.AddField(
             model_name='tablamenus',
