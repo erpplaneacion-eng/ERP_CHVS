@@ -242,17 +242,19 @@ STORAGES = {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if not DEBUG else "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        # Usar ManifestStaticFilesStorage en lugar de Compressed para evitar errores
-        # con archivos faltantes del admin de Django
-        "BACKEND": "whitenoise.storage.ManifestStaticFilesStorage",
+        # Usar CompressedManifestStaticFilesStorage con mejor manejo de errores
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
 
 # Variables de compatibilidad para cloudinary_storage (requiere estas variables antiguas)
 # Aunque Django 5.2 usa STORAGES, cloudinary_storage aún busca estas variables
-STATICFILES_STORAGE = 'whitenoise.storage.ManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 if not DEBUG:
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+# Configuración de WhiteNoise: no fallar si faltan archivos referenciados
+WHITENOISE_MANIFEST_STRICT = False
 
 # Credenciales de Cloudinary
 CLOUDINARY_STORAGE = {
