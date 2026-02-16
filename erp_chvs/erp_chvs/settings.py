@@ -242,10 +242,10 @@ STORAGES = {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if not DEBUG else "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        # WhiteNoise SIN compresión en build time (más confiable en Railway/Docker)
-        # La compresión ocurre en runtime via middleware (más eficiente para despliegues)
-        # CompressedStaticFilesStorage con --clear causa race conditions en Railway
-        "BACKEND": "whitenoise.storage.StaticFilesStorage",
+        # Usar StaticFilesStorage básico de Django (sin manifest, sin compresión)
+        # WhiteNoise middleware se encarga de servir los archivos en producción
+        # Es la opción más confiable para Railway (sin race conditions)
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
 
