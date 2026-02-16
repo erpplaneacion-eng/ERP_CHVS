@@ -300,6 +300,8 @@ class PDFAsistenciaService:
                 logger.warning("⚠️ No se generaron reportes (sin sedes con estudiantes)")
                 return HttpResponse(f"No se generaron reportes. Verifique que las sedes tengan estudiantes con complementos asignados para la focalización '{focalizacion}'.", status=404)
 
+            # Definir nombre del archivo antes del logging
+            nombre_archivo_zip = f"Asistencias_Masivo_{programa_obj.programa.replace(' ', '_')}_{focalizacion.replace(' ', '_')}_{mes}.zip"
 
             logger.info("="*70)
             logger.info("✅ GENERACIÓN ZIP MASIVO COMPLETADA")
@@ -311,8 +313,6 @@ class PDFAsistenciaService:
             zip_buffer.seek(0)
 
             response = HttpResponse(zip_buffer, content_type='application/zip')
-
-            nombre_archivo_zip = f"Asistencias_Masivo_{programa_obj.programa.replace(' ', '_')}_{focalizacion.replace(' ', '_')}_{mes}.zip"
 
             response['Content-Disposition'] = f'attachment; filename="{nombre_archivo_zip}"'
 
