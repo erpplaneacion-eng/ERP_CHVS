@@ -139,6 +139,7 @@ class ListadosFocalizacion(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        db_column='programa_id',
         verbose_name="Programa"
     )
 
@@ -154,7 +155,7 @@ class ListadosFocalizacion(models.Model):
     )
 
     class Meta:
-        db_table = 'facturacion_Listados_Focalizacion'
+        db_table = 'facturacion_listados_focalizacion'
         verbose_name = "Listado de Focalización"
         verbose_name_plural = "Listados de Focalización"
         ordering = ['-ano', 'etc', 'institucion', 'sede']
