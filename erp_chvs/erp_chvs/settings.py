@@ -106,14 +106,14 @@ if not DEBUG:
 # Application definition
 
 INSTALLED_APPS = [
-    'cloudinary_storage',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'cloudinary',
+    'cloudinary_storage',
     'django.contrib.staticfiles',
+    'cloudinary',
     # 'django_extensions',  # Temporalmente comentado para crear migraciones
     'principal', # aplicación principal, cuando se ejecuta el servidor
     'dashboard',
