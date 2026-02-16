@@ -280,6 +280,11 @@ LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
 
 # Configuración de logging para ver el proceso de generación de PDFs
+# Crear directorio de logs si no existe (solo en desarrollo)
+if DEBUG:
+    logs_dir = os.path.join(BASE_DIR, 'logs')
+    os.makedirs(logs_dir, exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -298,23 +303,26 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
         },
-        'file_facturacion': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'facturacion.log'),
-            'formatter': 'verbose',
-        },
     },
     'loggers': {
         'facturacion': {
-            'handlers': ['console', 'file_facturacion'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
-        # Para debugging detallado, cambiar a DEBUG
-        # 'facturacion.pdf_generator': {
-        #     'handlers': ['console'],
-        #     'level': 'DEBUG',
-        #     'propagate': False,
-        # },
+        'facturacion.pdf_generator': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
     },
 }
+
+# En desarrollo, agregar handler de archivo también
+if DEBUG:
+    LOGGING['handlers']['file_facturacion'] = {
+        'class': 'logging.FileHandler',
+        'filename': os.path.join(BASE_DIR, 'logs', 'facturacion.log'),
+        'formatter': 'verbose',
+    }
+    LOGGING['loggers']['facturacion']['handlers'].append('file_facturacion')
