@@ -10,6 +10,8 @@ import requests
 
 # Cache para mapeos de géneros (evitar consultas repetidas)
 _genero_cache = None
+# Cache de logos para evitar descargas repetidas desde Cloudinary
+_logo_cache = {}
 
 def obtener_id_genero_por_codigo(codigo_genero):
     """
@@ -66,6 +68,8 @@ class AsistenciaPDFGenerator:
         self.max_filas_por_pagina = 25
         self.y_inicio_filas = 0
         self.anchos_cols = self._calcular_anchos_columnas()
+        # Resolver el logo una sola vez por PDF (evita descargas por página)
+        self.logo_fuente = self._resolver_fuente_logo(self.datos_encabezado.get('ruta_logo'))
 
     def _calcular_anchos_columnas(self):
         ancho_total_tabla = self.width - 2 * self.margen
@@ -99,9 +103,13 @@ class AsistenciaPDFGenerator:
 
         if isinstance(ruta_imagen, str) and ruta_imagen.startswith(("http://", "https://")):
             try:
+                if ruta_imagen in _logo_cache:
+                    return _logo_cache[ruta_imagen]
                 response = requests.get(ruta_imagen, timeout=10)
                 response.raise_for_status()
-                return ImageReader(BytesIO(response.content))
+                logo = ImageReader(BytesIO(response.content))
+                _logo_cache[ruta_imagen] = logo
+                return logo
             except Exception:
                 return None
 
@@ -124,11 +132,9 @@ class AsistenciaPDFGenerator:
         c.setLineWidth(1)
         c.line(margen, y_linea_logo, width - margen, y_linea_logo)
 
-        ruta_imagen = self.datos_encabezado.get('ruta_logo')
         try:
-            logo_fuente = self._resolver_fuente_logo(ruta_imagen)
-            if logo_fuente:
-                c.drawImage(logo_fuente, margen + 5, y_linea_logo + 2, width=170, height=45, preserveAspectRatio=True, mask="auto")
+            if self.logo_fuente:
+                c.drawImage(self.logo_fuente, margen + 5, y_linea_logo + 2, width=170, height=45, preserveAspectRatio=True, mask="auto")
             else:
                 raise FileNotFoundError("Logo no encontrado")
         except:
