@@ -242,15 +242,15 @@ STORAGES = {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if not DEBUG else "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        # Usar CompressedStaticFilesStorage (sin Manifest) para evitar errores
-        # con archivos faltantes del admin de Django en Railway
-        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+        # Evita el paso de compresión paralela de WhiteNoise que puede fallar
+        # de forma intermitente en deploy al no encontrar archivos temporales.
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
 
 # Variables de compatibilidad para cloudinary_storage (requiere estas variables antiguas)
 # Aunque Django 5.2 usa STORAGES, cloudinary_storage aún busca estas variables
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 if not DEBUG:
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
