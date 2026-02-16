@@ -24,6 +24,20 @@ class PerfilUsuarioInline(admin.StackedInline):
 class UserAdmin(BaseUserAdmin):
     inlines = (PerfilUsuarioInline,)
 
+    # Widget mejorado para selección múltiple de grupos y permisos
+    filter_horizontal = ('groups', 'user_permissions')
+
+    # Configuración de fieldsets para mejor organización
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        ('Información Personal', {'fields': ('first_name', 'last_name', 'email')}),
+        ('Permisos y Accesos', {
+            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
+            'description': 'Un usuario puede pertenecer a múltiples grupos. Seleccione todos los que apliquen.'
+        }),
+        ('Fechas Importantes', {'fields': ('last_login', 'date_joined')}),
+    )
+
     def get_inline_instances(self, request, obj=None):
         # En la vista de creación, el perfil lo crea la señal post_save.
         # Evitamos que el inline intente crear un segundo PerfilUsuario.
