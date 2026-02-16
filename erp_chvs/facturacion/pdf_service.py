@@ -95,7 +95,52 @@ class PDFAsistenciaService:
 
             programa_obj = get_object_or_404(Programa, id=programa_id)
 
+            # PRE-CARGAR EL LOGO UNA SOLA VEZ para evitar múltiples descargas desde Cloudinary
+            # Esto es crítico en generación masiva para evitar timeouts
+            ruta_logo_precargado = None
+            if programa_obj and programa_obj.imagen:
+                from django.conf import settings
+                from .pdf_generator import _logo_cache
+                import requests
+                from io import BytesIO
+                from reportlab.lib.utils import ImageReader
 
+                # Determinar la URL del logo
+                if hasattr(settings, 'DEBUG') and not settings.DEBUG:
+                    # Producción: usar URL de Cloudinary
+                    logo_url = programa_obj.imagen.url
+                else:
+                    # Desarrollo: intentar path local primero
+                    try:
+                        logo_url = programa_obj.imagen.path
+                    except (AttributeError, ValueError):
+                        logo_url = programa_obj.imagen.url
+
+                # Si es URL remota (Cloudinary), descargarla UNA VEZ y cachearla
+                if isinstance(logo_url, str) and logo_url.startswith(("http://", "https://")):
+                    if logo_url not in _logo_cache:
+                        try:
+                            # Descargar con timeout generoso y reintentos
+                            for intento in range(3):
+                                try:
+                                    response = requests.get(logo_url, timeout=30, stream=True)
+                                    response.raise_for_status()
+                                    image_content = BytesIO(response.content)
+                                    logo_reader = ImageReader(image_content)
+                                    _logo_cache[logo_url] = logo_reader
+                                    ruta_logo_precargado = logo_url
+                                    break
+                                except (requests.exceptions.Timeout, requests.exceptions.RequestException):
+                                    if intento < 2:
+                                        continue
+                        except Exception:
+                            pass  # Si falla, continuar sin logo
+                    else:
+                        # Ya está en cache
+                        ruta_logo_precargado = logo_url
+                else:
+                    # Es ruta local
+                    ruta_logo_precargado = logo_url
 
             # Obtener todas las sedes que tienen estudiantes para este programa y focalización
 
@@ -393,13 +438,25 @@ class PDFAsistenciaService:
 
 
 
+                # IMPORTANTE: En generación masiva, el logo ya fue pre-cargado en cache
+                # por generar_zip_masivo_por_programa(), así que _resolver_fuente_logo()
+                # lo encontrará en cache sin necesidad de descargarlo nuevamente
                 ruta_logo_final = None
 
                 if programa_obj and programa_obj.imagen:
-                    try:
-                        ruta_logo_final = programa_obj.imagen.path
-                    except Exception:
+                    from django.conf import settings
+                    # En producción (Cloudinary), usar siempre .url
+                    # En desarrollo (FileSystemStorage), usar .path si existe
+                    if hasattr(settings, 'DEBUG') and not settings.DEBUG:
+                        # Producción: usar URL de Cloudinary directamente
                         ruta_logo_final = programa_obj.imagen.url
+                    else:
+                        # Desarrollo: intentar ruta local primero
+                        try:
+                            ruta_logo_final = programa_obj.imagen.path
+                        except (AttributeError, ValueError):
+                            # Si falla .path, usar .url (puede ser relativa)
+                            ruta_logo_final = programa_obj.imagen.url
 
 
 

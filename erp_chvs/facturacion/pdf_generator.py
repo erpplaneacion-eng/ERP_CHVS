@@ -108,24 +108,58 @@ class AsistenciaPDFGenerator:
     def _resolver_fuente_logo(self, ruta_imagen):
         """
         Resuelve una fuente válida para ReportLab desde ruta local o URL remota.
+        Incluye retry logic para URLs remotas (Cloudinary).
         """
         if not ruta_imagen:
             return None
 
-        if isinstance(ruta_imagen, str) and ruta_imagen.startswith(("http://", "https://")):
-            try:
-                if ruta_imagen in _logo_cache:
-                    return _logo_cache[ruta_imagen]
-                response = requests.get(ruta_imagen, timeout=10)
-                response.raise_for_status()
-                logo = ImageReader(BytesIO(response.content))
-                _logo_cache[ruta_imagen] = logo
-                return logo
-            except Exception:
-                return None
+        ruta_str = str(ruta_imagen)
 
-        if os.path.exists(ruta_imagen):
-            return ruta_imagen
+        # Si es URL remota (Cloudinary u otra fuente)
+        if ruta_str.startswith(("http://", "https://")):
+            # Verificar cache primero
+            if ruta_str in _logo_cache:
+                return _logo_cache[ruta_str]
+
+            # Intentar descargar con retry logic
+            max_intentos = 3
+            timeout = 30  # Aumentado de 10 a 30 segundos
+
+            for intento in range(max_intentos):
+                try:
+                    response = requests.get(ruta_str, timeout=timeout, stream=True)
+                    response.raise_for_status()
+                    # Leer contenido completo
+                    image_content = BytesIO(response.content)
+                    logo = ImageReader(image_content)
+                    # Guardar en cache para reutilizar
+                    _logo_cache[ruta_str] = logo
+                    return logo
+                except requests.exceptions.Timeout:
+                    if intento < max_intentos - 1:
+                        continue  # Reintentar
+                    return None
+                except requests.exceptions.RequestException:
+                    if intento < max_intentos - 1:
+                        continue  # Reintentar
+                    return None
+                except Exception:
+                    return None
+
+        # Si es ruta que comienza con /media/ (URL relativa en desarrollo)
+        # Intentar construir ruta absoluta del filesystem
+        if ruta_str.startswith('/media/'):
+            try:
+                from django.conf import settings
+                ruta_absoluta = os.path.join(settings.BASE_DIR, ruta_str.lstrip('/'))
+                if os.path.exists(ruta_absoluta):
+                    return ruta_absoluta
+            except Exception:
+                pass
+
+        # Si es ruta local absoluta
+        if os.path.exists(ruta_str):
+            return ruta_str
 
         return None
 
