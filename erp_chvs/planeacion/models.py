@@ -169,6 +169,51 @@ class Programa(models.Model):
             self.programa = self.programa.upper().strip()
         if self.contrato:
             self.contrato = self.contrato.upper().strip()
+
+        # Optimizar logo automáticamente al guardar (para PDFs impresos en B/N)
+        if self.imagen and hasattr(self.imagen, 'file'):
+            from PIL import Image
+            from io import BytesIO
+            from django.core.files.uploadedfile import InMemoryUploadedFile
+            import sys
+
+            try:
+                # Abrir imagen original
+                img = Image.open(self.imagen)
+
+                # Convertir a escala de grises (B/N) ya que los PDFs se imprimen en B/N
+                if img.mode != 'L':
+                    img = img.convert('L')
+
+                # Redimensionar a máximo 400px de ancho (suficiente para logo en PDF)
+                max_width = 400
+                if img.width > max_width:
+                    ratio = max_width / img.width
+                    new_height = int(img.height * ratio)
+                    img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+
+                # Guardar optimizado con compresión alta
+                output = BytesIO()
+                img.save(output, format='JPEG', quality=75, optimize=True)
+                output.seek(0)
+
+                # Crear nuevo archivo optimizado
+                original_name = self.imagen.name
+                self.imagen = InMemoryUploadedFile(
+                    output,
+                    'ImageField',
+                    original_name,
+                    'image/jpeg',
+                    sys.getsizeof(output),
+                    None
+                )
+
+            except Exception as e:
+                # Si falla la optimización, guardar imagen original
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"No se pudo optimizar logo del programa: {e}")
+
         super().save(*args, **kwargs)
 
     class Meta:

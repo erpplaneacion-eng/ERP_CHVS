@@ -1,1 +1,1 @@
-web: cd erp_chvs && mkdir -p staticfiles && python manage.py migrate --noinput && python manage.py collectstatic --noinput --clear --upload-unhashed-files && gunicorn erp_chvs.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 300
+web: cd erp_chvs && mkdir -p staticfiles && python manage.py migrate --noinput && python manage.py collectstatic --noinput --clear --upload-unhashed-files && gunicorn erp_chvs.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 600 --max-requests 100 --max-requests-jitter 10 --worker-class sync --worker-tmp-dir /dev/shm

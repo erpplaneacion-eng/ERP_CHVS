@@ -143,11 +143,16 @@ class PDFAsistenciaService:
                                     logger.info(f"      Intento {intento + 1}/3 de descarga...")
                                     response = requests.get(logo_url, timeout=30, stream=True)
                                     response.raise_for_status()
+
+                                    # Los logos ya vienen pre-optimizados (B/N, 400px, ~50KB)
+                                    # gracias al método save() del modelo Programa
                                     image_content = BytesIO(response.content)
                                     logo_reader = ImageReader(image_content)
                                     _logo_cache[logo_url] = logo_reader
                                     ruta_logo_precargado = logo_url
-                                    logger.info(f"   ✅ Logo descargado exitosamente ({len(response.content)} bytes)")
+
+                                    size_kb = len(response.content) / 1024
+                                    logger.info(f"   ✅ Logo descargado exitosamente ({size_kb:.2f} KB)")
                                     logger.info(f"   💾 Logo guardado en cache global")
                                     logger.info(f"   📦 Cache contiene {len(_logo_cache)} entrada(s)")
                                     break

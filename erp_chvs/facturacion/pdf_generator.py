@@ -8,6 +8,7 @@ import os
 from io import BytesIO
 import requests
 import logging
+from PIL import Image
 
 logger = logging.getLogger(__name__)
 
@@ -134,12 +135,16 @@ class AsistenciaPDFGenerator:
                 try:
                     response = requests.get(ruta_str, timeout=timeout, stream=True)
                     response.raise_for_status()
-                    # Leer contenido completo
+
+                    # Los logos ya vienen pre-optimizados (B/N, 400px, ~50KB)
+                    # gracias al método save() del modelo Programa
                     image_content = BytesIO(response.content)
                     logo = ImageReader(image_content)
+
                     # Guardar en cache para reutilizar
                     _logo_cache[ruta_str] = logo
-                    logger.debug(f"      ✅ Logo descargado ({len(response.content)} bytes)")
+                    size_kb = len(response.content) / 1024
+                    logger.debug(f"      ✅ Logo descargado y cacheado ({size_kb:.2f} KB)")
                     return logo
                 except requests.exceptions.Timeout:
                     logger.warning(f"      ⚠️ Timeout en intento {intento + 1}/{max_intentos}")
