@@ -385,15 +385,18 @@ def api_modalidades_consumo(request):
     elif request.method == 'POST':
         try:
             data = json.loads(request.body)
+            id_modalidades = data['id_modalidades'].strip().upper()
+            modalidad_nombre = data['modalidad'].strip().upper()
+            cod_modalidad = data['cod_modalidad'].strip().upper()
 
             # Verificar si ya existe una modalidad con este ID
-            if ModalidadesDeConsumo.objects.filter(id_modalidades=data['id_modalidades']).exists():
+            if ModalidadesDeConsumo.objects.filter(id_modalidades=id_modalidades).exists():
                 return JsonResponse({'success': False, 'error': 'Error: Ya existe una modalidad con este ID'})
 
             modalidad = ModalidadesDeConsumo.objects.create(
-                id_modalidades=data['id_modalidades'],
-                modalidad=data['modalidad'],
-                cod_modalidad=data['cod_modalidad']
+                id_modalidades=id_modalidades,
+                modalidad=modalidad_nombre,
+                cod_modalidad=cod_modalidad
             )
 
             return JsonResponse({
@@ -426,8 +429,8 @@ def api_modalidad_consumo_detail(request, id_modalidades):
     elif request.method == 'PUT':
         try:
             data = json.loads(request.body)
-            modalidad.modalidad = data['modalidad']
-            modalidad.cod_modalidad = data['cod_modalidad']
+            modalidad.modalidad = data['modalidad'].strip().upper()
+            modalidad.cod_modalidad = data['cod_modalidad'].strip().upper()
             modalidad.save()
             return JsonResponse({'success': True})
         except Exception as e:
