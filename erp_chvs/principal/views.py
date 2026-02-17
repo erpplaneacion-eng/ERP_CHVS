@@ -5,6 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import IntegrityError
+from django.db.models.deletion import ProtectedError
 import json
 from .models import PrincipalDepartamento, PrincipalMunicipio, TipoDocumento, TipoGenero, ModalidadesDeConsumo, NivelGradoEscolar, MunicipioModalidades
 from planeacion.models import InstitucionesEducativas, SedesEducativas, Programa
@@ -436,6 +437,23 @@ def api_modalidad_consumo_detail(request, id_modalidades):
         try:
             modalidad.delete()
             return JsonResponse({'success': True})
+        except ProtectedError as e:
+            dependencias = {}
+            for obj in e.protected_objects:
+                modelo = obj._meta.verbose_name_plural or obj._meta.model_name
+                dependencias[modelo] = dependencias.get(modelo, 0) + 1
+
+            detalle = ', '.join(
+                [f"{cantidad} {modelo}" for modelo, cantidad in dependencias.items()]
+            )
+
+            return JsonResponse({
+                'success': False,
+                'error': (
+                    "No se puede eliminar la modalidad porque tiene registros relacionados. "
+                    f"Dependencias: {detalle}."
+                )
+            }, status=409)
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
 

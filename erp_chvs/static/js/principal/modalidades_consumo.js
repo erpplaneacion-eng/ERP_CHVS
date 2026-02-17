@@ -73,18 +73,23 @@ function deleteModalidad(id) {
 
 function confirmDelete() {
     if (currentModalidadId) {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+
         fetch(`/principal/api/modalidades-consumo/${currentModalidadId}/`, {
             method: 'DELETE',
             headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                'X-CSRFToken': csrfToken
             }
         })
-        .then(response => response.json())
+        .then(async response => {
+            const data = await response.json().catch(() => ({}));
+            return { ok: response.ok, data };
+        })
         .then(data => {
-            if (data.success) {
+            if (data.ok && data.data.success) {
                 location.reload();
             } else {
-                alert('Error: ' + data.error);
+                alert('Error: ' + (data.data.error || 'No fue posible eliminar la modalidad'));
             }
         })
         .catch(error => {

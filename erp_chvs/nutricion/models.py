@@ -76,7 +76,7 @@ class ComponentesModalidades(models.Model):
     id_modalidad = models.ForeignKey(
         ModalidadesDeConsumo,
         on_delete=models.CASCADE,
-        db_column='id_modalidad',
+        db_column='id_modalidades',
         related_name='componentes_modalidades',
         verbose_name="Modalidad de Consumo"
     )

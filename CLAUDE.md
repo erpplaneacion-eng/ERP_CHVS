@@ -58,6 +58,33 @@ python manage.py runserver
 - Uses Django's built-in authentication system
 - No custom user model (uses `django.contrib.auth.models.User`)
 
+## Authorization & Access Control
+
+**Role-based access control (RBAC)** via Django Groups:
+- Middleware: `principal.middleware.RoleAccessMiddleware` (line 136 in settings.py)
+- Controls module access per user group
+- Users without proper permissions are redirected to dashboard with error message
+
+**User Groups & Permissions**:
+
+| Group | Allowed Modules |
+|-------|----------------|
+| `NUTRICION` | nutricion, dashboard, principal |
+| `FACTURACION` | facturacion, dashboard |
+| `PLANEACION` | planeacion, dashboard |
+| `ADMINISTRACION` | All modules (full access) |
+
+**Setup and management**:
+```bash
+python manage.py setup_groups  # Creates default groups (first-time setup)
+```
+
+**Assigning users to groups**:
+- Via Django admin: `/admin/auth/group/`
+- Programmatically: `user.groups.add(group)`
+
+**Important**: Superusers (`is_superuser=True`) bypass all group restrictions.
+
 ## Common Commands
 
 All commands run from the `erp_chvs/` directory:
@@ -71,7 +98,7 @@ python manage.py makemigrations
 python manage.py migrate
 
 # Testing
-python manage.py test                    # Run all tests
+python manage.py test                    # Run all tests (Django test runner)
 python manage.py test facturacion        # Run tests for specific app
 python manage.py test nutricion
 pytest                                   # Run tests with pytest (pytest-django configured)
@@ -80,8 +107,11 @@ pytest -k "test_name"                    # Run specific test by name
 pytest --maxfail=1                       # Stop on first failure
 pytest facturacion/tests.py              # Run tests from specific file
 
+# Note: pytest-django is configured automatically via installed package
+# No pytest.ini file - uses default configuration with DJANGO_SETTINGS_MODULE
+
 # Static files
-python manage.py collectstatic
+python manage.py collectstatic           # Collect static files for production (WhiteNoise)
 
 # Database operations
 python manage.py loaddata <fixture>.json # Load data from fixtures
@@ -96,6 +126,11 @@ python test_gemini.py                    # Test Gemini AI menu generation
 # Admin operations
 python manage.py createsuperuser         # Create admin user
 python manage.py changepassword <username> # Change user password
+
+# Custom management commands
+python manage.py setup_groups            # Create default user groups (NUTRICION, FACTURACION, etc.)
+python manage.py inspeccionar_db         # Database structure inspector
+python manage.py optimizar_logos         # Optimize institution logos for PDFs (B/W, 400px, <50KB)
 
 # Note: django-extensions is temporarily commented out in INSTALLED_APPS
 # Uncomment in settings.py to use shell_plus and other utilities:
@@ -122,7 +157,7 @@ ERP_CHVS/
 │   ├── facturacion/          # Billing/focalization app
 │   └── dashboard/            # Dashboard app
 ├── archivos excel/           # Excel file input/output directory
-└── CHECKLIST_INTEGRACION_SIESA.md  # Siesa integration requirements
+└── CHECKLIST_INTEGRACION_SIESA.md  # Siesa integration requirements (TO BE CREATED)
 ```
 
 ## Architecture
@@ -381,6 +416,12 @@ MenusAvanzadosController (coordinator)
 *AI Integration*:
 - `GEMINI_API_KEY`: Google Gemini API key for AI menu generation
 
+*Media Storage (Production - Cloudinary)*:
+- `CLOUDINARY_CLOUD_NAME`: Cloudinary cloud name
+- `CLOUDINARY_API_KEY`: Cloudinary API key
+- `CLOUDINARY_API_SECRET`: Cloudinary API secret
+- Note: Only required in production (`DEBUG=False`). Development uses local filesystem.
+
 *Siesa Integration (planned)*:
 - `SIESA_API_BASE_URL`: Base URL for Siesa API
 - `SIESA_API_KEY`: Authentication token/key for Siesa
@@ -408,6 +449,12 @@ DB_PORT=5432
 # AI Integration
 GEMINI_API_KEY=your-gemini-api-key-here
 
+# Media Storage (Production only - Cloudinary)
+# Obtain from: https://cloudinary.com/console
+# CLOUDINARY_CLOUD_NAME=your-cloud-name
+# CLOUDINARY_API_KEY=your-api-key
+# CLOUDINARY_API_SECRET=your-api-secret
+
 # Siesa Integration (when implemented)
 # SIESA_API_BASE_URL=https://api.siesa.com
 # SIESA_API_KEY=your-api-key
@@ -420,10 +467,19 @@ GEMINI_API_KEY=your-gemini-api-key-here
 - XSS and content-type sniffing protection
 - Proxy SSL header support
 
+**Static files serving**:
+- **Development**: Django serves from `STATICFILES_DIRS` (`erp_chvs/static/`)
+- **Production**: WhiteNoise middleware serves from `STATIC_ROOT` (`erp_chvs/staticfiles/`)
+  - WhiteNoise configured in middleware (line 131 in settings.py)
+  - Run `python manage.py collectstatic` before deployment
+  - No nginx/Apache configuration needed for static files
+
 **Media files**:
 - `MEDIA_URL = '/media/'`
 - `MEDIA_ROOT`: Points to `erp_chvs/media/` directory
-- Used for user-uploaded files (prepared for future features)
+- **Development**: Local filesystem storage
+- **Production**: Cloudinary storage (requires CLOUDINARY_* environment variables)
+- Used for user-uploaded files (institution logos, future file uploads)
 
 **Application constants**:
 - Module-specific in `config.py` files (thresholds, column names, messages)
@@ -598,12 +654,14 @@ Log to Api.models.SyncLog
 3. **Educational facilities** (Siesa → `principal.SedesEducativas`)
    - Sync Siesa facility codes for cross-system compatibility
 
-**Implementation checklist**: See `CHECKLIST_INTEGRACION_SIESA.md` for:
+**Implementation checklist**: `CHECKLIST_INTEGRACION_SIESA.md` (TO BE CREATED) should include:
 - Required API credentials and endpoints
 - Data structure mapping (Siesa fields → Django models)
 - Webhook configuration
 - Rate limiting and pagination details
 - Testing environment setup
+- Authentication mechanism (API key, OAuth, etc.)
+- Error handling and retry strategies
 
 **Commands** (when implemented):
 ```bash
@@ -803,7 +861,7 @@ if menu.id_modalidad:
 **Issue**: App `Api` not appearing in admin or not loading
 - **Cause**: App not yet added to `INSTALLED_APPS` in `settings.py`
 - **Solution**: Add `'Api',` to `INSTALLED_APPS` when ready to activate integration
-- **Important**: Complete `CHECKLIST_INTEGRACION_SIESA.md` before activating
+- **Important**: Create and complete `CHECKLIST_INTEGRACION_SIESA.md` before activating
 
 **Issue**: Siesa sync not working
 - **Cause**: Missing or incorrect environment variables
