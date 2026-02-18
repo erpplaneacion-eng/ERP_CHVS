@@ -72,7 +72,7 @@ def api_validar_semana(request):
             comp_nombre = req.componente.componente
             requerido = req.frecuencia
             actual = conteo_componentes.get(comp_id, 0)
-            cumple = actual == requerido
+            cumple = actual >= requerido
 
             if not cumple:
                 cumple_total = False

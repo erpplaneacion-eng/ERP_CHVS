@@ -10,7 +10,6 @@ from ..models import (
     TablaAlimentos2018Icbf,
     TablaAnalisisNutricionalMenu,
     TablaIngredientesPorNivel,
-    TablaIngredientesSiesa,
     TablaMenus,
     TablaPreparaciones,
 )
@@ -132,7 +131,7 @@ def api_sincronizar_pesos_preparaciones(request):
 
 def _guardar_ingrediente_por_nivel(menu, analisis, ing_data):
     id_preparacion = ing_data.get('id_preparacion')
-    id_ingrediente = ing_data.get('id_ingrediente')
+    id_ingrediente = ing_data.get('id_ingrediente')  # código ICBF
     peso_neto = float(ing_data.get('peso_neto', 0))
 
     try:
@@ -148,13 +147,6 @@ def _guardar_ingrediente_por_nivel(menu, analisis, ing_data):
         except TablaAlimentos2018Icbf.DoesNotExist:
             return False, f'Ingrediente ICBF {id_ingrediente} no encontrado'
 
-        # Usar el código ICBF como clave en TablaIngredientesSiesa.
-        # Crea el registro puente si no existe (integración Siesa pendiente de implementar).
-        ingrediente_siesa, _ = TablaIngredientesSiesa.objects.get_or_create(
-            id_ingrediente_siesa=id_ingrediente,
-            defaults={'nombre_ingrediente': ingrediente_icbf.nombre_del_alimento}
-        )
-
         valores = CalculoService.calcular_valores_nutricionales_alimento(
             ingrediente_icbf,
             peso_neto
@@ -163,11 +155,14 @@ def _guardar_ingrediente_por_nivel(menu, analisis, ing_data):
         parte_comestible = float(ingrediente_icbf.parte_comestible_field or 100)
         peso_bruto = CalculoService.calcular_peso_bruto(peso_neto, parte_comestible)
 
+        # Usar codigo_icbf como clave de unicidad.
+        # id_ingrediente_siesa queda NULL hasta que se active la integración Siesa.
         TablaIngredientesPorNivel.objects.update_or_create(
             id_analisis=analisis,
             id_preparacion=preparacion,
-            id_ingrediente_siesa=ingrediente_siesa,
+            codigo_icbf=str(id_ingrediente),
             defaults={
+                'id_ingrediente_siesa': None,
                 'peso_neto': peso_neto,
                 'peso_bruto': peso_bruto,
                 'calorias': valores.get('calorias', 0),

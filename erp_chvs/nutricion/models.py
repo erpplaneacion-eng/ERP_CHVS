@@ -768,10 +768,12 @@ class TablaIngredientesPorNivel(models.Model):
     )
     id_ingrediente_siesa = models.ForeignKey(
         TablaIngredientesSiesa,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         db_column='id_ingrediente_siesa',
-        verbose_name="Ingrediente",
-        related_name='configuraciones_por_nivel'
+        verbose_name="Ingrediente Siesa",
+        related_name='configuraciones_por_nivel',
+        null=True,
+        blank=True
     )
 
     # ========== PESOS CONFIGURADOS ==========
@@ -851,15 +853,15 @@ class TablaIngredientesPorNivel(models.Model):
         db_table = 'nutricion_tabla_ingredientes_por_nivel'
         verbose_name = 'Ingrediente Configurado por Nivel'
         verbose_name_plural = 'Ingredientes Configurados por Nivel'
-        ordering = ['id_preparacion', 'id_ingrediente_siesa']
-        unique_together = [['id_analisis', 'id_preparacion', 'id_ingrediente_siesa']]
+        ordering = ['id_preparacion', 'codigo_icbf']
+        unique_together = [['id_analisis', 'id_preparacion', 'codigo_icbf']]
         indexes = [
             models.Index(fields=['id_analisis']),
             models.Index(fields=['id_preparacion']),
         ]
 
     def __str__(self):
-        return f"{self.id_ingrediente_siesa.nombre_ingrediente} - {self.peso_neto}g"
+        return f"{self.codigo_icbf or 'sin_codigo'} - {self.peso_neto}g"
 
 
 class RequerimientoSemanal(models.Model):

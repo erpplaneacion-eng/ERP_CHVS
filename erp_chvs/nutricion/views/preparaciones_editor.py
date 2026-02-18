@@ -155,10 +155,10 @@ def _obtener_ingredientes_configurados_por_analisis(analisis):
     ingredientes_configurados = {}
     ingredientes_nivel = TablaIngredientesPorNivel.objects.filter(
         id_analisis=analisis
-    ).select_related('id_preparacion', 'id_ingrediente_siesa')
+    ).select_related('id_preparacion')
 
     for ing_nivel in ingredientes_nivel:
-        key = f"{ing_nivel.id_preparacion_id}_{ing_nivel.id_ingrediente_siesa.id_ingrediente_siesa}"
+        key = f"{ing_nivel.id_preparacion_id}_{ing_nivel.codigo_icbf}"
         ingredientes_configurados[key] = {
             'peso_neto': float(ing_nivel.peso_neto),
             'peso_bruto': float(ing_nivel.peso_bruto),

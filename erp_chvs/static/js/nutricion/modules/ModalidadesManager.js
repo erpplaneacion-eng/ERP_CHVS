@@ -403,7 +403,7 @@ class ModalidadesManager {
 
                 // Generar HTML del validador
                 const componentesHtml = data.componentes.map(comp => {
-                    const cumple = comp.actual === comp.requerido;
+                    const cumple = comp.actual >= comp.requerido;
                     const icono = cumple ? '✅' : '❌';
                     const claseEstado = cumple ? 'cumple' : 'no-cumple';
 
