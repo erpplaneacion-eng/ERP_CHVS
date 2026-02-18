@@ -460,35 +460,194 @@
         )).join('');
 
         const result = await Swal.fire({
-            title: 'Agregar ingrediente',
-            width: 680,
+            title: '<div style="display:flex;align-items:center;gap:12px;"><i class="bi bi-plus-circle-fill" style="color:#667eea;font-size:1.8rem;"></i><span style="color:#1f2937;">Agregar Preparación</span></div>',
+            width: 700,
             showCancelButton: true,
-            confirmButtonText: 'Agregar',
-            cancelButtonText: 'Cancelar',
+            confirmButtonText: '<i class="bi bi-check-circle-fill"></i> Agregar',
+            cancelButtonText: '<i class="bi bi-x-circle"></i> Cancelar',
+            customClass: {
+                popup: 'swal-popup-modern',
+                title: 'swal-title-modern',
+                confirmButton: 'swal-confirm-modern',
+                cancelButton: 'swal-cancel-modern'
+            },
             html: `
-                <div style="text-align:left;display:grid;gap:10px;">
-                    <label style="font-size:13px;font-weight:600;">Preparación</label>
-                    <select id="agregarModoPrep" class="swal2-input" style="margin:0;">
-                        <option value="existente">Usar preparación existente</option>
-                        <option value="nueva">Crear nueva preparación</option>
-                    </select>
-                    <div id="bloquePrepExistente">
-                        <select id="agregarPreparacionExistente" class="swal2-input" style="margin:0;">
+                <style>
+                    .swal-popup-modern {
+                        border-radius: 16px !important;
+                        box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
+                    }
+                    .swal-title-modern {
+                        padding: 24px 24px 0 !important;
+                        font-size: 1.35rem !important;
+                    }
+                    .swal-confirm-modern {
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+                        border: none !important;
+                        border-radius: 10px !important;
+                        padding: 12px 28px !important;
+                        font-weight: 600 !important;
+                        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+                        transition: all 0.3s !important;
+                    }
+                    .swal-confirm-modern:hover {
+                        transform: translateY(-2px) !important;
+                        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+                    }
+                    .swal-cancel-modern {
+                        background-color: #6b7280 !important;
+                        border: none !important;
+                        border-radius: 10px !important;
+                        padding: 12px 28px !important;
+                        font-weight: 600 !important;
+                    }
+                    .swal-cancel-modern:hover {
+                        background-color: #4b5563 !important;
+                    }
+                    .modal-field-group {
+                        text-align: left;
+                        margin-bottom: 24px;
+                    }
+                    .modal-label {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #374151;
+                        margin-bottom: 8px;
+                    }
+                    .modal-label i {
+                        font-size: 1.1rem;
+                    }
+                    .modal-select {
+                        width: 100%;
+                        padding: 12px 16px;
+                        border: 2px solid #e5e7eb;
+                        border-radius: 10px;
+                        font-size: 0.95rem;
+                        transition: all 0.3s;
+                        background-color: white;
+                    }
+                    .modal-select:focus {
+                        outline: none;
+                        border-color: #667eea;
+                        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+                    }
+                    .modal-input {
+                        width: 100%;
+                        padding: 12px 16px;
+                        border: 2px solid #e5e7eb;
+                        border-radius: 10px;
+                        font-size: 0.95rem;
+                        transition: all 0.3s;
+                    }
+                    .modal-input:focus {
+                        outline: none;
+                        border-color: #667eea;
+                        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+                    }
+                    .modal-help-text {
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        color: #6b7280;
+                        font-size: 12px;
+                        margin-top: 6px;
+                    }
+                    .modal-info-box {
+                        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+                        border: 2px solid #0ea5e9;
+                        border-radius: 12px;
+                        padding: 16px;
+                        margin-top: 24px;
+                        text-align: left;
+                    }
+                    .modal-info-box-content {
+                        display: flex;
+                        align-items: start;
+                        gap: 12px;
+                    }
+                    .modal-info-icon {
+                        color: #0ea5e9;
+                        font-size: 1.4rem;
+                        margin-top: 2px;
+                    }
+                    .modal-info-text {
+                        flex: 1;
+                    }
+                    .modal-info-title {
+                        color: #0c4a6e;
+                        font-weight: 600;
+                        margin-bottom: 6px;
+                        font-size: 13px;
+                    }
+                    .modal-info-desc {
+                        color: #0c4a6e;
+                        font-size: 12px;
+                        line-height: 1.5;
+                    }
+                </style>
+                <div style="padding: 8px 24px 24px;">
+                    <div class="modal-field-group">
+                        <label class="modal-label">
+                            <i class="bi bi-egg-fried" style="color:#667eea;"></i>
+                            Preparación
+                            <span style="color:#ef4444;">*</span>
+                        </label>
+                        <select id="agregarModoPrep" class="modal-select">
+                            <option value="existente">Usar preparación existente</option>
+                            <option value="nueva">Crear nueva preparación</option>
+                        </select>
+                    </div>
+
+                    <div id="bloquePrepExistente" class="modal-field-group">
+                        <select id="agregarPreparacionExistente" class="modal-select">
                             <option value="">Seleccione una preparación...</option>
                             ${opcionesPreparaciones}
                         </select>
+                        <small class="modal-help-text">
+                            <i class="bi bi-info-circle"></i>
+                            Seleccione la preparación a la que agregará el ingrediente
+                        </small>
                     </div>
-                    <div id="bloquePrepNueva" style="display:none;">
-                        <input id="agregarPreparacionNueva" class="swal2-input" style="margin:0;" placeholder="Nombre de nueva preparación" />
+
+                    <div id="bloquePrepNueva" class="modal-field-group" style="display:none;">
+                        <input id="agregarPreparacionNueva" class="modal-input" placeholder="Nombre de la nueva preparación" />
+                        <small class="modal-help-text">
+                            <i class="bi bi-info-circle"></i>
+                            Ingrese el nombre de la nueva preparación
+                        </small>
                     </div>
-                    <label style="font-size:13px;font-weight:600;">Ingrediente</label>
-                    <select id="agregarIngredienteId" class="swal2-input" style="margin:0;">
-                        <option value="">Seleccione un ingrediente...</option>
-                        ${opcionesIngredientes}
-                    </select>
-                    <label style="font-size:13px;font-weight:600;">Gramaje base (opcional)</label>
-                    <input id="agregarGramaje" class="swal2-input" type="number" min="0" step="0.1" style="margin:0;" placeholder="Ej: 100 (dejar vacío para valor por defecto)" />
-                    <small style="color:#6b7280;font-size:11px;">Si no especificas gramaje, se aplicarán los valores predeterminados por nivel.</small>
+
+                    <div class="modal-field-group">
+                        <label class="modal-label">
+                            <i class="bi bi-basket3" style="color:#10b981;"></i>
+                            Ingrediente ICBF
+                            <span style="color:#ef4444;">*</span>
+                        </label>
+                        <select id="agregarIngredienteId" class="modal-select">
+                            <option value="">Seleccione un ingrediente...</option>
+                            ${opcionesIngredientes}
+                        </select>
+                        <small class="modal-help-text">
+                            <i class="bi bi-search"></i>
+                            Busque por código o nombre del ingrediente
+                        </small>
+                    </div>
+
+                    <div class="modal-info-box">
+                        <div class="modal-info-box-content">
+                            <i class="bi bi-lightbulb-fill modal-info-icon"></i>
+                            <div class="modal-info-text">
+                                <div class="modal-info-title">Nota importante</div>
+                                <div class="modal-info-desc">
+                                    El ingrediente se agregará a <strong>todos los niveles escolares</strong>.
+                                    Podrás ajustar los pesos individuales después.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `,
             didOpen: () => {
@@ -506,7 +665,6 @@
                 const idPrep = document.getElementById('agregarPreparacionExistente').value;
                 const nomPrep = document.getElementById('agregarPreparacionNueva').value.trim();
                 const idIng = document.getElementById('agregarIngredienteId').value;
-                const gramajeInput = document.getElementById('agregarGramaje').value;
 
                 // Validaciones
                 if (!idIng) {
@@ -521,24 +679,11 @@
                     return Swal.showValidationMessage('Debes escribir el nombre de la nueva preparación');
                 }
 
-                // Validar gramaje (permitir vacío para usar valores por defecto)
-                let gramaje = null;
-                if (gramajeInput && gramajeInput.trim() !== '') {
-                    const gramajeNum = parseFloat(gramajeInput);
-                    if (isNaN(gramajeNum)) {
-                        return Swal.showValidationMessage('El gramaje debe ser un número válido');
-                    }
-                    if (gramajeNum < 0) {
-                        return Swal.showValidationMessage('El gramaje debe ser mayor o igual a cero');
-                    }
-                    gramaje = gramajeNum;
-                }
-
                 return {
                     id_preparacion: modo === 'existente' ? parseInt(idPrep) : null,
                     preparacion_nombre: modo === 'nueva' ? nomPrep : '',
                     id_ingrediente: idIng,
-                    gramaje: gramaje
+                    gramaje: null  // Siempre null, se usarán valores predeterminados por nivel
                 };
             }
         });

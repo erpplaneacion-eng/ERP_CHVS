@@ -372,7 +372,7 @@ class PreparacionesManager {
         container.className = 'ingredientes-container';
         container.innerHTML = `
             <button class="btn-agregar-ingrediente" onclick="abrirAgregarIngrediente(${preparacion.id_preparacion})">
-                <i class="fas fa-plus"></i> Agregar Ingrediente
+                <i class="fas fa-plus"></i> Agregar Preparación
             </button>
             <div id="ingredientes-${preparacion.id_preparacion}" style="margin-top: 15px;">
                 <div class="no-ingredientes">Haz clic para cargar ingredientes</div>

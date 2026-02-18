@@ -61,7 +61,7 @@ python manage.py runserver
 ## Authorization & Access Control
 
 **Role-based access control (RBAC)** via Django Groups:
-- Middleware: `principal.middleware.RoleAccessMiddleware` (line 136 in settings.py)
+- Middleware: `principal.middleware.RoleAccessMiddleware` (configured in settings.py)
 - Controls module access per user group
 - Users without proper permissions are redirected to dashboard with error message
 
@@ -193,24 +193,34 @@ views.py → services.py → persistence_service.py → models.py
 - **fuzzy_matching.py**: String matching algorithms (e.g., sede names with typos)
 
 **Nutricion module services** (`nutricion/services/`):
-- `MenuService`: Menu CRUD operations and business logic
+- `MenuService` (`menu_service.py`): Menu CRUD operations and business logic
   - `generar_menu_con_ia()`: Multi-level AI menu generation orchestrator
   - Handles menu creation, preparation management, and nutritional analysis
-- `GeminiService`: AI-powered menu generation using Google Gemini API
+- `GeminiService` (`gemini_service.py`): AI-powered menu generation using Google Gemini API
   - Model: `gemini-2.5-flash` with `temperature=0.2`
   - Generates menus with specific weights for ALL educational levels in one call
   - Optimized token usage through compressed food database context
-- `MinutaService`: Standard pattern menu (Minuta Patrón) management
+- `MinutaService` (`minuta_service.py`): Standard pattern menu (Minuta Patrón) management
   - Loads from `nutricion/data/minuta_patron.json`
   - Handles normalization between database and JSON level names
-- `AnalisisNutricionalService`: Nutritional analysis calculations
-- `PreparacionService`: Preparation management
-- `IngredienteService`: Ingredient operations
-- `ProgramaService`: Program-related operations
-- `CalculoService`: Pure nutritional calculation functions
+- `AnalisisNutricionalService` (`analisis_service.py`): Nutritional analysis calculations
+  - Filters requirements by modality + school level for semaforización
+- `PreparacionService` (`preparacion_service.py`): Preparation management
+- `IngredienteService` (`ingrediente_service.py`): Ingredient operations
+- `ProgramaService` (`programa_service.py`): Program-related operations
+- `CalculoService` (`calculo_service.py`): Pure nutritional calculation functions
   - `calcular_valores_nutricionales_alimento()`: Calculate nutrients from ICBF data
   - `calcular_peso_bruto()`: Calculate gross weight from net weight
   - Stateless pure functions for easy testing
+
+**Nutricion views package** (`nutricion/views/`): Split into sub-modules (NOT a single views.py):
+- `core.py`: Main views (`nutricion_index`, `lista_alimentos`, `lista_menus`, `api_generar_menu_ia`)
+- `menus_api.py`: Menu API endpoints (`api_menus`, `api_menu_detail`, `api_modalidades_por_programa`, `api_generar_menus_automaticos`, `api_crear_menu_especial`)
+- `preparaciones_api.py`: Preparation + ingredient API endpoints (`api_preparaciones`, `api_preparacion_detail`, `api_copiar_preparacion`, `api_ingredientes`, `api_componentes_alimentos`, etc.)
+- `analisis_api.py`: Nutritional analysis endpoints (`api_analisis_nutricional_menu`, `guardar_analisis_nutricional`, `api_sincronizar_pesos_preparaciones`, `api_guardar_ingredientes_por_nivel`)
+- `exportes.py`: Excel/PDF downloads (`download_menu_excel`, `download_modalidad_excel`)
+- `semanal.py`: Weekly validation (`api_validar_semana`, `api_requerimientos_modalidad`)
+- `preparaciones_editor.py`: Preparations editor view
 
 ### Key Model Relationships
 
@@ -224,10 +234,12 @@ PrincipalDepartamento → PrincipalMunicipio → InstitucionesEducativas → Sed
 TablaMenus (menu base)
     ↓
 TablaPreparaciones (preparations, shared across levels)
+    ├─ id_componente → ComponentesAlimentos (food component, optional direct assignment)
     ↓
 TablaPreparacionIngredientes (M2M relation, NO weights stored here)
     ↓
 TablaIngredientesSiesa ↔ TablaAlimentos2018Icbf
+    └─ id_componente → ComponentesAlimentos (food component from ICBF)
 
 TablaMenus
     ↓
@@ -236,6 +248,11 @@ TablaAnalisisNutricionalMenu (ONE per educational level)
 TablaIngredientesPorNivel (weights + calculated nutrients PER LEVEL)
     - Links to: TablaAnalisisNutricionalMenu, TablaPreparaciones, TablaIngredientesSiesa
     - Stores: peso_neto, peso_bruto, calorias, proteina, grasa, cho, calcio, hierro, sodio
+
+ModalidadesDeConsumo
+    ├─→ RequerimientoSemanal (ComponentesAlimentos × frecuencia): how many times/week
+    │       each food component must appear for this modality
+    └─→ ComponentesModalidades: which food components are valid for this modality
 ```
 
 ### Frontend Architecture
@@ -351,6 +368,24 @@ MenusAvanzadosController (coordinator)
 ```
 
 **Testing**: `python test_gemini.py` validates multi-level generation with weight storage
+
+### Principal Module - CRUD Completo para Modalidades de Consumo
+**Feature** (February 2025):
+- `ModalidadesDeConsumo` now supports full create/edit/delete via AJAX
+- Recent commits added edit and delete operations (previously only create existed)
+- All CRUD via `api_modalidades` endpoint in `principal/views.py`
+
+### Nutricion Module - Validación Semanal de Componentes
+**New feature** (February 2026):
+- Validates that a weekly menu plan meets required food component frequencies per modality
+- Model: `RequerimientoSemanal` (db_table: `nutricion_requerimientos_semanales`)
+  - Links `ComponentesAlimentos` × `ModalidadesDeConsumo` with `frecuencia` (times/week)
+- Model: `ComponentesModalidades` (db_table: `nutricion_componentes_modalidades`)
+  - Defines which food components are valid/expected for each modality
+- API endpoints in `nutricion/views/semanal.py`:
+  - `GET /nutricion/api/validar-semana/?menu_ids=1,2,3&modalidad_id=5` → checks frequencies
+  - `GET /nutricion/api/requerimientos-modalidad/?modalidad_id=5` → lists requirements
+- Component lookup: first checks `TablaPreparaciones.id_componente` (manual override), then falls back to `TablaIngredientesSiesa.id_componente` (from ICBF data)
 
 ### Nutricion Module - UI Performance Optimizations
 **Performance improvements** (February 2025):
@@ -805,8 +840,8 @@ if menu.id_modalidad:
 
 #### Archivos Relacionados
 
-- **Modelo**: `nutricion/models.py` (línea 277)
-- **Servicio**: `nutricion/services/analisis_service.py` (línea 32)
+- **Modelo**: `nutricion/models.py` (`TablaRequerimientosNutricionales`)
+- **Servicio**: `nutricion/services/analisis_service.py`
 - **Migración**: `nutricion/migrations/0002_agregar_modalidad_requerimientos.py`
 - **Script población**: `nutricion/poblar_requerimientos_modalidad.py`
 - **Documentación completa**: `nutricion/README_SEMAFORIZACION_MODALIDAD.md`
