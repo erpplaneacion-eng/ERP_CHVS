@@ -357,7 +357,15 @@
                 }
 
                 ocultarOverlayGuardando();
-                showNotification(`✅ Cambios guardados exitosamente.`, 'success');
+
+                if (data.errores && data.errores.length > 0) {
+                    showNotification(
+                        `⚠️ Guardado parcial: ${data.registros_actualizados} ingrediente(s) guardado(s). Errores: ${data.errores.join(', ')}`,
+                        'warning'
+                    );
+                } else {
+                    showNotification(`✅ Cambios guardados exitosamente (${data.registros_actualizados} ingrediente(s)).`, 'success');
+                }
 
                 setTimeout(() => {
                     window.location.reload();

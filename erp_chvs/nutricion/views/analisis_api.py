@@ -141,16 +141,19 @@ def _guardar_ingrediente_por_nivel(menu, analisis, ing_data):
             id_menu=menu
         )
 
-        ingrediente_siesa = TablaIngredientesSiesa.objects.get(
-            id_ingrediente_siesa=id_ingrediente
-        )
-
         try:
             ingrediente_icbf = TablaAlimentos2018Icbf.objects.get(
                 codigo=id_ingrediente
             )
         except TablaAlimentos2018Icbf.DoesNotExist:
             return False, f'Ingrediente ICBF {id_ingrediente} no encontrado'
+
+        # Usar el código ICBF como clave en TablaIngredientesSiesa.
+        # Crea el registro puente si no existe (integración Siesa pendiente de implementar).
+        ingrediente_siesa, _ = TablaIngredientesSiesa.objects.get_or_create(
+            id_ingrediente_siesa=id_ingrediente,
+            defaults={'nombre_ingrediente': ingrediente_icbf.nombre_del_alimento}
+        )
 
         valores = CalculoService.calcular_valores_nutricionales_alimento(
             ingrediente_icbf,
@@ -180,8 +183,6 @@ def _guardar_ingrediente_por_nivel(menu, analisis, ing_data):
 
     except TablaPreparaciones.DoesNotExist:
         return False, f'Preparación {id_preparacion} no encontrada'
-    except TablaIngredientesSiesa.DoesNotExist:
-        return False, f'Ingrediente Siesa {id_ingrediente} no encontrado'
     except Exception as e:
         return False, f'Error procesando ingrediente {id_ingrediente}: {str(e)}'
 
