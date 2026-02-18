@@ -4,6 +4,87 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+
+    // ===== BÚSQUEDA DE MUNICIPIO (input + datalist sobre select oculto) =====
+    const municipioSelect = document.querySelector('[name="municipio"]');
+    const municipioSearch = document.getElementById('municipio-search');
+    const municipioDatalist = document.getElementById('municipios-datalist');
+
+    function initMunicipioDatalist() {
+        if (!municipioSelect || !municipioSearch || !municipioDatalist) return;
+
+        // Poblar datalist con los nombres de los municipios del select oculto
+        municipioDatalist.innerHTML = '';
+        Array.from(municipioSelect.options).forEach(function(option) {
+            if (option.value) {
+                const dataOption = document.createElement('option');
+                dataOption.value = option.text.trim();
+                municipioDatalist.appendChild(dataOption);
+            }
+        });
+
+        // Si el select ya tiene valor (error de validación backend), pre-llenar el input
+        if (municipioSelect.value) {
+            const selectedOpt = municipioSelect.options[municipioSelect.selectedIndex];
+            if (selectedOpt && selectedOpt.value) {
+                municipioSearch.value = selectedOpt.text.trim();
+            }
+        }
+    }
+
+    /**
+     * Sincroniza el texto ingresado en el input con el select oculto.
+     * Retorna true si encontró un municipio válido, false en caso contrario.
+     */
+    function syncMunicipioToSelect(searchValue) {
+        if (!municipioSelect) return false;
+        const texto = searchValue.trim().toUpperCase();
+        let found = false;
+
+        Array.from(municipioSelect.options).forEach(function(option) {
+            if (option.text.trim().toUpperCase() === texto) {
+                municipioSelect.value = option.value;
+                found = true;
+            }
+        });
+
+        if (!found) {
+            municipioSelect.value = '';
+        }
+        return found;
+    }
+
+    /**
+     * Establece el municipio seleccionado en el input de búsqueda a partir del PK.
+     * Se usa al abrir el modal de edición.
+     */
+    function setMunicipioSearchByPk(pk) {
+        if (!municipioSelect || !municipioSearch) return;
+        municipioSelect.value = pk;
+        const selectedOpt = municipioSelect.options[municipioSelect.selectedIndex];
+        if (selectedOpt && selectedOpt.value) {
+            municipioSearch.value = selectedOpt.text.trim();
+            municipioSearch.style.borderColor = '#ced4da';
+        }
+    }
+
+    if (municipioSearch) {
+        municipioSearch.addEventListener('input', function() {
+            syncMunicipioToSelect(this.value);
+        });
+        municipioSearch.addEventListener('change', function() {
+            const found = syncMunicipioToSelect(this.value);
+            if (this.value && !found) {
+                this.style.borderColor = '#e74c3c';
+            } else {
+                this.style.borderColor = '#ced4da';
+            }
+        });
+    }
+
+    initMunicipioDatalist();
+
+
     // ===== MODAL PARA PROGRAMAS =====
     const programModal = document.getElementById('program-modal');
     if (programModal) {
@@ -16,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const closeBtn = programModal.querySelector('.modal-close-btn');
         const cancelBtn = programModal.querySelector('.modal-cancel-btn');
-        
+
         const currentImageContainer = document.getElementById('current-image-container');
         const currentImageLink = document.getElementById('current-image-link');
 
@@ -35,6 +116,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 modalSubmitBtn.textContent = 'Guardar Programa';
                 modalForm.action = this.dataset.createUrl;
                 modalForm.reset();
+                // Limpiar estilos del campo de municipio (form.reset() no resetea CSS)
+                if (municipioSearch) {
+                    municipioSearch.style.borderColor = '#ced4da';
+                }
                 if (currentImageContainer) currentImageContainer.style.display = 'none';
                 openModal();
             });
@@ -50,12 +135,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 modalForm.action = `/planeacion/programas/editar/${data.id}/`;
 
                 modalForm.querySelector('[name="programa"]').value = data.programa;
-                modalForm.querySelector('[name="municipio"]').value = data.municipio;
+                setMunicipioSearchByPk(data.municipio);
                 modalForm.querySelector('[name="fecha_inicial"]').value = data.fechaInicial;
                 modalForm.querySelector('[name="fecha_final"]').value = data.fechaFinal;
                 modalForm.querySelector('[name="estado"]').value = data.estado;
                 modalForm.querySelector('[name="contrato"]').value = data.contrato;
-                
+
                 if (data.imagenUrl && currentImageContainer && currentImageLink) {
                     currentImageLink.href = data.imagenUrl;
                     currentImageContainer.style.display = 'block';
@@ -63,12 +148,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     currentImageContainer.style.display = 'none';
                 }
                 modalForm.querySelector('[name="imagen"]').value = '';
-                
+
                 openModal();
             });
         });
 
-        // Eventos para cerrar el modal de programas
+        // Eventos para cerrar el modal
         if (closeBtn) {
             closeBtn.addEventListener('click', closeModal);
         }
@@ -99,16 +184,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     cancelButtonText: 'Cancelar'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        // Crear un formulario temporal para enviar el POST de eliminación
                         const form = document.createElement('form');
                         form.method = 'POST';
                         form.action = `/planeacion/programas/eliminar/${programId}/`;
-                        
+
                         const csrfInput = document.createElement('input');
                         csrfInput.type = 'hidden';
                         csrfInput.name = 'csrfmiddlewaretoken';
                         csrfInput.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
-                        
+
                         form.appendChild(csrfInput);
                         document.body.appendChild(form);
                         form.submit();
@@ -117,20 +201,19 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // Validación antes de enviar
+        // ===== VALIDACIÓN ANTES DE ENVIAR =====
         modalForm.addEventListener('submit', function(e) {
             let isValid = true;
             let errorMessage = '';
 
-            // Validar campos requeridos
+            // Campos de texto/fecha obligatorios
             const requiredFields = [
                 {name: 'programa', label: 'Nombre del Programa'},
-                {name: 'municipio', label: 'Municipio'},
                 {name: 'fecha_inicial', label: 'Fecha Inicial'},
                 {name: 'fecha_final', label: 'Fecha Final'},
                 {name: 'contrato', label: 'Número de Contrato'}
             ];
-            
+
             requiredFields.forEach(function(field) {
                 const element = modalForm.querySelector(`[name="${field.name}"]`);
                 if (element && !element.value.trim()) {
@@ -142,10 +225,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
+            // Validar municipio (a través del select oculto sincronizado)
+            if (!municipioSelect || !municipioSelect.value) {
+                isValid = false;
+                errorMessage += '- Municipio es obligatorio\n';
+                if (municipioSearch) municipioSearch.style.borderColor = '#e74c3c';
+            }
+
             // Validar que la fecha final sea posterior a la inicial
             const fechaInicial = new Date(modalForm.querySelector('[name="fecha_inicial"]').value);
             const fechaFinal = new Date(modalForm.querySelector('[name="fecha_final"]').value);
-            
+
             if (fechaInicial && fechaFinal && fechaFinal <= fechaInicial) {
                 isValid = false;
                 errorMessage += '- La fecha final debe ser posterior a la fecha inicial\n';

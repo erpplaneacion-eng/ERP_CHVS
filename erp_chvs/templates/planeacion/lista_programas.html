@@ -88,12 +88,31 @@
                 <span class="modal-close-btn">&times;</span>
             </div>
             <div class="modal-body">
-                <form id="program-form" method="POST" 
-                      action="{% if editing_id %}{% url 'planeacion:editar_programa' editing_id %}{% else %}{% url 'planeacion:lista_programas' %}{% endif %}" 
+                <form id="program-form" method="POST"
+                      action="{% if editing_id %}{% url 'planeacion:editar_programa' editing_id %}{% else %}{% url 'planeacion:lista_programas' %}{% endif %}"
                       enctype="multipart/form-data">
                     {% csrf_token %}
-                    
-                    {{ form.as_p }}
+
+                    <p>{{ form.programa.label_tag }}{{ form.programa }}{{ form.programa.errors }}</p>
+
+                    <p>
+                        <label for="municipio-search">Municipio:</label>
+                        <input type="text"
+                               id="municipio-search"
+                               class="form-control"
+                               placeholder="Buscar municipio por nombre..."
+                               list="municipios-datalist"
+                               autocomplete="off">
+                        <datalist id="municipios-datalist"></datalist>
+                        <span style="display:none;">{{ form.municipio }}</span>
+                        {{ form.municipio.errors }}
+                    </p>
+
+                    <p>{{ form.fecha_inicial.label_tag }}{{ form.fecha_inicial }}{{ form.fecha_inicial.errors }}</p>
+                    <p>{{ form.fecha_final.label_tag }}{{ form.fecha_final }}{{ form.fecha_final.errors }}</p>
+                    <p>{{ form.estado.label_tag }}{{ form.estado }}{{ form.estado.errors }}</p>
+                    <p>{{ form.contrato.label_tag }}{{ form.contrato }}{{ form.contrato.errors }}</p>
+                    <p>{{ form.imagen.label_tag }}{{ form.imagen }}{{ form.imagen.errors }}</p>
 
                     <p id="current-image-container" style="display: none;">
                         <strong>Imagen actual:</strong> <a href="#" id="current-image-link" target="_blank">Ver imagen</a>
