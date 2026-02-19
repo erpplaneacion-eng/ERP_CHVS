@@ -9,6 +9,8 @@ from .models import (
     TablaRequerimientosNutricionales,
     GrupoExcluyenteSet,
     GrupoExcluyenteSetMiembro,
+    RestriccionAlimentoSubgrupo,
+    RestriccionAlimentoEspecifico,
 )
 
 
@@ -111,6 +113,28 @@ class GrupoExcluyenteSetAdmin(admin.ModelAdmin):
         grupos = obj.miembros.select_related('grupo').all()
         return ' + '.join(m.grupo.grupo_alimentos for m in grupos)
     lista_grupos.short_description = 'Grupos del Set'
+
+
+class RestriccionAlimentoEspecificoInline(admin.TabularInline):
+    model = RestriccionAlimentoEspecifico
+    autocomplete_fields = ['alimento']
+    extra = 1
+
+
+@admin.register(RestriccionAlimentoSubgrupo)
+class RestriccionAlimentoSubgrupoAdmin(admin.ModelAdmin):
+    """
+    Configuración de sub-restricciones de alimentos por subgrupo y modalidad.
+    Permite definir qué alimentos específicos deben usarse dentro de un grupo.
+    """
+    list_display = ('nombre', 'modalidad', 'grupo', 'frecuencia', 'num_alimentos')
+    list_filter = ('modalidad', 'grupo')
+    search_fields = ('nombre',)
+    inlines = [RestriccionAlimentoEspecificoInline]
+
+    def num_alimentos(self, obj):
+        return obj.alimentos.count()
+    num_alimentos.short_description = 'Alimentos válidos'
 
 
 @admin.register(TablaRequerimientosNutricionales)

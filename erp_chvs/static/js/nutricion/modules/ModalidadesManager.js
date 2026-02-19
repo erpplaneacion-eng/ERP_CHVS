@@ -441,6 +441,39 @@ class ModalidadesManager {
                     `;
                 }).join('');
 
+                // Sub-restricciones de alimentos
+                let subRestriccionesHtml = '';
+                if (data.restricciones_subgrupo && data.restricciones_subgrupo.length > 0) {
+                    subRestriccionesHtml = data.restricciones_subgrupo.map(r => {
+                        const cumple = r.cumple;
+                        const icono = cumple ? '✅' : '❌';
+                        const claseEstado = cumple ? 'cumple' : 'no-cumple';
+                        const falta = r.frecuencia - r.actual;
+                        let mensaje = '';
+                        if (r.actual > r.frecuencia) {
+                            mensaje = `(Excede por ${r.actual - r.frecuencia})`;
+                        } else if (falta > 0) {
+                            mensaje = `(Falta ${falta})`;
+                        }
+                        const tooltipHtml = this._generarTooltipSubRestriccion(r);
+                        return `
+                            <div class="validador-item ${claseEstado} sub-restriccion">
+                                <span class="validador-icono">${icono}</span>
+                                <span class="validador-componente">
+                                    ${r.grupo_id} › ${r.nombre}
+                                </span>
+                                <div class="validador-frecuencias">
+                                    <span class="frecuencia-badge ${claseEstado}">
+                                        ${r.actual} / ${r.frecuencia}
+                                    </span>
+                                    ${mensaje ? `<span class="frecuencia-mensaje">${mensaje}</span>` : ''}
+                                    ${tooltipHtml}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
                 const cumpleGeneral = data.cumple;
                 const estadoGeneral = cumpleGeneral
                     ? '<span class="validador-estado-ok"><i class="fas fa-check-circle"></i> Semana completa</span>'
@@ -449,6 +482,7 @@ class ModalidadesManager {
                 validador.innerHTML = `
                     <div class="validador-componentes">
                         ${componentesHtml}
+                        ${subRestriccionesHtml}
                     </div>
                     <div class="validador-resumen ${cumpleGeneral ? 'valido' : 'invalido'}">
                         ${estadoGeneral}
@@ -462,8 +496,12 @@ class ModalidadesManager {
                     if (!encoded) return;
                     let htmlContent = '';
                     try {
-                        const excl = JSON.parse(decodeURIComponent(encoded));
-                        htmlContent = this._buildTooltipHtml(excl);
+                        const parsed = JSON.parse(decodeURIComponent(encoded));
+                        if (el.classList.contains('sub-restriccion-tooltip-icon')) {
+                            htmlContent = this._buildTooltipSubRestriccionHtml(parsed);
+                        } else {
+                            htmlContent = this._buildTooltipHtml(parsed);
+                        }
                     } catch (err) {
                         console.warn('[ModalidadesManager] Error al parsear tooltip JSON:', err);
                         return;
@@ -727,6 +765,51 @@ class ModalidadesManager {
                 const dia = DIAS[item.menu_index] || `Día ${item.menu_index + 1}`;
                 partes.push(`&bull; ${dia}: ${item.preparacion} <span style="opacity:.7">(${item.grupo_nombre})</span>`);
             });
+        }
+
+        return partes.join('<br>');
+    }
+
+    /**
+     * Genera el icono de tooltip para una sub-restricción de alimentos.
+     * @param {Object} r - Sub-restricción del validador semanal
+     * @returns {string} HTML del icono con el atributo data-tooltip-json
+     */
+    _generarTooltipSubRestriccion(r) {
+        const payload = {
+            nombre: r.nombre,
+            nombres_validos: r.nombres_validos,
+            detalle: r.detalle,
+        };
+        const jsonEncoded = encodeURIComponent(JSON.stringify(payload));
+        return `<span class="sub-restriccion-tooltip-icon" data-tooltip-json="${jsonEncoded}">
+                    <i class="fas fa-list-check"></i>
+                </span>`;
+    }
+
+    /**
+     * Construye el HTML interno del tooltip de una sub-restricción.
+     * @param {Object} data - {nombre, nombres_validos, detalle}
+     * @returns {string} HTML para mostrar en el tooltip
+     */
+    _buildTooltipSubRestriccionHtml(data) {
+        const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+        const partes = [];
+
+        partes.push(`<strong>${data.nombre}</strong>`);
+
+        if (data.nombres_validos && data.nombres_validos.length > 0) {
+            partes.push(`<em>Válidos: ${data.nombres_validos.join(', ')}</em>`);
+        }
+
+        if (data.detalle && data.detalle.length > 0) {
+            partes.push('');
+            data.detalle.forEach(item => {
+                const dia = DIAS[item.menu_index] || `Día ${item.menu_index + 1}`;
+                partes.push(`&bull; ${dia}: ${item.preparacion} <span style="opacity:.7">(${item.alimento_usado})</span>`);
+            });
+        } else {
+            partes.push('<em>Ningún alimento válido usado aún</em>');
         }
 
         return partes.join('<br>');

@@ -1036,3 +1036,72 @@ class GrupoExcluyenteSetMiembro(models.Model):
 
     def __str__(self):
         return f"{self.set_excluyente.nombre} ← {self.grupo.grupo_alimentos}"
+
+
+class RestriccionAlimentoSubgrupo(models.Model):
+    """
+    Sub-restricción dentro de un grupo: de las apariciones del grupo en una semana,
+    al menos `frecuencia` deben usar un alimento de la lista blanca.
+
+    Ejemplo: G4 aparece 5 veces/semana, pero 2 de ellas deben ser leguminosas.
+    """
+    modalidad = models.ForeignKey(
+        ModalidadesDeConsumo,
+        on_delete=models.CASCADE,
+        db_column='id_modalidades',
+        verbose_name="Modalidad de Consumo",
+        related_name='restricciones_subgrupo'
+    )
+    grupo = models.ForeignKey(
+        GruposAlimentos,
+        on_delete=models.CASCADE,
+        verbose_name="Grupo de Alimentos",
+        related_name='restricciones_subgrupo'
+    )
+    nombre = models.CharField(
+        max_length=120,
+        verbose_name="Nombre de la Sub-restricción",
+        help_text="Ej: 'G4 Leguminosas', 'G4 Huevo obligatorio'"
+    )
+    frecuencia = models.IntegerField(
+        verbose_name="Frecuencia Requerida",
+        help_text="Cuántas veces por semana debe usarse un alimento de la lista blanca"
+    )
+
+    class Meta:
+        db_table = 'nutricion_restriccion_alimento_subgrupo'
+        verbose_name = "Sub-restricción de Alimento"
+        verbose_name_plural = "Sub-restricciones de Alimentos"
+        ordering = ['modalidad', 'grupo', 'nombre']
+
+    def __str__(self):
+        return f"{self.modalidad.modalidad} — {self.nombre} (×{self.frecuencia}/sem)"
+
+
+class RestriccionAlimentoEspecifico(models.Model):
+    """
+    Alimento válido para cumplir una RestriccionAlimentoSubgrupo.
+    """
+    restriccion = models.ForeignKey(
+        RestriccionAlimentoSubgrupo,
+        on_delete=models.CASCADE,
+        related_name='alimentos',
+        verbose_name="Sub-restricción"
+    )
+    alimento = models.ForeignKey(
+        TablaAlimentos2018Icbf,
+        on_delete=models.CASCADE,
+        to_field='codigo',
+        db_column='codigo_alimento',
+        related_name='restricciones_subgrupo',
+        verbose_name="Alimento ICBF"
+    )
+
+    class Meta:
+        db_table = 'nutricion_restriccion_alimento_especifico'
+        unique_together = [['restriccion', 'alimento']]
+        verbose_name = "Alimento de Sub-restricción"
+        verbose_name_plural = "Alimentos de Sub-restricciones"
+
+    def __str__(self):
+        return f"{self.restriccion.nombre} ← {self.alimento.nombre_del_alimento}"

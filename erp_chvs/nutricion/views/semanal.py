@@ -6,6 +6,10 @@ from ..services.exclusion_service import (
     cargar_sets_exclusion,
     ajustar_componentes_con_exclusion,
 )
+from ..services.restriccion_subgrupo_service import (
+    cargar_restricciones_subgrupo,
+    validar_restricciones_subgrupo,
+)
 
 
 @login_required
@@ -44,6 +48,10 @@ def api_validar_semana(request):
         # Usado por exclusion_service para generar los tooltips
         preparaciones_detalle = {}
 
+        # ingredientes_detalle_por_grupo: {grupo_id: {menu_id: [{'codigo', 'nombre_alimento', 'preparacion', 'menu_index'}]}}
+        # Usado por restriccion_subgrupo_service para validar listas blancas
+        ingredientes_detalle_por_grupo = {}
+
         for idx, menu_id in enumerate(menu_ids):
             preparaciones = TablaPreparaciones.objects.filter(
                 id_menu_id=menu_id
@@ -72,6 +80,22 @@ def api_validar_semana(request):
                     'preparacion': prep.preparacion,
                     'menu_index': idx,  # 0=Lunes…4=Viernes dentro de la semana
                 })
+
+                # Para sub-restricciones: recolectar códigos ICBF de ingredientes
+                for ing_rel in prep.ingredientes.all():
+                    alimento = ing_rel.id_ingrediente_siesa
+                    if alimento:
+                        (
+                            ingredientes_detalle_por_grupo
+                            .setdefault(grupo_id, {})
+                            .setdefault(menu_id, [])
+                            .append({
+                                'codigo': alimento.codigo,
+                                'nombre_alimento': alimento.nombre_del_alimento,
+                                'preparacion': prep.preparacion,
+                                'menu_index': idx,
+                            })
+                        )
 
             for grupo_id in grupos_del_menu:
                 if grupo_id not in menus_por_grupo:
@@ -105,11 +129,22 @@ def api_validar_semana(request):
             preparaciones_detalle,
         )
 
-        cumple_total = all(comp['cumple'] for comp in grupos_resultado)
+        # ── Sub-restricciones de alimentos ───────────────────────────────────
+        restricciones_subgrupo_cfg = cargar_restricciones_subgrupo(modalidad_id)
+        restricciones_subgrupo_resultado = validar_restricciones_subgrupo(
+            restricciones_subgrupo_cfg,
+            ingredientes_detalle_por_grupo,
+        )
+
+        cumple_total = (
+            all(comp['cumple'] for comp in grupos_resultado)
+            and all(r['cumple'] for r in restricciones_subgrupo_resultado)
+        )
 
         return JsonResponse({
             'cumple': cumple_total,
             'componentes': grupos_resultado,
+            'restricciones_subgrupo': restricciones_subgrupo_resultado,
         })
 
     except ValueError as e:
