@@ -451,3 +451,11 @@
     border: 7px solid transparent;
     border-top-color: #1e293b;
 }
+
+/* Cuando el tooltip se muestra debajo del elemento */
+.tooltip-excluyente-burbuja.tooltip-abajo::after {
+    top: auto;
+    bottom: 100%;
+    border-top-color: transparent;
+    border-bottom-color: #1e293b;
+}

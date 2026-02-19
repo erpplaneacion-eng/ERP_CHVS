@@ -747,12 +747,25 @@ class ModalidadesManager {
             burbuja.innerHTML = htmlContent;
             document.body.appendChild(burbuja);
 
+            // position:fixed usa coordenadas del viewport (getBoundingClientRect),
+            // NO se suma window.scrollY.
             const rect = el.getBoundingClientRect();
-            const top = rect.top + window.scrollY - burbuja.offsetHeight - 10;
-            const left = rect.left + window.scrollX + rect.width / 2 - burbuja.offsetWidth / 2;
+            const bH = burbuja.offsetHeight;
+            const bW = burbuja.offsetWidth;
 
-            // Evitar que se salga del viewport por la izquierda
-            burbuja.style.left = Math.max(8, left) + 'px';
+            let top = rect.top - bH - 10;
+            let left = rect.left + rect.width / 2 - bW / 2;
+
+            // Si no cabe arriba, mostrar debajo
+            if (top < 8) {
+                top = rect.bottom + 10;
+                // Quitar la flecha superior y agregar flecha inferior
+                burbuja.classList.add('tooltip-abajo');
+            }
+
+            // Evitar desborde horizontal
+            const maxLeft = window.innerWidth - bW - 8;
+            burbuja.style.left = Math.max(8, Math.min(left, maxLeft)) + 'px';
             burbuja.style.top = top + 'px';
         });
 
