@@ -974,3 +974,65 @@ class MinutaPatronMeta(models.Model):
 
     def __str__(self):
         return f"{self.id_modalidad.modalidad} - {self.id_grado_escolar_uapa.nivel_escolar_uapa} - {self.id_componente.componente}"
+
+
+class GrupoExcluyenteSet(models.Model):
+    """
+    Define un conjunto de grupos de alimentos que comparten una cuota semanal.
+    Los grupos del mismo set son excluyentes entre sí: el total de apariciones
+    de TODOS los grupos del set debe cumplir con frecuencia_compartida (no cada uno por separado).
+
+    Ejemplo: G4 y G6 comparten cuota de 2/semana → G4+G6 ≥ 2, no G4≥2 Y G6≥2.
+    """
+    modalidad = models.ForeignKey(
+        ModalidadesDeConsumo,
+        on_delete=models.CASCADE,
+        db_column='id_modalidades',
+        verbose_name="Modalidad de Consumo",
+        related_name='grupos_excluyentes_sets'
+    )
+    nombre = models.CharField(
+        max_length=100,
+        verbose_name="Nombre del Set",
+        help_text="Nombre descriptivo. Ej: 'G4-G6 proteína excluyente'"
+    )
+    frecuencia_compartida = models.IntegerField(
+        verbose_name="Frecuencia Compartida",
+        help_text="Veces/semana que debe aparecer CUALQUIERA de los grupos del set en conjunto"
+    )
+
+    class Meta:
+        db_table = 'nutricion_grupo_excluyente_set'
+        verbose_name = "Set de Grupos Excluyentes"
+        verbose_name_plural = "Sets de Grupos Excluyentes"
+        ordering = ['modalidad', 'nombre']
+
+    def __str__(self):
+        return f"{self.modalidad.modalidad} — {self.nombre} ({self.frecuencia_compartida}x/sem)"
+
+
+class GrupoExcluyenteSetMiembro(models.Model):
+    """
+    Grupo de alimentos perteneciente a un set de exclusión.
+    """
+    set_excluyente = models.ForeignKey(
+        GrupoExcluyenteSet,
+        on_delete=models.CASCADE,
+        related_name='miembros',
+        verbose_name="Set Excluyente"
+    )
+    grupo = models.ForeignKey(
+        GruposAlimentos,
+        on_delete=models.CASCADE,
+        related_name='sets_excluyentes',
+        verbose_name="Grupo de Alimentos"
+    )
+
+    class Meta:
+        db_table = 'nutricion_grupo_excluyente_set_miembro'
+        unique_together = [['set_excluyente', 'grupo']]
+        verbose_name = "Miembro del Set Excluyente"
+        verbose_name_plural = "Miembros del Set Excluyente"
+
+    def __str__(self):
+        return f"{self.set_excluyente.nombre} ← {self.grupo.grupo_alimentos}"

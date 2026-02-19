@@ -374,3 +374,80 @@
         overflow-y: auto;
     }
 }
+
+/* ─── Grupos Excluyentes — Validador Semanal ─────────────────────────────── */
+
+/* Borde lateral especial para ítems de grupos excluyentes */
+.validador-item.excluyente {
+    border-left-color: #8b5cf6;
+    position: relative;
+}
+
+.validador-item.excluyente.cumple {
+    background: linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%);
+    border-left-color: #7c3aed;
+}
+
+.validador-item.excluyente.no-cumple {
+    background: linear-gradient(135deg, #fde8e8 0%, #fff1f2 100%);
+    border-left-color: #dc2626;
+}
+
+/* Icono "⇄" junto al nombre del grupo excluyente */
+.badge-excluyente {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background-color: #8b5cf6;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 0.6rem;
+    margin-left: 5px;
+    vertical-align: middle;
+    cursor: default;
+}
+
+/* Icono de información con tooltip */
+.excluyente-tooltip-icon {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    color: #7c3aed;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: color 0.15s;
+}
+
+.excluyente-tooltip-icon:hover {
+    color: #5b21b6;
+}
+
+/* ─── Burbuja tooltip custom para grupos excluyentes ────────────────────── */
+.tooltip-excluyente-burbuja {
+    position: fixed;
+    background: #1e293b;
+    color: #f8fafc;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    max-width: 300px;
+    min-width: 180px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    z-index: 99999;
+    pointer-events: none;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.tooltip-excluyente-burbuja::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 7px solid transparent;
+    border-top-color: #1e293b;
+}

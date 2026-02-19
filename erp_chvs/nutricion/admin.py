@@ -6,7 +6,9 @@ from .models import (
     TablaPreparaciones,
     TablaIngredientesSiesa,
     TablaPreparacionIngredientes,
-    TablaRequerimientosNutricionales
+    TablaRequerimientosNutricionales,
+    GrupoExcluyenteSet,
+    GrupoExcluyenteSetMiembro,
 )
 
 
@@ -86,6 +88,29 @@ class TablaPreparacionIngredientesAdmin(admin.ModelAdmin):
     search_fields = ('id_preparacion__preparacion', 'id_ingrediente_siesa__nombre_del_alimento', 'id_ingrediente_siesa__codigo')
     autocomplete_fields = ['id_preparacion', 'id_ingrediente_siesa']
     list_per_page = 25
+
+
+class GrupoExcluyenteSetMiembroInline(admin.TabularInline):
+    model = GrupoExcluyenteSetMiembro
+    extra = 1
+    autocomplete_fields = []
+
+
+@admin.register(GrupoExcluyenteSet)
+class GrupoExcluyenteSetAdmin(admin.ModelAdmin):
+    """
+    Configuración de grupos excluyentes por modalidad.
+    Permite definir cuáles grupos comparten cuota semanal.
+    """
+    list_display = ('nombre', 'modalidad', 'frecuencia_compartida', 'lista_grupos')
+    list_filter = ('modalidad',)
+    search_fields = ('nombre', 'modalidad__modalidad')
+    inlines = [GrupoExcluyenteSetMiembroInline]
+
+    def lista_grupos(self, obj):
+        grupos = obj.miembros.select_related('grupo').all()
+        return ' + '.join(m.grupo.grupo_alimentos for m in grupos)
+    lista_grupos.short_description = 'Grupos del Set'
 
 
 @admin.register(TablaRequerimientosNutricionales)

@@ -403,26 +403,39 @@ class ModalidadesManager {
 
                 // Generar HTML del validador
                 const componentesHtml = data.componentes.map(comp => {
-                    const cumple = comp.actual >= comp.requerido;
+                    const requeridoDisplay = comp.requerido_efectivo !== undefined
+                        ? comp.requerido_efectivo
+                        : comp.requerido;
+                    const cumple = comp.cumple;
                     const icono = cumple ? '✅' : '❌';
                     const claseEstado = cumple ? 'cumple' : 'no-cumple';
 
                     let mensaje = '';
-                    if (comp.actual > comp.requerido) {
-                        mensaje = `(Excede por ${comp.actual - comp.requerido})`;
-                    } else if (comp.actual < comp.requerido) {
-                        mensaje = `(Falta ${comp.requerido - comp.actual})`;
+                    const falta = requeridoDisplay - comp.actual;
+                    if (comp.actual > requeridoDisplay) {
+                        mensaje = `(Excede por ${comp.actual - requeridoDisplay})`;
+                    } else if (falta > 0) {
+                        mensaje = `(Falta ${falta})`;
                     }
 
+                    // Tooltip para grupos excluyentes
+                    const tooltipHtml = this._generarTooltipExcluyente(comp);
+                    const badgeExcluyente = comp.exclusion
+                        ? `<span class="badge-excluyente" title="Grupos excluyentes">⇄</span>`
+                        : '';
+
                     return `
-                        <div class="validador-item ${claseEstado}">
+                        <div class="validador-item ${claseEstado}${comp.exclusion ? ' excluyente' : ''}">
                             <span class="validador-icono">${icono}</span>
-                            <span class="validador-componente">${comp.grupo}</span>
+                            <span class="validador-componente">
+                                ${comp.grupo}${badgeExcluyente}
+                            </span>
                             <div class="validador-frecuencias">
                                 <span class="frecuencia-badge ${claseEstado}">
-                                    ${comp.actual} / ${comp.requerido}
+                                    ${comp.actual} / ${requeridoDisplay}
                                 </span>
                                 ${mensaje ? `<span class="frecuencia-mensaje">${mensaje}</span>` : ''}
+                                ${tooltipHtml}
                             </div>
                         </div>
                     `;
@@ -441,6 +454,22 @@ class ModalidadesManager {
                         ${estadoGeneral}
                     </div>
                 `;
+
+                // Inicializar tooltips custom (sin Bootstrap Tooltip / Popper.js).
+                // Bootstrap Tooltip falla silenciosamente en contenedores con animación CSS.
+                validador.querySelectorAll('[data-tooltip-json]').forEach(el => {
+                    const encoded = el.getAttribute('data-tooltip-json');
+                    if (!encoded) return;
+                    let htmlContent = '';
+                    try {
+                        const excl = JSON.parse(decodeURIComponent(encoded));
+                        htmlContent = this._buildTooltipHtml(excl);
+                    } catch (err) {
+                        console.warn('[ModalidadesManager] Error al parsear tooltip JSON:', err);
+                        return;
+                    }
+                    this._attachTooltipCustom(el, htmlContent);
+                });
 
             } catch (error) {
                 console.error('Error al validar semana:', error);
@@ -650,6 +679,89 @@ class ModalidadesManager {
         });
 
         return estadisticas;
+    }
+
+    /**
+     * Genera el icono de tooltip para un componente excluyente.
+     * Usa encodeURIComponent para serializar el JSON de forma segura en el atributo HTML,
+     * evitando problemas con caracteres especiales (&, <, >, comillas) en nombres de grupos
+     * o preparaciones.
+     * @param {Object} comp - Componente del validador semanal
+     * @returns {string} HTML del icono con el atributo data-tooltip-json
+     */
+    _generarTooltipExcluyente(comp) {
+        if (!comp.exclusion) return '';
+
+        // encodeURIComponent garantiza que cualquier caracter especial quede seguro
+        // para ser usado como valor de atributo HTML.
+        const jsonEncoded = encodeURIComponent(JSON.stringify(comp.exclusion));
+
+        return `<span class="excluyente-tooltip-icon" data-tooltip-json="${jsonEncoded}">
+                    <i class="fas fa-link"></i>
+                </span>`;
+    }
+
+    /**
+     * Construye el HTML interno del tooltip de exclusión a partir del objeto exclusion.
+     * Se llama en tiempo de inicialización del tooltip (no en innerHTML).
+     * @param {Object} excl - Datos de exclusión del componente
+     * @returns {string} HTML para mostrar en el tooltip
+     */
+    _buildTooltipHtml(excl) {
+        const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+        const nombresHermanos = excl.grupos_hermanos.map(g => g.nombre).join(', ');
+
+        let partes = [];
+
+        const cuotaRestante = excl.cuota_compartida - excl.cuota_total_usada;
+        if (cuotaRestante <= 0) {
+            partes.push(`<strong>&#10003; Cuota cubierta (${excl.cuota_total_usada}/${excl.cuota_compartida})</strong>`);
+        } else {
+            partes.push(`<strong>&#8644; Compartida con ${nombresHermanos}: ${excl.cuota_total_usada}/${excl.cuota_compartida}</strong>`);
+        }
+
+        if (excl.aporte_hermanos.length === 0) {
+            partes.push(`<em>Ningún grupo hermano ha aportado aún</em>`);
+        } else {
+            excl.aporte_hermanos.forEach(item => {
+                const dia = DIAS[item.menu_index] || `Día ${item.menu_index + 1}`;
+                partes.push(`&bull; ${dia}: ${item.preparacion} <span style="opacity:.7">(${item.grupo_nombre})</span>`);
+            });
+        }
+
+        return partes.join('<br>');
+    }
+
+    /**
+     * Adjunta un tooltip custom (sin Bootstrap/Popper) a un elemento.
+     * Crea una burbuja flotante en el body al hacer hover.
+     * @param {HTMLElement} el - Elemento disparador
+     * @param {string} htmlContent - HTML del contenido del tooltip
+     */
+    _attachTooltipCustom(el, htmlContent) {
+        let burbuja = null;
+
+        el.addEventListener('mouseenter', () => {
+            burbuja = document.createElement('div');
+            burbuja.className = 'tooltip-excluyente-burbuja';
+            burbuja.innerHTML = htmlContent;
+            document.body.appendChild(burbuja);
+
+            const rect = el.getBoundingClientRect();
+            const top = rect.top + window.scrollY - burbuja.offsetHeight - 10;
+            const left = rect.left + window.scrollX + rect.width / 2 - burbuja.offsetWidth / 2;
+
+            // Evitar que se salga del viewport por la izquierda
+            burbuja.style.left = Math.max(8, left) + 'px';
+            burbuja.style.top = top + 'px';
+        });
+
+        el.addEventListener('mouseleave', () => {
+            if (burbuja) {
+                burbuja.remove();
+                burbuja = null;
+            }
+        });
     }
 }
 
