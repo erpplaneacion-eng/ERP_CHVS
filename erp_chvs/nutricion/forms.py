@@ -8,7 +8,7 @@ class AlimentoForm(forms.ModelForm):
     class Meta:
         model = TablaAlimentos2018Icbf
         fields = [
-            'codigo', 'nombre_del_alimento', 'parte_analizada',
+            'codigo', 'nombre_del_alimento', 'parte_analizada', 'id_componente',
             'humedad_g', 'energia_kcal', 'energia_kj', 'proteina_g',
             'lipidos_g', 'carbohidratos_totales_g', 'carbohidratos_disponibles_g',
             'fibra_dietaria_g', 'cenizas_g', 'calcio_mg', 'hierro_mg',
@@ -24,6 +24,9 @@ class AlimentoForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Código único del alimento',
                 'required': True
+            }),
+            'id_componente': forms.Select(attrs={
+                'class': 'form-control'
             }),
             'nombre_del_alimento': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -43,12 +46,14 @@ class AlimentoForm(forms.ModelForm):
             }),
             'energia_kcal': forms.NumberInput(attrs={
                 'class': 'form-control',
+                'step': '0.01',
                 'min': '0',
                 'placeholder': 'Energía en kcal',
                 'required': True
             }),
             'energia_kj': forms.NumberInput(attrs={
                 'class': 'form-control',
+                'step': '0.01',
                 'min': '0',
                 'placeholder': 'Energía en kJ',
                 'required': True
@@ -94,6 +99,7 @@ class AlimentoForm(forms.ModelForm):
             }),
             'calcio_mg': forms.NumberInput(attrs={
                 'class': 'form-control',
+                'step': '0.01',
                 'min': '0',
                 'placeholder': 'Calcio en mg'
             }),
@@ -105,11 +111,13 @@ class AlimentoForm(forms.ModelForm):
             }),
             'sodio_mg': forms.NumberInput(attrs={
                 'class': 'form-control',
+                'step': '0.01',
                 'min': '0',
                 'placeholder': 'Sodio en mg'
             }),
             'fosforo_mg': forms.NumberInput(attrs={
                 'class': 'form-control',
+                'step': '0.01',
                 'min': '0',
                 'placeholder': 'Fósforo en mg'
             }),
@@ -127,11 +135,13 @@ class AlimentoForm(forms.ModelForm):
             }),
             'magnesio_mg': forms.NumberInput(attrs={
                 'class': 'form-control',
+                'step': '0.01',
                 'min': '0',
                 'placeholder': 'Magnesio en mg'
             }),
             'potasio_mg': forms.NumberInput(attrs={
                 'class': 'form-control',
+                'step': '0.01',
                 'min': '0',
                 'placeholder': 'Potasio en mg'
             }),
@@ -167,11 +177,13 @@ class AlimentoForm(forms.ModelForm):
             }),
             'vitamina_c_mg': forms.NumberInput(attrs={
                 'class': 'form-control',
+                'step': '0.01',
                 'min': '0',
                 'placeholder': 'Vitamina C en mg'
             }),
             'vitamina_a_er': forms.NumberInput(attrs={
                 'class': 'form-control',
+                'step': '0.01',
                 'min': '0',
                 'placeholder': 'Vitamina A ER'
             }),
@@ -195,11 +207,13 @@ class AlimentoForm(forms.ModelForm):
             }),
             'colesterol_mg': forms.NumberInput(attrs={
                 'class': 'form-control',
+                'step': '0.01',
                 'min': '0',
                 'placeholder': 'Colesterol en mg'
             }),
             'parte_comestible_field': forms.NumberInput(attrs={
                 'class': 'form-control',
+                'step': '0.01',
                 'min': '0',
                 'max': '100',
                 'placeholder': 'Parte comestible (%)'
@@ -210,6 +224,7 @@ class AlimentoForm(forms.ModelForm):
             'codigo': 'Código',
             'nombre_del_alimento': 'Nombre del Alimento',
             'parte_analizada': 'Parte Analizada',
+            'id_componente': 'Componente de Alimento',
             'humedad_g': 'Humedad (g)',
             'energia_kcal': 'Energía (kcal)',
             'energia_kj': 'Energía (kJ)',
@@ -326,13 +341,13 @@ class AlimentoForm(forms.ModelForm):
         energia = self.cleaned_data.get('energia_kcal')
         if energia is None:
             raise ValidationError("La energía en kcal es obligatoria.")
-        return self._validate_positive_number(energia, "La energía (kcal)", max_value=900, decimals=0)
+        return self._validate_positive_number(energia, "La energía (kcal)", max_value=900)
 
     def clean_energia_kj(self):
         energia = self.cleaned_data.get('energia_kj')
         if energia is None:
             raise ValidationError("La energía en kJ es obligatoria.")
-        return self._validate_positive_number(energia, "La energía (kJ)", max_value=3800, decimals=0)
+        return self._validate_positive_number(energia, "La energía (kJ)", max_value=3800)
 
     def clean_proteina_g(self):
         proteina = self.cleaned_data.get('proteina_g')
@@ -366,7 +381,7 @@ class AlimentoForm(forms.ModelForm):
 
     def clean_calcio_mg(self):
         calcio = self.cleaned_data.get('calcio_mg')
-        return self._validate_positive_number(calcio, "El calcio", max_value=2000, decimals=0)
+        return self._validate_positive_number(calcio, "El calcio", max_value=2000)
 
     def clean_hierro_mg(self):
         hierro = self.cleaned_data.get('hierro_mg')
@@ -374,7 +389,7 @@ class AlimentoForm(forms.ModelForm):
 
     def clean_vitamina_c_mg(self):
         vitamina_c = self.cleaned_data.get('vitamina_c_mg')
-        return self._validate_positive_number(vitamina_c, "La vitamina C", max_value=1000, decimals=0)
+        return self._validate_positive_number(vitamina_c, "La vitamina C", max_value=1000)
 
     def clean_parte_comestible_field(self):
         parte_comestible = self.cleaned_data.get('parte_comestible_field')

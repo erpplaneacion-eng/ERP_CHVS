@@ -246,6 +246,7 @@ class AlimentosManager {
             'codigo': 'id_codigo',
             'nombre': 'id_nombre_del_alimento',
             'parteAnalizada': 'id_parte_analizada',
+            'idComponente': 'id_id_componente',
             'humedad': 'id_humedad_g',
             'energiaKcal': 'id_energia_kcal',
             'energiaKj': 'id_energia_kj',
@@ -425,6 +426,10 @@ class AlimentosManager {
                         <div class="detail-item">
                             <label>Parte Analizada:</label>
                             <span>${data.parteAnalizada}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Componente:</label>
+                            <span>${data.componente || 'Sin componente'}</span>
                         </div>
                     </div>
                 </div>

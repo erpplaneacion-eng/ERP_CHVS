@@ -634,13 +634,20 @@
                             Ingrediente ICBF
                             <span style="color:#ef4444;">*</span>
                         </label>
-                        <select id="agregarIngredienteId" class="modal-select">
-                            <option value="">Seleccione un ingrediente...</option>
+                        <div style="position:relative; margin-bottom:8px;">
+                            <i class="bi bi-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; pointer-events:none; z-index:1;"></i>
+                            <input id="filtroIngrediente" class="modal-input"
+                                   placeholder="Filtrar por nombre o código..."
+                                   autocomplete="off"
+                                   style="padding-left:38px;" />
+                        </div>
+                        <select id="agregarIngredienteId" class="modal-select" size="5" style="height:auto; overflow-y:auto;">
+                            <option value="">— seleccione —</option>
                             ${opcionesIngredientes}
                         </select>
-                        <small class="modal-help-text">
-                            <i class="bi bi-search"></i>
-                            Busque por código o nombre del ingrediente
+                        <small class="modal-help-text" id="contadorIngredientes">
+                            <i class="bi bi-list-ul"></i>
+                            ${ingredientesCatalogo.length} ingredientes disponibles
                         </small>
                     </div>
 
@@ -667,6 +674,53 @@
                     bExistente.style.display = esNueva ? 'none' : 'block';
                     bNueva.style.display = esNueva ? 'block' : 'none';
                 });
+
+                // Filtro de ingredientes en tiempo real
+                const filtroIng = document.getElementById('filtroIngrediente');
+                const selectIng = document.getElementById('agregarIngredienteId');
+                const contador = document.getElementById('contadorIngredientes');
+
+                filtroIng.addEventListener('input', () => {
+                    const termino = filtroIng.value.toLowerCase().trim();
+
+                    const filtrados = termino
+                        ? ingredientesCatalogo.filter(ing =>
+                            ing.nombre_del_alimento.toLowerCase().includes(termino) ||
+                            String(ing.codigo).toLowerCase().includes(termino)
+                          )
+                        : ingredientesCatalogo;
+
+                    const valorActual = selectIng.value;
+
+                    // Reconstruir opciones del select
+                    selectIng.innerHTML = '<option value="">— seleccione —</option>';
+                    filtrados.forEach(ing => {
+                        const opt = document.createElement('option');
+                        opt.value = ing.codigo;
+                        opt.textContent = `${ing.codigo} - ${ing.nombre_del_alimento}`;
+                        selectIng.appendChild(opt);
+                    });
+
+                    // Restaurar selección si sigue siendo válida
+                    if (valorActual && filtrados.some(ing => String(ing.codigo) === String(valorActual))) {
+                        selectIng.value = valorActual;
+                    }
+
+                    // Actualizar contador
+                    if (contador) {
+                        contador.innerHTML = termino
+                            ? `<i class="bi bi-funnel-fill"></i> ${filtrados.length} de ${ingredientesCatalogo.length} ingredientes`
+                            : `<i class="bi bi-list-ul"></i> ${ingredientesCatalogo.length} ingredientes disponibles`;
+                    }
+
+                    // Si hay exactamente un resultado, seleccionarlo automáticamente
+                    if (filtrados.length === 1) {
+                        selectIng.value = filtrados[0].codigo;
+                    }
+                });
+
+                // Focus automático en el filtro al abrir el modal
+                setTimeout(() => filtroIng.focus(), 100);
             },
             preConfirm: () => {
                 const modo = document.getElementById('agregarModoPrep').value;

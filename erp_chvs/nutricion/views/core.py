@@ -78,7 +78,7 @@ def lista_alimentos(request):
         form = AlimentoForm()
 
     search_query = request.GET.get('q', '')
-    alimentos_list = TablaAlimentos2018Icbf.objects.all().order_by('nombre_del_alimento')
+    alimentos_list = TablaAlimentos2018Icbf.objects.select_related('id_componente').order_by('nombre_del_alimento')
 
     if search_query:
         alimentos_list = alimentos_list.filter(

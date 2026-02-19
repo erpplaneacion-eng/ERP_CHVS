@@ -91,6 +91,7 @@
                             data-codigo="{{ alimento.codigo }}"
                             data-nombre="{{ alimento.nombre_del_alimento }}"
                             data-parte-analizada="{{ alimento.parte_analizada|default:'N/A' }}"
+                            data-componente="{{ alimento.id_componente.componente|default:'Sin componente' }}"
                             data-humedad="{{ alimento.humedad_g }}"
                             data-energia-kcal="{{ alimento.energia_kcal }}"
                             data-energia-kj="{{ alimento.energia_kj }}"
@@ -127,6 +128,7 @@
                             data-codigo="{{ alimento.codigo }}"
                             data-nombre="{{ alimento.nombre_del_alimento }}"
                             data-parte-analizada="{{ alimento.parte_analizada|default:'' }}"
+                            data-id-componente="{{ alimento.id_componente_id|default:'' }}"
                             data-humedad="{{ alimento.humedad_g }}"
                             data-energia-kcal="{{ alimento.energia_kcal }}"
                             data-energia-kj="{{ alimento.energia_kj }}"
@@ -240,9 +242,15 @@
                                     <input type="text" name="nombre_del_alimento" id="id_nombre_del_alimento" class="form-control" required>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label for="id_parte_analizada">Parte Analizada</label>
-                                <input type="text" name="parte_analizada" id="id_parte_analizada" class="form-control">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="id_parte_analizada">Parte Analizada</label>
+                                    <input type="text" name="parte_analizada" id="id_parte_analizada" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_id_componente">Componente de Alimento</label>
+                                    {{ form.id_componente }}
+                                </div>
                             </div>
                         </div>
 
@@ -256,11 +264,11 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="id_energia_kcal">Energía (kcal) *</label>
-                                    <input type="number" name="energia_kcal" id="id_energia_kcal" class="form-control" required>
+                                    <input type="number" step="0.01" name="energia_kcal" id="id_energia_kcal" class="form-control" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="id_energia_kj">Energía (kJ) *</label>
-                                    <input type="number" name="energia_kj" id="id_energia_kj" class="form-control" required>
+                                    <input type="number" step="0.01" name="energia_kj" id="id_energia_kj" class="form-control" required>
                                 </div>
                             </div>
                             <div class="form-row">
@@ -299,7 +307,7 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="id_calcio_mg">Calcio (mg)</label>
-                                    <input type="number" name="calcio_mg" id="id_calcio_mg" class="form-control">
+                                    <input type="number" step="0.01" name="calcio_mg" id="id_calcio_mg" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label for="id_hierro_mg">Hierro (mg)</label>
@@ -307,13 +315,13 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="id_sodio_mg">Sodio (mg)</label>
-                                    <input type="number" name="sodio_mg" id="id_sodio_mg" class="form-control">
+                                    <input type="number" step="0.01" name="sodio_mg" id="id_sodio_mg" class="form-control">
                                 </div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="id_fosforo_mg">Fósforo (mg)</label>
-                                    <input type="number" name="fosforo_mg" id="id_fosforo_mg" class="form-control">
+                                    <input type="number" step="0.01" name="fosforo_mg" id="id_fosforo_mg" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label for="id_yodo_mg">Yodo (mg)</label>
@@ -327,11 +335,11 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="id_magnesio_mg">Magnesio (mg)</label>
-                                    <input type="number" name="magnesio_mg" id="id_magnesio_mg" class="form-control">
+                                    <input type="number" step="0.01" name="magnesio_mg" id="id_magnesio_mg" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label for="id_potasio_mg">Potasio (mg)</label>
-                                    <input type="number" name="potasio_mg" id="id_potasio_mg" class="form-control">
+                                    <input type="number" step="0.01" name="potasio_mg" id="id_potasio_mg" class="form-control">
                                 </div>
                             </div>
                         </div>
@@ -364,13 +372,13 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="id_vitamina_c_mg">Vitamina C (mg)</label>
-                                    <input type="number" name="vitamina_c_mg" id="id_vitamina_c_mg" class="form-control">
+                                    <input type="number" step="0.01" name="vitamina_c_mg" id="id_vitamina_c_mg" class="form-control">
                                 </div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="id_vitamina_a_er">Vitamina A (ER)</label>
-                                    <input type="number" name="vitamina_a_er" id="id_vitamina_a_er" class="form-control">
+                                    <input type="number" step="0.01" name="vitamina_a_er" id="id_vitamina_a_er" class="form-control">
                                 </div>
                             </div>
                         </div>
@@ -395,11 +403,11 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="id_colesterol_mg">Colesterol (mg)</label>
-                                    <input type="number" name="colesterol_mg" id="id_colesterol_mg" class="form-control">
+                                    <input type="number" step="0.01" name="colesterol_mg" id="id_colesterol_mg" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label for="id_parte_comestible_field">Parte Comestible (%)</label>
-                                    <input type="number" name="parte_comestible_field" id="id_parte_comestible_field" class="form-control" min="0" max="100">
+                                    <input type="number" step="0.01" name="parte_comestible_field" id="id_parte_comestible_field" class="form-control" min="0" max="100">
                                 </div>
                             </div>
                         </div>
