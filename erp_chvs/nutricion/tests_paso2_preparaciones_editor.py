@@ -275,26 +275,6 @@ class Paso2PreparacionesEditorIntegrationTests(TestCase):
         self.assertContains(response, 'data-proteina="', html=False)
         self.assertContains(response, 'title="Calor', html=False)
 
-    def test_paso5_template_incluye_toolbar_de_optimizacion_por_nivel(self):
-        url = reverse("nutricion:preparaciones_editor", args=[self.menu.id_menu])
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'class="btn btn-outline-primary btn-sm btn-copiar-pesos"', html=False)
-        self.assertContains(response, 'class="btn btn-outline-success btn-sm btn-optimizar-pesos"', html=False)
-        self.assertContains(response, 'class="btn btn-outline-info btn-sm btn-comparar-minuta"', html=False)
-        self.assertContains(response, 'class="btn btn-outline-secondary btn-sm btn-sugerencias"', html=False)
-
-    def test_paso5_template_incluye_panel_sugerencias_oculto(self):
-        url = reverse("nutricion:preparaciones_editor", args=[self.menu.id_menu])
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'class="panel-sugerencias"', html=False)
-        self.assertContains(response, 'style="display: none;"', html=False)
-        self.assertContains(response, 'class="btn-close-sugerencias"', html=False)
-        self.assertContains(response, 'class="sugerencias-content"', html=False)
-
 
 class Paso4FrontendContractsTests(TestCase):
     @classmethod
@@ -313,29 +293,10 @@ class Paso4FrontendContractsTests(TestCase):
         self.assertIn("if (e.target.classList.contains('slider-peso'))", js)
         self.assertIn("badge.textContent = resultado.valido ? 'OK' : 'FUERA';", js)
 
-    def test_paso4_js_contiene_overlay_y_uso_en_guardar_y_sincronizar(self):
+    def test_paso4_js_contiene_overlay_y_uso_en_guardar(self):
         js = self.js_source
         self.assertIn("function mostrarOverlayGuardando(mensaje = 'Guardando cambios...')", js)
         self.assertIn("function ocultarOverlayGuardando()", js)
         self.assertIn("const overlay = mostrarOverlayGuardando('Guardando cambios...');", js)
-        self.assertIn(
-            "const overlay = mostrarOverlayGuardando('Sincronizando pesos en todos los niveles...');",
-            js,
-        )
         self.assertIn("ocultarOverlayGuardando();", js)
 
-    def test_paso5_js_contiene_funciones_auxiliares_de_optimizacion(self):
-        js = self.js_source
-        self.assertIn("async function copiarPesosAOtrosNiveles(nivelOrigenId)", js)
-        self.assertIn("function generarSugerencias(nivelId)", js)
-        self.assertIn("function mostrarSugerencias(nivelId)", js)
-        self.assertIn("function ocultarSugerencias(nivelId)", js)
-        self.assertIn("async function compararConMinutaPatron(nivelId)", js)
-
-    def test_paso5_js_contiene_event_delegation_y_placeholder_optimizacion(self):
-        js = self.js_source
-        self.assertIn("if (e.target.closest('.btn-copiar-pesos'))", js)
-        self.assertIn("if (e.target.closest('.btn-sugerencias'))", js)
-        self.assertIn("if (e.target.closest('.btn-comparar-minuta'))", js)
-        self.assertIn("if (e.target.closest('.btn-optimizar-pesos'))", js)
-        self.assertIn("Función en desarrollo", js)

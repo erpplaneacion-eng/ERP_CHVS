@@ -36,7 +36,6 @@ from .preparaciones_api import (
 from .analisis_api import (
     api_analisis_nutricional_menu,
     guardar_analisis_nutricional,
-    api_sincronizar_pesos_preparaciones,
     api_guardar_ingredientes_por_nivel,
 )
 from .exportes import (

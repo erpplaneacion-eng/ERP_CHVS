@@ -35,9 +35,6 @@
         <button type="button" id="btnGuardarCambios" class="btn btn-success btn-sm">
             <i class="bi bi-save"></i> Guardar cambios
         </button>
-        <button type="button" id="btnSincronizarPesos" class="btn btn-info btn-sm">
-            <i class="bi bi-arrow-repeat"></i> Sincronizar pesos base
-        </button>
     </div>
 
     <!-- ========================================
@@ -73,30 +70,6 @@
             data-nivel-id="{{ nivel_data.nivel.id }}"
             data-id-analisis="{{ nivel_data.id_analisis }}"
         >
-            <!-- Toolbar de optimización (copiar, optimizar, comparar) -->
-            <div class="nivel-toolbar">
-                <div class="nivel-toolbar-section">
-                    <button type="button" class="btn btn-outline-primary btn-sm btn-copiar-pesos"
-                            data-nivel-id="{{ nivel_data.nivel.id }}"
-                            title="Copiar estos pesos a otros niveles">
-                        <i class="bi bi-files"></i> Copiar a otros niveles
-                    </button>
-                    <button type="button" class="btn btn-outline-success btn-sm btn-optimizar-pesos"
-                            data-nivel-id="{{ nivel_data.nivel.id }}"
-                            title="Optimizar automáticamente para cumplir metas">
-                        <i class="bi bi-lightning-charge"></i> Optimizar
-                    </button>
-                    <button type="button" class="btn btn-outline-info btn-sm btn-comparar-minuta"
-                            data-nivel-id="{{ nivel_data.nivel.id }}"
-                            title="Comparar con Minuta Patrón">
-                        <i class="bi bi-clipboard-check"></i> Comparar
-                    </button>
-                </div>
-                <div class="nivel-toolbar-section">
-                    <!-- Sección de herramientas adicionales -->
-                </div>
-            </div>
-
             <!-- Tabla de ingredientes con pesos editables -->
             <div class="tabla-container">
                 <table class="tabla-ingredientes">

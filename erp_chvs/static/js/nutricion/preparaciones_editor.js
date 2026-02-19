@@ -294,12 +294,6 @@
         }
     });
 
-    // ========================================
-    // LÓGICA DE SUGERENCIAS - ELIMINADA
-    // ========================================
-
-    // Event Delegation para botones de sugerencias por nivel (ELIMINADO)
-    
     const btnAgregarFila = document.getElementById('btnAgregarFila');
     if (btnAgregarFila) {
         btnAgregarFila.addEventListener('click', agregarIngredienteATodosLosNiveles);
@@ -382,68 +376,7 @@
         });
     }
 
-    const btnSincronizarPesos = document.getElementById('btnSincronizarPesos');
-    if (btnSincronizarPesos) {
-        btnSincronizarPesos.addEventListener('click', async () => {
-            if (typeof Swal === 'undefined') {
-                if (!confirm('¿Estás seguro de restablecer los pesos a los valores originales de la receta? Se perderán las personalizaciones manuales.')) return;
-            } else {
-                const result = await Swal.fire({
-                    title: '¿Sincronizar con receta base?',
-                    text: "Esto restablecerá los pesos de TODOS los niveles a los valores originales de la preparación. Se perderán las personalizaciones manuales que hayas hecho aquí.",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Sí, sincronizar',
-                    cancelButtonText: 'Cancelar'
-                });
-                if (!result.isConfirmed) return;
-            }
-
-            const overlay = mostrarOverlayGuardando('Sincronizando pesos...');
-
-            try {
-                // Iteramos sobre todos los niveles para sincronizarlos uno por uno (o podríamos ajustar el endpoint para masivo)
-                // Según el test, el endpoint recibe 'id_nivel_escolar'. Vamos a intentar enviar null o hacerlo por loop.
-                // Como el test muestra 'id_nivel_escolar', lo haremos por loop para asegurar compatibilidad.
-                
-                const promesas = nivelesData.map(nivelData => {
-                    return fetch('/nutricion/api/sincronizar-pesos-preparaciones/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCookie('csrftoken')
-                        },
-                        body: JSON.stringify({
-                            id_menu: menuId,
-                            id_nivel_escolar: nivelData.nivel.id,
-                            sobrescribir_existentes: true
-                        })
-                    });
-                });
-
-                await Promise.all(promesas);
-
-                ocultarOverlayGuardando();
-                
-                if (typeof Swal !== 'undefined') {
-                    await Swal.fire('¡Sincronizado!', 'Los pesos se han restablecido a la receta original.', 'success');
-                } else {
-                    alert('Pesos sincronizados correctamente.');
-                }
-                
-                window.location.reload();
-
-            } catch (error) {
-                console.error('Error al sincronizar:', error);
-                ocultarOverlayGuardando();
-                showNotification('Error al sincronizar pesos', 'error');
-            }
-        });
-    }
-
-    // ========================================
+// ========================================
     // FUNCIONES DE SOPORTE
     // ========================================
 

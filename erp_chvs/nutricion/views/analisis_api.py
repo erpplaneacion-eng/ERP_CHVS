@@ -90,44 +90,6 @@ def guardar_analisis_nutricional(request):
         }, status=500)
 
 
-@login_required
-@csrf_exempt
-def api_sincronizar_pesos_preparaciones(request):
-    """
-    Sincroniza los pesos desde TablaPreparacionIngredientes.gramaje
-    hacia TablaIngredientesPorNivel para un menú y nivel específico.
-    """
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
-
-    try:
-        data = json.loads(request.body)
-        id_menu = data.get('id_menu')
-        id_nivel_escolar = data.get('id_nivel_escolar')
-        sobrescribir_existentes = data.get('sobrescribir_existentes', False)
-
-        if not id_menu or not id_nivel_escolar:
-            return JsonResponse({
-                'error': 'Faltan parámetros: id_menu e id_nivel_escolar son requeridos'
-            }, status=400)
-
-        resultado = AnalisisNutricionalService.sincronizar_pesos_desde_preparaciones(
-            id_menu=id_menu,
-            id_nivel_escolar=id_nivel_escolar,
-            sobrescribir_existentes=sobrescribir_existentes
-        )
-
-        return JsonResponse(resultado)
-
-    except TablaMenus.DoesNotExist:
-        return JsonResponse({'error': 'Menú no encontrado'}, status=404)
-
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Error al sincronizar pesos: {str(e)}'
-        }, status=500)
-
 
 def _guardar_ingrediente_por_nivel(menu, analisis, ing_data):
     id_preparacion = ing_data.get('id_preparacion')

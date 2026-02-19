@@ -68,33 +68,6 @@
     transform: translateY(0);
 }
 
-/* ========================================
-   TOOLBAR DE NIVEL
-   ======================================== */
-
-.nivel-toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
-    background: #f8fafc;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    margin-bottom: 16px;
-}
-
-.nivel-toolbar-section {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.nivel-toolbar button {
-    font-size: 13px;
-    padding: 6px 12px;
-    white-space: nowrap;
-}
 
 /* ========================================
    TABLA DE INGREDIENTES

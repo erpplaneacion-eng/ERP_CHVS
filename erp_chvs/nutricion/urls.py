@@ -46,8 +46,7 @@ urlpatterns = [
     # Análisis Nutricional
     path('api/menus/<int:id_menu>/analisis-nutricional/', views.api_analisis_nutricional_menu, name='api_analisis_nutricional_menu'),
     path('api/guardar-analisis-nutricional/', views.guardar_analisis_nutricional, name='guardar_analisis_nutricional'),
-    path('api/sincronizar-pesos-preparaciones/', views.api_sincronizar_pesos_preparaciones, name='api_sincronizar_pesos_preparaciones'),
-    path('api/menus/<int:id_menu>/guardar-ingredientes-por-nivel/', views.api_guardar_ingredientes_por_nivel, name='api_guardar_ingredientes_por_nivel'),
+path('api/menus/<int:id_menu>/guardar-ingredientes-por-nivel/', views.api_guardar_ingredientes_por_nivel, name='api_guardar_ingredientes_por_nivel'),
 
     # Exportación Excel
     path('exportar-excel/<int:menu_id>/', views.download_menu_excel, name='exportar_menu_excel'),
