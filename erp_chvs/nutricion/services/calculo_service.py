@@ -67,10 +67,10 @@ class CalculoService:
         factor = peso_neto / 100.0
 
         return {
-            'calorias': float(alimento_icbf.energia_kcal) * factor,
-            'proteina': float(alimento_icbf.proteina_g) * factor,
-            'grasa': float(alimento_icbf.lipidos_g) * factor,
-            'cho': float(alimento_icbf.carbohidratos_totales_g) * factor,
+            'calorias': float(alimento_icbf.energia_kcal or 0) * factor,
+            'proteina': float(alimento_icbf.proteina_g or 0) * factor,
+            'grasa': float(alimento_icbf.lipidos_g or 0) * factor,
+            'cho': float(alimento_icbf.carbohidratos_totales_g or 0) * factor,
             'calcio': float(alimento_icbf.calcio_mg or 0) * factor,
             'hierro': float(alimento_icbf.hierro_mg or 0) * factor,
             'sodio': float(alimento_icbf.sodio_mg or 0) * factor,
