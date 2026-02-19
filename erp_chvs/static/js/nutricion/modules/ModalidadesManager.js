@@ -417,7 +417,7 @@ class ModalidadesManager {
                     return `
                         <div class="validador-item ${claseEstado}">
                             <span class="validador-icono">${icono}</span>
-                            <span class="validador-componente">${comp.componente}</span>
+                            <span class="validador-componente">${comp.grupo}</span>
                             <div class="validador-frecuencias">
                                 <span class="frecuencia-badge ${claseEstado}">
                                     ${comp.actual} / ${comp.requerido}

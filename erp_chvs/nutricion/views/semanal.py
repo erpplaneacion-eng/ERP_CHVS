@@ -7,7 +7,7 @@ from ..models import RequerimientoSemanal, TablaPreparaciones
 @login_required
 def api_validar_semana(request):
     """
-    Valida si una semana cumple con las frecuencias requeridas.
+    Valida si una semana cumple con las frecuencias requeridas por grupo de alimentos.
     """
     try:
         menu_ids_str = request.GET.get('menu_ids', '')
@@ -23,7 +23,7 @@ def api_validar_semana(request):
 
         requerimientos = RequerimientoSemanal.objects.filter(
             modalidad__id_modalidades=modalidad_id
-        ).select_related('componente')
+        ).select_related('grupo')
 
         if not requerimientos.exists():
             return JsonResponse({
@@ -32,54 +32,58 @@ def api_validar_semana(request):
                 'mensaje': 'No hay requerimientos definidos para esta modalidad'
             })
 
-        menus_por_componente = {}
+        menus_por_grupo = {}
 
         for menu_id in menu_ids:
-            # Obtener preparaciones con sus ingredientes y el componente del ingrediente
+            # Obtener preparaciones con sus ingredientes y el componente → grupo
             preparaciones = TablaPreparaciones.objects.filter(
                 id_menu_id=menu_id
-            ).prefetch_related('ingredientes__id_ingrediente_siesa__id_componente')
+            ).select_related(
+                'id_componente__id_grupo_alimentos'
+            ).prefetch_related(
+                'ingredientes__id_ingrediente_siesa__id_componente__id_grupo_alimentos'
+            )
 
-            componentes_del_menu = set()
-            
+            grupos_del_menu = set()
+
             for prep in preparaciones:
                 # 1. Intentar usar el componente asignado a la preparación (prioridad manual)
-                if prep.id_componente:
-                    componentes_del_menu.add(prep.id_componente.id_componente)
-                
+                if prep.id_componente and prep.id_componente.id_grupo_alimentos:
+                    grupos_del_menu.add(prep.id_componente.id_grupo_alimentos.id_grupo_alimentos)
+
                 # 2. Si no tiene, buscar en sus ingredientes
                 else:
                     for ingrediente_rel in prep.ingredientes.all():
                         alimento = ingrediente_rel.id_ingrediente_siesa
-                        if alimento and alimento.id_componente:
-                            componentes_del_menu.add(alimento.id_componente.id_componente)
+                        if alimento and alimento.id_componente and alimento.id_componente.id_grupo_alimentos:
+                            grupos_del_menu.add(alimento.id_componente.id_grupo_alimentos.id_grupo_alimentos)
 
-            for comp_id in componentes_del_menu:
-                if comp_id not in menus_por_componente:
-                    menus_por_componente[comp_id] = set()
-                menus_por_componente[comp_id].add(menu_id)
+            for grupo_id in grupos_del_menu:
+                if grupo_id not in menus_por_grupo:
+                    menus_por_grupo[grupo_id] = set()
+                menus_por_grupo[grupo_id].add(menu_id)
 
-        conteo_componentes = {
-            comp_id: len(menus_set)
-            for comp_id, menus_set in menus_por_componente.items()
+        conteo_grupos = {
+            grupo_id: len(menus_set)
+            for grupo_id, menus_set in menus_por_grupo.items()
         }
 
-        componentes_resultado = []
+        grupos_resultado = []
         cumple_total = True
 
         for req in requerimientos:
-            comp_id = req.componente.id_componente
-            comp_nombre = req.componente.componente
+            grupo_id = req.grupo.id_grupo_alimentos
+            grupo_nombre = req.grupo.grupo_alimentos
             requerido = req.frecuencia
-            actual = conteo_componentes.get(comp_id, 0)
+            actual = conteo_grupos.get(grupo_id, 0)
             cumple = actual >= requerido
 
             if not cumple:
                 cumple_total = False
 
-            componentes_resultado.append({
-                'id': comp_id,
-                'componente': comp_nombre,
+            grupos_resultado.append({
+                'id': grupo_id,
+                'grupo': grupo_nombre,
                 'requerido': requerido,
                 'actual': actual,
                 'cumple': cumple
@@ -87,7 +91,7 @@ def api_validar_semana(request):
 
         return JsonResponse({
             'cumple': cumple_total,
-            'componentes': componentes_resultado
+            'componentes': grupos_resultado
         })
 
     except ValueError as e:
@@ -109,13 +113,13 @@ def api_requerimientos_modalidad(request):
 
         requerimientos = RequerimientoSemanal.objects.filter(
             modalidad__id_modalidades=modalidad_id
-        ).select_related('componente')
+        ).select_related('grupo')
 
         resultado = []
         for req in requerimientos:
             resultado.append({
-                'componente_id': req.componente.id_componente,
-                'componente_nombre': req.componente.componente,
+                'grupo_id': req.grupo.id_grupo_alimentos,
+                'grupo_nombre': req.grupo.grupo_alimentos,
                 'frecuencia': req.frecuencia
             })
 

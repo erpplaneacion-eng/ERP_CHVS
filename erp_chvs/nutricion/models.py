@@ -866,11 +866,11 @@ class TablaIngredientesPorNivel(models.Model):
 
 class RequerimientoSemanal(models.Model):
     """
-    Modelo para gestionar los requerimientos semanales de componentes por modalidad.
-    Define la frecuencia mínima semanal que debe cumplir cada componente de alimento
+    Modelo para gestionar los requerimientos semanales de grupos de alimentos por modalidad.
+    Define la frecuencia mínima semanal que debe cumplir cada grupo de alimento
     según la modalidad de consumo.
 
-    Ejemplo: Para modalidad "Almuerzo", el componente "Bebida con leche" debe aparecer
+    Ejemplo: Para modalidad "Almuerzo", el grupo "Lácteos" debe aparecer
     mínimo 3 veces por semana.
     """
     id = models.AutoField(
@@ -883,15 +883,15 @@ class RequerimientoSemanal(models.Model):
         verbose_name="Modalidad de Consumo",
         related_name='requerimientos_semanales'
     )
-    componente = models.ForeignKey(
-        ComponentesAlimentos,
+    grupo = models.ForeignKey(
+        GruposAlimentos,
         on_delete=models.PROTECT,
-        verbose_name="Componente de Alimento",
+        verbose_name="Grupo de Alimentos",
         related_name='requerimientos_semanales'
     )
     frecuencia = models.IntegerField(
         verbose_name="Frecuencia Semanal",
-        help_text="Número de veces que debe aparecer este componente en la semana"
+        help_text="Número de veces que debe aparecer este grupo de alimentos en la semana"
     )
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -906,15 +906,15 @@ class RequerimientoSemanal(models.Model):
         db_table = 'nutricion_requerimientos_semanales'
         verbose_name = "Requerimiento Semanal"
         verbose_name_plural = "Requerimientos Semanales"
-        ordering = ['modalidad', 'componente']
-        unique_together = [['modalidad', 'componente']]
+        ordering = ['modalidad', 'grupo']
+        unique_together = [['modalidad', 'grupo']]
         indexes = [
-            models.Index(fields=['modalidad']),
-            models.Index(fields=['componente']),
+            models.Index(fields=['modalidad'], name='nutricion_r_modalid_e1a6d0_idx'),
+            models.Index(fields=['grupo'], name='nutricion_r_grupo_idx'),
         ]
 
     def __str__(self):
-        return f"{self.modalidad.modalidad} - {self.componente.componente} (x{self.frecuencia}/semana)"
+        return f"{self.modalidad.modalidad} - {self.grupo.grupo_alimentos} (x{self.frecuencia}/semana)"
 
 
 class MinutaPatronMeta(models.Model):
