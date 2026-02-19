@@ -5,6 +5,7 @@ from .models import (
     PerfilUsuario,
     PrincipalDepartamento,
     PrincipalMunicipio,
+    RegistroActividad,
     TipoDocumento,
     TipoGenero,
     ModalidadesDeConsumo,
@@ -90,3 +91,26 @@ class TablaGradosEscolaresUapaAdmin(admin.ModelAdmin):
     list_display = ('id_grado_escolar_uapa', 'nivel_escolar_uapa')
     search_fields = ('id_grado_escolar_uapa', 'nivel_escolar_uapa')
     list_filter = ('nivel_escolar_uapa',)
+
+
+@admin.register(RegistroActividad)
+class RegistroActividadAdmin(admin.ModelAdmin):
+    list_display = ('fecha', 'usuario', 'modulo', 'accion', 'descripcion_corta', 'ip', 'exitoso')
+    list_filter = ('modulo', 'exitoso', 'usuario')
+    search_fields = ('usuario__username', 'accion', 'descripcion', 'ip')
+    date_hierarchy = 'fecha'
+    readonly_fields = ('usuario', 'modulo', 'accion', 'descripcion', 'ip', 'fecha', 'exitoso')
+    ordering = ('-fecha',)
+
+    def descripcion_corta(self, obj):
+        return obj.descripcion[:80] + '…' if len(obj.descripcion) > 80 else obj.descripcion
+    descripcion_corta.short_description = 'Detalle'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser

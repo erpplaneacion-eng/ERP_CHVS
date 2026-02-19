@@ -1,7 +1,11 @@
-from django.db import models
+import logging
+
 from django.contrib.auth.models import User
+from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
+logger = logging.getLogger(__name__)
 
 # Create your models here.
 
@@ -201,3 +205,63 @@ class TablaGradosEscolaresUapa(models.Model):
 
     def __str__(self):
         return f"{self.id_grado_escolar_uapa} - {self.nivel_escolar_uapa}"
+
+
+class RegistroActividad(models.Model):
+    """
+    Auditoría de acciones realizadas por los usuarios en cada módulo.
+    Se registra automáticamente desde las vistas/servicios. Es de solo lectura.
+    """
+
+    MODULO_CHOICES = [
+        ('facturacion', 'Facturación'),
+        ('nutricion', 'Nutrición'),
+        ('planeacion', 'Planeación'),
+        ('principal', 'Datos Maestros'),
+        ('dashboard', 'Dashboard'),
+    ]
+
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        verbose_name="Usuario"
+    )
+    modulo = models.CharField(max_length=50, choices=MODULO_CHOICES, verbose_name="Módulo")
+    accion = models.CharField(max_length=100, verbose_name="Acción")
+    descripcion = models.TextField(blank=True, verbose_name="Detalle")
+    ip = models.GenericIPAddressField(null=True, blank=True, verbose_name="IP")
+    fecha = models.DateTimeField(auto_now_add=True, verbose_name="Fecha y hora")
+    exitoso = models.BooleanField(default=True, verbose_name="Exitoso")
+
+    class Meta:
+        db_table = 'principal_registro_actividad'
+        verbose_name = 'Registro de Actividad'
+        verbose_name_plural = 'Registros de Actividad'
+        ordering = ['-fecha']
+
+    def __str__(self):
+        usuario = self.usuario.username if self.usuario else 'desconocido'
+        return f"[{self.fecha:%Y-%m-%d %H:%M}] {usuario} — {self.modulo}/{self.accion}"
+
+    @classmethod
+    def registrar(cls, request, modulo, accion, descripcion='', exitoso=True):
+        """
+        Registra una acción de usuario. Silencia cualquier error para no
+        interrumpir el flujo principal de la aplicación.
+        """
+        try:
+            ip = (
+                request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
+                or request.META.get('REMOTE_ADDR')
+            ) or None
+            cls.objects.create(
+                usuario=request.user if request.user.is_authenticated else None,
+                modulo=modulo,
+                accion=accion,
+                descripcion=descripcion,
+                ip=ip,
+                exitoso=exitoso,
+            )
+        except Exception as exc:
+            logger.warning("No se pudo registrar actividad (%s/%s): %s", modulo, accion, exc)

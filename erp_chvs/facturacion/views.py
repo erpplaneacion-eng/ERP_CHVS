@@ -16,7 +16,7 @@ from io import StringIO
 import json
 
 from .models import ListadosFocalizacion
-from principal.models import PrincipalDepartamento, PrincipalMunicipio
+from principal.models import PrincipalDepartamento, PrincipalMunicipio, RegistroActividad
 from .services import ProcesamientoService, ValidacionService, EstadisticasService
 from .config import ProcesamientoConfig, FOCALIZACIONES_DISPONIBLES, MESES_ATENCION
 from .logging_config import FacturacionLogger
@@ -165,6 +165,11 @@ def procesar_listados_view(request):
 
                 # Actualizar contexto con los resultados de la visualización
                 if resultado['success']:
+                    RegistroActividad.registrar(
+                        request, 'facturacion', 'cargue_excel',
+                        f"Archivo: {archivo.name} | Municipio: {municipio} | "
+                        f"Focalización: {focalizacion} | Registros: {resultado.get('total_registros', 0)}"
+                    )
                     # Guardar datos en sesión para la etapa 2 (incluir DataFrame procesado)
                     # Convertir DataFrame a JSON para almacenar en sesión
                     df_procesado = resultado.get('dataframe')
@@ -283,6 +288,13 @@ def procesar_listados_view(request):
                 # Limpiar sesión después del guardado
                 if 'datos_etapa_1' in request.session:
                     del request.session['datos_etapa_1']
+
+                RegistroActividad.registrar(
+                    request, 'facturacion', 'guardar_listados',
+                    f"Archivo: {archivo_name} | Municipio: {datos_etapa_1.get('tipo_procesamiento', '')} | "
+                    f"Focalización: {focalizacion} | Guardados en BD: {contexto['registros_guardados_bd']}",
+                    exitoso=resultado.get('success', False)
+                )
 
                 # Mensaje de éxito para etapa 2
                 if contexto['registros_guardados_bd'] > 0:
@@ -795,6 +807,12 @@ def api_transferir_grados(request):
                     except Exception as e:
                         continue  # Continuar con el siguiente registro
 
+            RegistroActividad.registrar(
+                request, 'facturacion', 'transferir_grados',
+                f"Origen: {sede_origen} → Destino: {sede_destino} | "
+                f"Grados: {', '.join(grados_seleccionados)} | Focalización: {focalizacion} | "
+                f"Registros movidos: {registros_movidos}"
+            )
             return JsonResponse({
                 'success': True,
                 'registros_creados': registros_movidos,
@@ -897,6 +915,10 @@ def generar_pdf_asistencia(request, programa_id, sede_cod_interprise, mes, focal
         except (ValueError, TypeError):
             return HttpResponse("Formato de días inválido. Deben ser números separados por comas.", status=400)
 
+    RegistroActividad.registrar(
+        request, 'facturacion', 'generar_pdf',
+        f"Programa: {programa_id} | Sede: {sede_cod_interprise} | Mes: {mes} | Focalización: {focalizacion}"
+    )
     return PDFAsistenciaService.generar_pdf_asistencia(programa_id, sede_cod_interprise, mes, focalizacion, dias_personalizados=dias_personalizados)
 
 @login_required
@@ -913,6 +935,10 @@ def generar_zip_masivo_programa(request, programa_id, mes, focalizacion):
         except (ValueError, TypeError):
             return HttpResponse("Formato de días inválido. Deben ser números separados por comas.", status=400)
             
+    RegistroActividad.registrar(
+        request, 'facturacion', 'generar_zip_masivo',
+        f"Programa: {programa_id} | Mes: {mes} | Focalización: {focalizacion}"
+    )
     return PDFAsistenciaService.generar_zip_masivo_por_programa(programa_id, mes, focalizacion, dias_personalizados=dias_personalizados)
 
 @login_required
@@ -1027,6 +1053,11 @@ def reemplazar_focalizacion_sedes(request):
             if not resultado_persistencia['success']:
                 raise Exception(resultado_persistencia['error'])
 
+        RegistroActividad.registrar(
+            request, 'facturacion', 'reemplazar_focalizacion',
+            f"Programa ID: {programa_id} | Sedes: {', '.join(sedes)} | "
+            f"{focalizacion_origen} → {focalizacion_nueva}"
+        )
         return JsonResponse({'success': True, 'message': 'Focalización reemplazada exitosamente'})
 
     except Exception as e:
@@ -1389,12 +1420,11 @@ def generar_pdf_asistencia_prediligenciada(request):
         nombre_archivo = f"Asistencia_Prediligenciada_{sede_nombre.replace(' ', '_')}_{codigo_complemento}_{mes}_{ano}.pdf"
         response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
 
-        FacturacionLogger.log_procesamiento_inicio(
-            f"PDF_Prediligenciado_{sede_nombre}_{mes}",
-            "generacion_exitosa",
-            focalizacion
+        RegistroActividad.registrar(
+            request, 'facturacion', 'pdf_prediligenciado',
+            f"Sede: {sede_nombre} | Mes: {mes} | Focalización: {focalizacion} | "
+            f"Complemento: {complemento} | Días configurados: {len(configuracion_dias)}"
         )
-
         return response
 
     except Exception as e:
