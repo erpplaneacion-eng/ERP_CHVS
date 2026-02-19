@@ -122,22 +122,22 @@ PrincipalDepartamento → PrincipalMunicipio → InstitucionesEducativas → Sed
 
 TablaMenus
     ├─→ TablaPreparaciones (shared across levels)
-    │       └─→ TablaPreparacionIngredientes (M2M, NO weights here)
-    │               └─→ TablaIngredientesSiesa ↔ TablaAlimentos2018Icbf
+    │       └─→ TablaPreparacionIngredientes (M2M + optional gramaje field)
+    │               └─→ TablaAlimentos2018Icbf (via codigo_icbf)
     └─→ TablaAnalisisNutricionalMenu (ONE per educational level)
             └─→ TablaIngredientesPorNivel (weights + nutrients PER LEVEL)
                     Fields: peso_neto, peso_bruto, calorias, proteina, grasa,
                             cho, calcio, hierro, sodio
 
 ModalidadesDeConsumo
-    ├─→ RequerimientoSemanal (ComponentesAlimentos × frecuencia/week)
+    ├─→ RequerimientoSemanal (GruposAlimentos × frecuencia/week)
     └─→ ComponentesModalidades (valid food components per modality)
 
 TablaRequerimientosNutricionales (level + modality → nutritional targets)
     unique_together: [id_nivel_escolar_uapa, id_modalidad]
 ```
 
-**Critical**: Ingredient weights are stored in `TablaIngredientesPorNivel`, NOT in `TablaPreparacionIngredientes`. The M2M table only tracks the relationship.
+**Critical**: Primary ingredient weights (per educational level) are stored in `TablaIngredientesPorNivel`. `TablaPreparacionIngredientes` also has a nullable `gramaje` field (added in migration 0016) for a base reference weight, but the authoritative per-level weights live in `TablaIngredientesPorNivel`.
 
 **Level names** (database format): `prescolar`, `primaria_1_2_3`, `primaria_4_5`, `secundaria`, `media_ciclo_complementario`
 
@@ -154,7 +154,9 @@ TablaRequerimientosNutricionales (level + modality → nutritional targets)
   - `ModalesManager.js`, `FiltrosManager.js`, `ModalidadesManager.js`
   - `PreparacionesManager.js`, `IngredientesManager.js`
   - `AnalisisNutricionalManager.js`, `MenusEspecialesManager.js`
-- `modules/guardado-automatico.js` — Auto-save during editing
+  - `calculos.js` — Nutritional calculation helpers
+  - `guardado-automatico.js` — Auto-save during editing
+  - `DIAGNOSTICO_FUNCIONES.js` — Diagnostic utilities
 
 ## Authentication & Authorization
 
