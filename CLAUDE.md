@@ -102,6 +102,7 @@ views.py → services.py → persistence_service.py → models.py
 - `minuta_service.py` — Standard pattern menus from `nutricion/data/minuta_patron.json`
 - `analisis_service.py` — Nutritional analysis + semaforización per level + modality
 - `calculo_service.py` — Pure stateless calculation functions
+- `exclusion_service.py` — Mutually exclusive food group sets: groups that share a weekly quota (e.g. G4+G6 must appear 2×/week combined, not individually). Used by `semanal.py` to adjust validator results.
 - `preparacion_service.py`, `ingrediente_service.py`, `programa_service.py`
 
 **Nutricion views** (`nutricion/views/` package):
@@ -131,7 +132,9 @@ TablaMenus
 
 ModalidadesDeConsumo
     ├─→ RequerimientoSemanal (GruposAlimentos × frecuencia/week)
-    └─→ ComponentesModalidades (valid food components per modality)
+    ├─→ ComponentesModalidades (valid food components per modality)
+    └─→ GrupoExcluyenteSet → GrupoExcluyenteSetMiembro → GruposAlimentos
+           (sets of food groups sharing a combined weekly quota)
 
 TablaRequerimientosNutricionales (level + modality → nutritional targets)
     unique_together: [id_nivel_escolar_uapa, id_modalidad]
