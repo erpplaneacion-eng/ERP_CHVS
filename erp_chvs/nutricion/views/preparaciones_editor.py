@@ -354,14 +354,18 @@ def vista_preparaciones_editor(request, id_menu):
         id_menu=id_menu
     )
 
-    # Orden pedagógico deseado: prescolar → primaria 1-3 → primaria 4-5 → secundaria → media
-    # Los IDs son CharField, por lo que el sort alfabético ("100","1011","12"…) no sirve.
-    _ORDEN_NIVELES = ['100', '123', '45', '6789', '1011']
-    _todos_niveles = {n.id_grado_escolar_uapa: n for n in TablaGradosEscolaresUapa.objects.all()}
+    # Orden pedagógico por nombre de nivel (independiente del valor del ID CharField).
+    _ORDEN_NIVELES = [
+        'prescolar',
+        'primaria_1_2_3',
+        'primaria_4_5',
+        'secundaria',
+        'media_ciclo_complementario',
+    ]
     niveles_escolares = sorted(
-        _todos_niveles.values(),
-        key=lambda n: _ORDEN_NIVELES.index(str(n.id_grado_escolar_uapa))
-                      if str(n.id_grado_escolar_uapa) in _ORDEN_NIVELES else 999
+        TablaGradosEscolaresUapa.objects.all(),
+        key=lambda n: _ORDEN_NIVELES.index(n.nivel_escolar_uapa)
+                      if n.nivel_escolar_uapa in _ORDEN_NIVELES else 999
     )
     requerimientos_por_nivel = _obtener_requerimientos_por_nivel(menu.id_modalidad)
     referencias_por_nivel = _obtener_referencias_por_nivel(menu.id_modalidad)
