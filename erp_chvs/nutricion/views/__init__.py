@@ -18,6 +18,8 @@ from .menus_api import (
     api_crear_menu_especial,
     api_menus,
     api_menu_detail,
+    api_programas_con_modalidad,
+    api_copiar_modalidad,
 )
 from .preparaciones_api import (
     lista_preparaciones,

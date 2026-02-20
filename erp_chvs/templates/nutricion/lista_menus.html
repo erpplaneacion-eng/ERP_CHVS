@@ -312,6 +312,53 @@
     </div>
 </div>
 
+<!-- Modal: Copiar Modalidad desde otro Programa -->
+<div id="modalCopiarModalidad" class="modal">
+    <div class="modal-content modal-copiar-modalidad">
+        <span class="close" onclick="cerrarModalCopiar()">&times;</span>
+        <h2><i class="fas fa-copy"></i> Copiar Modalidad desde otro Programa</h2>
+
+        <input type="hidden" id="copiarModalidadId">
+
+        <div id="cargandoProgramas" class="text-center py-3">
+            <div class="spinner-border text-success" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Buscando programas con esta modalidad...</p>
+        </div>
+
+        <div id="listaProgramasOrigen" style="display:none">
+            <p class="text-muted mb-3">
+                Selecciona el programa desde el cual copiar la modalidad
+                <strong id="copiarNombreModalidad"></strong>:
+            </p>
+            <div id="programasOrigenContainer">
+                <!-- Tarjetas de programas generadas por JS -->
+            </div>
+        </div>
+
+        <div id="sinProgramasOrigen" class="alert alert-warning" style="display:none">
+            <i class="fas fa-exclamation-triangle"></i>
+            No hay otros programas con menús configurados para esta modalidad.
+        </div>
+
+        <div id="accionesCopiar" style="display:none" class="mt-3">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                Se copiarán todos los menús con sus preparaciones, ingredientes y gramajes por nivel educativo.
+            </div>
+            <div class="form-actions">
+                <button id="btnEjecutarCopia" class="btn btn-primary" onclick="ejecutarCopiaModalidad()">
+                    <i class="fas fa-copy"></i> Copiar Modalidad
+                </button>
+                <button class="btn btn-secondary" onclick="cerrarModalCopiar()">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}

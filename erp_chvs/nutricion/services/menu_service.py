@@ -347,6 +347,139 @@ class MenuService:
     # =================== CREACIÓN DE MENÚS ===================
 
     @staticmethod
+    @transaction.atomic
+    def copiar_modalidad_completa(programa_origen_id: int, programa_destino_id: int, modalidad_id: str) -> int:
+        """
+        Copia todos los menús de una modalidad desde programa_origen a programa_destino.
+
+        Copia la jerarquía completa:
+            TablaMenus → TablaPreparaciones → TablaPreparacionIngredientes
+            → TablaAnalisisNutricionalMenu → TablaIngredientesPorNivel
+
+        Args:
+            programa_origen_id: ID del programa fuente
+            programa_destino_id: ID del programa destino
+            modalidad_id: ID de la modalidad a copiar
+
+        Returns:
+            Número de menús copiados al programa destino
+
+        Raises:
+            ValueError: Si el programa destino ya tiene menús para esta modalidad
+        """
+        # 1. Validar que destino no tenga menús existentes para esta modalidad
+        if TablaMenus.objects.filter(
+            id_contrato_id=programa_destino_id,
+            id_modalidad_id=modalidad_id
+        ).exists():
+            raise ValueError("El programa destino ya tiene menús para esta modalidad.")
+
+        # 2. Obtener menús origen con toda la jerarquía prefetcheada
+        menus_origen = TablaMenus.objects.filter(
+            id_contrato_id=programa_origen_id,
+            id_modalidad_id=modalidad_id
+        ).prefetch_related(
+            'preparaciones__ingredientes',
+            'analisis_nutricionales__ingredientes_configurados'
+        )
+
+        prep_map = {}     # {old_prep_id: new_prep_instance}
+        analisis_map = {} # {old_analisis_id: new_analisis_instance}
+
+        for menu_origen in menus_origen:
+            # Crear nuevo menú (save() auto-calcula semana)
+            nuevo_menu = TablaMenus.objects.create(
+                menu=menu_origen.menu,
+                id_modalidad_id=modalidad_id,
+                id_contrato_id=programa_destino_id
+            )
+
+            # Copiar preparaciones + ingredientes base (TablaPreparacionIngredientes)
+            for prep_origen in menu_origen.preparaciones.all():
+                nueva_prep = TablaPreparaciones.objects.create(
+                    preparacion=prep_origen.preparacion,
+                    id_menu=nuevo_menu,
+                    id_componente=prep_origen.id_componente
+                )
+                prep_map[prep_origen.id_preparacion] = nueva_prep
+
+                nuevos_ingredientes = [
+                    TablaPreparacionIngredientes(
+                        id_preparacion=nueva_prep,
+                        id_ingrediente_siesa=ing.id_ingrediente_siesa,
+                        gramaje=ing.gramaje
+                    )
+                    for ing in prep_origen.ingredientes.all()
+                ]
+                if nuevos_ingredientes:
+                    TablaPreparacionIngredientes.objects.bulk_create(nuevos_ingredientes)
+
+            # Copiar análisis nutricional por nivel + pesos por nivel
+            for analisis_origen in menu_origen.analisis_nutricionales.all():
+                nuevo_analisis = TablaAnalisisNutricionalMenu.objects.create(
+                    id_menu=nuevo_menu,
+                    id_nivel_escolar_uapa=analisis_origen.id_nivel_escolar_uapa,
+                    total_calorias=analisis_origen.total_calorias,
+                    total_proteina=analisis_origen.total_proteina,
+                    total_grasa=analisis_origen.total_grasa,
+                    total_cho=analisis_origen.total_cho,
+                    total_calcio=analisis_origen.total_calcio,
+                    total_hierro=analisis_origen.total_hierro,
+                    total_sodio=analisis_origen.total_sodio,
+                    total_peso_neto=analisis_origen.total_peso_neto,
+                    total_peso_bruto=analisis_origen.total_peso_bruto,
+                    porcentaje_calorias=analisis_origen.porcentaje_calorias,
+                    porcentaje_proteina=analisis_origen.porcentaje_proteina,
+                    porcentaje_grasa=analisis_origen.porcentaje_grasa,
+                    porcentaje_cho=analisis_origen.porcentaje_cho,
+                    porcentaje_calcio=analisis_origen.porcentaje_calcio,
+                    porcentaje_hierro=analisis_origen.porcentaje_hierro,
+                    porcentaje_sodio=analisis_origen.porcentaje_sodio,
+                    estado_calorias=analisis_origen.estado_calorias,
+                    estado_proteina=analisis_origen.estado_proteina,
+                    estado_grasa=analisis_origen.estado_grasa,
+                    estado_cho=analisis_origen.estado_cho,
+                    estado_calcio=analisis_origen.estado_calcio,
+                    estado_hierro=analisis_origen.estado_hierro,
+                    estado_sodio=analisis_origen.estado_sodio,
+                )
+                analisis_map[analisis_origen.id_analisis] = nuevo_analisis
+
+                # Copiar TablaIngredientesPorNivel (pesos por nivel educativo)
+                nuevos_niveles = [
+                    TablaIngredientesPorNivel(
+                        id_analisis=nuevo_analisis,
+                        id_preparacion=prep_map[ing_nivel.id_preparacion_id],
+                        id_ingrediente_siesa=ing_nivel.id_ingrediente_siesa,
+                        codigo_icbf=ing_nivel.codigo_icbf,
+                        peso_neto=ing_nivel.peso_neto,
+                        peso_bruto=ing_nivel.peso_bruto,
+                        parte_comestible=ing_nivel.parte_comestible,
+                        calorias=ing_nivel.calorias,
+                        proteina=ing_nivel.proteina,
+                        grasa=ing_nivel.grasa,
+                        cho=ing_nivel.cho,
+                        calcio=ing_nivel.calcio,
+                        hierro=ing_nivel.hierro,
+                        sodio=ing_nivel.sodio,
+                    )
+                    for ing_nivel in analisis_origen.ingredientes_configurados.all()
+                    if ing_nivel.id_preparacion_id in prep_map
+                ]
+                if nuevos_niveles:
+                    TablaIngredientesPorNivel.objects.bulk_create(nuevos_niveles)
+
+        total_copiados = TablaMenus.objects.filter(
+            id_contrato_id=programa_destino_id,
+            id_modalidad_id=modalidad_id
+        ).count()
+        logger.info(
+            f"✅ Copia de modalidad completada: {total_copiados} menús copiados "
+            f"(programa {programa_origen_id} → {programa_destino_id}, modalidad {modalidad_id})"
+        )
+        return total_copiados
+
+    @staticmethod
     def crear_menu(
         nombre: str,
         id_programa: int,

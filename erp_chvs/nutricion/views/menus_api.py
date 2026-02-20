@@ -2,7 +2,7 @@ import json
 
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction
-from django.db.models import Case, IntegerField, Value, When
+from django.db.models import Case, Count, IntegerField, Value, When
 from django.db.models.functions import Cast
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -281,3 +281,94 @@ def api_menu_detail(request, id_menu):
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
 
     return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def api_programas_con_modalidad(request):
+    """
+    GET /nutricion/api/programas-con-modalidad/?modalidad_id=X&programa_excluir=Y
+
+    Devuelve todos los programas que tienen al menos 1 menú configurado para
+    la modalidad indicada, ordenados por municipio → ID desc.
+    El programa actual (programa_excluir) se omite del resultado.
+    """
+    modalidad_id = request.GET.get('modalidad_id')
+    programa_excluir = request.GET.get('programa_excluir')
+
+    if not modalidad_id:
+        return JsonResponse({'programas': []})
+
+    try:
+        qs = TablaMenus.objects.filter(
+            id_modalidad_id=modalidad_id
+        ).values(
+            'id_contrato_id',
+            'id_contrato__programa',
+            'id_contrato__contrato',
+            'id_contrato__municipio__nombre_municipio',
+        ).annotate(
+            cantidad_menus=Count('id_menu')
+        ).filter(
+            cantidad_menus__gt=0
+        ).order_by(
+            'id_contrato__municipio__nombre_municipio',
+            '-id_contrato_id'
+        )
+
+        if programa_excluir:
+            qs = qs.exclude(id_contrato_id=programa_excluir)
+
+        programas = [
+            {
+                'id': p['id_contrato_id'],
+                'programa': p['id_contrato__programa'],
+                'contrato': p['id_contrato__contrato'],
+                'municipio_nombre': p['id_contrato__municipio__nombre_municipio'],
+                'cantidad_menus': p['cantidad_menus'],
+            }
+            for p in qs
+        ]
+
+        return JsonResponse({'programas': programas})
+
+    except Exception as e:
+        return JsonResponse({'programas': [], 'error': str(e)})
+
+
+@login_required
+@csrf_exempt
+def api_copiar_modalidad(request):
+    """
+    POST /nutricion/api/copiar-modalidad/
+    Body: {programa_origen_id, programa_destino_id, modalidad_id}
+
+    Copia la jerarquía completa de menús de una modalidad entre programas.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        programa_origen_id = data.get('programa_origen_id')
+        programa_destino_id = data.get('programa_destino_id')
+        modalidad_id = data.get('modalidad_id')
+
+        if not all([programa_origen_id, programa_destino_id, modalidad_id]):
+            return JsonResponse({'error': 'Faltan parámetros requeridos'}, status=400)
+
+        from ..services.menu_service import MenuService
+        menus_copiados = MenuService.copiar_modalidad_completa(
+            programa_origen_id=int(programa_origen_id),
+            programa_destino_id=int(programa_destino_id),
+            modalidad_id=str(modalidad_id)
+        )
+
+        return JsonResponse({
+            'success': True,
+            'menus_copiados': menus_copiados
+        })
+
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': f'Error inesperado: {str(e)}'}, status=500)
