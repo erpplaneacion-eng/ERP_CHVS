@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Firmas Nutricionales por Contrato{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h3 class="mb-1">Firmas Nutricionales por Contrato</h3>
+            <p class="text-muted mb-0">Configura los dos profesionales que se imprimen en el Excel por programa.</p>
+        </div>
+        <a href="{% url 'nutricion:nutricion_index' %}" class="btn btn-outline-secondary">Volver</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-8">
+                    <label for="programa" class="form-label">Contrato / Programa</label>
+                    <select id="programa" name="programa" class="form-select" required>
+                        <option value="">Seleccione un contrato...</option>
+                        {% for p in programas %}
+                            <option value="{{ p.id }}" {% if programa_obj and p.id == programa_obj.id %}selected{% endif %}>
+                                {{ p.programa }} ({{ p.contrato }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-primary w-100" type="submit">Cargar configuración</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if programa_obj and form %}
+    <form method="post" enctype="multipart/form-data" class="card">
+        {% csrf_token %}
+        <input type="hidden" name="programa_id" value="{{ programa_obj.id }}">
+        <div class="card-header">
+            <strong>{{ programa_obj.programa }}</strong> - {{ programa_obj.contrato }}
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-12"><h5 class="mb-0">Profesional que Elabora</h5></div>
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.elabora_nombre.label }}</label>
+                    {{ form.elabora_nombre }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.elabora_matricula.label }}</label>
+                    {{ form.elabora_matricula }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.elabora_firma_texto.label }}</label>
+                    {{ form.elabora_firma_texto }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.elabora_firma_imagen.label }}</label>
+                    {{ form.elabora_firma_imagen }}
+                    {% if firma_obj and firma_obj.elabora_firma_imagen %}
+                        <div class="mt-2">
+                            <img src="{{ firma_obj.elabora_firma_imagen.url }}" alt="Firma elabora" style="max-height:70px; border:1px solid #ddd; padding:4px;">
+                        </div>
+                    {% endif %}
+                </div>
+
+                <hr class="my-3">
+
+                <div class="col-12"><h5 class="mb-0">Profesional que Aprueba</h5></div>
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.aprueba_nombre.label }}</label>
+                    {{ form.aprueba_nombre }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.aprueba_matricula.label }}</label>
+                    {{ form.aprueba_matricula }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.aprueba_firma_texto.label }}</label>
+                    {{ form.aprueba_firma_texto }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.aprueba_firma_imagen.label }}</label>
+                    {{ form.aprueba_firma_imagen }}
+                    {% if firma_obj and firma_obj.aprueba_firma_imagen %}
+                        <div class="mt-2">
+                            <img src="{{ firma_obj.aprueba_firma_imagen.url }}" alt="Firma aprueba" style="max-height:70px; border:1px solid #ddd; padding:4px;">
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="card-footer text-end">
+            <button class="btn btn-success" type="submit">Guardar firmas</button>
+        </div>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}
+

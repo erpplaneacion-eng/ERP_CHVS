@@ -164,14 +164,17 @@ class ExcelReportDrawer:
         modalidad_nombre = menu_info.get('modalidad', 'N/A')
         modalidad_atencion = self._resolver_modalidad_atencion(modalidad_id)
 
+        def _upper(value):
+            return str(value).upper() if value is not None else ""
+
         admin_data = [
-            ("ENTIDAD TERRITORIAL:", menu_info.get('programa', 'N/A')),
-            ("MINUTA CON ENFOQUE ETNICO:", "No"),
-            ("GRUPO ÉTNICO", "Sin Pertenencia Étnica"),
-            ("MODALIDAD DE ATENCIÓN", modalidad_atencion),
-            ("TIPO DE COMPLEMENTO", modalidad_nombre),
-            ("NIVEL", nivel_escolar),
-            ("MENÚ No.", menu_info.get('nombre', 'N/A'))
+            ("ENTIDAD TERRITORIAL:", _upper(menu_info.get('programa', 'N/A'))),
+            ("MINUTA CON ENFOQUE ETNICO:", _upper("No")),
+            ("GRUPO ÉTNICO", _upper("Sin Pertenencia Étnica")),
+            ("MODALIDAD DE ATENCIÓN", _upper(modalidad_atencion)),
+            ("TIPO DE COMPLEMENTO", _upper(modalidad_nombre)),
+            ("NIVEL", _upper(nivel_escolar)),
+            ("MENÚ No.", _upper(menu_info.get('nombre', 'N/A')))
         ]
 
         for i, (label, value) in enumerate(admin_data):
@@ -357,11 +360,22 @@ class ExcelReportDrawer:
             cell.number_format = '0.00"%"'
             cell.alignment = Alignment(horizontal='center')
 
-    def _add_signatures(self, ws: Worksheet, start_row: int) -> None:
+    def _add_signatures(self, ws: Worksheet, start_row: int, menu_info: Optional[Dict] = None) -> None:
         """Agregar sección de firmas."""
         bottom_border = Border(bottom=Side(style='thin'))
         full_border = self.border
         center_align = Alignment(horizontal='center', vertical='center')
+        firmas = (menu_info or {}).get('firmas') or {}
+
+        elabora_nombre = firmas.get('elabora_nombre') or "SARA ISABEL DIAZ MARQUEZ"
+        elabora_matricula = firmas.get('elabora_matricula') or "1107089938"
+        elabora_firma_texto = firmas.get('elabora_firma_texto') or ""
+        elabora_firma_imagen_path = firmas.get('elabora_firma_imagen_path')
+
+        aprueba_nombre = firmas.get('aprueba_nombre') or "GABRIELA GIRALDO MARTINEZ"
+        aprueba_matricula = firmas.get('aprueba_matricula') or "1005964870"
+        aprueba_firma_texto = firmas.get('aprueba_firma_texto') or ""
+        aprueba_firma_imagen_path = firmas.get('aprueba_firma_imagen_path')
 
         row = start_row
         # --- Bloque 1 ---
@@ -371,7 +385,7 @@ class ExcelReportDrawer:
         ws.merge_cells(f'A{row}:D{row}')
 
         name_value_cell = ws.cell(row=row, column=5)
-        name_value_cell.value = "SARA ISABEL DIAZ MARQUEZ"
+        name_value_cell.value = elabora_nombre
         name_value_cell.border = full_border
         name_value_cell.alignment = center_align
         ws.merge_cells(f'E{row}:G{row}')
@@ -384,13 +398,19 @@ class ExcelReportDrawer:
         for col_idx in range(2, 5):
             ws.cell(row=row, column=col_idx).border = bottom_border
         ws.merge_cells(f'B{row}:D{row}')
+        if elabora_firma_imagen_path:
+            self._insert_signature_image(ws, elabora_firma_imagen_path, f'B{max(1, row - 2)}')
+        elif elabora_firma_texto:
+            firma_cell = ws.cell(row=row, column=2)
+            firma_cell.value = elabora_firma_texto
+            firma_cell.alignment = center_align
 
         ws.cell(row=row, column=8).value = "MATRÍCULA PROFESIONAL"
         ws.cell(row=row, column=8).border = full_border
         ws.merge_cells(f'H{row}:J{row}')
         
         matricula_value_cell = ws.cell(row=row, column=11)
-        matricula_value_cell.value = "1107089938"
+        matricula_value_cell.value = elabora_matricula
         matricula_value_cell.border = full_border
         matricula_value_cell.alignment = center_align
         ws.merge_cells(f'K{row}:L{row}')
@@ -403,7 +423,7 @@ class ExcelReportDrawer:
         ws.merge_cells(f'A{row}:D{row}')
 
         name_value_cell_2 = ws.cell(row=row, column=5)
-        name_value_cell_2.value = "GABRIELA GIRALDO MARTINEZ"
+        name_value_cell_2.value = aprueba_nombre
         name_value_cell_2.border = full_border
         name_value_cell_2.alignment = center_align
         ws.merge_cells(f'E{row}:G{row}')
@@ -416,16 +436,37 @@ class ExcelReportDrawer:
         for col_idx in range(2, 5):
             ws.cell(row=row, column=col_idx).border = bottom_border
         ws.merge_cells(f'B{row}:D{row}')
+        if aprueba_firma_imagen_path:
+            self._insert_signature_image(ws, aprueba_firma_imagen_path, f'B{max(1, row - 2)}')
+        elif aprueba_firma_texto:
+            firma_cell_2 = ws.cell(row=row, column=2)
+            firma_cell_2.value = aprueba_firma_texto
+            firma_cell_2.alignment = center_align
 
         ws.cell(row=row, column=8).value = "MATRÍCULA PROFESIONAL"
         ws.cell(row=row, column=8).border = full_border
         ws.merge_cells(f'H{row}:J{row}')
 
         matricula_value_cell_2 = ws.cell(row=row, column=11)
-        matricula_value_cell_2.value = "1005964870"
+        matricula_value_cell_2.value = aprueba_matricula
         matricula_value_cell_2.border = full_border
         matricula_value_cell_2.alignment = center_align
         ws.merge_cells(f'K{row}:L{row}')
+
+    def _insert_signature_image(self, ws: Worksheet, image_path: str, anchor_cell: str) -> None:
+        """
+        Inserta imagen de firma en Excel si el archivo existe.
+        """
+        if not image_path:
+            return
+        try:
+            img = Image(image_path)
+            img.width = min(img.width, 180)
+            img.height = min(img.height, 60)
+            ws.add_image(img, anchor_cell)
+        except Exception:
+            # Fallback silencioso para no romper la exportación por errores de archivo.
+            return
 
     def _apply_formatting(self, ws: Worksheet) -> None:
         """Aplica formato a todo el worksheet."""
@@ -533,7 +574,7 @@ class ExcelReportDrawer:
 
         # La sección de firmas comienza 6 filas después de los datos
         signatures_start_row = last_data_row + 6
-        self._add_signatures(ws, signatures_start_row)
+        self._add_signatures(ws, signatures_start_row, menu_info=menu_info)
 
         # Calcular la última fila del reporte
         # Sección de firmas ocupa aproximadamente 5-6 filas

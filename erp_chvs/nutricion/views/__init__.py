@@ -50,3 +50,6 @@ from .semanal import (
     api_validar_semana,
     api_requerimientos_modalidad,
 )
+from .firmas import (
+    firmas_contrato,
+)

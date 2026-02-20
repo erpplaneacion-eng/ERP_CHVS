@@ -247,6 +247,148 @@ class TablaMenus(models.Model):
         ]
 
 
+class FirmaNutricionalContrato(models.Model):
+    """
+    Configuración de firmas nutricionales por contrato/programa.
+    Mantiene un único registro vigente por programa.
+    """
+    programa = models.OneToOneField(
+        Programa,
+        on_delete=models.CASCADE,
+        db_column='id_contrato',
+        related_name='firma_nutricional',
+        verbose_name="Contrato/Programa"
+    )
+
+    # Profesional que elabora el análisis
+    elabora_nombre = models.CharField(max_length=255, verbose_name="Nombre Dietista (Elabora)")
+    elabora_matricula = models.CharField(max_length=50, verbose_name="Matrícula Profesional (Elabora)")
+    elabora_firma_texto = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Firma Texto (Elabora)"
+    )
+    elabora_firma_imagen = models.ImageField(
+        upload_to='firmas_nutricion/',
+        blank=True,
+        null=True,
+        verbose_name="Firma Imagen (Elabora)"
+    )
+
+    # Profesional que aprueba el análisis
+    aprueba_nombre = models.CharField(max_length=255, verbose_name="Nombre Dietista (Aprueba)")
+    aprueba_matricula = models.CharField(max_length=50, verbose_name="Matrícula Profesional (Aprueba)")
+    aprueba_firma_texto = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Firma Texto (Aprueba)"
+    )
+    aprueba_firma_imagen = models.ImageField(
+        upload_to='firmas_nutricion/',
+        blank=True,
+        null=True,
+        verbose_name="Firma Imagen (Aprueba)"
+    )
+
+    fecha_actualizacion = models.DateTimeField(auto_now=True, verbose_name="Fecha Actualización")
+    usuario_modificacion = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="Usuario que Modificó"
+    )
+
+    class Meta:
+        db_table = 'nutricion_firma_nutricional_contrato'
+        verbose_name = "Firma Nutricional por Contrato"
+        verbose_name_plural = "Firmas Nutricionales por Contrato"
+        ordering = ['programa__programa']
+
+    def __str__(self):
+        return f"Firmas nutricionales - {self.programa.programa}"
+
+    @staticmethod
+    def _normalizar_campo_texto(value):
+        if not value:
+            return value
+        return str(value).strip().upper()
+
+    @staticmethod
+    def _optimizar_firma(imagen_field):
+        """
+        Optimiza la firma para reducir peso y remover fondo claro.
+        """
+        if not imagen_field or not hasattr(imagen_field, 'file'):
+            return imagen_field
+
+        try:
+            import os
+            import sys
+            from io import BytesIO
+            from PIL import Image
+            from django.core.files.uploadedfile import InMemoryUploadedFile
+
+            img = Image.open(imagen_field).convert('RGBA')
+
+            # Transparencia para fondo claro.
+            pixels = img.getdata()
+            cleaned = []
+            for r, g, b, a in pixels:
+                if r > 240 and g > 240 and b > 240:
+                    cleaned.append((255, 255, 255, 0))
+                else:
+                    cleaned.append((r, g, b, 255))
+            img.putdata(cleaned)
+
+            # Recortar bordes transparentes.
+            bbox = img.getbbox()
+            if bbox:
+                img = img.crop(bbox)
+
+            # Reducir tamaño para Excel.
+            max_width = 500
+            if img.width > max_width:
+                ratio = max_width / float(img.width)
+                new_height = max(1, int(img.height * ratio))
+                img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+
+            output = BytesIO()
+            img.save(output, format='PNG', optimize=True)
+            output.seek(0)
+
+            original_name = os.path.basename(imagen_field.name)
+            base_name, _ = os.path.splitext(original_name)
+            file_name = f"{base_name}.png"
+
+            return InMemoryUploadedFile(
+                output,
+                'ImageField',
+                file_name,
+                'image/png',
+                sys.getsizeof(output),
+                None
+            )
+        except Exception:
+            return imagen_field
+
+    def save(self, *args, **kwargs):
+        self.elabora_nombre = self._normalizar_campo_texto(self.elabora_nombre)
+        self.elabora_matricula = self._normalizar_campo_texto(self.elabora_matricula)
+        self.elabora_firma_texto = self._normalizar_campo_texto(self.elabora_firma_texto)
+        self.aprueba_nombre = self._normalizar_campo_texto(self.aprueba_nombre)
+        self.aprueba_matricula = self._normalizar_campo_texto(self.aprueba_matricula)
+        self.aprueba_firma_texto = self._normalizar_campo_texto(self.aprueba_firma_texto)
+
+        if self.elabora_firma_imagen:
+            self.elabora_firma_imagen = self._optimizar_firma(self.elabora_firma_imagen)
+        if self.aprueba_firma_imagen:
+            self.aprueba_firma_imagen = self._optimizar_firma(self.aprueba_firma_imagen)
+
+        super().save(*args, **kwargs)
+
+
 class TablaPreparaciones(models.Model):
     """
     Modelo para gestionar preparaciones/recetas asociadas a un menú.

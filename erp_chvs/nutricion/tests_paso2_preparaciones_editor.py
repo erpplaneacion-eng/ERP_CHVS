@@ -16,6 +16,7 @@ from .excel_generator import generate_menu_excel
 from .excel_drawing_utils import ExcelReportDrawer
 from .models import (
     ComponentesAlimentos,
+    FirmaNutricionalContrato,
     GruposAlimentos,
     MinutaPatronMeta,
     TablaAlimentos2018Icbf,
@@ -404,7 +405,7 @@ class Paso2PreparacionesEditorIntegrationTests(TestCase):
         req_por_hoja = {}
         for sheet_name in wb.sheetnames:
             ws = wb[sheet_name]
-            self.assertEqual(ws["D7"].value, sheet_name)
+            self.assertEqual(ws["D7"].value, sheet_name.upper())
 
             total_row = None
             for row in range(11, 60):
@@ -425,8 +426,8 @@ class Paso2PreparacionesEditorIntegrationTests(TestCase):
         wb = load_workbook(filename=BytesIO(excel_stream.getvalue()))
         ws = wb[wb.sheetnames[0]]
 
-        self.assertEqual(ws["D5"].value, "Ración para Preparar en Sitio")
-        self.assertEqual(ws["D6"].value, self.modalidad.modalidad)
+        self.assertEqual(ws["D5"].value, "RACIÓN PARA PREPARAR EN SITIO")
+        self.assertEqual(ws["D6"].value, self.modalidad.modalidad.upper())
 
     def test_servicio_aplica_ingrediente_guardado_por_codigo_icbf_sin_siesa(self):
         analisis = TablaAnalisisNutricionalMenu.objects.create(
@@ -460,6 +461,48 @@ class Paso2PreparacionesEditorIntegrationTests(TestCase):
         self.assertEqual(float(ingrediente["peso_neto_base"]), 222.0)
         self.assertIn("valores_finales_guardados", ingrediente)
         self.assertEqual(float(ingrediente["valores_finales_guardados"]["calorias"]), 123.0)
+
+    def test_excel_export_usa_firmas_configuradas_por_contrato(self):
+        FirmaNutricionalContrato.objects.create(
+            programa=self.programa,
+            elabora_nombre="Nutri Elabora QA",
+            elabora_matricula="MAT-111",
+            elabora_firma_texto="FIRMA ELABORA QA",
+            aprueba_nombre="Nutri Aprueba QA",
+            aprueba_matricula="MAT-222",
+            aprueba_firma_texto="FIRMA APRUEBA QA",
+        )
+
+        excel_stream = generate_menu_excel(self.menu.id_menu)
+        wb = load_workbook(filename=BytesIO(excel_stream.getvalue()))
+        ws = wb[wb.sheetnames[0]]
+
+        row_elabora = None
+        row_aprueba = None
+        row_matriculas = []
+        for row in range(10, 80):
+            col1 = ws.cell(row=row, column=1).value
+            col8 = ws.cell(row=row, column=8).value
+            if col1 == "NOMBRE NUTRICIONISTA - DIETISTA QUE ELABORA EL ANÁLISIS":
+                row_elabora = row
+            if col1 == "NOMBRE NUTRICIONISTA - DIETISTA QUE REVISA Y APRUEBA EL ANÁLISIS POR PARTE DE LA SEM":
+                row_aprueba = row
+            if col8 == "MATRÍCULA PROFESIONAL":
+                row_matriculas.append(row)
+
+        self.assertIsNotNone(row_elabora)
+        self.assertIsNotNone(row_aprueba)
+        self.assertEqual(ws.cell(row=row_elabora, column=5).value, "NUTRI ELABORA QA")
+        self.assertEqual(ws.cell(row=row_aprueba, column=5).value, "NUTRI APRUEBA QA")
+        self.assertGreaterEqual(len(row_matriculas), 2)
+        self.assertEqual(ws.cell(row=row_matriculas[0], column=11).value, "MAT-111")
+        self.assertEqual(ws.cell(row=row_matriculas[1], column=11).value, "MAT-222")
+
+    def test_vista_firmas_contrato_carga(self):
+        url = reverse("nutricion:firmas_contrato")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Firmas Nutricionales por Contrato", html=False)
 
 
 class Paso4FrontendContractsTests(TestCase):

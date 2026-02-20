@@ -6,6 +6,7 @@ app_name = 'nutricion'
 urlpatterns = [
     # Vista principal
     path('', views.nutricion_index, name='nutricion_index'),
+    path('firmas-contrato/', views.firmas_contrato, name='firmas_contrato'),
 
     # Alimentos ICBF
     path('alimentos/', views.lista_alimentos, name='lista_alimentos'),

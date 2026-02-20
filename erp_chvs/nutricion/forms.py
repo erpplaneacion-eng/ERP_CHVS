@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import TablaAlimentos2018Icbf
+from .models import TablaAlimentos2018Icbf, FirmaNutricionalContrato
 import re
 from decimal import Decimal, InvalidOperation
 
@@ -420,3 +420,38 @@ class AlimentoForm(forms.ModelForm):
             raise ValidationError("La suma de los componentes principales (proteína + lípidos + carbohidratos + humedad + cenizas) no puede exceder 105g por 100g de alimento.")
         
         return cleaned_data
+
+
+class FirmaNutricionalContratoForm(forms.ModelForm):
+    class Meta:
+        model = FirmaNutricionalContrato
+        fields = [
+            'elabora_nombre',
+            'elabora_matricula',
+            'elabora_firma_texto',
+            'elabora_firma_imagen',
+            'aprueba_nombre',
+            'aprueba_matricula',
+            'aprueba_firma_texto',
+            'aprueba_firma_imagen',
+        ]
+        widgets = {
+            'elabora_nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'elabora_matricula': forms.TextInput(attrs={'class': 'form-control'}),
+            'elabora_firma_texto': forms.TextInput(attrs={'class': 'form-control'}),
+            'elabora_firma_imagen': forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+            'aprueba_nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'aprueba_matricula': forms.TextInput(attrs={'class': 'form-control'}),
+            'aprueba_firma_texto': forms.TextInput(attrs={'class': 'form-control'}),
+            'aprueba_firma_imagen': forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+        }
+        labels = {
+            'elabora_nombre': 'Nombre (Elabora)',
+            'elabora_matricula': 'Matrícula (Elabora)',
+            'elabora_firma_texto': 'Firma texto (Elabora)',
+            'elabora_firma_imagen': 'Firma imagen (Elabora)',
+            'aprueba_nombre': 'Nombre (Aprueba)',
+            'aprueba_matricula': 'Matrícula (Aprueba)',
+            'aprueba_firma_texto': 'Firma texto (Aprueba)',
+            'aprueba_firma_imagen': 'Firma imagen (Aprueba)',
+        }

@@ -21,6 +21,7 @@ from ..models import (
     TablaGradosEscolaresUapa,
     RecomendacionDiariaGradoMod,
     AdecuacionTotalPorcentaje,
+    FirmaNutricionalContrato,
 )
 from .calculo_service import CalculoService
 
@@ -111,6 +112,28 @@ class AnalisisNutricionalService:
             except (FileNotFoundError, ValueError):
                 logo_path = None # Handle cases where file is missing or path is invalid
 
+        firma_cfg = FirmaNutricionalContrato.objects.filter(programa=menu.id_contrato).first()
+        firma_data = None
+        if firma_cfg:
+            def _path_or_none(file_field):
+                if not file_field:
+                    return None
+                try:
+                    return file_field.path
+                except (FileNotFoundError, ValueError):
+                    return None
+
+            firma_data = {
+                'elabora_nombre': firma_cfg.elabora_nombre or '',
+                'elabora_matricula': firma_cfg.elabora_matricula or '',
+                'elabora_firma_texto': firma_cfg.elabora_firma_texto or '',
+                'elabora_firma_imagen_path': _path_or_none(firma_cfg.elabora_firma_imagen),
+                'aprueba_nombre': firma_cfg.aprueba_nombre or '',
+                'aprueba_matricula': firma_cfg.aprueba_matricula or '',
+                'aprueba_firma_texto': firma_cfg.aprueba_firma_texto or '',
+                'aprueba_firma_imagen_path': _path_or_none(firma_cfg.aprueba_firma_imagen),
+            }
+
         return {
             'success': True,
             'menu': {
@@ -119,7 +142,8 @@ class AnalisisNutricionalService:
                 'modalidad_id': menu.id_modalidad_id if menu.id_modalidad_id else None,
                 'modalidad': menu.id_modalidad.modalidad if menu.id_modalidad else 'N/A',
                 'programa': menu.id_contrato.programa if menu.id_contrato else 'N/A',
-                'logo_path': logo_path
+                'logo_path': logo_path,
+                'firmas': firma_data,
             },
             'analisis_por_nivel': analisis_por_nivel
         }
