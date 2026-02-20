@@ -714,7 +714,13 @@ class AnalisisNutricionalService:
 
         if denominadores:
             def _pct(total, den):
-                return (total / den * 100) if den else 0
+                # Mantener consistencia con el resto del sistema:
+                # los porcentajes de adecuacion se limitan a 100.
+                return CalculoService.calcular_porcentaje_adecuacion(
+                    total_actual=total,
+                    requerimiento=den,
+                    limitar_a_100=True,
+                )
 
             analisis.porcentaje_calorias = _pct(totales['calorias'], denominadores['calorias'])
             analisis.porcentaje_proteina = _pct(totales['proteina'], denominadores['proteina'])

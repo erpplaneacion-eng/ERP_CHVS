@@ -114,7 +114,7 @@ views.py → services.py → persistence_service.py → models.py
 - `analisis_api.py` — Nutritional analysis, weight sync
 - `exportes.py` — Excel/PDF downloads
 - `semanal.py` — Weekly menu validation (`api_validar_semana`, `api_requerimientos_modalidad`)
-- `preparaciones_editor.py` — Preparations editor view
+- `preparaciones_editor.py` — Preparations editor view (standalone page with editable ingredient weights per level, dynamic peso bruto column, 4-state semaforización)
 
 ### Key Model Relationships
 
@@ -148,6 +148,12 @@ TablaRequerimientosNutricionales (level + modality → nutritional targets)
 
 **Level names** (database format): `prescolar`, `primaria_1_2_3`, `primaria_4_5`, `secundaria`, `media_ciclo_complementario`
 
+**Critical**: `TablaGradosEscolaresUapa.id_grado_escolar_uapa` is a `CharField`, NOT an integer. Never sort by this field directly (alphabetical order breaks pedagogical order). Always sort using a known-order list:
+```python
+_ORDEN_NIVELES = ['prescolar', 'primaria_1_2_3', 'primaria_4_5', 'secundaria', 'media_ciclo_complementario']
+sorted(queryset, key=lambda n: _ORDEN_NIVELES.index(n.nivel_escolar_uapa) if n.nivel_escolar_uapa in _ORDEN_NIVELES else 999)
+```
+
 ### Frontend Architecture
 
 - **Stack**: Bootstrap 5.3.3, SweetAlert2, jQuery, DataTables
@@ -157,6 +163,7 @@ TablaRequerimientosNutricionales (level + modality → nutritional targets)
 **Nutricion JS** (`static/js/nutricion/`):
 - `main.js` — Entry point
 - `menus_avanzado_refactorizado.js` — Main controller (dependency injection)
+- `preparaciones_editor.js` — Standalone editor: dynamic peso bruto (`(peso_neto×100)/parte_comestible`), slider sync, 4-state semaforización
 - `modules/` — Single-responsibility managers:
   - `ModalesManager.js`, `FiltrosManager.js`, `ModalidadesManager.js`
   - `PreparacionesManager.js`, `IngredientesManager.js`
@@ -229,7 +236,9 @@ GEMINI_API_KEY=your-key
 
 ## Nutritional Analysis — Semaforización
 
-The traffic-light system evaluates nutritional adequacy per **school level + consumption modality**. Each modality has its own 100% baseline from the Minuta Patrón ICBF.
+Two semaforización systems coexist:
+
+**Lista de menús** (modal de análisis nutricional en `lista_menus.html`): 3 absolute states.
 
 | State | Range | Color |
 |-------|-------|-------|
@@ -237,7 +246,16 @@ The traffic-light system evaluates nutritional adequacy per **school level + con
 | ACEPTABLE | 35.1–70% | Yellow |
 | ALTO | >70% | Red |
 
-Key files: `nutricion/services/analisis_service.py`, `nutricion/models.py` (`TablaRequerimientosNutricionales`).
+**Editor de preparaciones** (`preparaciones_editor.py` / `preparaciones_editor.js`): 4-state proximity system using `AdecuacionTotalPorcentaje` as reference baseline. Denominator: `RecomendacionDiariaGradoMod` (with fallback to `TablaRequerimientosNutricionales`).
+
+| State | Proximity to reference % | Color |
+|-------|--------------------------|-------|
+| `optimo` | ≤3 pts | Green |
+| `azul` | 3–5 pts | Blue |
+| `aceptable` | 5–7 pts | Yellow |
+| `alto` | >7 pts | Red |
+
+Key files: `nutricion/services/analisis_service.py`, `nutricion/models.py` (`TablaRequerimientosNutricionales`, `RecomendacionDiariaGradoMod`, `AdecuacionTotalPorcentaje`).
 
 Weekly validation (component frequency): `nutricion/views/semanal.py`
 - `GET /nutricion/api/validar-semana/?menu_ids=1,2,3&modalidad_id=5`
@@ -262,6 +280,18 @@ MenuService.generar_menu_con_ia()
             TablaAnalisisNutricionalMenu
             TablaIngredientesPorNivel (peso_neto, peso_bruto, nutrients calculated)
 ```
+
+### Nutricion: Copy Modality Between Programs
+Button "Copiar desde otro programa" in `lista_menus.html` acordeón (visible only when a modality has 0 menus):
+```
+ModalidadesManager.js → abrirModalCopiar()
+    → GET /nutricion/api/programas-con-modalidad/?modalidad_id=X&programa_excluir=Y
+    → POST /nutricion/api/copiar-modalidad/  {programa_origen_id, programa_destino_id, modalidad_id}
+    → MenuService.copiar_modalidad_completa()  (atomic transaction)
+        Copies: TablaMenus → TablaPreparaciones → TablaPreparacionIngredientes
+                TablaAnalisisNutricionalMenu → TablaIngredientesPorNivel
+```
+Key file: `nutricion/services/menu_service.py` — `copiar_modalidad_completa()`. Endpoints in `menus_api.py`.
 
 ## Database
 

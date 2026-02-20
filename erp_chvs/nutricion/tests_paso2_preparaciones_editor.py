@@ -248,6 +248,38 @@ class Paso2PreparacionesEditorIntegrationTests(TestCase):
         self.assertEqual(body["registros_actualizados"], 0)
         self.assertTrue(any("no encontrado" in err.lower() for err in body["errores"]))
 
+    def test_api_guardar_ingredientes_por_nivel_limita_porcentajes_para_evitar_overflow(self):
+        analisis = TablaAnalisisNutricionalMenu.objects.create(
+            id_menu=self.menu,
+            id_nivel_escolar_uapa=self.nivel_prescolar,
+        )
+
+        url = reverse("nutricion:api_guardar_ingredientes_por_nivel", args=[self.menu.id_menu])
+        payload = {
+            "niveles": [
+                {
+                    "id_nivel_escolar": self.nivel_prescolar.id_grado_escolar_uapa,
+                    "id_analisis": analisis.id_analisis,
+                    "ingredientes": [
+                        {
+                            "id_preparacion": self.preparacion.id_preparacion,
+                            "id_ingrediente": self.alimento_icbf.codigo,
+                            # Fuerza un porcentaje > 1000% sin el tope.
+                            "peso_neto": 15000.0,
+                        }
+                    ],
+                }
+            ]
+        }
+        response = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+
+        analisis.refresh_from_db()
+        self.assertEqual(float(analisis.porcentaje_hierro), 100.0)
+
     def test_paso4_template_incluye_slider_y_labels_de_rango(self):
         url = reverse("nutricion:preparaciones_editor", args=[self.menu.id_menu])
         response = self.client.get(url)
@@ -299,4 +331,3 @@ class Paso4FrontendContractsTests(TestCase):
         self.assertIn("function ocultarOverlayGuardando()", js)
         self.assertIn("const overlay = mostrarOverlayGuardando('Guardando cambios...');", js)
         self.assertIn("ocultarOverlayGuardando();", js)
-
