@@ -1,4 +1,5 @@
 import json
+from io import BytesIO
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -9,7 +10,10 @@ from django.urls import reverse
 
 from planeacion.models import Programa
 from principal.models import ModalidadesDeConsumo, PrincipalMunicipio, TablaGradosEscolaresUapa
+from openpyxl import load_workbook
 
+from .excel_generator import generate_menu_excel
+from .excel_drawing_utils import ExcelReportDrawer
 from .models import (
     ComponentesAlimentos,
     GruposAlimentos,
@@ -23,6 +27,7 @@ from .models import (
     TablaPreparaciones,
     TablaRequerimientosNutricionales,
 )
+from .services.analisis_service import AnalisisNutricionalService
 
 
 class Paso2PreparacionesEditorIntegrationTests(TestCase):
@@ -360,6 +365,102 @@ class Paso2PreparacionesEditorIntegrationTests(TestCase):
         self.assertContains(response, 'data-proteina="', html=False)
         self.assertContains(response, 'title="Calor', html=False)
 
+    def test_excel_export_pobla_nutrientes_de_ingrediente_con_fallback(self):
+        excel_stream = generate_menu_excel(self.menu.id_menu)
+        wb = load_workbook(filename=BytesIO(excel_stream.getvalue()))
+        ws = wb[wb.sheetnames[0]]
+
+        valor_kcal = ws.cell(row=11, column=8).value
+        self.assertIsNotNone(valor_kcal)
+        self.assertGreater(float(valor_kcal), 0.0)
+
+    def test_excel_export_mapea_totales_desde_claves_del_servicio(self):
+        excel_stream = generate_menu_excel(self.menu.id_menu)
+        wb = load_workbook(filename=BytesIO(excel_stream.getvalue()))
+        ws = wb[wb.sheetnames[0]]
+
+        total_row = None
+        for row in range(11, 60):
+            if ws.cell(row=row, column=1).value == "TOTAL MENÚ":
+                total_row = row
+                break
+        self.assertIsNotNone(total_row)
+        self.assertAlmostEqual(float(ws.cell(row=total_row, column=8).value), 60.0, places=1)
+        self.assertAlmostEqual(float(ws.cell(row=total_row, column=9).value), 3.2, places=1)
+
+    def test_excel_export_usa_requerimientos_y_nivel_correcto_por_hoja(self):
+        TablaRequerimientosNutricionales.objects.filter(
+            id_nivel_escolar_uapa=self.nivel_prescolar,
+            id_modalidad=self.modalidad,
+        ).update(calorias_kcal=Decimal("276.0"))
+        TablaRequerimientosNutricionales.objects.filter(
+            id_nivel_escolar_uapa=self.nivel_primaria,
+            id_modalidad=self.modalidad,
+        ).update(calorias_kcal=Decimal("417.0"))
+
+        excel_stream = generate_menu_excel(self.menu.id_menu)
+        wb = load_workbook(filename=BytesIO(excel_stream.getvalue()))
+
+        req_por_hoja = {}
+        for sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            self.assertEqual(ws["D7"].value, sheet_name)
+
+            total_row = None
+            for row in range(11, 60):
+                if ws.cell(row=row, column=1).value == "TOTAL MENÚ":
+                    total_row = row
+                    break
+            self.assertIsNotNone(total_row)
+            req_row = total_row + 1
+            req_por_hoja[sheet_name] = float(ws.cell(row=req_row, column=8).value)
+
+        self.assertIn("Preescolar", req_por_hoja)
+        self.assertIn("Primaria 1-3", req_por_hoja)
+        self.assertEqual(req_por_hoja["Preescolar"], 276.0)
+        self.assertEqual(req_por_hoja["Primaria 1-3"], 417.0)
+
+    def test_excel_export_campos_administrativos_modalidad_y_tipo_complemento(self):
+        excel_stream = generate_menu_excel(self.menu.id_menu)
+        wb = load_workbook(filename=BytesIO(excel_stream.getvalue()))
+        ws = wb[wb.sheetnames[0]]
+
+        self.assertEqual(ws["D5"].value, "Ración para Preparar en Sitio")
+        self.assertEqual(ws["D6"].value, self.modalidad.modalidad)
+
+    def test_servicio_aplica_ingrediente_guardado_por_codigo_icbf_sin_siesa(self):
+        analisis = TablaAnalisisNutricionalMenu.objects.create(
+            id_menu=self.menu,
+            id_nivel_escolar_uapa=self.nivel_prescolar,
+        )
+        TablaIngredientesPorNivel.objects.create(
+            id_analisis=analisis,
+            id_preparacion=self.preparacion,
+            id_ingrediente_siesa=None,
+            codigo_icbf=self.alimento_icbf.codigo,
+            peso_neto=Decimal("222.00"),
+            peso_bruto=Decimal("222.00"),
+            calorias=Decimal("123.00"),
+            proteina=Decimal("11.00"),
+            grasa=Decimal("10.00"),
+            cho=Decimal("9.00"),
+            calcio=Decimal("8.00"),
+            hierro=Decimal("7.00"),
+            sodio=Decimal("6.00"),
+        )
+
+        resultado = AnalisisNutricionalService.obtener_analisis_completo(self.menu.id_menu)
+        self.assertTrue(resultado["success"])
+        nivel_prescolar = next(
+            n for n in resultado["analisis_por_nivel"]
+            if n["nivel_escolar"]["id"] == self.nivel_prescolar.id_grado_escolar_uapa
+        )
+        ingrediente = nivel_prescolar["preparaciones"][0]["ingredientes"][0]
+
+        self.assertEqual(float(ingrediente["peso_neto_base"]), 222.0)
+        self.assertIn("valores_finales_guardados", ingrediente)
+        self.assertEqual(float(ingrediente["valores_finales_guardados"]["calorias"]), 123.0)
+
 
 class Paso4FrontendContractsTests(TestCase):
     @classmethod
@@ -390,3 +491,19 @@ class Paso4FrontendContractsTests(TestCase):
         self.assertIn("selectComponente.disabled = !esNueva;", js)
         self.assertIn("if (modo === 'nueva' && !idComp)", js)
         self.assertIn("id_componente: modo === 'nueva' ? idComp : null", js)
+
+
+class ExcelRulesTests(TestCase):
+    def test_resolver_modalidad_atencion(self):
+        self.assertEqual(
+            ExcelReportDrawer._resolver_modalidad_atencion("020511"),
+            "Ración Industrializada"
+        )
+        self.assertEqual(
+            ExcelReportDrawer._resolver_modalidad_atencion("20502"),
+            "Ración Industrializada"
+        )
+        self.assertEqual(
+            ExcelReportDrawer._resolver_modalidad_atencion("modpaso2"),
+            "Ración para Preparar en Sitio"
+        )

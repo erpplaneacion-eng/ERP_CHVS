@@ -106,8 +106,8 @@ NUTRITIONAL_HEADERS = [
 ]
 
 NUTRIENT_KEYS = [
-    'calorias_kcal', 'proteina_g', 'grasa_g', 'cho_g',
-    'calcio_mg', 'hierro_mg', 'sodio_mg'
+    'calorias', 'proteina', 'grasa', 'cho',
+    'calcio', 'hierro', 'sodio'
 ]
 
 
@@ -150,17 +150,26 @@ class ExcelReportDrawer:
         title_cell.font = Font(bold=True, size=16)
         title_cell.alignment = Alignment(horizontal='center', vertical='center')
 
-    def _populate_administrative_section(self, ws: Worksheet, start_row: int, analisis_data: Dict) -> None:
+    def _populate_administrative_section(
+        self,
+        ws: Worksheet,
+        start_row: int,
+        analisis_data: Dict,
+        nivel_escolar_nombre: Optional[str] = None
+    ) -> None:
         """Poblar información administrativa del menú."""
         menu_info = analisis_data.get('menu', {})
-        nivel_escolar = self._extract_nivel_escolar(analisis_data)
+        nivel_escolar = nivel_escolar_nombre or self._extract_nivel_escolar(analisis_data)
+        modalidad_id = menu_info.get('modalidad_id')
+        modalidad_nombre = menu_info.get('modalidad', 'N/A')
+        modalidad_atencion = self._resolver_modalidad_atencion(modalidad_id)
 
         admin_data = [
             ("ENTIDAD TERRITORIAL:", menu_info.get('programa', 'N/A')),
             ("MINUTA CON ENFOQUE ETNICO:", "No"),
             ("GRUPO ÉTNICO", "Sin Pertenencia Étnica"),
-            ("MODALIDAD DE ATENCIÓN", menu_info.get('modalidad', 'N/A')),
-            ("TIPO DE COMPLEMENTO", "Almuerzo"),
+            ("MODALIDAD DE ATENCIÓN", modalidad_atencion),
+            ("TIPO DE COMPLEMENTO", modalidad_nombre),
             ("NIVEL", nivel_escolar),
             ("MENÚ No.", menu_info.get('nombre', 'N/A'))
         ]
@@ -190,6 +199,13 @@ class ExcelReportDrawer:
 
             value_cell.value = value
             value_cell.alignment = Alignment(horizontal='left', vertical='center')
+
+    @staticmethod
+    def _resolver_modalidad_atencion(modalidad_id: Optional[str]) -> str:
+        modalidad_codigo = str(modalidad_id or '').strip()
+        if modalidad_codigo in {'020511', '20502'}:
+            return "Ración Industrializada"
+        return "Ración para Preparar en Sitio"
 
     def _populate_headers(self, ws: Worksheet, start_row: int) -> None:
         """Poblar encabezados de columnas."""
@@ -229,17 +245,29 @@ class ExcelReportDrawer:
                 ws.cell(row=current_row, column=self.layout.COL_PESO_BRUTO).value = ingrediente.get('peso_bruto_base', 0)
                 ws.cell(row=current_row, column=self.layout.COL_PESO_NETO).value = ingrediente.get('peso_neto_base', 0)
 
-                if 'valores_finales_guardados' in ingrediente:
-                    valores_finales = ingrediente['valores_finales_guardados']
-                    ws.cell(row=current_row, column=self.layout.COL_CALORIAS).value = valores_finales.get('calorias', 0)
-                    ws.cell(row=current_row, column=self.layout.COL_PROTEINA).value = valores_finales.get('proteina', 0)
-                    ws.cell(row=current_row, column=self.layout.COL_GRASA).value = valores_finales.get('grasa', 0)
-                    ws.cell(row=current_row, column=self.layout.COL_CHO).value = valores_finales.get('cho', 0)
-                    ws.cell(row=current_row, column=self.layout.COL_CALCIO).value = valores_finales.get('calcio', 0)
-                    ws.cell(row=current_row, column=self.layout.COL_HIERRO).value = valores_finales.get('hierro', 0)
-                    ws.cell(row=current_row, column=self.layout.COL_SODIO).value = valores_finales.get('sodio', 0)
-                
-                
+                valores = ingrediente.get('valores_finales_guardados')
+                if not valores:
+                    peso_neto = float(ingrediente.get('peso_neto_base', 0) or 0)
+                    valores_por_100g = ingrediente.get('valores_por_100g', {}) or {}
+                    factor = peso_neto / 100
+                    valores = {
+                        'calorias': (valores_por_100g.get('calorias_kcal', 0) or 0) * factor,
+                        'proteina': (valores_por_100g.get('proteina_g', 0) or 0) * factor,
+                        'grasa': (valores_por_100g.get('grasa_g', 0) or 0) * factor,
+                        'cho': (valores_por_100g.get('cho_g', 0) or 0) * factor,
+                        'calcio': (valores_por_100g.get('calcio_mg', 0) or 0) * factor,
+                        'hierro': (valores_por_100g.get('hierro_mg', 0) or 0) * factor,
+                        'sodio': (valores_por_100g.get('sodio_mg', 0) or 0) * factor,
+                    }
+
+                ws.cell(row=current_row, column=self.layout.COL_CALORIAS).value = valores.get('calorias', 0)
+                ws.cell(row=current_row, column=self.layout.COL_PROTEINA).value = valores.get('proteina', 0)
+                ws.cell(row=current_row, column=self.layout.COL_GRASA).value = valores.get('grasa', 0)
+                ws.cell(row=current_row, column=self.layout.COL_CHO).value = valores.get('cho', 0)
+                ws.cell(row=current_row, column=self.layout.COL_CALCIO).value = valores.get('calcio', 0)
+                ws.cell(row=current_row, column=self.layout.COL_HIERRO).value = valores.get('hierro', 0)
+                ws.cell(row=current_row, column=self.layout.COL_SODIO).value = valores.get('sodio', 0)
+
                 # Aplicar bordes a toda la fila
                 for col_idx in range(self.layout.COL_COMPONENTE, self.layout.COL_SODIO + 1):
                     ws.cell(row=current_row, column=col_idx).border = self.border
@@ -296,10 +324,18 @@ class ExcelReportDrawer:
         ws.merge_cells(f'A{row}:G{row}')
 
         requerimientos = nivel_data.get('requerimientos', {})
+        default_values = {
+            'calorias': 1300,
+            'proteina': 45.5,
+            'grasa': 43.3,
+            'cho': 182,
+            'calcio': 700,
+            'hierro': 5.6,
+            'sodio': 1133,
+        }
         for i, key in enumerate(NUTRIENT_KEYS, start=self.layout.COL_CALORIAS):
             cell = ws.cell(row, i)
-            default_values = [1300, 45.5, 43.3, 182, 700, 5.6, 1133]
-            cell.value = requerimientos.get(key, default_values[i - self.layout.COL_CALORIAS])
+            cell.value = requerimientos.get(key, default_values[key])
             cell.fill = self.header_fill
             cell.border = self.border
             cell.alignment = Alignment(horizontal='center')
@@ -467,17 +503,23 @@ class ExcelReportDrawer:
         # Combinar título inmediatamente después de escribirlo
         ws.merge_cells(start_row=start_row, start_column=4, end_row=start_row, end_column=14)
 
+        nivel_data = self._extract_nivel_data(analisis_data, nivel_escolar_id)
+        if not nivel_data:
+            raise ValueError("No se encontró información del nivel escolar para el reporte")
+        nivel_escolar_nombre = nivel_data.get('nivel_escolar', {}).get('nombre', 'N/A')
+
         admin_start_row = start_row + 1
-        self._populate_administrative_section(ws, start_row=admin_start_row, analisis_data=analisis_data)
+        self._populate_administrative_section(
+            ws,
+            start_row=admin_start_row,
+            analisis_data=analisis_data,
+            nivel_escolar_nombre=nivel_escolar_nombre
+        )
 
         # Combinar sección administrativa inmediatamente después de escribirla
         for i in range(7):
             row = admin_start_row + i
             ws.merge_cells(f'A{row}:C{row}')
-
-        nivel_data = self._extract_nivel_data(analisis_data, nivel_escolar_id)
-        if not nivel_data:
-            raise ValueError("No se encontró información del nivel escolar para el reporte")
 
         header_start_row = start_row + 9
         self._populate_headers(ws, start_row=header_start_row)

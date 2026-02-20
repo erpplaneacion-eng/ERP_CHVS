@@ -116,6 +116,7 @@ class AnalisisNutricionalService:
             'menu': {
                 'id': menu.id_menu,
                 'nombre': menu.menu,
+                'modalidad_id': menu.id_modalidad_id if menu.id_modalidad_id else None,
                 'modalidad': menu.id_modalidad.modalidad if menu.id_modalidad else 'N/A',
                 'programa': menu.id_contrato.programa if menu.id_contrato else 'N/A',
                 'logo_path': logo_path
@@ -413,15 +414,33 @@ class AnalisisNutricionalService:
             preparaciones_nivel: Lista de preparaciones (se modifica)
             analisis_guardado: Análisis con datos guardados
         """
+        ingredientes_guardados = TablaIngredientesPorNivel.objects.filter(
+            id_analisis=analisis_guardado
+        )
+
+        # Índices para resolver por codigo_icbf (modelo actual) y por id_ingrediente_siesa
+        # (compatibilidad histórica).
+        index_por_codigo = {}
+        index_por_siesa = {}
+        for item in ingredientes_guardados:
+            prep_id = item.id_preparacion_id
+            if item.codigo_icbf:
+                index_por_codigo[(prep_id, str(item.codigo_icbf).strip())] = item
+            if item.id_ingrediente_siesa_id:
+                index_por_siesa[(prep_id, str(item.id_ingrediente_siesa_id).strip())] = item
+
         for prep in preparaciones_nivel:
             for ing in prep['ingredientes']:
                 if ing.get('alimento_encontrado', True):
-                    # Buscar ingrediente guardado
-                    ingrediente_guardado = TablaIngredientesPorNivel.objects.filter(
-                        id_analisis=analisis_guardado,
-                        id_preparacion__id_preparacion=prep['id_preparacion'],
-                        id_ingrediente_siesa__id_ingrediente_siesa=ing['id_ingrediente']
-                    ).first()
+                    prep_id = prep.get('id_preparacion')
+                    codigo = str(ing.get('codigo_icbf') or ing.get('id_ingrediente') or '').strip()
+                    siesa_id = str(ing.get('id_ingrediente') or '').strip()
+
+                    # Priorizar lookup por codigo_icbf porque TablaIngredientesPorNivel
+                    # ya usa esta clave como referencia principal.
+                    ingrediente_guardado = index_por_codigo.get((prep_id, codigo))
+                    if not ingrediente_guardado and siesa_id:
+                        ingrediente_guardado = index_por_siesa.get((prep_id, siesa_id))
 
                     if ingrediente_guardado:
                         # Aplicar pesos guardados
