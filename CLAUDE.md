@@ -34,9 +34,10 @@ python manage.py makemigrations && python manage.py migrate
 
 # Testing
 python manage.py test                  # All tests
-pytest -v                              # With pytest
-pytest -k "test_name"                  # Single test
-pytest facturacion/tests.py            # Single file
+python manage.py test nutricion.tests_sincronizacion_pesos --verbosity=2  # Single module
+DJANGO_SETTINGS_MODULE=erp_chvs.settings pytest -v          # pytest (no pytest.ini)
+DJANGO_SETTINGS_MODULE=erp_chvs.settings pytest -k "test_name"
+DJANGO_SETTINGS_MODULE=erp_chvs.settings pytest facturacion/tests.py
 
 # Static files (production)
 python manage.py collectstatic
@@ -103,6 +104,7 @@ views.py → services.py → persistence_service.py → models.py
 - `analisis_service.py` — Nutritional analysis + semaforización per level + modality
 - `calculo_service.py` — Pure stateless calculation functions
 - `exclusion_service.py` — Mutually exclusive food group sets: groups that share a weekly quota (e.g. G4+G6 must appear 2×/week combined, not individually). Used by `semanal.py` to adjust validator results.
+- `restriccion_subgrupo_service.py` — Sub-restrictions within a group: requires that N of a group's weekly appearances use a specific whitelist of foods (e.g. G4 must include ≥1 egg and ≥2 legumes per week). Used by `semanal.py`.
 - `preparacion_service.py`, `ingrediente_service.py`, `programa_service.py`
 
 **Nutricion views** (`nutricion/views/` package):
@@ -133,8 +135,10 @@ TablaMenus
 ModalidadesDeConsumo
     ├─→ RequerimientoSemanal (GruposAlimentos × frecuencia/week)
     ├─→ ComponentesModalidades (valid food components per modality)
-    └─→ GrupoExcluyenteSet → GrupoExcluyenteSetMiembro → GruposAlimentos
-           (sets of food groups sharing a combined weekly quota)
+    ├─→ GrupoExcluyenteSet → GrupoExcluyenteSetMiembro → GruposAlimentos
+    │      (sets of food groups sharing a combined weekly quota)
+    └─→ RestriccionAlimentoSubgrupo → RestriccionAlimentoEspecifico → TablaAlimentos2018Icbf
+           (requires N appearances of a group to use foods from a whitelist)
 
 TablaRequerimientosNutricionales (level + modality → nutritional targets)
     unique_together: [id_nivel_escolar_uapa, id_modalidad]
