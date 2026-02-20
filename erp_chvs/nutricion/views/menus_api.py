@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 
 from principal.models import ModalidadesDeConsumo
-from planeacion.models import Programa
+from planeacion.models import Programa, ProgramaModalidades
 
 from ..models import TablaMenus
 
@@ -45,10 +45,8 @@ def api_modalidades_por_programa(request):
     try:
         programa = Programa.objects.get(id=programa_id)
 
-        from principal.models import MunicipioModalidades
-
-        modalidades_configuradas = MunicipioModalidades.objects.filter(
-            municipio=programa.municipio
+        modalidades_configuradas = ProgramaModalidades.objects.filter(
+            programa=programa
         ).select_related('modalidad').values(
             'modalidad__id_modalidades',
             'modalidad__modalidad'

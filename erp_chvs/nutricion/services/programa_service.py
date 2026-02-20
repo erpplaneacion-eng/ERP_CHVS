@@ -7,8 +7,8 @@ Maneja consultas relacionadas con programas y modalidades de consumo.
 from typing import Dict, List
 from django.db.models import QuerySet
 
-from planeacion.models import Programa
-from principal.models import ModalidadesDeConsumo, MunicipioModalidades
+from planeacion.models import Programa, ProgramaModalidades
+from principal.models import ModalidadesDeConsumo
 
 
 class ProgramaService:
@@ -76,9 +76,9 @@ class ProgramaService:
         """
         programa = Programa.objects.select_related('municipio').get(id=id_programa)
 
-        # Obtener modalidades configuradas para el municipio
-        modalidades_configuradas = MunicipioModalidades.objects.filter(
-            municipio=programa.municipio
+        # Obtener modalidades configuradas para el programa
+        modalidades_configuradas = ProgramaModalidades.objects.filter(
+            programa=programa
         ).select_related('modalidad')
 
         if modalidades_configuradas.exists():

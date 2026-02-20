@@ -134,33 +134,6 @@ class ModalidadesDeConsumo(models.Model):
 
 
 # Modelo para la tabla: nivel_grado_escolar
-# Modelo para la tabla intermedia: municipio_modalidades
-class MunicipioModalidades(models.Model):
-    id = models.BigAutoField(primary_key=True)
-    municipio = models.ForeignKey(
-        PrincipalMunicipio,
-        on_delete=models.CASCADE,
-        verbose_name="Municipio",
-        related_name="modalidades_configuradas"
-    )
-    modalidad = models.ForeignKey(
-        ModalidadesDeConsumo,
-        on_delete=models.CASCADE,
-        verbose_name="Modalidad",
-        related_name="municipios_asignados"
-    )
-
-    class Meta:
-        db_table = 'municipio_modalidades'
-        verbose_name = 'Modalidad por Municipio'
-        verbose_name_plural = 'Modalidades por Municipio'
-        unique_together = [['municipio', 'modalidad']]
-        ordering = ['municipio__nombre_municipio', 'modalidad__modalidad']
-
-    def __str__(self):
-        return f"{self.municipio.nombre_municipio} - {self.modalidad.modalidad}"
-
-
 class NivelGradoEscolar(models.Model):
     id_grado_escolar = models.CharField(max_length=50, primary_key=True, verbose_name="ID Grado Escolar")
     grados_sedes = models.CharField(max_length=200, verbose_name="Grados Sedes")

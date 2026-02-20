@@ -111,10 +111,11 @@ views.py → services.py → persistence_service.py → models.py
 - `core.py` — Main views, `api_generar_menu_ia`
 - `menus_api.py` — Menu CRUD API endpoints
 - `preparaciones_api.py` — Preparations + ingredients API
-- `analisis_api.py` — Nutritional analysis, weight sync
+- `analisis_api.py` — Nutritional analysis, weight sync (`api_guardar_ingredientes_por_nivel`)
 - `exportes.py` — Excel/PDF downloads
 - `semanal.py` — Weekly menu validation (`api_validar_semana`, `api_requerimientos_modalidad`)
 - `preparaciones_editor.py` — Preparations editor view (standalone page with editable ingredient weights per level, dynamic peso bruto column, 4-state semaforización)
+- `firmas.py` — Nutritional contract signatures (`FirmaNutricionalContrato` model, per-program form at `/nutricion/firmas-contrato/`)
 
 ### Key Model Relationships
 
@@ -205,7 +206,11 @@ GEMINI_API_KEY=your-key
 # CLOUDINARY_CLOUD_NAME=, CLOUDINARY_API_KEY=, CLOUDINARY_API_SECRET=
 ```
 
+**DB variable priority**: `DATABASE_URL` (full URL, used by Railway) → `DB_*` variables → `PG*` variables (PGDATABASE, PGUSER, PGPASSWORD, PGHOST, PGPORT). Use `DATABASE_URL` in production.
+
 `CSRF_TRUSTED_ORIGINS` values are auto-normalized (scheme added if missing) in `settings.py` via `_normalize_csrf_origin()`.
+
+**Localization**: `LANGUAGE_CODE = 'es-col'`, `TIME_ZONE = 'America/Bogota'`, `DECIMAL_SEPARATOR = '.'` (point, not comma).
 
 ## Deployment (Railway)
 
@@ -301,6 +306,6 @@ Key file: `nutricion/services/menu_service.py` — `copiar_modalidad_completa()`
 
 ## Logging
 
-- **Log dir**: `erp_chvs/logs/`
-- **`facturacion.log`**: Excel processing, validation, fuzzy matching, persistence errors
-- Configured in `facturacion/logging_config.py`
+- **Console**: Always active for `facturacion` and `facturacion.pdf_generator` loggers
+- **File** (`erp_chvs/logs/facturacion.log`): Only in DEBUG mode — Excel processing, validation, fuzzy matching, persistence errors
+- Configured in `settings.py` LOGGING dict and `facturacion/logging_config.py`

@@ -1,5 +1,5 @@
 from django.db import models
-from principal.models import PrincipalMunicipio
+from principal.models import PrincipalMunicipio, ModalidadesDeConsumo
 
 
 class InstitucionesEducativas(models.Model):
@@ -319,3 +319,28 @@ class PlanificacionRaciones(models.Model):
     def total_raciones(self):
         """Retorna el total de raciones planificadas para este registro."""
         return self.cap_am + self.cap_pm + self.almuerzo_ju + self.refuerzo
+
+
+class ProgramaModalidades(models.Model):
+    programa = models.ForeignKey(
+        Programa,
+        on_delete=models.CASCADE,
+        verbose_name="Programa",
+        related_name='modalidades_configuradas'
+    )
+    modalidad = models.ForeignKey(
+        ModalidadesDeConsumo,
+        on_delete=models.CASCADE,
+        verbose_name="Modalidad",
+        related_name='programas_asignados'
+    )
+
+    class Meta:
+        db_table = 'programa_modalidades'
+        verbose_name = 'Modalidad por Programa'
+        verbose_name_plural = 'Modalidades por Programa'
+        unique_together = [['programa', 'modalidad']]
+        ordering = ['programa__programa', 'modalidad__modalidad']
+
+    def __str__(self):
+        return f"{self.programa.programa} - {self.modalidad.modalidad}"
