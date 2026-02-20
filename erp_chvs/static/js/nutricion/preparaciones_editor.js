@@ -227,6 +227,10 @@
         const panel = document.querySelector(`#panel-${nivelId}`);
         if (!panel) return;
 
+        // Obtener referencias de adecuación para este nivel (semaforización por proximidad)
+        const nivelDataRef = nivelesData.find(n => String(n.nivel.id) === String(nivelId));
+        const referencias = nivelDataRef?.referencias || {};
+
         const nutrientes = ['calorias', 'proteina', 'grasa', 'cho', 'calcio', 'hierro', 'sodio'];
 
         nutrientes.forEach(nutriente => {
@@ -247,15 +251,20 @@
                 porcentajeActualSpan.textContent = porcentaje.toFixed(1);
             }
 
-            let estado = 'optimo';
-            if (porcentaje > 100) {
-                estado = 'alto'; // Rojo
-            } else if (porcentaje >= 80) {
-                estado = 'optimo'; // Verde
-            } else if (porcentaje >= 50) {
-                estado = 'aceptable'; // Amarillo
+            // Semaforización por proximidad al valor de referencia ICBF
+            let estado;
+            const ref = referencias[nutriente];
+            if (ref !== undefined && ref !== null) {
+                const diff = Math.abs(porcentaje - parseFloat(ref));
+                if (diff <= 3)       estado = 'optimo';
+                else if (diff <= 5)  estado = 'azul';
+                else if (diff <= 7)  estado = 'aceptable';
+                else                 estado = 'alto';
             } else {
-                estado = 'info'; // Azul
+                // Fallback: rangos absolutos
+                if (porcentaje <= 35)      estado = 'optimo';
+                else if (porcentaje <= 70) estado = 'aceptable';
+                else                       estado = 'alto';
             }
 
             card.className = `nutriente-card ${estado}`;

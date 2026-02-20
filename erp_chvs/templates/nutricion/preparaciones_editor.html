@@ -181,8 +181,13 @@
                             <span class="porcentaje-actual">{{ nivel_data.porcentajes.calorias|floatformat:1 }}</span>%
                         </div>
                         <div class="nutriente-requerimiento">
-                            Meta: {{ nivel_data.requerimientos.calorias|floatformat:1 }} kcal
+                            Rec. ICBF: {{ nivel_data.requerimientos.calorias|floatformat:1 }} kcal
                         </div>
+                        {% if nivel_data.referencias.calorias %}
+                        <div class="nutriente-referencia">
+                            Ref: <span class="ref-actual">{{ nivel_data.referencias.calorias|floatformat:1 }}</span>%
+                        </div>
+                        {% endif %}
                     </div>
 
                     <!-- Proteína -->
@@ -195,8 +200,13 @@
                             <span class="porcentaje-actual">{{ nivel_data.porcentajes.proteina|floatformat:1 }}</span>%
                         </div>
                         <div class="nutriente-requerimiento">
-                            Meta: {{ nivel_data.requerimientos.proteina|floatformat:1 }} g
+                            Rec. ICBF: {{ nivel_data.requerimientos.proteina|floatformat:1 }} g
                         </div>
+                        {% if nivel_data.referencias.proteina %}
+                        <div class="nutriente-referencia">
+                            Ref: <span class="ref-actual">{{ nivel_data.referencias.proteina|floatformat:1 }}</span>%
+                        </div>
+                        {% endif %}
                     </div>
 
                     <!-- Grasa -->
@@ -209,8 +219,13 @@
                             <span class="porcentaje-actual">{{ nivel_data.porcentajes.grasa|floatformat:1 }}</span>%
                         </div>
                         <div class="nutriente-requerimiento">
-                            Meta: {{ nivel_data.requerimientos.grasa|floatformat:1 }} g
+                            Rec. ICBF: {{ nivel_data.requerimientos.grasa|floatformat:1 }} g
                         </div>
+                        {% if nivel_data.referencias.grasa %}
+                        <div class="nutriente-referencia">
+                            Ref: <span class="ref-actual">{{ nivel_data.referencias.grasa|floatformat:1 }}</span>%
+                        </div>
+                        {% endif %}
                     </div>
 
                     <!-- Carbohidratos -->
@@ -223,8 +238,13 @@
                             <span class="porcentaje-actual">{{ nivel_data.porcentajes.cho|floatformat:1 }}</span>%
                         </div>
                         <div class="nutriente-requerimiento">
-                            Meta: {{ nivel_data.requerimientos.cho|floatformat:1 }} g
+                            Rec. ICBF: {{ nivel_data.requerimientos.cho|floatformat:1 }} g
                         </div>
+                        {% if nivel_data.referencias.cho %}
+                        <div class="nutriente-referencia">
+                            Ref: <span class="ref-actual">{{ nivel_data.referencias.cho|floatformat:1 }}</span>%
+                        </div>
+                        {% endif %}
                     </div>
 
                     <!-- Calcio -->
@@ -237,8 +257,13 @@
                             <span class="porcentaje-actual">{{ nivel_data.porcentajes.calcio|floatformat:1 }}</span>%
                         </div>
                         <div class="nutriente-requerimiento">
-                            Meta: {{ nivel_data.requerimientos.calcio|floatformat:1 }} mg
+                            Rec. ICBF: {{ nivel_data.requerimientos.calcio|floatformat:1 }} mg
                         </div>
+                        {% if nivel_data.referencias.calcio %}
+                        <div class="nutriente-referencia">
+                            Ref: <span class="ref-actual">{{ nivel_data.referencias.calcio|floatformat:1 }}</span>%
+                        </div>
+                        {% endif %}
                     </div>
 
                     <!-- Hierro -->
@@ -251,8 +276,13 @@
                             <span class="porcentaje-actual">{{ nivel_data.porcentajes.hierro|floatformat:1 }}</span>%
                         </div>
                         <div class="nutriente-requerimiento">
-                            Meta: {{ nivel_data.requerimientos.hierro|floatformat:1 }} mg
+                            Rec. ICBF: {{ nivel_data.requerimientos.hierro|floatformat:1 }} mg
                         </div>
+                        {% if nivel_data.referencias.hierro %}
+                        <div class="nutriente-referencia">
+                            Ref: <span class="ref-actual">{{ nivel_data.referencias.hierro|floatformat:1 }}</span>%
+                        </div>
+                        {% endif %}
                     </div>
 
                     <!-- Sodio -->
@@ -265,8 +295,13 @@
                             <span class="porcentaje-actual">{{ nivel_data.porcentajes.sodio|floatformat:1 }}</span>%
                         </div>
                         <div class="nutriente-requerimiento">
-                            Meta: {{ nivel_data.requerimientos.sodio|floatformat:1 }} mg
+                            Rec. ICBF: {{ nivel_data.requerimientos.sodio|floatformat:1 }} mg
                         </div>
+                        {% if nivel_data.referencias.sodio %}
+                        <div class="nutriente-referencia">
+                            Ref: <span class="ref-actual">{{ nivel_data.referencias.sodio|floatformat:1 }}</span>%
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

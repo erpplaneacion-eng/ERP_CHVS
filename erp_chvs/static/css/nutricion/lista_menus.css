@@ -1490,6 +1490,13 @@
     color: #721c24;
 }
 
+/* Azul: diferencia 3-5 puntos respecto a referencia ICBF */
+.total-mini[data-estado="azul"], .adecuacion-mini[data-estado="azul"] {
+    border-color: #2563eb;
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    color: #1e40af;
+}
+
 /* Estados no utilizados - mantener por compatibilidad */
 .total-mini[data-estado="moderado"], .adecuacion-mini[data-estado="moderado"] {
     border-color: #17a2b8;
@@ -1508,6 +1515,118 @@
     background: linear-gradient(135deg, #e2d9f3, #d1b3e3);
     color: #4a154b;
 }
+
+/* ===================================================== */
+/* TARJETAS UNIFICADAS DE ANÁLISIS NUTRICIONAL (7 cards) */
+/* ===================================================== */
+
+.nutrientes-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+    gap: 12px;
+}
+
+.nca-card {
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+    background: #f8fafc;
+    overflow: hidden;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+/* Colores por estado */
+.nca-card[data-estado="optimo"] {
+    border-color: #28a745;
+    background: linear-gradient(160deg, #d4edda, #f0fdf4);
+}
+.nca-card[data-estado="azul"] {
+    border-color: #2563eb;
+    background: linear-gradient(160deg, #dbeafe, #eff6ff);
+}
+.nca-card[data-estado="aceptable"] {
+    border-color: #ffc107;
+    background: linear-gradient(160deg, #fff3cd, #fffbea);
+}
+.nca-card[data-estado="alto"] {
+    border-color: #dc3545;
+    background: linear-gradient(160deg, #f8d7da, #fff5f5);
+}
+
+/* Header de la tarjeta */
+.nca-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px 6px;
+    border-bottom: 1px solid rgba(0,0,0,0.07);
+}
+
+.nca-semaforo {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.nca-card[data-estado="optimo"]   .nca-semaforo { background: #28a745; }
+.nca-card[data-estado="azul"]     .nca-semaforo { background: #2563eb; }
+.nca-card[data-estado="aceptable"] .nca-semaforo { background: #ffc107; }
+.nca-card[data-estado="alto"]     .nca-semaforo { background: #dc3545; }
+
+.nca-icon {
+    font-size: 0.8rem;
+    opacity: 0.6;
+}
+
+.nca-nombre {
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: #1e293b;
+}
+
+/* Cuerpo de la tarjeta */
+.nca-body {
+    padding: 8px 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.nca-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.78rem;
+}
+
+.nca-lbl {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.nca-val {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+/* Fila de % calculado — resaltada */
+.nca-row.nca-pct {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px dashed rgba(0,0,0,0.1);
+}
+.nca-row.nca-pct .nca-lbl { color: #475569; }
+.nca-card[data-estado="optimo"]    .nca-row.nca-pct .nca-val { color: #166534; font-size: 0.92rem; }
+.nca-card[data-estado="azul"]      .nca-row.nca-pct .nca-val { color: #1e40af; font-size: 0.92rem; }
+.nca-card[data-estado="aceptable"] .nca-row.nca-pct .nca-val { color: #92400e; font-size: 0.92rem; }
+.nca-card[data-estado="alto"]      .nca-row.nca-pct .nca-val { color: #991b1b; font-size: 0.92rem; }
+
+/* Fila de meta */
+.nca-row.nca-meta .nca-lbl { color: #475569; }
+.nca-row.nca-meta .nca-val { color: #1e293b; }
+
+/* Fila de diferencia */
+.nca-row.nca-diff .nca-lbl { color: #94a3b8; font-size: 0.73rem; }
+.nca-row.nca-diff .nca-val { font-size: 0.73rem; color: #64748b; }
 
 /* Estilos especiales para requerimientos (mantener fondo gris) */
 .requerimiento-mini {

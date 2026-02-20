@@ -5,45 +5,49 @@ Funciones helper reutilizables.
 """
 
 
-def calcular_estado_adecuacion(porcentaje: float, nutriente: str) -> str:
+def calcular_estado_adecuacion(porcentaje: float, nutriente: str, referencia: float = None) -> str:
     """
-    Determina el estado de adecuación nutricional según el porcentaje alcanzado.
+    Determina el estado de adecuación nutricional.
 
-    RANGOS DE EVALUACIÓN (válidos para todos los nutrientes):
-    - 0-35%: ÓPTIMO (verde) - Aporte bajo pero seguro
-    - 35.1-70%: ACEPTABLE (amarillo) - Aporte moderado
-    - >70%: ALTO (rojo) - Aporte elevado, cerca del límite máximo
+    Si se provee `referencia` (% esperado según AdecuacionTotalPorcentaje),
+    el estado se calcula por proximidad a ese valor de referencia:
+    - |diff| ≤ 3 puntos → ÓPTIMO  (verde)
+    - |diff| ≤ 5 puntos → AZUL    (azul)
+    - |diff| ≤ 7 puntos → ACEPTABLE (amarillo)
+    - |diff| > 7 puntos → ALTO    (rojo)
 
-    NOTA IMPORTANTE:
-    - El 100% representa el MÁXIMO permitido según ICBF 2018
-    - Para sodio, valores bajos son mejores (pero el rango de colores es el mismo)
-    - Para otros nutrientes, alcanzar valores altos es aceptable pero no debe exceder 100%
+    Sin referencia (fallback legacy):
+    - 0-35%: ÓPTIMO (verde)
+    - 35.1-70%: ACEPTABLE (amarillo)
+    - >70%: ALTO (rojo)
 
     Args:
-        porcentaje: Porcentaje de adecuación (0-100)
-        nutriente: Nombre del nutriente evaluado
+        porcentaje: Porcentaje calculado (total / recomendación × 100)
+        nutriente: Nombre del nutriente
+        referencia: Porcentaje esperado según tabla AdecuacionTotalPorcentaje (opcional)
 
     Returns:
-        str: Estado ('optimo', 'aceptable', 'alto')
-
-    Examples:
-        >>> calcular_estado_adecuacion(25, 'calorias_kcal')
-        'optimo'
-        >>> calcular_estado_adecuacion(50, 'proteina_g')
-        'aceptable'
-        >>> calcular_estado_adecuacion(85, 'sodio_mg')
-        'alto'
+        str: 'optimo', 'azul', 'aceptable' o 'alto'
     """
-    # Validar entrada
-    porcentaje = max(0, min(100, porcentaje))
+    if referencia is not None:
+        diff = abs(porcentaje - float(referencia))
+        if diff <= 3:
+            return 'optimo'      # Verde: ≤3 puntos
+        elif diff <= 5:
+            return 'azul'        # Azul: 3-5 puntos
+        elif diff <= 7:
+            return 'aceptable'   # Amarillo: 5-7 puntos
+        else:
+            return 'alto'        # Rojo: >7 puntos
 
-    # Rangos uniformes para todos los nutrientes
+    # Fallback: lógica original sin referencia
+    porcentaje = max(0, min(100, porcentaje))
     if porcentaje <= 35:
-        return 'optimo'      # 0-35%: Verde
+        return 'optimo'
     elif porcentaje <= 70:
-        return 'aceptable'   # 35.1-70%: Amarillo
+        return 'aceptable'
     else:
-        return 'alto'        # >70%: Rojo
+        return 'alto'
 
 
 def formatear_valor_nutricional(valor: float, nutriente: str) -> str:

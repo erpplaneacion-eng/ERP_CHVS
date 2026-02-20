@@ -157,10 +157,17 @@ class CalculoService:
     @staticmethod
     def calcular_todos_porcentajes(
         totales: Dict[str, float],
-        requerimientos: Dict[str, float]
+        requerimientos: Dict[str, float],
+        referencias: Dict[str, float] = None
     ) -> Dict[str, Dict[str, float]]:
         """
         Calcula porcentajes de adecuación para todos los nutrientes.
+
+        Args:
+            totales: Totales nutricionales del menú.
+            requerimientos: Denominadores (RecomendacionDiariaGradoMod o TablaRequerimientosNutricionales).
+            referencias: Porcentajes esperados de AdecuacionTotalPorcentaje para semaforización
+                         por proximidad. Si es None usa la lógica legacy (0-35-70).
         """
         from ..utils import calcular_estado_adecuacion
 
@@ -173,7 +180,8 @@ class CalculoService:
             req = requerimientos.get(nutriente, 0)
 
             porcentaje = CalculoService.calcular_porcentaje_adecuacion(total, req)
-            estado = calcular_estado_adecuacion(porcentaje, nutriente)
+            referencia = referencias.get(nutriente) if referencias else None
+            estado = calcular_estado_adecuacion(porcentaje, nutriente, referencia)
 
             porcentajes[nutriente] = {
                 'porcentaje': round(porcentaje, 1),

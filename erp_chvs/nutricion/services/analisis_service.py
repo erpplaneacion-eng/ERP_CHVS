@@ -18,7 +18,9 @@ from ..models import (
     TablaRequerimientosNutricionales,
     TablaAnalisisNutricionalMenu,
     TablaIngredientesPorNivel,
-    TablaGradosEscolaresUapa
+    TablaGradosEscolaresUapa,
+    RecomendacionDiariaGradoMod,
+    AdecuacionTotalPorcentaje,
 )
 from .calculo_service import CalculoService
 
@@ -333,19 +335,55 @@ class AnalisisNutricionalService:
             [ing for prep in preparaciones_nivel for ing in prep['ingredientes']]
         )
 
-        # Preparar requerimientos (estandarizado sin sufijos)
-        requerimientos_dict = {
-            'calorias': float(requerimiento.calorias_kcal),
-            'proteina': float(requerimiento.proteina_g),
-            'grasa': float(requerimiento.grasa_g),
-            'cho': float(requerimiento.cho_g),
-            'calcio': float(requerimiento.calcio_mg),
-            'hierro': float(requerimiento.hierro_mg),
-            'sodio': float(requerimiento.sodio_mg)
-        }
+        # Denominador: usar RecomendacionDiariaGradoMod (ICBF oficial) si existe,
+        # si no, hacer fallback a TablaRequerimientosNutricionales.
+        try:
+            rec_diaria = RecomendacionDiariaGradoMod.objects.get(
+                nivel_escolar_uapa=nivel_escolar,
+                id_modalidades=requerimiento.id_modalidad
+            )
+            requerimientos_dict = {
+                'calorias': float(rec_diaria.calorias_kcal),
+                'proteina': float(rec_diaria.proteina_g),
+                'grasa': float(rec_diaria.grasa_g),
+                'cho': float(rec_diaria.cho_g),
+                'calcio': float(rec_diaria.calcio_mg),
+                'hierro': float(rec_diaria.hierro_mg),
+                'sodio': float(rec_diaria.sodio_mg),
+            }
+        except RecomendacionDiariaGradoMod.DoesNotExist:
+            requerimientos_dict = {
+                'calorias': float(requerimiento.calorias_kcal),
+                'proteina': float(requerimiento.proteina_g),
+                'grasa': float(requerimiento.grasa_g),
+                'cho': float(requerimiento.cho_g),
+                'calcio': float(requerimiento.calcio_mg),
+                'hierro': float(requerimiento.hierro_mg),
+                'sodio': float(requerimiento.sodio_mg),
+            }
 
-        # Calcular porcentajes
-        porcentajes = CalculoService.calcular_todos_porcentajes(totales, requerimientos_dict)
+        # Referencias de adecuación (vara de medición ICBF para semaforización)
+        try:
+            adecuacion_ref = AdecuacionTotalPorcentaje.objects.get(
+                id_nivel_escolar_uapa=nivel_escolar,
+                id_modalidad=requerimiento.id_modalidad
+            )
+            referencias_dict = {
+                'calorias': float(adecuacion_ref.calorias_porc),
+                'proteina': float(adecuacion_ref.proteina_porc),
+                'grasa':    float(adecuacion_ref.grasa_porc),
+                'cho':      float(adecuacion_ref.cho_porc),
+                'calcio':   float(adecuacion_ref.calcio_porc),
+                'hierro':   float(adecuacion_ref.hierro_porc),
+                'sodio':    float(adecuacion_ref.sodio_porc),
+            }
+        except AdecuacionTotalPorcentaje.DoesNotExist:
+            referencias_dict = None
+
+        # Calcular porcentajes con semaforización por proximidad
+        porcentajes = CalculoService.calcular_todos_porcentajes(
+            totales, requerimientos_dict, referencias_dict
+        )
 
         return {
             'nivel_escolar': {
@@ -355,6 +393,7 @@ class AnalisisNutricionalService:
             },
             'es_programa_actual': es_programa_actual,
             'requerimientos': requerimientos_dict,
+            'referencias_adecuacion': referencias_dict,
             'totales': totales,
             'porcentajes_adecuacion': porcentajes,
             'preparaciones': preparaciones_nivel
@@ -632,40 +671,96 @@ class AnalisisNutricionalService:
         analisis.total_peso_neto = totales['peso_neto']
         analisis.total_peso_bruto = totales['peso_bruto']
 
-        # Calcular porcentajes si hay requerimientos
-        try:
-            requerimiento = TablaRequerimientosNutricionales.objects.get(
-                id_nivel_escolar_uapa=analisis.id_nivel_escolar_uapa,
-                id_modalidad=analisis.id_menu.id_modalidad
-            )
+        # Calcular porcentajes: usar RecomendacionDiariaGradoMod (ICBF oficial) si existe,
+        # si no, hacer fallback a TablaRequerimientosNutricionales.
+        def _obtener_denominadores(nivel_escolar_uapa, modalidad):
+            try:
+                rec = RecomendacionDiariaGradoMod.objects.get(
+                    nivel_escolar_uapa=nivel_escolar_uapa,
+                    id_modalidades=modalidad
+                )
+                return {
+                    'calorias': float(rec.calorias_kcal),
+                    'proteina': float(rec.proteina_g),
+                    'grasa': float(rec.grasa_g),
+                    'cho': float(rec.cho_g),
+                    'calcio': float(rec.calcio_mg),
+                    'hierro': float(rec.hierro_mg),
+                    'sodio': float(rec.sodio_mg),
+                }
+            except RecomendacionDiariaGradoMod.DoesNotExist:
+                pass
+            try:
+                req = TablaRequerimientosNutricionales.objects.get(
+                    id_nivel_escolar_uapa=nivel_escolar_uapa,
+                    id_modalidad=modalidad
+                )
+                return {
+                    'calorias': float(req.calorias_kcal),
+                    'proteina': float(req.proteina_g),
+                    'grasa': float(req.grasa_g),
+                    'cho': float(req.cho_g),
+                    'calcio': float(req.calcio_mg),
+                    'hierro': float(req.hierro_mg),
+                    'sodio': float(req.sodio_mg),
+                }
+            except TablaRequerimientosNutricionales.DoesNotExist:
+                return None
 
-            analisis.porcentaje_calorias = (totales['calorias'] / float(requerimiento.calorias_kcal)) * 100
-            analisis.porcentaje_proteina = (totales['proteina'] / float(requerimiento.proteina_g)) * 100
-            analisis.porcentaje_grasa = (totales['grasa'] / float(requerimiento.grasa_g)) * 100
-            analisis.porcentaje_cho = (totales['cho'] / float(requerimiento.cho_g)) * 100
-            analisis.porcentaje_calcio = (totales['calcio'] / float(requerimiento.calcio_mg)) * 100
-            analisis.porcentaje_hierro = (totales['hierro'] / float(requerimiento.hierro_mg)) * 100
-            analisis.porcentaje_sodio = (totales['sodio'] / float(requerimiento.sodio_mg)) * 100
+        denominadores = _obtener_denominadores(
+            analisis.id_nivel_escolar_uapa,
+            analisis.id_menu.id_modalidad
+        )
 
-            # Actualizar estados de semaforización
-            def clasificar_estado(porcentaje):
-                if porcentaje <= 35:
-                    return 'optimo'
-                elif porcentaje <= 70:
-                    return 'aceptable'
-                else:
-                    return 'alto'
+        if denominadores:
+            def _pct(total, den):
+                return (total / den * 100) if den else 0
 
-            analisis.estado_calorias = clasificar_estado(analisis.porcentaje_calorias)
-            analisis.estado_proteina = clasificar_estado(analisis.porcentaje_proteina)
-            analisis.estado_grasa = clasificar_estado(analisis.porcentaje_grasa)
-            analisis.estado_cho = clasificar_estado(analisis.porcentaje_cho)
-            analisis.estado_calcio = clasificar_estado(analisis.porcentaje_calcio)
-            analisis.estado_hierro = clasificar_estado(analisis.porcentaje_hierro)
-            analisis.estado_sodio = clasificar_estado(analisis.porcentaje_sodio)
+            analisis.porcentaje_calorias = _pct(totales['calorias'], denominadores['calorias'])
+            analisis.porcentaje_proteina = _pct(totales['proteina'], denominadores['proteina'])
+            analisis.porcentaje_grasa    = _pct(totales['grasa'],    denominadores['grasa'])
+            analisis.porcentaje_cho      = _pct(totales['cho'],      denominadores['cho'])
+            analisis.porcentaje_calcio   = _pct(totales['calcio'],   denominadores['calcio'])
+            analisis.porcentaje_hierro   = _pct(totales['hierro'],   denominadores['hierro'])
+            analisis.porcentaje_sodio    = _pct(totales['sodio'],    denominadores['sodio'])
 
-        except TablaRequerimientosNutricionales.DoesNotExist:
-            pass
+            # Buscar referencia ICBF para semaforización por proximidad
+            try:
+                adecuacion_ref = AdecuacionTotalPorcentaje.objects.get(
+                    id_nivel_escolar_uapa=analisis.id_nivel_escolar_uapa,
+                    id_modalidad=analisis.id_menu.id_modalidad
+                )
+                refs = {
+                    'calorias': float(adecuacion_ref.calorias_porc),
+                    'proteina': float(adecuacion_ref.proteina_porc),
+                    'grasa':    float(adecuacion_ref.grasa_porc),
+                    'cho':      float(adecuacion_ref.cho_porc),
+                    'calcio':   float(adecuacion_ref.calcio_porc),
+                    'hierro':   float(adecuacion_ref.hierro_porc),
+                    'sodio':    float(adecuacion_ref.sodio_porc),
+                }
+            except AdecuacionTotalPorcentaje.DoesNotExist:
+                refs = {}
+
+            def clasificar_estado(porcentaje, nutriente):
+                ref = refs.get(nutriente)
+                if ref is not None:
+                    diff = abs(porcentaje - ref)
+                    if diff <= 3: return 'optimo'
+                    elif diff <= 5: return 'azul'
+                    elif diff <= 7: return 'aceptable'
+                    else: return 'alto'
+                if porcentaje <= 35: return 'optimo'
+                elif porcentaje <= 70: return 'aceptable'
+                else: return 'alto'
+
+            analisis.estado_calorias = clasificar_estado(analisis.porcentaje_calorias, 'calorias')
+            analisis.estado_proteina = clasificar_estado(analisis.porcentaje_proteina, 'proteina')
+            analisis.estado_grasa    = clasificar_estado(analisis.porcentaje_grasa,    'grasa')
+            analisis.estado_cho      = clasificar_estado(analisis.porcentaje_cho,      'cho')
+            analisis.estado_calcio   = clasificar_estado(analisis.porcentaje_calcio,   'calcio')
+            analisis.estado_hierro   = clasificar_estado(analisis.porcentaje_hierro,   'hierro')
+            analisis.estado_sodio    = clasificar_estado(analisis.porcentaje_sodio,    'sodio')
 
         analisis.save()
 

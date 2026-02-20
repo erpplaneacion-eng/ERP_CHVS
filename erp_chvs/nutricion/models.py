@@ -1105,3 +1105,67 @@ class RestriccionAlimentoEspecifico(models.Model):
 
     def __str__(self):
         return f"{self.restriccion.nombre} ← {self.alimento.nombre_del_alimento}"
+
+
+class RecomendacionDiariaGradoMod(models.Model):
+    """
+    Recomendación nutricional diaria oficial ICBF por nivel escolar y modalidad de consumo.
+    Actúa como denominador para calcular el porcentaje de adecuación del menú:
+        porcentaje_calorias = (total_calorias / calorias_kcal) * 100
+    """
+    id_calorias_nivel_escolar = models.CharField(
+        max_length=20,
+        primary_key=True,
+        verbose_name="ID Recomendación"
+    )
+    calorias_kcal = models.DecimalField(
+        max_digits=8, decimal_places=1,
+        verbose_name="Calorías (kcal)"
+    )
+    proteina_g = models.DecimalField(
+        max_digits=7, decimal_places=1,
+        verbose_name="Proteína (g)"
+    )
+    grasa_g = models.DecimalField(
+        max_digits=7, decimal_places=1,
+        verbose_name="Grasa (g)"
+    )
+    cho_g = models.DecimalField(
+        max_digits=8, decimal_places=1,
+        verbose_name="CHO (g)"
+    )
+    calcio_mg = models.DecimalField(
+        max_digits=8, decimal_places=1,
+        verbose_name="Calcio (mg)"
+    )
+    hierro_mg = models.DecimalField(
+        max_digits=6, decimal_places=1,
+        verbose_name="Hierro (mg)"
+    )
+    sodio_mg = models.DecimalField(
+        max_digits=8, decimal_places=1,
+        verbose_name="Sodio (mg)"
+    )
+    nivel_escolar_uapa = models.ForeignKey(
+        TablaGradosEscolaresUapa,
+        on_delete=models.PROTECT,
+        db_column='nivel_escolar_uapa',
+        verbose_name="Nivel Escolar",
+        related_name='recomendaciones_diarias'
+    )
+    id_modalidades = models.ForeignKey(
+        ModalidadesDeConsumo,
+        on_delete=models.PROTECT,
+        db_column='id_modalidades',
+        verbose_name="Modalidad",
+        related_name='recomendaciones_diarias'
+    )
+
+    class Meta:
+        db_table = 'nutricion_recomendacion_diaria_por_grado_mod'
+        unique_together = [['nivel_escolar_uapa', 'id_modalidades']]
+        verbose_name = "Recomendación Diaria por Grado y Modalidad"
+        verbose_name_plural = "Recomendaciones Diarias por Grado y Modalidad"
+
+    def __str__(self):
+        return f"{self.nivel_escolar_uapa_id} - {self.id_modalidades_id}"

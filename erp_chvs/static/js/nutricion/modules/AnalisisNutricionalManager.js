@@ -105,9 +105,10 @@ class AnalisisNutricionalManager {
         const { menu, analisis_por_nivel } = data;
 
         this.requerimientosNiveles = {};
-        // Será sincronizado después del loop de niveles
+        this.referenciasAdecuacion = {};
         analisis_por_nivel.forEach((nivel, index) => {
             this.requerimientosNiveles[index] = nivel.requerimientos;
+            this.referenciasAdecuacion[index] = nivel.referencias_adecuacion || null;
         });
 
         // Sincronizar requerimientos con estado global
@@ -191,29 +192,13 @@ class AnalisisNutricionalManager {
 
     /**
      * Crear contenido del nivel
-     * @param {Object} nivel - Datos del nivel
-     * @param {number} index - Índice del nivel
-     * @returns {string} HTML del contenido
      */
     crearContenidoNivel(nivel, index) {
         return `
-            <div class="nivel-totales mb-3">
-                <h6><i class="fas fa-calculator"></i> Totales del Nivel</h6>
-                <div class="totales-grid-mini">
-                    ${this.crearGridTotales(nivel.totales, nivel.porcentajes_adecuacion, index)}
-                </div>
-                
-                <h6 class="mt-3"><i class="fas fa-target"></i> Requerimientos</h6>
-                <div class="requerimientos-grid-mini">
-                    ${this.crearGridRequerimientos(nivel.requerimientos)}
-                </div>
-                
-                <h6 class="mt-3"><i class="fas fa-percentage"></i> % de Adecuación (Editable)</h6>
-                <div class="adecuacion-grid-mini">
-                    ${this.crearGridAdecuacion(nivel.porcentajes_adecuacion, index)}
-                </div>
+            <div class="nutrientes-cards-grid mb-3">
+                ${this.crearTarjetasNutrientes(nivel, index)}
             </div>
-            
+
             <div class="preparaciones-container">
                 <h6><i class="fas fa-list-ul"></i> Preparaciones e Ingredientes</h6>
                 ${nivel.preparaciones.map((prep, prepIndex) => this.crearPreparacion(prep, index, prepIndex)).join('')}
@@ -222,89 +207,65 @@ class AnalisisNutricionalManager {
     }
 
     /**
-     * Crear grid de totales
-     * @param {Object} totales - Totales del nivel
-     * @param {Object} porcentajes - Porcentajes de adecuación
-     * @param {number} index - Índice del nivel
-     * @returns {string} HTML del grid
+     * Crear las 7 tarjetas unificadas de nutrientes.
+     * Cada tarjeta muestra: total calculado, recomendación ICBF,
+     * % calculado, meta % (si existe) y diferencia, con semáforo de 4 colores.
      */
-    crearGridTotales(totales, porcentajes, index) {
-        const nutrientes = [
-            { key: 'calorias', label: 'Calorías', suffix: 'Kcal', id: `nivel-${index}-calorias` },
-            { key: 'proteina', label: 'Proteína', suffix: 'g', id: `nivel-${index}-proteina` },
-            { key: 'grasa', label: 'Grasa', suffix: 'g', id: `nivel-${index}-grasa` },
-            { key: 'cho', label: 'CHO', suffix: 'g', id: `nivel-${index}-cho` },
-            { key: 'calcio', label: 'Calcio', suffix: 'mg', id: `nivel-${index}-calcio` },
-            { key: 'hierro', label: 'Hierro', suffix: 'mg', id: `nivel-${index}-hierro` },
-            { key: 'sodio', label: 'Sodio', suffix: 'mg', id: `nivel-${index}-sodio` }
+    crearTarjetasNutrientes(nivel, index) {
+        const defs = [
+            { key: 'calorias', label: 'Calorías',  suffix: 'Kcal', icon: 'fa-fire' },
+            { key: 'proteina', label: 'Proteína',  suffix: 'g',    icon: 'fa-dumbbell' },
+            { key: 'grasa',    label: 'Grasa',     suffix: 'g',    icon: 'fa-tint' },
+            { key: 'cho',      label: 'CHO',       suffix: 'g',    icon: 'fa-seedling' },
+            { key: 'calcio',   label: 'Calcio',    suffix: 'mg',   icon: 'fa-bone' },
+            { key: 'hierro',   label: 'Hierro',    suffix: 'mg',   icon: 'fa-dot-circle' },
+            { key: 'sodio',    label: 'Sodio',     suffix: 'mg',   icon: 'fa-flask' },
         ];
 
-        return nutrientes.map(nutriente => `
-            <div class="total-mini" data-estado="${porcentajes[nutriente.key].estado}">
-                <span>${nutriente.label}:</span>
-                <span class="value" id="${nutriente.id}">${totales[nutriente.key].toFixed(1)} ${nutriente.suffix}</span>
-            </div>
-        `).join('');
-    }
+        return defs.map(def => {
+            const total   = nivel.totales[def.key] ?? 0;
+            const rec     = nivel.requerimientos?.[def.key] ?? 0;
+            const pct     = nivel.porcentajes_adecuacion?.[def.key]?.porcentaje ?? 0;
+            const estado  = nivel.porcentajes_adecuacion?.[def.key]?.estado ?? 'optimo';
+            const meta    = nivel.referencias_adecuacion?.[def.key] ?? null;
+            const diff    = meta !== null ? Math.abs(pct - meta).toFixed(1) : null;
 
-    /**
-     * Crear grid de requerimientos
-     * @param {Object} requerimientos - Requerimientos del nivel
-     * @returns {string} HTML del grid
-     */
-    crearGridRequerimientos(requerimientos) {
-        const nutrientes = [
-            { key: 'calorias', label: 'Calorías', suffix: 'Kcal' },
-            { key: 'proteina', label: 'Proteína', suffix: 'g' },
-            { key: 'grasa', label: 'Grasa', suffix: 'g' },
-            { key: 'cho', label: 'CHO', suffix: 'g' },
-            { key: 'calcio', label: 'Calcio', suffix: 'mg' },
-            { key: 'hierro', label: 'Hierro', suffix: 'mg' },
-            { key: 'sodio', label: 'Sodio', suffix: 'mg' }
-        ];
+            const metaRow = meta !== null ? `
+                <div class="nca-row nca-meta">
+                    <span class="nca-lbl">Meta</span>
+                    <span class="nca-val">${parseFloat(meta).toFixed(1)}%</span>
+                </div>
+                <div class="nca-row nca-diff">
+                    <span class="nca-lbl">Diferencia</span>
+                    <span class="nca-val">${diff} pts</span>
+                </div>` : '';
 
-        return nutrientes.map(nutriente => `
-            <div class="requerimiento-mini">
-                <span>${nutriente.label}:</span>
-                <span class="value">${requerimientos[nutriente.key].toFixed(1)} ${nutriente.suffix}</span>
-            </div>
-        `).join('');
-    }
-
-    /**
-     * Crear grid de adecuación
-     * @param {Object} porcentajes - Porcentajes de adecuación
-     * @param {number} index - Índice del nivel
-     * @returns {string} HTML del grid
-     */
-    crearGridAdecuacion(porcentajes, index) {
-        const nutrientes = [
-            { key: 'calorias', label: 'Calorías' },
-            { key: 'proteina', label: 'Proteína' },
-            { key: 'grasa', label: 'Grasa' },
-            { key: 'cho', label: 'CHO' },
-            { key: 'calcio', label: 'Calcio' },
-            { key: 'hierro', label: 'Hierro' },
-            { key: 'sodio', label: 'Sodio' }
-        ];
-
-        return nutrientes.map(nutriente => `
-            <div class="adecuacion-mini" data-estado="${porcentajes[nutriente.key].estado}">
-                <span>${nutriente.label}:</span>
-                <input type="number" 
-                       class="form-control form-control-sm porcentaje-input bg-light" 
-                       id="nivel-${index}-${nutriente.key}-pct"
-                       value="${porcentajes[nutriente.key].porcentaje}" 
-                       min="0" 
-                       max="100" 
-                       step="0.1"
-                       readonly
-                       style="cursor: not-allowed;"
-                       data-nutriente="${nutriente.key}"
-                       data-nivel="${index}">
-                <span class="porcentaje-symbol">%</span>
-            </div>
-        `).join('');
+            return `
+                <div class="nca-card" data-estado="${estado}"
+                     data-nivel="${index}" data-nutriente="${def.key}"
+                     id="nca-${index}-${def.key}">
+                    <div class="nca-header">
+                        <span class="nca-semaforo"></span>
+                        <i class="fas ${def.icon} nca-icon"></i>
+                        <span class="nca-nombre">${def.label}</span>
+                    </div>
+                    <div class="nca-body">
+                        <div class="nca-row">
+                            <span class="nca-lbl">Total</span>
+                            <span class="nca-val" id="nivel-${index}-${def.key}">${total.toFixed(1)} ${def.suffix}</span>
+                        </div>
+                        <div class="nca-row">
+                            <span class="nca-lbl">Rec. ICBF</span>
+                            <span class="nca-val">${rec.toFixed(1)} ${def.suffix}</span>
+                        </div>
+                        <div class="nca-row nca-pct">
+                            <span class="nca-lbl">% Calculado</span>
+                            <span class="nca-val" id="nivel-${index}-${def.key}-pct">${pct.toFixed(1)}%</span>
+                        </div>
+                        ${metaRow}
+                    </div>
+                </div>`;
+        }).join('');
     }
 
     /**
@@ -583,14 +544,10 @@ class AnalisisNutricionalManager {
         const porcentajes = this.calcularPorcentajesNivel(nivelIndex, totales);
         console.log(`[DEBUG] Porcentajes calculados:`, porcentajes);
         
-        // Actualizar campos de porcentajes en la interfaz
-        $(`#nivel-${nivelIndex}-calorias-pct`).val(porcentajes.calorias.toFixed(1));
-        $(`#nivel-${nivelIndex}-proteina-pct`).val(porcentajes.proteina.toFixed(1));
-        $(`#nivel-${nivelIndex}-grasa-pct`).val(porcentajes.grasa.toFixed(1));
-        $(`#nivel-${nivelIndex}-cho-pct`).val(porcentajes.cho.toFixed(1));
-        $(`#nivel-${nivelIndex}-calcio-pct`).val(porcentajes.calcio.toFixed(1));
-        $(`#nivel-${nivelIndex}-hierro-pct`).val(porcentajes.hierro.toFixed(1));
-        $(`#nivel-${nivelIndex}-sodio-pct`).val(porcentajes.sodio.toFixed(1));
+        // Actualizar % en las tarjetas
+        ['calorias','proteina','grasa','cho','calcio','hierro','sodio'].forEach(n => {
+            $(`#nivel-${nivelIndex}-${n}-pct`).text(`${porcentajes[n].toFixed(1)}%`);
+        });
         
         // Actualizar badges del header del acordeón
         $(`#heading-${nivelIndex} .badge-primary`).text(`${totales.calorias.toFixed(0)} Kcal`);
@@ -609,44 +566,29 @@ class AnalisisNutricionalManager {
      * @param {Object} porcentajes - Porcentajes de adecuación
      */
     actualizarColoresEstado(nivelIndex, porcentajes) {
-        const nutrientes = [
-            { key: 'calorias', nombre: 'calorias', totalId: 'calorias' },
-            { key: 'proteina', nombre: 'proteina', totalId: 'proteina' },
-            { key: 'grasa', nombre: 'grasa', totalId: 'grasa' },
-            { key: 'cho', nombre: 'cho', totalId: 'cho' },
-            { key: 'calcio', nombre: 'calcio', totalId: 'calcio' },
-            { key: 'hierro', nombre: 'hierro', totalId: 'hierro' },
-            { key: 'sodio', nombre: 'sodio', totalId: 'sodio' }
-        ];
+        const referencias = this.referenciasAdecuacion?.[nivelIndex];
 
-        nutrientes.forEach(nutriente => {
-            const porcentaje = porcentajes[nutriente.nombre] || 0;
-
-            // Determinar el estado según el porcentaje
+        ['calorias','proteina','grasa','cho','calcio','hierro','sodio'].forEach(key => {
+            const pct    = porcentajes[key] || 0;
+            const refVal = referencias?.[key];
             let estado;
-            if (porcentaje <= 35) {
+
+            if (refVal !== undefined && refVal !== null) {
+                const diff = Math.abs(pct - refVal);
+                if (diff <= 3)      estado = 'optimo';
+                else if (diff <= 5) estado = 'azul';
+                else if (diff <= 7) estado = 'aceptable';
+                else                estado = 'alto';
+            } else if (pct <= 35) {
                 estado = 'optimo';
-            } else if (porcentaje <= 70) {
+            } else if (pct <= 70) {
                 estado = 'aceptable';
             } else {
                 estado = 'alto';
             }
 
-            // Actualizar el atributo data-estado del contenedor de adecuación
-            const inputId = `nivel-${nivelIndex}-${nutriente.key}-pct`;
-            const $input = $(`#${inputId}`);
-            const $adecuacionContainer = $input.closest('.adecuacion-mini');
-            if ($adecuacionContainer.length) {
-                $adecuacionContainer.attr('data-estado', estado);
-            }
-
-            // Actualizar el atributo data-estado del contenedor de totales
-            const totalId = `nivel-${nivelIndex}-${nutriente.totalId}`;
-            const $totalElement = $(`#${totalId}`);
-            const $totalContainer = $totalElement.closest('.total-mini');
-            if ($totalContainer.length) {
-                $totalContainer.attr('data-estado', estado);
-            }
+            // Actualizar la tarjeta unificada
+            $(`#nca-${nivelIndex}-${key}`).attr('data-estado', estado);
         });
     }
 

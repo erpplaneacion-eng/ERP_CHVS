@@ -11,7 +11,9 @@ from django.views.decorators.csrf import csrf_exempt
 from principal.models import TablaGradosEscolaresUapa
 
 from ..models import (
+    AdecuacionTotalPorcentaje,
     MinutaPatronMeta,
+    RecomendacionDiariaGradoMod,
     TablaAlimentos2018Icbf,
     TablaAnalisisNutricionalMenu,
     TablaIngredientesPorNivel,
@@ -129,26 +131,79 @@ NUTRIENTES_ANALISIS = ['calorias', 'proteina', 'grasa', 'cho', 'calcio', 'hierro
 
 
 def _obtener_requerimientos_por_nivel(modalidad):
+    """
+    Denominadores nutricionales por nivel.
+    Prioriza RecomendacionDiariaGradoMod (ICBF oficial); hace fallback a
+    TablaRequerimientosNutricionales para niveles sin entrada nueva.
+    """
     requerimientos_por_nivel = {}
     if not modalidad:
         return requerimientos_por_nivel
 
-    requerimientos = TablaRequerimientosNutricionales.objects.filter(
-        id_modalidad=modalidad
-    ).select_related('id_nivel_escolar_uapa')
+    # 1. Intentar usar RecomendacionDiariaGradoMod
+    try:
+        for rec in RecomendacionDiariaGradoMod.objects.filter(
+            id_modalidades=modalidad
+        ).select_related('nivel_escolar_uapa'):
+            nivel_id = rec.nivel_escolar_uapa.id_grado_escolar_uapa
+            requerimientos_por_nivel[nivel_id] = {
+                'calorias': float(rec.calorias_kcal),
+                'proteina': float(rec.proteina_g),
+                'grasa': float(rec.grasa_g),
+                'cho': float(rec.cho_g),
+                'calcio': float(rec.calcio_mg),
+                'hierro': float(rec.hierro_mg),
+                'sodio': float(rec.sodio_mg),
+            }
+    except Exception:
+        pass
 
-    for req in requerimientos:
-        requerimientos_por_nivel[req.id_nivel_escolar_uapa.id_grado_escolar_uapa] = {
-            'calorias': float(req.calorias_kcal),
-            'proteina': float(req.proteina_g),
-            'grasa': float(req.grasa_g),
-            'cho': float(req.cho_g),
-            'calcio': float(req.calcio_mg),
-            'hierro': float(req.hierro_mg),
-            'sodio': float(req.sodio_mg)
-        }
+    # 2. Fallback: TablaRequerimientosNutricionales para niveles no cubiertos
+    for req in TablaRequerimientosNutricionales.objects.filter(
+        id_modalidad=modalidad
+    ).select_related('id_nivel_escolar_uapa'):
+        nivel_id = req.id_nivel_escolar_uapa.id_grado_escolar_uapa
+        if nivel_id not in requerimientos_por_nivel:
+            requerimientos_por_nivel[nivel_id] = {
+                'calorias': float(req.calorias_kcal),
+                'proteina': float(req.proteina_g),
+                'grasa': float(req.grasa_g),
+                'cho': float(req.cho_g),
+                'calcio': float(req.calcio_mg),
+                'hierro': float(req.hierro_mg),
+                'sodio': float(req.sodio_mg),
+            }
 
     return requerimientos_por_nivel
+
+
+def _obtener_referencias_por_nivel(modalidad):
+    """
+    Porcentajes de adecuación de referencia (AdecuacionTotalPorcentaje).
+    Se usan como 'vara de medición' para la semaforización por proximidad.
+    """
+    referencias_por_nivel = {}
+    if not modalidad:
+        return referencias_por_nivel
+
+    try:
+        for ref in AdecuacionTotalPorcentaje.objects.filter(
+            id_modalidad=modalidad
+        ).select_related('id_nivel_escolar_uapa'):
+            nivel_id = ref.id_nivel_escolar_uapa.id_grado_escolar_uapa
+            referencias_por_nivel[nivel_id] = {
+                'calorias': float(ref.calorias_porc),
+                'proteina': float(ref.proteina_porc),
+                'grasa':    float(ref.grasa_porc),
+                'cho':      float(ref.cho_porc),
+                'calcio':   float(ref.calcio_porc),
+                'hierro':   float(ref.hierro_porc),
+                'sodio':    float(ref.sodio_porc),
+            }
+    except Exception:
+        pass
+
+    return referencias_por_nivel
 
 
 def _obtener_ingredientes_configurados_por_analisis(analisis):
@@ -246,7 +301,19 @@ def _calcular_totales_filas(filas_nivel):
     }
 
 
-def _calcular_porcentajes_y_estados(totales, requerimientos):
+def _calcular_porcentajes_y_estados(totales, requerimientos, referencias=None):
+    """
+    Calcula porcentajes de adecuación y estados de semaforización.
+
+    Si se proporciona 'referencias' (porcentajes de adecuación de referencia ICBF),
+    usa lógica de proximidad de 4 colores:
+      ≤3 pts  → optimo   (verde)
+      3-5 pts → azul     (azul)
+      5-7 pts → aceptable (amarillo)
+      >7 pts  → alto     (rojo)
+
+    Si no hay referencia, usa los rangos absolutos originales (35 / 70 %).
+    """
     porcentajes = {}
     estados = {}
 
@@ -255,12 +322,24 @@ def _calcular_porcentajes_y_estados(totales, requerimientos):
             porcentaje = (totales[nutriente] / requerimientos[nutriente]) * 100
             porcentajes[nutriente] = round(porcentaje, 1)
 
-            if porcentaje <= 35:
-                estados[nutriente] = 'optimo'
-            elif porcentaje <= 70:
-                estados[nutriente] = 'aceptable'
+            ref = (referencias or {}).get(nutriente)
+            if ref is not None:
+                diff = abs(porcentaje - float(ref))
+                if diff <= 3:
+                    estados[nutriente] = 'optimo'
+                elif diff <= 5:
+                    estados[nutriente] = 'azul'
+                elif diff <= 7:
+                    estados[nutriente] = 'aceptable'
+                else:
+                    estados[nutriente] = 'alto'
             else:
-                estados[nutriente] = 'alto'
+                if porcentaje <= 35:
+                    estados[nutriente] = 'optimo'
+                elif porcentaje <= 70:
+                    estados[nutriente] = 'aceptable'
+                else:
+                    estados[nutriente] = 'alto'
         else:
             porcentajes[nutriente] = 0
             estados[nutriente] = 'optimo'
@@ -277,6 +356,7 @@ def vista_preparaciones_editor(request, id_menu):
 
     niveles_escolares = TablaGradosEscolaresUapa.objects.all().order_by('id_grado_escolar_uapa')
     requerimientos_por_nivel = _obtener_requerimientos_por_nivel(menu.id_modalidad)
+    referencias_por_nivel = _obtener_referencias_por_nivel(menu.id_modalidad)
 
     preparaciones = list(
         TablaPreparaciones.objects.filter(id_menu=menu)
@@ -296,7 +376,8 @@ def vista_preparaciones_editor(request, id_menu):
         filas_nivel = _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados)
         totales = _calcular_totales_filas(filas_nivel)
         requerimientos = requerimientos_por_nivel.get(nivel.id_grado_escolar_uapa, {})
-        porcentajes, estados = _calcular_porcentajes_y_estados(totales, requerimientos)
+        referencias = referencias_por_nivel.get(nivel.id_grado_escolar_uapa, {})
+        porcentajes, estados = _calcular_porcentajes_y_estados(totales, requerimientos, referencias)
 
         niveles_data.append({
             'nivel': {
@@ -306,6 +387,7 @@ def vista_preparaciones_editor(request, id_menu):
             'filas': filas_nivel,
             'totales': totales,
             'requerimientos': requerimientos,
+            'referencias': referencias,
             'porcentajes': porcentajes,
             'estados': estados,
             'id_analisis': analisis.id_analisis
