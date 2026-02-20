@@ -56,6 +56,11 @@ path('api/menus/<int:id_menu>/guardar-ingredientes-por-nivel/', views.api_guarda
     path('exportar-excel/<int:menu_id>/nivel/<str:nivel_escolar_id>/', views.download_menu_excel_with_nivel, name='exportar_menu_excel_con_nivel'),
     path('exportar-excel-servicio/<int:menu_id>/', views.download_menu_excel_service, name='exportar_menu_excel_servicio'),
     path('exportar-modalidad-excel/<int:programa_id>/<str:modalidad_id>/', views.download_modalidad_excel, name='exportar_modalidad_excel'),
+    path(
+        'exportar-guias-preparacion/<int:programa_id>/<str:modalidad_id>/',
+        views.download_guias_preparacion_excel,
+        name='exportar_guias_preparacion_excel'
+    ),
 
     # Validación Semanal
     path('api/validar-semana/', views.api_validar_semana, name='api_validar_semana'),

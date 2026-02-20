@@ -45,6 +45,7 @@ from .exportes import (
     download_menu_excel_service,
     download_menu_excel_with_nivel,
     download_modalidad_excel,
+    download_guias_preparacion_excel,
 )
 from .semanal import (
     api_validar_semana,

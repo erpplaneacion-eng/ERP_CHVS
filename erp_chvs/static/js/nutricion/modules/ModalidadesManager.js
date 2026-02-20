@@ -138,6 +138,7 @@ class ModalidadesManager {
         header.onclick = () => this.toggleAccordion(header);
 
         const downloadUrl = `/nutricion/exportar-modalidad-excel/${this.programaActual.id}/${modalidadId}/`;
+        const guiasDownloadUrl = `/nutricion/exportar-guias-preparacion/${this.programaActual.id}/${modalidadId}/`;
 
         header.innerHTML = `
             <div>
@@ -147,6 +148,9 @@ class ModalidadesManager {
             <div class="accordion-header-actions" id="actions-${modalidadId}">
                 <a href="${downloadUrl}" class="btn btn-success btn-sm" onclick="event.stopPropagation();" title="Descargar Reporte Maestro para ${modalidad.modalidad}">
                     <i class="fas fa-file-excel"></i> Descargar Modalidad
+                </a>
+                <a href="${guiasDownloadUrl}" class="btn btn-success btn-sm" onclick="event.stopPropagation();" title="Descargar Guías de Preparación para ${modalidad.modalidad}">
+                    <i class="fas fa-file-excel"></i> Descargar Guías
                 </a>
                 ${!tieneMenus ? `
                 <button class="btn-generar-auto" data-modalidad-id="${modalidadId}" data-modalidad-nombre="${modalidad.modalidad}">

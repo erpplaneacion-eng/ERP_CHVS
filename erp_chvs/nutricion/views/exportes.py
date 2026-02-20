@@ -3,6 +3,7 @@ from django.http import HttpResponse
 
 from ..master_excel_generator import MasterNutritionalExcelGenerator
 from ..excel_generator import generate_advanced_nutritional_excel, generate_excel_from_service
+from ..guia_preparacion_excel_generator import GuiaPreparacionExcelGenerator
 from ..services import AnalisisNutricionalService
 
 
@@ -90,3 +91,25 @@ def download_modalidad_excel(request, programa_id, modalidad_id):
 
     except Exception as e:
         return HttpResponse(f"Error generando el reporte maestro de Excel: {str(e)}", status=500)
+
+
+@login_required
+def download_guias_preparacion_excel(request, programa_id, modalidad_id):
+    """
+    Descarga archivo de guias de preparacion:
+    una hoja por menu para el programa/modalidad seleccionados.
+    """
+    try:
+        generator = GuiaPreparacionExcelGenerator()
+        excel_stream = generator.generate(programa_id=programa_id, modalidad_id=modalidad_id)
+
+        response = HttpResponse(
+            excel_stream,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = (
+            f'attachment; filename="guias_preparacion_programa_{programa_id}_modalidad_{modalidad_id}.xlsx"'
+        )
+        return response
+    except Exception as e:
+        return HttpResponse(f"Error generando guias de preparacion: {str(e)}", status=500)
