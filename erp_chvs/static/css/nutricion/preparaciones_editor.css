@@ -116,7 +116,45 @@
 .col-grupo { width: 140px; }
 .col-rango { width: 120px; }
 .col-peso { width: 220px; }
-.col-acciones { width: 80px; text-align: center; }
+.col-acciones { width: 130px; text-align: center; }
+
+/* Botón eliminar ingrediente: estilo "peligro elegante" */
+.btn-eliminar-ingrediente-editor {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 9px;
+    border: 1px solid #fca5a5;
+    background: linear-gradient(180deg, #fff5f5 0%, #fee2e2 100%);
+    color: #b91c1c;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+
+.btn-eliminar-ingrediente-editor i {
+    font-size: 0.9rem;
+}
+
+.btn-eliminar-ingrediente-editor:hover {
+    border-color: #ef4444;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(220, 38, 38, 0.28);
+}
+
+.btn-eliminar-ingrediente-editor:focus,
+.btn-eliminar-ingrediente-editor:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.24);
+}
+
+.btn-eliminar-ingrediente-editor:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.24);
+}
 
 /* Scrollable table container */
 .tabla-container {

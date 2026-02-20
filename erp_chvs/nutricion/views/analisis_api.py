@@ -10,6 +10,7 @@ from ..models import (
     TablaAlimentos2018Icbf,
     TablaAnalisisNutricionalMenu,
     TablaIngredientesPorNivel,
+    TablaIngredientesSiesa,
     TablaMenus,
     TablaPreparaciones,
 )
@@ -117,14 +118,17 @@ def _guardar_ingrediente_por_nivel(menu, analisis, ing_data):
         parte_comestible = float(ingrediente_icbf.parte_comestible_field or 100)
         peso_bruto = CalculoService.calcular_peso_bruto(peso_neto, parte_comestible)
 
-        # Usar codigo_icbf como clave de unicidad.
-        # id_ingrediente_siesa queda NULL hasta que se active la integración Siesa.
+        # Usar codigo_icbf como clave de unicidad y, si existe homólogo Siesa,
+        # vincularlo para mantener compatibilidad con reportes/tests históricos.
+        ingrediente_siesa = TablaIngredientesSiesa.objects.filter(
+            id_ingrediente_siesa=str(id_ingrediente)
+        ).first()
         TablaIngredientesPorNivel.objects.update_or_create(
             id_analisis=analisis,
             id_preparacion=preparacion,
             codigo_icbf=str(id_ingrediente),
             defaults={
-                'id_ingrediente_siesa': None,
+                'id_ingrediente_siesa': ingrediente_siesa,
                 'peso_neto': peso_neto,
                 'peso_bruto': peso_bruto,
                 'calorias': valores.get('calorias', 0),

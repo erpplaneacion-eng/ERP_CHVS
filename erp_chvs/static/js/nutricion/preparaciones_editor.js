@@ -386,6 +386,69 @@
         return div.innerHTML;
     }
 
+    function quitarFilasDeIngredienteEnTodosLosNiveles(idPreparacion, idIngrediente) {
+        // Quitar del modelo en memoria para que guardados y cálculos futuros no lo incluyan.
+        nivelesData.forEach((nivelData) => {
+            nivelData.filas = (nivelData.filas || []).filter((fila) => !(
+                String(fila.id_preparacion) === String(idPreparacion) &&
+                String(fila.id_ingrediente) === String(idIngrediente)
+            ));
+        });
+
+        // Quitar del DOM en todos los tabs/niveles.
+        document.querySelectorAll('.tbody-ingredientes tr').forEach((row) => {
+            if (
+                String(row.dataset.idPreparacion) === String(idPreparacion) &&
+                String(row.dataset.idIngrediente) === String(idIngrediente)
+            ) {
+                row.remove();
+            }
+        });
+
+        // Recalcular tarjetas nutricionales de todos los niveles.
+        nivelesData.forEach((nivelData) => {
+            recalcularNivel(nivelData.nivel.id);
+        });
+    }
+
+    async function eliminarIngredienteDePreparacion(idPreparacion, idIngrediente) {
+        const mensajeConfirmacion = '¿Eliminar este ingrediente de la preparación en todos los niveles?';
+        const confirmado = typeof Swal !== 'undefined'
+            ? (await Swal.fire({
+                text: mensajeConfirmacion,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            })).isConfirmed
+            : confirm(mensajeConfirmacion);
+
+        if (!confirmado) return;
+
+        const overlay = mostrarOverlayGuardando('Eliminando ingrediente...');
+        try {
+            const response = await fetch(
+                `/nutricion/api/preparaciones/${idPreparacion}/ingredientes/${encodeURIComponent(idIngrediente)}/`,
+                {
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                }
+            );
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'No fue posible eliminar el ingrediente');
+            }
+
+            quitarFilasDeIngredienteEnTodosLosNiveles(idPreparacion, idIngrediente);
+            showNotification('Ingrediente eliminado correctamente.', 'success');
+        } catch (error) {
+            console.error('Error al eliminar ingrediente:', error);
+            showNotification(error.message || 'Error al eliminar ingrediente', 'error');
+        } finally {
+            ocultarOverlayGuardando();
+        }
+    }
+
     async function agregarIngredienteATodosLosNiveles() {
         if (typeof Swal === 'undefined') {
             showNotification('Se requiere SweetAlert2', 'info');
@@ -739,6 +802,15 @@
 
         console.log('✅ Editor inicializado. Niveles:', nivelesData.length);
     }
+
+    document.addEventListener('click', (e) => {
+        const btnEliminar = e.target.closest('.btn-eliminar-ingrediente-editor');
+        if (!btnEliminar) return;
+        const idPreparacion = btnEliminar.dataset.idPreparacion;
+        const idIngrediente = btnEliminar.dataset.idIngrediente;
+        if (!idPreparacion || !idIngrediente) return;
+        eliminarIngredienteDePreparacion(idPreparacion, idIngrediente);
+    });
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', inicializar);

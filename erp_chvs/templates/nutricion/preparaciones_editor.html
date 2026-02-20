@@ -80,7 +80,7 @@
                             <th class="col-grupo">Grupo</th>
                             <th class="col-rango">Rango (g)</th>
                             <th class="col-peso">Peso neto (g)</th>
-                            <th class="col-acciones">Estado</th>
+                            <th class="col-acciones">Acciones</th>
                         </tr>
                     </thead>
                     <tbody class="tbody-ingredientes" data-nivel-id="{{ nivel_data.nivel.id }}">
@@ -107,7 +107,7 @@
                                 {% endif %}
                             </td>
                             <td class="col-peso">
-                                <div class="peso-control-container">                                    
+                                <div class="peso-control-container">
                                     <!-- Input numérico -->
                                     <input
                                         type="number"
@@ -125,15 +125,38 @@
                                         data-cho="{{ fila.cho|default:0 }}"
                                         title="Calorías: {{ fila.calorias|floatformat:1 }} kcal | Proteína: {{ fila.proteina|floatformat:1 }}g | Grasa: {{ fila.grasa|floatformat:1 }}g | CHO: {{ fila.cho|floatformat:1 }}g"
                                     />
+                                    <input
+                                        type="range"
+                                        class="slider-peso"
+                                        min="{{ fila.minimo|default:0|floatformat:0 }}"
+                                        max="{% if fila.maximo != None %}{{ fila.maximo|floatformat:0 }}{% else %}500{% endif %}"
+                                        value="{{ fila.peso_neto|floatformat:0 }}"
+                                        step="1"
+                                    />
+                                    <div class="d-flex justify-content-between">
+                                        <small class="slider-label-min">{{ fila.minimo|default:0|floatformat:0 }}g</small>
+                                        <small class="slider-label-max">{% if fila.maximo != None %}{{ fila.maximo|floatformat:0 }}g{% else %}Abierto{% endif %}</small>
+                                    </div>
                                 </div>
                             </td>
                             <td class="col-acciones">
-                                <span class="badge-estado ok"
-                                      data-bs-toggle="tooltip"
-                                      data-bs-placement="left"
-                                      title="Dentro del rango permitido">
-                                    OK
-                                </span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge-estado ok"
+                                          data-bs-toggle="tooltip"
+                                          data-bs-placement="left"
+                                          title="Dentro del rango permitido">
+                                        OK
+                                    </span>
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-danger btn-sm btn-eliminar-ingrediente-editor"
+                                        data-id-preparacion="{{ fila.id_preparacion }}"
+                                        data-id-ingrediente="{{ fila.id_ingrediente }}"
+                                        title="Eliminar ingrediente de la preparación"
+                                    >
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -251,114 +274,6 @@
         {% endfor %}
     </div>
 </div>
-
-<!-- ========================================
-     MODAL PARA AGREGAR PREPARACIÓN
-     ======================================== -->
-<div class="modal fade" id="modalAgregarIngrediente" tabindex="-1" aria-labelledby="modalAgregarIngredienteLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border: none; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.15);">
-            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 16px 16px 0 0; padding: 24px;">
-                <h5 class="modal-title" id="modalAgregarIngredienteLabel" style="font-weight: 600; font-size: 1.25rem;">
-                    <i class="bi bi-plus-circle-fill" style="margin-right: 8px;"></i> Agregar Preparación
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" style="padding: 32px;">
-                <form id="formAgregarIngrediente">
-                    <!-- Campo: Preparación -->
-                    <div class="mb-4">
-                        <label for="selectPreparacion" class="form-label" style="font-weight: 600; color: #374151; margin-bottom: 8px; display: flex; align-items: center;">
-                            <i class="bi bi-egg-fried" style="margin-right: 8px; color: #667eea;"></i>
-                            Preparación
-                            <span style="color: #ef4444; margin-left: 4px;">*</span>
-                        </label>
-                        <select class="form-select" id="selectPreparacion" required
-                                style="border: 2px solid #e5e7eb; border-radius: 10px; padding: 12px 16px; font-size: 0.95rem; transition: all 0.3s;">
-                            <option value="">Seleccione una preparación...</option>
-                        </select>
-                        <small class="form-text" style="color: #6b7280; margin-top: 6px; display: block;">
-                            <i class="bi bi-info-circle" style="margin-right: 4px;"></i>
-                            Preparación a la que se agregará el ingrediente
-                        </small>
-                    </div>
-
-                    <!-- Campo: Ingrediente ICBF -->
-                    <div class="mb-4">
-                        <label for="selectIngrediente" class="form-label" style="font-weight: 600; color: #374151; margin-bottom: 8px; display: flex; align-items: center;">
-                            <i class="bi bi-basket3" style="margin-right: 8px; color: #10b981;"></i>
-                            Ingrediente ICBF
-                            <span style="color: #ef4444; margin-left: 4px;">*</span>
-                        </label>
-                        <select class="form-select" id="selectIngrediente" required
-                                style="border: 2px solid #e5e7eb; border-radius: 10px; padding: 12px 16px; font-size: 0.95rem; transition: all 0.3s;">
-                            <option value="">Seleccione un ingrediente...</option>
-                        </select>
-                        <small class="form-text" style="color: #6b7280; margin-top: 6px; display: block;">
-                            <i class="bi bi-search" style="margin-right: 4px;"></i>
-                            Busque por nombre o código ICBF
-                        </small>
-                    </div>
-
-                    <!-- Información adicional -->
-                    <div class="alert" role="alert"
-                         style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-                                border: 2px solid #0ea5e9;
-                                border-radius: 12px;
-                                padding: 16px;
-                                margin-bottom: 0;">
-                        <div style="display: flex; align-items: start;">
-                            <i class="bi bi-lightbulb-fill" style="color: #0ea5e9; font-size: 1.25rem; margin-right: 12px; margin-top: 2px;"></i>
-                            <div style="flex: 1;">
-                                <strong style="color: #0c4a6e; display: block; margin-bottom: 6px;">Nota importante</strong>
-                                <span style="color: #0c4a6e; font-size: 0.9rem;">
-                                    El ingrediente se agregará a <strong>todos los niveles escolares</strong>.
-                                    Podrás ajustar los pesos individuales después.
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer" style="border-top: 2px solid #f3f4f6; padding: 20px 32px; background-color: #f9fafb; border-radius: 0 0 16px 16px;">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-                        style="padding: 10px 24px; border-radius: 8px; font-weight: 500;">
-                    <i class="bi bi-x-circle"></i> Cancelar
-                </button>
-                <button type="button" class="btn btn-primary" id="btnConfirmarAgregarIngrediente"
-                        style="padding: 10px 24px;
-                               border-radius: 8px;
-                               font-weight: 500;
-                               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                               border: none;">
-                    <i class="bi bi-check-circle-fill"></i> Agregar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<style>
-/* Estilos para el modal de agregar preparación */
-#modalAgregarIngrediente .form-select:focus {
-    border-color: #667eea !important;
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1) !important;
-}
-
-#modalAgregarIngrediente .form-select:hover {
-    border-color: #cbd5e1;
-}
-
-#modalAgregarIngrediente .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
-}
-
-#modalAgregarIngrediente .btn-secondary:hover {
-    background-color: #6b7280;
-    border-color: #6b7280;
-}
-</style>
 
 <!-- ========================================
      DATOS JSON PARA JAVASCRIPT
