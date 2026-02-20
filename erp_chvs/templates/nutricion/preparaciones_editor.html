@@ -76,6 +76,7 @@
                     <thead>
                         <tr>
                             <th class="col-preparacion">Preparación</th>
+                            <th class="col-componente">Componente</th>
                             <th class="col-ingrediente">Ingrediente ICBF</th>
                             <th class="col-grupo">Grupo</th>
                             <th class="col-rango">Rango (g)</th>
@@ -92,6 +93,9 @@
                         >
                             <td class="col-preparacion">
                                 <strong>{{ fila.preparacion }}</strong>
+                            </td>
+                            <td class="col-componente">
+                                <span class="badge bg-light text-dark border">{{ fila.componente }}</span>
                             </td>
                             <td class="col-ingrediente">
                                 <span style="color: #6b7280; font-size: 11px;">{{ fila.codigo_icbf }}</span><br>
@@ -321,6 +325,7 @@
 <script id="niveles-data" type="application/json">{{ niveles_json|safe }}</script>
 <script id="ingredientes-catalogo" type="application/json">{{ ingredientes_json|safe }}</script>
 <script id="preparaciones-catalogo" type="application/json">{{ preparaciones_json|safe }}</script>
+<script id="componentes-catalogo" type="application/json">{{ componentes_json|safe }}</script>
 {% endblock %}
 
 {% block extra_js %}

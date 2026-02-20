@@ -280,6 +280,59 @@ class Paso2PreparacionesEditorIntegrationTests(TestCase):
         analisis.refresh_from_db()
         self.assertEqual(float(analisis.porcentaje_hierro), 100.0)
 
+    def test_api_guardar_preparaciones_editor_crea_nueva_con_componente(self):
+        url = reverse("nutricion:api_guardar_preparaciones_editor", args=[self.menu.id_menu])
+        payload = {
+            "filas": [
+                {
+                    "id_preparacion": None,
+                    "preparacion_nombre": "Nueva preparación QA",
+                    "id_componente": self.componente.id_componente,
+                    "id_ingrediente": self.alimento_icbf.codigo,
+                    "gramaje": None,
+                }
+            ]
+        }
+        response = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertEqual(body["guardadas"], 1)
+
+        prep = TablaPreparaciones.objects.get(
+            id_menu=self.menu,
+            preparacion="Nueva preparación QA",
+        )
+        self.assertEqual(prep.id_componente, self.componente)
+
+    def test_api_guardar_preparaciones_editor_existente_no_sobrescribe_componente(self):
+        componente_alt = ComponentesAlimentos.objects.create(
+            id_componente="comp_alt",
+            componente="Componente Alterno",
+            id_grupo_alimentos=self.grupo,
+        )
+        url = reverse("nutricion:api_guardar_preparaciones_editor", args=[self.menu.id_menu])
+        payload = {
+            "filas": [
+                {
+                    "id_preparacion": self.preparacion.id_preparacion,
+                    "preparacion_nombre": "",
+                    "id_componente": componente_alt.id_componente,
+                    "id_ingrediente": self.alimento_icbf.codigo,
+                    "gramaje": None,
+                }
+            ]
+        }
+        response = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+
+        self.preparacion.refresh_from_db()
+        self.assertEqual(self.preparacion.id_componente, self.componente)
+
     def test_paso4_template_incluye_slider_y_labels_de_rango(self):
         url = reverse("nutricion:preparaciones_editor", args=[self.menu.id_menu])
         response = self.client.get(url)
@@ -331,3 +384,9 @@ class Paso4FrontendContractsTests(TestCase):
         self.assertIn("function ocultarOverlayGuardando()", js)
         self.assertIn("const overlay = mostrarOverlayGuardando('Guardando cambios...');", js)
         self.assertIn("ocultarOverlayGuardando();", js)
+
+    def test_paso4_js_modal_aplica_regla_componente_solo_para_nueva(self):
+        js = self.js_source
+        self.assertIn("selectComponente.disabled = !esNueva;", js)
+        self.assertIn("if (modo === 'nueva' && !idComp)", js)
+        self.assertIn("id_componente: modo === 'nueva' ? idComp : null", js)

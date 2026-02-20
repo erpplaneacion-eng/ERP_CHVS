@@ -14,6 +14,7 @@
     let nivelesData = JSON.parse(document.getElementById('niveles-data')?.textContent || '[]');
     const ingredientesCatalogo = JSON.parse(document.getElementById('ingredientes-catalogo')?.textContent || '[]');
     const preparacionesCatalogo = JSON.parse(document.getElementById('preparaciones-catalogo')?.textContent || '[]');
+    const componentesCatalogo = JSON.parse(document.getElementById('componentes-catalogo')?.textContent || '[]');
 
     // Crear mapa de ingredientes para cálculos nutricionales
     const ingredientesMap = new Map();
@@ -486,6 +487,10 @@
             `<option value="${escaparHtml(ing.codigo)}">${escaparHtml(ing.codigo)} - ${escaparHtml(ing.nombre_del_alimento)}</option>`
         )).join('');
 
+        const opcionesComponentes = componentesCatalogo.map((comp) => (
+            `<option value="${comp.id_componente}">${escaparHtml(comp.componente)}</option>`
+        )).join('');
+
         const result = await Swal.fire({
             title: '<div style="display:flex;align-items:center;gap:12px;"><i class="bi bi-plus-circle-fill" style="color:#667eea;font-size:1.8rem;"></i><span style="color:#1f2937;">Agregar Preparación</span></div>',
             width: 700,
@@ -647,6 +652,22 @@
                         </small>
                     </div>
 
+                    <div id="bloqueComponente" class="modal-field-group">
+                        <label class="modal-label">
+                            <i class="bi bi-grid-3x3-gap-fill" style="color:#f59e0b;"></i>
+                            Componente de Alimento
+                            <span style="color:#ef4444;">*</span>
+                        </label>
+                        <select id="agregarComponenteId" class="modal-select">
+                            <option value="">— seleccione —</option>
+                            ${opcionesComponentes}
+                        </select>
+                        <small class="modal-help-text">
+                            <i class="bi bi-info-circle"></i>
+                            Defina a qué componente pertenece esta preparación (ej: Proteína, Cereal)
+                        </small>
+                    </div>
+
                     <div class="modal-field-group">
                         <label class="modal-label">
                             <i class="bi bi-basket3" style="color:#10b981;"></i>
@@ -688,11 +709,24 @@
                 const modo = document.getElementById('agregarModoPrep');
                 const bExistente = document.getElementById('bloquePrepExistente');
                 const bNueva = document.getElementById('bloquePrepNueva');
-                modo.addEventListener('change', () => {
+                const bComponente = document.getElementById('bloqueComponente');
+                const selectComponente = document.getElementById('agregarComponenteId');
+
+                const actualizarVistaModo = () => {
                     const esNueva = modo.value === 'nueva';
                     bExistente.style.display = esNueva ? 'none' : 'block';
                     bNueva.style.display = esNueva ? 'block' : 'none';
+                    bComponente.style.display = esNueva ? 'block' : 'none';
+                    selectComponente.disabled = !esNueva;
+                    if (!esNueva) {
+                        selectComponente.value = '';
+                    }
+                };
+
+                modo.addEventListener('change', () => {
+                    actualizarVistaModo();
                 });
+                actualizarVistaModo();
 
                 // Filtro de ingredientes en tiempo real
                 const filtroIng = document.getElementById('filtroIngrediente');
@@ -745,6 +779,7 @@
                 const modo = document.getElementById('agregarModoPrep').value;
                 const idPrep = document.getElementById('agregarPreparacionExistente').value;
                 const nomPrep = document.getElementById('agregarPreparacionNueva').value.trim();
+                const idComp = document.getElementById('agregarComponenteId').value;
                 const idIng = document.getElementById('agregarIngredienteId').value;
 
                 // Validaciones
@@ -760,9 +795,14 @@
                     return Swal.showValidationMessage('Debes escribir el nombre de la nueva preparación');
                 }
 
+                if (modo === 'nueva' && !idComp) {
+                    return Swal.showValidationMessage('Debes seleccionar un componente');
+                }
+
                 return {
                     id_preparacion: modo === 'existente' ? parseInt(idPrep) : null,
                     preparacion_nombre: modo === 'nueva' ? nomPrep : '',
+                    id_componente: modo === 'nueva' ? idComp : null,
                     id_ingrediente: idIng,
                     gramaje: null  // Siempre null, se usarán valores predeterminados por nivel
                 };
