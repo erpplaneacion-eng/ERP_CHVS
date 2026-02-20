@@ -279,24 +279,38 @@
     // EVENT LISTENERS
     // ========================================
 
+    function actualizarPesoBruto(row) {
+        const input = row.querySelector('.input-peso');
+        const cell  = row.querySelector('.peso-bruto-cell');
+        if (!input || !cell) return;
+        const pesoNeto        = parseFloat(input.value) || 0;
+        const parteComestible = parseFloat(input.dataset.parteComestible) || 100;
+        const pesoBruto = parteComestible > 0
+            ? (pesoNeto * 100) / parteComestible
+            : pesoNeto;
+        cell.textContent = pesoBruto.toFixed(1);
+    }
+
     document.addEventListener('input', (e) => {
         if (e.target.classList.contains('input-peso')) {
             const row = e.target.closest('tr');
             const tbody = e.target.closest('.tbody-ingredientes');
             if (row && tbody) {
                 const nivelId = tbody.dataset.nivelId;
+                actualizarPesoBruto(row);
                 actualizarEstadoFila(row);
                 sincronizarSliderConInput(row);
                 recalcularNivel(nivelId);
             }
         }
-        
+
         if (e.target.classList.contains('slider-peso')) {
             const row = e.target.closest('tr');
             const tbody = e.target.closest('.tbody-ingredientes');
             if (row && tbody) {
                 const nivelId = tbody.dataset.nivelId;
                 sincronizarInputConSlider(row);
+                actualizarPesoBruto(row);
                 actualizarEstadoFila(row);
                 recalcularNivel(nivelId);
             }

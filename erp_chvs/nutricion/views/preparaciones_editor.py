@@ -282,6 +282,12 @@ def _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados
             'rango_abierto': rango.get('rango_abierto', False),
             'peso_neto': peso_neto,
             'parte_comestible': float(rel.id_ingrediente_siesa.parte_comestible_field or 100),
+            'peso_bruto': round(
+                CalculoService.calcular_peso_bruto(
+                    peso_neto,
+                    float(rel.id_ingrediente_siesa.parte_comestible_field or 100)
+                ), 1
+            ),
             **valores_nutricionales
         })
 

@@ -116,7 +116,15 @@
 .col-grupo { width: 140px; }
 .col-rango { width: 120px; }
 .col-peso { width: 220px; }
+.col-peso-bruto { width: 120px; text-align: center; }
 .col-acciones { width: 130px; text-align: center; }
+
+.peso-bruto-cell {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    font-size: 14px;
+    color: #374151;
+}
 
 /* Botón eliminar ingrediente: estilo "peligro elegante" */
 .btn-eliminar-ingrediente-editor {

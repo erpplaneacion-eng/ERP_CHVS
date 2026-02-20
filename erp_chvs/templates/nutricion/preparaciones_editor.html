@@ -80,6 +80,7 @@
                             <th class="col-grupo">Grupo</th>
                             <th class="col-rango">Rango (g)</th>
                             <th class="col-peso">Peso neto (g)</th>
+                            <th class="col-peso-bruto">Peso bruto (g)</th>
                             <th class="col-acciones">Acciones</th>
                         </tr>
                     </thead>
@@ -138,6 +139,9 @@
                                         <small class="slider-label-max">{% if fila.maximo != None %}{{ fila.maximo|floatformat:0 }}g{% else %}Abierto{% endif %}</small>
                                     </div>
                                 </div>
+                            </td>
+                            <td class="col-peso-bruto">
+                                <span class="peso-bruto-cell">{{ fila.peso_bruto|floatformat:1 }}</span> g
                             </td>
                             <td class="col-acciones">
                                 <div class="d-flex align-items-center gap-2">
