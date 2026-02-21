@@ -10,8 +10,9 @@ Estructura funcional equivalente al formato solicitado:
 
 import io
 import re
+import unicodedata
 from decimal import Decimal
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image
@@ -287,7 +288,7 @@ class GuiaPreparacionExcelGenerator:
         return row2 + 1
 
     def _draw_table_body(self, ws, start_row: int, menu: TablaMenus) -> int:
-        niveles = self._get_niveles()
+        niveles_por_columna = self._get_niveles_por_columna()
         preps = list(TablaPreparaciones.objects.filter(id_menu=menu).order_by("preparacion"))
         rels = list(
             TablaPreparacionIngredientes.objects.filter(id_preparacion__in=preps)
@@ -319,7 +320,9 @@ class GuiaPreparacionExcelGenerator:
 
             # Peso servido por nivel = suma de netos de todos los ingredientes de la preparacion
             peso_servido_by_nivel = {}
-            for nivel_id in niveles:
+            for _, nivel_id in niveles_por_columna:
+                if not nivel_id:
+                    continue
                 total = Decimal("0")
                 for rel in prep_rels:
                     _, neto = self._get_bruto_neto(rel, prep.id_preparacion, nivel_id, idx, analisis_por_nivel)
@@ -333,7 +336,7 @@ class GuiaPreparacionExcelGenerator:
                 ws.cell(row=row, column=2).border = self.border
 
                 col = 3
-                for nivel_id in NIVELES_ORDEN:
+                for _, nivel_id in niveles_por_columna:
                     bruto, neto = self._get_bruto_neto(rel, prep.id_preparacion, nivel_id, idx, analisis_por_nivel)
 
                     ws.cell(row=row, column=col, value=float(round(bruto, 2)))
@@ -358,8 +361,8 @@ class GuiaPreparacionExcelGenerator:
 
             # Peso servido combinado por preparacion (una sola celda vertical por nivel)
             col = 3
-            for nivel_id in NIVELES_ORDEN:
-                servido = peso_servido_by_nivel.get(nivel_id, Decimal("0"))
+            for _, nivel_id in niveles_por_columna:
+                servido = peso_servido_by_nivel.get(nivel_id, Decimal("0")) if nivel_id else Decimal("0")
                 servido_col = col + 2
                 if prep_end > prep_start:
                     ws.merge_cells(
@@ -398,20 +401,45 @@ class GuiaPreparacionExcelGenerator:
             idx[(nivel_id, prep_id, codigo)] = item
         return idx
 
-    def _get_niveles(self) -> List[str]:
-        disponibles = set(TablaGradosEscolaresUapa.objects.values_list("id_grado_escolar_uapa", flat=True))
-        return [n for n in NIVELES_ORDEN if n in disponibles]
+    @staticmethod
+    def _normalize_nivel_key(value: str) -> str:
+        value = str(value or "").strip().lower()
+        value = unicodedata.normalize("NFKD", value)
+        value = "".join(ch for ch in value if not unicodedata.combining(ch))
+        value = value.replace("-", "_").replace(" ", "_")
+        return value
+
+    def _get_niveles_por_columna(self) -> List[Tuple[str, Optional[str]]]:
+        niveles = list(
+            TablaGradosEscolaresUapa.objects.values_list(
+                "id_grado_escolar_uapa",
+                "nivel_escolar_uapa",
+            )
+        )
+        por_key: Dict[str, str] = {}
+        for nivel_id, nombre in niveles:
+            nivel_id_str = str(nivel_id).strip()
+            for candidato in (
+                self._normalize_nivel_key(nivel_id_str),
+                self._normalize_nivel_key(nombre),
+            ):
+                if candidato and candidato not in por_key:
+                    por_key[candidato] = nivel_id_str
+
+        return [(slot, por_key.get(self._normalize_nivel_key(slot))) for slot in NIVELES_ORDEN]
 
     def _get_bruto_neto(
         self,
         rel: TablaPreparacionIngredientes,
         prep_id: int,
-        nivel_id: str,
+        nivel_id: Optional[str],
         idx: Dict[Tuple[str, int, str], TablaIngredientesPorNivel],
         analisis_por_nivel: Dict[str, TablaAnalisisNutricionalMenu],
     ) -> Tuple[Decimal, Decimal]:
-        codigo = str(rel.id_ingrediente_siesa.codigo).strip()
-        guardado = idx.get((nivel_id, prep_id, codigo))
+        guardado = None
+        if nivel_id:
+            codigo = str(rel.id_ingrediente_siesa.codigo).strip()
+            guardado = idx.get((nivel_id, prep_id, codigo))
 
         if guardado:
             neto = Decimal(guardado.peso_neto or 0)

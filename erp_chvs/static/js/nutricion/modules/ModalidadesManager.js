@@ -147,13 +147,13 @@ class ModalidadesManager {
                 <span class="preparacion-badge" id="badge-${modalidadId}">${menusModalidad.length} / 20 Menus</span>
             </div>
             <div class="accordion-header-actions" id="actions-${modalidadId}">
-                <a href="${downloadUrl}" class="btn btn-success btn-sm" style="${menusCompletos ? "" : "display:none;"}" onclick="event.stopPropagation();" title="Descargar Reporte Maestro para ${modalidad.modalidad}">
+                <a href="${downloadUrl}" class="btn btn-success btn-sm btn-download-analisis" style="${menusCompletos ? "" : "display:none;"}" onclick="event.stopPropagation();" title="Descargar Reporte Maestro para ${modalidad.modalidad}">
                     <i class="fas fa-file-excel"></i> Descargar Analisis
                 </a>
-                <a href="${guiasDownloadUrl}" class="btn btn-success btn-sm" style="${menusCompletos ? "" : "display:none;"}" onclick="event.stopPropagation();" title="Descargar Guias de Preparacion para ${modalidad.modalidad}">
+                <a href="${guiasDownloadUrl}" class="btn btn-success btn-sm btn-download-guias" style="${menusCompletos ? "" : "display:none;"}" onclick="event.stopPropagation();" title="Descargar Guias de Preparacion para ${modalidad.modalidad}">
                     <i class="fas fa-file-excel"></i> Descargar Guias
                 </a>
-                ${!tieneMenus ? `
+                ${!menusCompletos ? `
                 <button class="btn-generar-auto" data-modalidad-id="${modalidadId}" data-modalidad-nombre="${modalidad.modalidad}">
                     <i class="fas fa-magic"></i> Generar 20 Menus
                 </button>
@@ -164,8 +164,8 @@ class ModalidadesManager {
             </div>
         `;
 
-        // Agregar event listeners a los botones cuando no hay Menus
-        if (!tieneMenus) {
+        // Agregar event listeners mientras no esten completos los 20 menus
+        if (!menusCompletos) {
             setTimeout(() => {
                 const btn = header.querySelector('.btn-generar-auto');
                 if (btn) {
@@ -429,7 +429,7 @@ class ModalidadesManager {
                         ? comp.requerido_efectivo
                         : comp.requerido;
                     const cumple = comp.cumple;
-                    const icono = cumple ? 'âœ…' : 'âŒ';
+                    const icono = cumple ? '&#9989;' : '&#10060;';
                     const claseEstado = cumple ? 'cumple' : 'no-cumple';
 
                     let mensaje = '';
@@ -468,7 +468,7 @@ class ModalidadesManager {
                 if (data.restricciones_subgrupo && data.restricciones_subgrupo.length > 0) {
                     subRestriccionesHtml = data.restricciones_subgrupo.map(r => {
                         const cumple = r.cumple;
-                        const icono = cumple ? 'âœ…' : 'âŒ';
+                        const icono = cumple ? '&#9989;' : '&#10060;';
                         const claseEstado = cumple ? 'cumple' : 'no-cumple';
                         const falta = r.frecuencia - r.actual;
                         let mensaje = '';
@@ -562,13 +562,13 @@ class ModalidadesManager {
      */
     async generarMenusAutomaticos(modalidadId, modalidadNombre) {
         const result = await Swal.fire({
-            title: 'Â¿Generar 20 Menus?',
-            text: `Se crearÃ¡n automÃ¡ticamente los Menus regulares para ${modalidadNombre}`,
+            title: 'Generar 20 Menus?',
+            text: `Se crearan automaticamente los Menus regulares para ${modalidadNombre}`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#10b981',
             cancelButtonColor: '#64748b',
-            confirmButtonText: 'SÃ­, generar',
+            confirmButtonText: 'Si, generar',
             cancelButtonText: 'Cancelar'
         });
 
@@ -616,10 +616,22 @@ class ModalidadesManager {
                     badge.textContent = `${menusNuevos.length} / 20 Menus`;
                 }
 
-                // 3. Ocultar botÃ³n de generaciÃ³n
+                // 3. Alternar acciones en header segun cantidad de menus
                 const btnGenerar = document.querySelector(`#actions-${modalidadId} .btn-generar-auto`);
                 if (btnGenerar) {
-                    btnGenerar.style.display = 'none';
+                    btnGenerar.style.display = menusNuevos.length >= 20 ? 'none' : '';
+                }
+                const btnCopiar = document.querySelector(`#actions-${modalidadId} .btn-copiar-modalidad`);
+                if (btnCopiar) {
+                    btnCopiar.style.display = menusNuevos.length >= 20 ? 'none' : '';
+                }
+                const btnAnalisis = document.querySelector(`#actions-${modalidadId} .btn-download-analisis`);
+                if (btnAnalisis) {
+                    btnAnalisis.style.display = menusNuevos.length >= 20 ? '' : 'none';
+                }
+                const btnGuias = document.querySelector(`#actions-${modalidadId} .btn-download-guias`);
+                if (btnGuias) {
+                    btnGuias.style.display = menusNuevos.length >= 20 ? '' : 'none';
                 }
                 
                 // 4. Renderizar con animaciÃ³n escalonada
@@ -630,9 +642,9 @@ class ModalidadesManager {
                     this.cargarValidadoresSemana(modalidadId);
                 }, 500);
 
-                // 6. Cerrar modal de carga y mostrar Ã©xito
+                // 6. Cerrar modal de carga y mostrar exito
                 Swal.fire({
-                    title: 'Â¡Ã‰xito!',
+                    title: 'Exito',
                     text: `Se han generado ${data.menus_creados} Menus correctamente.`,
                     icon: 'success',
                     timer: 2000,
@@ -642,8 +654,8 @@ class ModalidadesManager {
                 Swal.fire('Error', data.error || 'No se pudieron generar los Menus', 'error');
             }
         } catch (error) {
-            console.error('Error al generar Menus automÃ¡ticos:', error);
-            Swal.fire('Error', 'Hubo un problema en la conexiÃ³n con el servidor', 'error');
+            console.error('Error al generar Menus automaticos:', error);
+            Swal.fire('Error', 'Hubo un problema en la conexion con el servidor', 'error');
         }
     }
 
@@ -928,20 +940,20 @@ class ModalidadesManager {
         const programaDestinoId = this.programaActual?.id;
 
         if (!radioSeleccionado) {
-            Swal.fire('AtenciÃ³n', 'Selecciona un programa origen antes de continuar.', 'warning');
+            Swal.fire('Atencion', 'Selecciona un programa origen antes de continuar.', 'warning');
             return;
         }
 
         const programaOrigenId = radioSeleccionado.value;
 
         const confirmacion = await Swal.fire({
-            title: 'Â¿Copiar modalidad?',
-            text: 'Se copiarÃ¡n todos los Menus con preparaciones, ingredientes y gramajes por nivel educativo. Esta acciÃ³n no se puede deshacer.',
+            title: 'Copiar modalidad?',
+            text: 'Se copiaran todos los Menus con preparaciones, ingredientes y gramajes por nivel educativo. Esta accion no se puede deshacer.',
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#6366f1',
             cancelButtonColor: '#64748b',
-            confirmButtonText: 'SÃ­, copiar',
+            confirmButtonText: 'Si, copiar',
             cancelButtonText: 'Cancelar'
         });
 
@@ -989,12 +1001,18 @@ class ModalidadesManager {
                     badge.textContent = `${menusNuevos.length} / 20 Menus`;
                 }
 
-                // Ocultar botones de acciÃ³n inicial
+                // Alternar acciones en header segun cantidad de menus
                 const actionsDiv = document.getElementById(`actions-${modalidadId}`);
                 if (actionsDiv) {
-                    actionsDiv.querySelectorAll('.btn-generar-auto, .btn-copiar-modalidad').forEach(b => {
-                        b.style.display = 'none';
-                    });
+                    const completado = menusNuevos.length >= 20;
+                    const btnGenerar = actionsDiv.querySelector('.btn-generar-auto');
+                    const btnCopiar = actionsDiv.querySelector('.btn-copiar-modalidad');
+                    const btnAnalisis = actionsDiv.querySelector('.btn-download-analisis');
+                    const btnGuias = actionsDiv.querySelector('.btn-download-guias');
+                    if (btnGenerar) btnGenerar.style.display = completado ? 'none' : '';
+                    if (btnCopiar) btnCopiar.style.display = completado ? 'none' : '';
+                    if (btnAnalisis) btnAnalisis.style.display = completado ? '' : 'none';
+                    if (btnGuias) btnGuias.style.display = completado ? '' : 'none';
                 }
 
                 // Renderizar tarjetas con animaciÃ³n
@@ -1007,7 +1025,7 @@ class ModalidadesManager {
                 }
 
                 Swal.fire({
-                    title: 'Â¡Copia exitosa!',
+                    title: 'Copia exitosa',
                     text: `Se copiaron ${data.menus_copiados} Menus correctamente.`,
                     icon: 'success',
                     timer: 2500,
@@ -1018,7 +1036,7 @@ class ModalidadesManager {
             }
         } catch (error) {
             console.error('[ModalidadesManager] Error al copiar modalidad:', error);
-            Swal.fire('Error', 'Hubo un problema en la conexiÃ³n con el servidor.', 'error');
+            Swal.fire('Error', 'Hubo un problema en la conexion con el servidor.', 'error');
         }
     }
 

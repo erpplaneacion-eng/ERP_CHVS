@@ -27,8 +27,8 @@ class GuiasPreparacionExcelTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.nivel_prescolar = TablaGradosEscolaresUapa.objects.create(
-            id_grado_escolar_uapa="prescolar",
-            nivel_escolar_uapa="Preescolar",
+            id_grado_escolar_uapa="100",
+            nivel_escolar_uapa="prescolar",
         )
 
         cls.modalidad = ModalidadesDeConsumo.objects.create(
@@ -169,6 +169,19 @@ class GuiasPreparacionExcelTests(TestCase):
         servido_fila_2 = ws.cell(row=12, column=5).value
         self.assertEqual(float(servido_fila_1), 30.0)
         self.assertIsNone(servido_fila_2)
+
+    def test_toma_pesos_guardados_con_ids_nivel_numericos_y_gramaje_nulo(self):
+        TablaPreparacionIngredientes.objects.filter(id_preparacion=self.prep_1).update(gramaje=None)
+
+        generator = GuiaPreparacionExcelGenerator()
+        stream = generator.generate(self.programa.id, self.modalidad.id_modalidades)
+        wb = load_workbook(filename=BytesIO(stream.getvalue()))
+        ws = wb["Menu 1"]
+
+        # Fila 11 = primer ingrediente. Prescolar ocupa C:D:E = bruto, neto, servido.
+        self.assertEqual(float(ws.cell(row=11, column=3).value), 10.0)
+        self.assertEqual(float(ws.cell(row=11, column=4).value), 10.0)
+        self.assertEqual(float(ws.cell(row=11, column=5).value), 30.0)
 
     def test_bloque_firmas_usa_tabla_firma_nutricional_contrato(self):
         FirmaNutricionalContrato.objects.create(
