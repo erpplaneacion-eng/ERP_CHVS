@@ -165,8 +165,8 @@ class GuiasPreparacionExcelTests(TestCase):
         ws = wb["Menu 1"]
 
         # Primera fila de datos: prescolar -> C bruto, D neto, E servido
-        servido_fila_1 = ws.cell(row=11, column=5).value
-        servido_fila_2 = ws.cell(row=12, column=5).value
+        servido_fila_1 = ws.cell(row=12, column=5).value
+        servido_fila_2 = ws.cell(row=13, column=5).value
         self.assertEqual(float(servido_fila_1), 30.0)
         self.assertEqual(float(servido_fila_2), 30.0)
 
