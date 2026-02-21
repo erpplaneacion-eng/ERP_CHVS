@@ -165,10 +165,10 @@ class GuiasPreparacionExcelTests(TestCase):
         ws = wb["Menu 1"]
 
         # Primera fila de datos: prescolar -> C bruto, D neto, E servido
-        servido_fila_1 = ws.cell(row=12, column=5).value
-        servido_fila_2 = ws.cell(row=13, column=5).value
+        servido_fila_1 = ws.cell(row=11, column=5).value
+        servido_fila_2 = ws.cell(row=12, column=5).value
         self.assertEqual(float(servido_fila_1), 30.0)
-        self.assertEqual(float(servido_fila_2), 30.0)
+        self.assertIsNone(servido_fila_2)
 
     def test_bloque_firmas_usa_tabla_firma_nutricional_contrato(self):
         FirmaNutricionalContrato.objects.create(
@@ -192,11 +192,11 @@ class GuiasPreparacionExcelTests(TestCase):
             text = ws.cell(row=row, column=1).value
             if text == "NOMBRE NUTRICIONISTA - DIETISTA POR PARTE DEL OPERADOR":
                 self.assertEqual(ws.cell(row=row, column=5).value, "DIETISTA ELABORA")
-                self.assertEqual(ws.cell(row=row, column=13).value, "MAT-ELA-1")
+                self.assertEqual(ws.cell(row=row, column=12).value, "MAT-ELA-1")
                 found_elabora = True
             if text == "NOMBRE NUTRICIONISTA - DIETISTA QUE APRUEBA LA GUIA POR PARTE DEL PAE SEM":
                 self.assertEqual(ws.cell(row=row, column=5).value, "DIETISTA APRUEBA")
-                self.assertEqual(ws.cell(row=row, column=13).value, "MAT-APR-2")
+                self.assertEqual(ws.cell(row=row, column=12).value, "MAT-APR-2")
                 found_aprueba = True
 
         self.assertTrue(found_elabora)

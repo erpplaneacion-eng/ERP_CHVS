@@ -49,7 +49,7 @@ class GuiaPreparacionExcelGenerator:
     def __init__(self):
         side = Side(style="thin", color="000000")
         self.border = Border(left=side, right=side, top=side, bottom=side)
-        self.header_fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
+        self.header_fill = PatternFill(start_color="D9EAD3", end_color="D9EAD3", fill_type="solid")
         self.center = Alignment(horizontal="center", vertical="center", wrap_text=True)
         self.left = Alignment(horizontal="left", vertical="center", wrap_text=True)
 
@@ -86,28 +86,32 @@ class GuiaPreparacionExcelGenerator:
     def _build_sheet(self, ws, menu: TablaMenus) -> None:
         self._set_columns(ws)
         self._draw_top(ws, menu)
-        row = 10
+        row = 9
         row = self._draw_table_header(ws, row)
         row_end = self._draw_table_body(ws, row, menu)
         self._draw_signature_block(ws, row_end + 2, menu)
+        self._apply_all_borders(ws)
 
     def _set_columns(self, ws):
         ws.column_dimensions["A"].width = 24  # preparacion
-        ws.column_dimensions["B"].width = 24  # ingrediente
+        ws.column_dimensions["B"].width = 22  # ingrediente
         for col in "CDEFGHIJKLMNOPQ":
-            ws.column_dimensions[col].width = 10
-        ws.column_dimensions["R"].width = 46  # procedimiento
+            ws.column_dimensions[col].width = 9
+        ws.column_dimensions["R"].width = 42  # procedimiento
 
     def _draw_top(self, ws, menu: TablaMenus):
         ws.row_dimensions[1].height = 38
         ws.row_dimensions[2].height = 38
+        ws.merge_cells("A1:R2")
+        ws["A1"].fill = self.header_fill
+        ws["A1"].border = self.border
 
         # Logo programa (si existe)
         try:
             if menu.id_contrato and menu.id_contrato.imagen:
                 img = Image(menu.id_contrato.imagen.path)
-                img.height = min(70, img.height)
-                img.width = min(220, img.width)
+                img.height = min(60, img.height)
+                img.width = min(180, img.width)
                 ws.add_image(img, "O1")
         except Exception:
             pass
@@ -142,8 +146,9 @@ class GuiaPreparacionExcelGenerator:
         ws["E5"].border = self.border
 
         ws.merge_cells("H5:R5")
-        ws["H5"] = ""
+        ws["H5"] = str(menu.id_contrato.programa).upper()
         ws["H5"].alignment = self.center
+        ws["H5"].font = Font(bold=True)
         ws["H5"].fill = self.header_fill
         ws["H5"].border = self.border
 
@@ -159,31 +164,31 @@ class GuiaPreparacionExcelGenerator:
         ws["B6"].fill = self.header_fill
         ws["B6"].border = self.border
 
+        ws.merge_cells("D6:E6")
         ws["D6"] = "COMUNIDAD / PUEBLO INDÍGENA"
         ws["D6"].alignment = self.center
         ws["D6"].fill = self.header_fill
         ws["D6"].border = self.border
 
-        ws.merge_cells("E6:G6")
-        ws["E6"] = ""
-        ws["E6"].alignment = self.center
-        ws["E6"].fill = self.header_fill
-        ws["E6"].border = self.border
+        ws.merge_cells("F6:G6")
+        ws["F6"] = ""
+        ws["F6"].alignment = self.center
+        ws["F6"].fill = self.header_fill
+        ws["F6"].border = self.border
 
+        ws.merge_cells("H6:I6")
         ws["H6"] = "AFROCOLOMBIANO / PALENQUEROS"
         ws["H6"].alignment = self.center
         ws["H6"].fill = self.header_fill
         ws["H6"].border = self.border
 
-        ws.merge_cells("K6:R6")
-        ws["K6"] = str(menu.id_contrato.programa).upper()
-        ws["K6"].alignment = self.center
-        ws["K6"].font = Font(bold=True)
-        ws["K6"].fill = self.header_fill
-        ws["K6"].border = self.border
+        ws.merge_cells("J6:R6")
+        ws["J6"] = ""
+        ws["J6"].alignment = self.center
+        ws["J6"].fill = self.header_fill
+        ws["J6"].border = self.border
 
         # Fila 7
-        ws.merge_cells("A7:A8")
         ws["A7"] = "GRUPO ETNICO"
         ws["A7"].alignment = self.center
         ws["A7"].font = Font(bold=True)
@@ -195,35 +200,37 @@ class GuiaPreparacionExcelGenerator:
         ws["B7"].fill = self.header_fill
         ws["B7"].border = self.border
 
+        ws.merge_cells("D7:E7")
         ws["D7"] = "ROM"
         ws["D7"].alignment = self.center
         ws["D7"].fill = self.header_fill
         ws["D7"].border = self.border
 
-        ws.merge_cells("E7:G7")
-        ws["E7"] = ""
-        ws["E7"].alignment = self.center
-        ws["E7"].fill = self.header_fill
-        ws["E7"].border = self.border
+        ws.merge_cells("F7:G7")
+        ws["F7"] = ""
+        ws["F7"].alignment = self.center
+        ws["F7"].fill = self.header_fill
+        ws["F7"].border = self.border
 
-        ws.merge_cells("I7:R7")
-        ws["I7"] = "X"
-        ws["I7"].alignment = self.center
-        ws["I7"].font = Font(bold=True, size=13)
-        ws["I7"].fill = self.header_fill
-        ws["I7"].border = self.border
-
+        ws.merge_cells("H7:I7")
         ws["H7"] = "SIN PERTENENCIA ÉTNICA"
         ws["H7"].alignment = self.center
         ws["H7"].fill = self.header_fill
         ws["H7"].border = self.border
 
-        ws.merge_cells("A9:R9")
-        ws["A9"] = f"Menu {menu.menu}"
-        ws["A9"].font = Font(bold=True)
-        ws["A9"].alignment = self.center
-        ws["A9"].fill = self.header_fill
-        ws["A9"].border = self.border
+        ws.merge_cells("J7:R7")
+        ws["J7"] = "X"
+        ws["J7"].alignment = self.center
+        ws["J7"].font = Font(bold=True, size=13)
+        ws["J7"].fill = self.header_fill
+        ws["J7"].border = self.border
+
+        ws.merge_cells("A8:R8")
+        ws["A8"] = f"Menu {menu.menu}"
+        ws["A8"].font = Font(bold=True)
+        ws["A8"].alignment = self.center
+        ws["A8"].fill = self.header_fill
+        ws["A8"].border = self.border
 
     def _draw_table_header(self, ws, start_row: int) -> int:
         row1 = start_row
@@ -319,11 +326,10 @@ class GuiaPreparacionExcelGenerator:
                 col = 3
                 for nivel_id in NIVELES_ORDEN:
                     bruto, neto = self._get_bruto_neto(rel, prep.id_preparacion, nivel_id, idx, analisis_por_nivel)
-                    servido = peso_servido_by_nivel.get(nivel_id, Decimal("0"))
 
                     ws.cell(row=row, column=col, value=float(round(bruto, 2)))
                     ws.cell(row=row, column=col + 1, value=float(round(neto, 2)))
-                    ws.cell(row=row, column=col + 2, value=float(round(servido, 2)))
+                    ws.cell(row=row, column=col + 2, value="")
                     for c in (col, col + 1, col + 2):
                         ws.cell(row=row, column=c).alignment = self.center
                         ws.cell(row=row, column=c).border = self.border
@@ -341,6 +347,23 @@ class GuiaPreparacionExcelGenerator:
             ws.cell(row=prep_start, column=1).alignment = self.center
             ws.cell(row=prep_start, column=1).border = self.border
 
+            # Peso servido combinado por preparacion (una sola celda vertical por nivel)
+            col = 3
+            for nivel_id in NIVELES_ORDEN:
+                servido = peso_servido_by_nivel.get(nivel_id, Decimal("0"))
+                servido_col = col + 2
+                if prep_end > prep_start:
+                    ws.merge_cells(
+                        start_row=prep_start,
+                        start_column=servido_col,
+                        end_row=prep_end,
+                        end_column=servido_col,
+                    )
+                ws.cell(row=prep_start, column=servido_col, value=float(round(servido, 2)))
+                ws.cell(row=prep_start, column=servido_col).alignment = self.center
+                ws.cell(row=prep_start, column=servido_col).border = self.border
+                col += 3
+
             # Procedimiento en blanco pero combinado por preparacion
             ws.merge_cells(start_row=prep_start, start_column=18, end_row=prep_end, end_column=18)
             ws.cell(row=prep_start, column=18, value="")
@@ -352,7 +375,7 @@ class GuiaPreparacionExcelGenerator:
                 ws.cell(row=r, column=1).border = self.border
                 ws.cell(row=r, column=18).border = self.border
 
-        ws.freeze_panes = "C12"
+        ws.freeze_panes = "C11"
         return row
 
     def _build_index(self, ingredientes_guardados: List[TablaIngredientesPorNivel]) -> Dict[Tuple[str, int, str], TablaIngredientesPorNivel]:
@@ -420,7 +443,7 @@ class GuiaPreparacionExcelGenerator:
 
         rows = [start_row, start_row + 1]
         for r in rows:
-            for c in range(1, 21):
+            for c in range(1, 19):
                 ws.cell(row=r, column=c).border = self.border
                 ws.cell(row=r, column=c).alignment = self.center
                 ws.cell(row=r, column=c).fill = self.header_fill
@@ -431,28 +454,28 @@ class GuiaPreparacionExcelGenerator:
         ws.cell(row=start_row, column=1).alignment = self.left
         ws.cell(row=start_row, column=1).font = Font(bold=True)
 
-        ws.merge_cells(start_row=start_row, start_column=5, end_row=start_row, end_column=9)
+        ws.merge_cells(start_row=start_row, start_column=5, end_row=start_row, end_column=8)
         ws.cell(row=start_row, column=5, value=elabora_nombre)
         ws.cell(row=start_row, column=5).font = Font(bold=True)
 
-        ws.merge_cells(start_row=start_row, start_column=10, end_row=start_row, end_column=12)
-        ws.cell(row=start_row, column=10, value="MATRÍCULA PROFESIONAL")
-        ws.cell(row=start_row, column=10).font = Font(bold=True)
+        ws.merge_cells(start_row=start_row, start_column=9, end_row=start_row, end_column=11)
+        ws.cell(row=start_row, column=9, value="MATRÍCULA PROFESIONAL")
+        ws.cell(row=start_row, column=9).font = Font(bold=True)
 
-        ws.merge_cells(start_row=start_row, start_column=13, end_row=start_row, end_column=14)
-        ws.cell(row=start_row, column=13, value=elabora_matricula)
-        ws.cell(row=start_row, column=13).font = Font(bold=True)
+        ws.merge_cells(start_row=start_row, start_column=12, end_row=start_row, end_column=13)
+        ws.cell(row=start_row, column=12, value=elabora_matricula)
+        ws.cell(row=start_row, column=12).font = Font(bold=True)
 
-        ws.merge_cells(start_row=start_row, start_column=15, end_row=start_row, end_column=16)
-        ws.cell(row=start_row, column=15, value="FIRMA")
-        ws.cell(row=start_row, column=15).font = Font(bold=True)
+        ws.merge_cells(start_row=start_row, start_column=14, end_row=start_row, end_column=14)
+        ws.cell(row=start_row, column=14, value="FIRMA")
+        ws.cell(row=start_row, column=14).font = Font(bold=True)
 
-        ws.merge_cells(start_row=start_row, start_column=17, end_row=start_row, end_column=20)
+        ws.merge_cells(start_row=start_row, start_column=15, end_row=start_row, end_column=18)
         if elabora_img:
-            self._insert_signature_image(ws, elabora_img, f"Q{start_row}")
+            self._insert_signature_image(ws, elabora_img, f"O{start_row}")
         else:
-            ws.cell(row=start_row, column=17, value=elabora_firma_texto)
-            ws.cell(row=start_row, column=17).alignment = self.left
+            ws.cell(row=start_row, column=15, value=elabora_firma_texto)
+            ws.cell(row=start_row, column=15).alignment = self.left
 
         # Fila 2
         ws.merge_cells(start_row=start_row + 1, start_column=1, end_row=start_row + 1, end_column=4)
@@ -464,28 +487,28 @@ class GuiaPreparacionExcelGenerator:
         ws.cell(row=start_row + 1, column=1).alignment = self.left
         ws.cell(row=start_row + 1, column=1).font = Font(bold=True)
 
-        ws.merge_cells(start_row=start_row + 1, start_column=5, end_row=start_row + 1, end_column=9)
+        ws.merge_cells(start_row=start_row + 1, start_column=5, end_row=start_row + 1, end_column=8)
         ws.cell(row=start_row + 1, column=5, value=aprueba_nombre)
         ws.cell(row=start_row + 1, column=5).font = Font(bold=True)
 
-        ws.merge_cells(start_row=start_row + 1, start_column=10, end_row=start_row + 1, end_column=12)
-        ws.cell(row=start_row + 1, column=10, value="MATRÍCULA PROFESIONAL")
-        ws.cell(row=start_row + 1, column=10).font = Font(bold=True)
+        ws.merge_cells(start_row=start_row + 1, start_column=9, end_row=start_row + 1, end_column=11)
+        ws.cell(row=start_row + 1, column=9, value="MATRÍCULA PROFESIONAL")
+        ws.cell(row=start_row + 1, column=9).font = Font(bold=True)
 
-        ws.merge_cells(start_row=start_row + 1, start_column=13, end_row=start_row + 1, end_column=14)
-        ws.cell(row=start_row + 1, column=13, value=aprueba_matricula)
-        ws.cell(row=start_row + 1, column=13).font = Font(bold=True)
+        ws.merge_cells(start_row=start_row + 1, start_column=12, end_row=start_row + 1, end_column=13)
+        ws.cell(row=start_row + 1, column=12, value=aprueba_matricula)
+        ws.cell(row=start_row + 1, column=12).font = Font(bold=True)
 
-        ws.merge_cells(start_row=start_row + 1, start_column=15, end_row=start_row + 1, end_column=16)
-        ws.cell(row=start_row + 1, column=15, value="FIRMA")
-        ws.cell(row=start_row + 1, column=15).font = Font(bold=True)
+        ws.merge_cells(start_row=start_row + 1, start_column=14, end_row=start_row + 1, end_column=14)
+        ws.cell(row=start_row + 1, column=14, value="FIRMA")
+        ws.cell(row=start_row + 1, column=14).font = Font(bold=True)
 
-        ws.merge_cells(start_row=start_row + 1, start_column=17, end_row=start_row + 1, end_column=20)
+        ws.merge_cells(start_row=start_row + 1, start_column=15, end_row=start_row + 1, end_column=18)
         if aprueba_img:
-            self._insert_signature_image(ws, aprueba_img, f"Q{start_row + 1}")
+            self._insert_signature_image(ws, aprueba_img, f"O{start_row + 1}")
         else:
-            ws.cell(row=start_row + 1, column=17, value=aprueba_firma_texto)
-            ws.cell(row=start_row + 1, column=17).alignment = self.left
+            ws.cell(row=start_row + 1, column=15, value=aprueba_firma_texto)
+            ws.cell(row=start_row + 1, column=15).alignment = self.left
 
     @staticmethod
     def _insert_signature_image(ws, image_path: str, anchor_cell: str) -> None:
@@ -498,3 +521,9 @@ class GuiaPreparacionExcelGenerator:
             ws.add_image(img, anchor_cell)
         except Exception:
             return
+
+    def _apply_all_borders(self, ws) -> None:
+        max_row = ws.max_row
+        for row in range(1, max_row + 1):
+            for col in range(1, 19):
+                ws.cell(row=row, column=col).border = self.border
