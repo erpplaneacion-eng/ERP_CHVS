@@ -28,8 +28,7 @@
 
 /* Dashboard Background */
 #costos-dashboard-background {
-    background: linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), 
-                url('../../images/dashboard-bg.jpg'); /* Reutiliza si existe */
+    background: url('/static/costos/images/costos.png');
     background-size: cover;
     background-position: center;
     min-height: calc(100vh - 120px);
