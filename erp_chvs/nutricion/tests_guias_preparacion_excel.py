@@ -201,3 +201,37 @@ class GuiasPreparacionExcelTests(TestCase):
 
         self.assertTrue(found_elabora)
         self.assertTrue(found_aprueba)
+
+    def test_pestanas_se_ordenan_numericamente(self):
+        TablaMenus.objects.create(
+            menu="10",
+            id_modalidad=self.modalidad,
+            id_contrato=self.programa,
+        )
+
+        generator = GuiaPreparacionExcelGenerator()
+        stream = generator.generate(self.programa.id, self.modalidad.id_modalidades)
+        wb = load_workbook(filename=BytesIO(stream.getvalue()))
+
+        self.assertEqual(wb.sheetnames[:3], ["Menu 1", "Menu 2", "Menu 10"])
+
+    def test_no_hay_filas_vacias_entre_tabla_y_bloque_firmas(self):
+        FirmaNutricionalContrato.objects.create(
+            programa=self.programa,
+            elabora_nombre="Dietista Elabora",
+            elabora_matricula="MAT-ELA-1",
+            aprueba_nombre="Dietista Aprueba",
+            aprueba_matricula="MAT-APR-2",
+        )
+
+        generator = GuiaPreparacionExcelGenerator()
+        stream = generator.generate(self.programa.id, self.modalidad.id_modalidades)
+        wb = load_workbook(filename=BytesIO(stream.getvalue()))
+        ws = wb["Menu 1"]
+
+        # Ultima fila de ingredientes para menu 1 en setup: fila 12.
+        # Bloque firmas debe iniciar inmediatamente en la fila 13.
+        self.assertEqual(
+            ws.cell(row=13, column=1).value,
+            "NOMBRE NUTRICIONISTA - DIETISTA POR PARTE DEL OPERADOR",
+        )

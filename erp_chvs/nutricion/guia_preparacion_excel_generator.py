@@ -9,6 +9,7 @@ Estructura funcional equivalente al formato solicitado:
 """
 
 import io
+import re
 from decimal import Decimal
 from typing import Dict, List, Tuple
 
@@ -60,8 +61,8 @@ class GuiaPreparacionExcelGenerator:
                 id_modalidad_id=modalidad_id,
             )
             .select_related("id_contrato", "id_modalidad")
-            .order_by("menu")
         )
+        menus.sort(key=self._menu_sort_key)
 
         wb = Workbook()
         wb.remove(wb.active)
@@ -89,8 +90,16 @@ class GuiaPreparacionExcelGenerator:
         row = 9
         row = self._draw_table_header(ws, row)
         row_end = self._draw_table_body(ws, row, menu)
-        self._draw_signature_block(ws, row_end + 2, menu)
+        self._draw_signature_block(ws, row_end, menu)
         self._apply_all_borders(ws)
+
+    @staticmethod
+    def _menu_sort_key(menu: TablaMenus):
+        menu_text = str(menu.menu).strip()
+        match = re.search(r"\d+", menu_text)
+        if match:
+            return (0, int(match.group()), menu_text.lower())
+        return (1, float("inf"), menu_text.lower())
 
     def _set_columns(self, ws):
         ws.column_dimensions["A"].width = 24  # preparacion
