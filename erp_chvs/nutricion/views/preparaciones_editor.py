@@ -420,7 +420,11 @@ def vista_preparaciones_editor(request, id_menu):
         TablaAlimentos2018Icbf.objects.values('codigo', 'nombre_del_alimento').order_by('nombre_del_alimento')
     )
     preparaciones_catalogo = [
-        {'id_preparacion': p.id_preparacion, 'preparacion': p.preparacion}
+        {
+            'id_preparacion': p.id_preparacion,
+            'preparacion': p.preparacion,
+            'id_componente': p.id_componente_id,
+        }
         for p in preparaciones
     ]
     componentes_catalogo = list(
@@ -486,6 +490,16 @@ def api_guardar_preparaciones_editor(request, id_menu):
                 # Resolver componente solo para nuevas preparaciones
                 if id_preparacion:
                     preparacion = TablaPreparaciones.objects.get(id_preparacion=id_preparacion, id_menu=menu)
+                    if id_componente:
+                        try:
+                            componente_obj = ComponentesAlimentos.objects.get(id_componente=id_componente)
+                        except ComponentesAlimentos.DoesNotExist:
+                            errores.append(f"Fila {idx + 1}: componente {id_componente} no encontrado")
+                            continue
+
+                        if preparacion.id_componente_id != componente_obj.id_componente:
+                            preparacion.id_componente = componente_obj
+                            preparacion.save(update_fields=['id_componente'])
                 else:
                     if not preparacion_nombre:
                         errores.append(f"Fila {idx + 1}: nombre de preparación requerido")

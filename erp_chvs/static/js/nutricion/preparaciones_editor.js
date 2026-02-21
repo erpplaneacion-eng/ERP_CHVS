@@ -716,15 +716,24 @@
                     const esNueva = modo.value === 'nueva';
                     bExistente.style.display = esNueva ? 'none' : 'block';
                     bNueva.style.display = esNueva ? 'block' : 'none';
-                    bComponente.style.display = esNueva ? 'block' : 'none';
-                    selectComponente.disabled = !esNueva;
+                    bComponente.style.display = 'block';
+                    selectComponente.disabled = false;
                     if (!esNueva) {
-                        selectComponente.value = '';
+                        const idPrepSeleccionada = document.getElementById('agregarPreparacionExistente').value;
+                        const prepSeleccionada = preparacionesCatalogo.find(
+                            (prep) => String(prep.id_preparacion) === String(idPrepSeleccionada)
+                        );
+                        selectComponente.value = prepSeleccionada?.id_componente || '';
                     }
                 };
 
                 modo.addEventListener('change', () => {
                     actualizarVistaModo();
+                });
+                document.getElementById('agregarPreparacionExistente').addEventListener('change', () => {
+                    if (modo.value === 'existente') {
+                        actualizarVistaModo();
+                    }
                 });
                 actualizarVistaModo();
 
@@ -802,7 +811,7 @@
                 return {
                     id_preparacion: modo === 'existente' ? parseInt(idPrep) : null,
                     preparacion_nombre: modo === 'nueva' ? nomPrep : '',
-                    id_componente: modo === 'nueva' ? idComp : null,
+                    id_componente: idComp || null,
                     id_ingrediente: idIng,
                     gramaje: null  // Siempre null, se usarán valores predeterminados por nivel
                 };

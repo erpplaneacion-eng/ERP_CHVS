@@ -312,7 +312,7 @@ class Paso2PreparacionesEditorIntegrationTests(TestCase):
         )
         self.assertEqual(prep.id_componente, self.componente)
 
-    def test_api_guardar_preparaciones_editor_existente_no_sobrescribe_componente(self):
+    def test_api_guardar_preparaciones_editor_existente_actualiza_componente(self):
         componente_alt = ComponentesAlimentos.objects.create(
             id_componente="comp_alt",
             componente="Componente Alterno",
@@ -337,7 +337,7 @@ class Paso2PreparacionesEditorIntegrationTests(TestCase):
         self.assertTrue(body["success"])
 
         self.preparacion.refresh_from_db()
-        self.assertEqual(self.preparacion.id_componente, self.componente)
+        self.assertEqual(self.preparacion.id_componente, componente_alt)
 
     def test_paso4_template_incluye_slider_y_labels_de_rango(self):
         url = reverse("nutricion:preparaciones_editor", args=[self.menu.id_menu])
