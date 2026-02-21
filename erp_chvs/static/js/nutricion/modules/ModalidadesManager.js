@@ -1,10 +1,10 @@
-/**
+﻿/**
  * ModalidadesManager.js
- * Maneja toda la lógica relacionada con modalidades y menús
- * - Gestión de modalidades
- * - Creación y gestión de acordeones
- * - Generación de menús automáticos
- * - Tarjetas de menús
+ * Maneja toda la lÃ³gica relacionada con modalidades y Menus
+ * - GestiÃ³n de modalidades
+ * - CreaciÃ³n y gestiÃ³n de acordeones
+ * - GeneraciÃ³n de Menus automÃ¡ticos
+ * - Tarjetas de Menus
  */
 
 class ModalidadesManager {
@@ -20,7 +20,7 @@ class ModalidadesManager {
     }
 
     init() {
-        // Inicialización del manager
+        // InicializaciÃ³n del manager
     }
 
     /**
@@ -55,7 +55,7 @@ class ModalidadesManager {
     }
 
     /**
-     * Cargar menús existentes por programa
+     * Cargar Menus existentes por programa
      * @param {string} programaId - ID del programa
      */
     async cargarMenusExistentes(programaId) {
@@ -63,7 +63,7 @@ class ModalidadesManager {
             const response = await fetch(`/nutricion/api/menus/?programa_id=${programaId}`);
             const data = await response.json();
             
-            // Agrupar menús por modalidad
+            // Agrupar Menus por modalidad
             this.menusData = {};
             if (data.menus) {
                 data.menus.forEach(menu => {
@@ -74,7 +74,7 @@ class ModalidadesManager {
                     this.menusData[modalidadId].push(menu);
                 });
                 
-                // Ordenar menús numéricamente dentro de cada modalidad
+                // Ordenar Menus numÃ©ricamente dentro de cada modalidad
                 Object.keys(this.menusData).forEach(modalidadId => {
                     this.menusData[modalidadId].sort((a, b) => {
                         const numA = parseInt(a.menu) || 0;
@@ -84,12 +84,12 @@ class ModalidadesManager {
                 });
             }
         } catch (error) {
-            console.error('Error al cargar menús:', error);
+            console.error('Error al cargar Menus:', error);
         }
     }
 
     /**
-     * Mostrar información del programa
+     * Mostrar informaciÃ³n del programa
      * @param {Object} programa - Datos del programa
      */
     mostrarInfoPrograma(programa) {
@@ -119,14 +119,15 @@ class ModalidadesManager {
     }
 
     /**
-     * Crear acordeón para una modalidad
+     * Crear acordeÃ³n para una modalidad
      * @param {Object} modalidad - Datos de la modalidad
-     * @returns {HTMLElement} Elemento del acordeón
+     * @returns {HTMLElement} Elemento del acordeÃ³n
      */
     crearAcordeon(modalidad) {
         const modalidadId = modalidad.id_modalidades;
         const menusModalidad = this.menusData[modalidadId] || [];
         const tieneMenus = menusModalidad.length > 0;
+        const menusCompletos = menusModalidad.length >= 20;
         
         const accordionDiv = document.createElement('div');
         accordionDiv.className = 'accordion';
@@ -143,18 +144,18 @@ class ModalidadesManager {
         header.innerHTML = `
             <div>
                 <strong>${modalidad.modalidad}</strong>
-                <span class="preparacion-badge" id="badge-${modalidadId}">${menusModalidad.length} / 20 menús</span>
+                <span class="preparacion-badge" id="badge-${modalidadId}">${menusModalidad.length} / 20 Menus</span>
             </div>
             <div class="accordion-header-actions" id="actions-${modalidadId}">
-                <a href="${downloadUrl}" class="btn btn-success btn-sm" onclick="event.stopPropagation();" title="Descargar Reporte Maestro para ${modalidad.modalidad}">
-                    <i class="fas fa-file-excel"></i> Descargar Modalidad
+                <a href="${downloadUrl}" class="btn btn-success btn-sm" style="${menusCompletos ? "" : "display:none;"}" onclick="event.stopPropagation();" title="Descargar Reporte Maestro para ${modalidad.modalidad}">
+                    <i class="fas fa-file-excel"></i> Descargar Analisis
                 </a>
-                <a href="${guiasDownloadUrl}" class="btn btn-success btn-sm" onclick="event.stopPropagation();" title="Descargar Guías de Preparación para ${modalidad.modalidad}">
-                    <i class="fas fa-file-excel"></i> Descargar Guías
+                <a href="${guiasDownloadUrl}" class="btn btn-success btn-sm" style="${menusCompletos ? "" : "display:none;"}" onclick="event.stopPropagation();" title="Descargar Guias de Preparacion para ${modalidad.modalidad}">
+                    <i class="fas fa-file-excel"></i> Descargar Guias
                 </a>
                 ${!tieneMenus ? `
                 <button class="btn-generar-auto" data-modalidad-id="${modalidadId}" data-modalidad-nombre="${modalidad.modalidad}">
-                    <i class="fas fa-magic"></i> Generar 20 Menús
+                    <i class="fas fa-magic"></i> Generar 20 Menus
                 </button>
                 <button class="btn-copiar-modalidad" data-modalidad-id="${modalidadId}" data-modalidad-nombre="${modalidad.modalidad}">
                     <i class="fas fa-copy"></i> Copiar desde otro programa
@@ -163,7 +164,7 @@ class ModalidadesManager {
             </div>
         `;
 
-        // Agregar event listeners a los botones cuando no hay menús
+        // Agregar event listeners a los botones cuando no hay Menus
         if (!tieneMenus) {
             setTimeout(() => {
                 const btn = header.querySelector('.btn-generar-auto');
@@ -194,19 +195,19 @@ class ModalidadesManager {
         content.id = `content-${modalidadId}`;
         
         const grid = document.createElement('div');
-        // Contenedor vertical para semanas (evita distribución horizontal por grid global)
+        // Contenedor vertical para semanas (evita distribuciÃ³n horizontal por grid global)
         grid.className = 'semanas-stack';
         grid.id = `grid-${modalidadId}`;
 
         if (tieneMenus) {
             grid.innerHTML = this.generarTarjetasMenus(menusModalidad);
 
-            // Cargar validadores semanales de forma asíncrona
+            // Cargar validadores semanales de forma asÃ­ncrona
             setTimeout(() => {
                 this.cargarValidadoresSemana(modalidadId);
             }, 100);
         } else {
-            grid.innerHTML = `<p style="padding: 20px;" id="placeholder-${modalidadId}">Genere los menús para esta modalidad</p>`;
+            grid.innerHTML = `<p style="padding: 20px;" id="placeholder-${modalidadId}">Genere los Menus para esta modalidad</p>`;
         }
 
         content.appendChild(grid);
@@ -217,13 +218,13 @@ class ModalidadesManager {
     }
 
     /**
-     * Generar tarjetas de menús con agrupación semanal
-     * @param {Array} menus - Array de menús
+     * Generar tarjetas de Menus con agrupaciÃ³n semanal
+     * @param {Array} menus - Array de Menus
      * @param {boolean} animate - Si se deben animar las tarjetas
      * @returns {string} HTML de las tarjetas
      */
     generarTarjetasMenus(menus, animate = false) {
-        // Separar menús regulares (1-20) de menús especiales
+        // Separar Menus regulares (1-20) de Menus especiales
         const menusRegulares = menus.filter(menu => {
             const num = parseInt(menu.menu);
             return !isNaN(num) && num >= 1 && num <= 20;
@@ -238,7 +239,7 @@ class ModalidadesManager {
 
         let html = '';
 
-        // Generar 4 semanas de 5 menús cada una
+        // Generar 4 semanas de 5 Menus cada una
         for (let semana = 1; semana <= 4; semana++) {
             const inicio = (semana - 1) * 5;
             const fin = inicio + 5;
@@ -247,19 +248,19 @@ class ModalidadesManager {
             html += this.generarSeccionSemana(semana, menusSemana, modalidadId, animate);
         }
 
-        // Sección de menús especiales al final
+        // SecciÃ³n de Menus especiales al final
         html += this.generarSeccionEspeciales(menusEspeciales, modalidadId, animate);
 
         return html;
     }
 
     /**
-     * Generar sección de una semana con validador
-     * @param {number} numSemana - Número de semana (1-4)
-     * @param {Array} menus - Menús de la semana
+     * Generar secciÃ³n de una semana con validador
+     * @param {number} numSemana - NÃºmero de semana (1-4)
+     * @param {Array} menus - Menus de la semana
      * @param {string} modalidadId - ID de la modalidad
      * @param {boolean} animate - Si se deben animar las tarjetas
-     * @returns {string} HTML de la sección de semana
+     * @returns {string} HTML de la secciÃ³n de semana
      */
     generarSeccionSemana(numSemana, menus, modalidadId, animate) {
         const menuIds = menus.map(m => m.id_menu).join(',');
@@ -288,7 +289,7 @@ class ModalidadesManager {
             `;
         }).join('');
 
-        // Si no hay 5 menús, rellenar con placeholders
+        // Si no hay 5 Menus, rellenar con placeholders
         const faltantes = 5 - menus.length;
         for (let i = 0; i < faltantes; i++) {
             const numeroMenu = (numSemana - 1) * 5 + menus.length + i + 1;
@@ -323,14 +324,14 @@ class ModalidadesManager {
     }
 
     /**
-     * Generar sección de menús especiales
-     * @param {Array} menusEspeciales - Menús especiales existentes
+     * Generar secciÃ³n de Menus especiales
+     * @param {Array} menusEspeciales - Menus especiales existentes
      * @param {string} modalidadId - ID de la modalidad
      * @param {boolean} animate - Si se deben animar las tarjetas
-     * @returns {string} HTML de la sección de menús especiales
+     * @returns {string} HTML de la secciÃ³n de Menus especiales
      */
     generarSeccionEspeciales(menusEspeciales, modalidadId, animate) {
-        const delayBase = animate ? 20 * 0.05 : 0; // Delay después de los 20 menús regulares
+        const delayBase = animate ? 20 * 0.05 : 0; // Delay despuÃ©s de los 20 Menus regulares
 
         const tarjetasEspeciales = menusEspeciales.map((menu, index) => {
             const menuEscaped = String(menu.menu).replace(/'/g, "\\'");
@@ -386,7 +387,7 @@ class ModalidadesManager {
             <div class="menus-especiales-section">
                 <div class="menus-especiales-titulo">
                     <i class="fas fa-star"></i>
-                    <span>Menús Especiales</span>
+                    <span>Menus Especiales</span>
                 </div>
                 <div class="menus-especiales-grid">
                     ${tarjetasEspeciales}
@@ -409,7 +410,7 @@ class ModalidadesManager {
             const menuIds = validador.getAttribute('data-menu-ids');
 
             if (!menuIds || menuIds === '') {
-                validador.innerHTML = '<div class="validador-vacio">No hay menús para validar</div>';
+                validador.innerHTML = '<div class="validador-vacio">No hay Menus para validar</div>';
                 continue;
             }
 
@@ -428,7 +429,7 @@ class ModalidadesManager {
                         ? comp.requerido_efectivo
                         : comp.requerido;
                     const cumple = comp.cumple;
-                    const icono = cumple ? '✅' : '❌';
+                    const icono = cumple ? 'âœ…' : 'âŒ';
                     const claseEstado = cumple ? 'cumple' : 'no-cumple';
 
                     let mensaje = '';
@@ -442,7 +443,7 @@ class ModalidadesManager {
                     // Tooltip para grupos excluyentes
                     const tooltipHtml = this._generarTooltipExcluyente(comp);
                     const badgeExcluyente = comp.exclusion
-                        ? `<span class="badge-excluyente" title="Grupos excluyentes">⇄</span>`
+                        ? `<span class="badge-excluyente" title="Grupos excluyentes">â‡„</span>`
                         : '';
 
                     return `
@@ -467,7 +468,7 @@ class ModalidadesManager {
                 if (data.restricciones_subgrupo && data.restricciones_subgrupo.length > 0) {
                     subRestriccionesHtml = data.restricciones_subgrupo.map(r => {
                         const cumple = r.cumple;
-                        const icono = cumple ? '✅' : '❌';
+                        const icono = cumple ? 'âœ…' : 'âŒ';
                         const claseEstado = cumple ? 'cumple' : 'no-cumple';
                         const falta = r.frecuencia - r.actual;
                         let mensaje = '';
@@ -481,7 +482,7 @@ class ModalidadesManager {
                             <div class="validador-item ${claseEstado} sub-restriccion">
                                 <span class="validador-icono">${icono}</span>
                                 <span class="validador-componente">
-                                    ${r.grupo_id} › ${r.nombre}
+                                    ${r.grupo_id} â€º ${r.nombre}
                                 </span>
                                 <div class="validador-frecuencias">
                                     <span class="frecuencia-badge ${claseEstado}">
@@ -511,7 +512,7 @@ class ModalidadesManager {
                 `;
 
                 // Inicializar tooltips custom (sin Bootstrap Tooltip / Popper.js).
-                // Bootstrap Tooltip falla silenciosamente en contenedores con animación CSS.
+                // Bootstrap Tooltip falla silenciosamente en contenedores con animaciÃ³n CSS.
                 validador.querySelectorAll('[data-tooltip-json]').forEach(el => {
                     const encoded = el.getAttribute('data-tooltip-json');
                     if (!encoded) return;
@@ -532,14 +533,14 @@ class ModalidadesManager {
 
             } catch (error) {
                 console.error('Error al validar semana:', error);
-                validador.innerHTML = '<div class="validador-error">Error al cargar validación</div>';
+                validador.innerHTML = '<div class="validador-error">Error al cargar validaciÃ³n</div>';
             }
         }
     }
 
     /**
-     * Alternar acordeón
-     * @param {HTMLElement} header - Header del acordeón
+     * Alternar acordeÃ³n
+     * @param {HTMLElement} header - Header del acordeÃ³n
      */
     toggleAccordion(header) {
         const content = header.nextElementSibling;
@@ -555,19 +556,19 @@ class ModalidadesManager {
     }
 
     /**
-     * Generar menús automáticos para una modalidad
+     * Generar Menus automÃ¡ticos para una modalidad
      * @param {string} modalidadId - ID de la modalidad
      * @param {string} modalidadNombre - Nombre de la modalidad
      */
     async generarMenusAutomaticos(modalidadId, modalidadNombre) {
         const result = await Swal.fire({
-            title: '¿Generar 20 menús?',
-            text: `Se crearán automáticamente los menús regulares para ${modalidadNombre}`,
+            title: 'Â¿Generar 20 Menus?',
+            text: `Se crearÃ¡n automÃ¡ticamente los Menus regulares para ${modalidadNombre}`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#10b981',
             cancelButtonColor: '#64748b',
-            confirmButtonText: 'Sí, generar',
+            confirmButtonText: 'SÃ­, generar',
             cancelButtonText: 'Cancelar'
         });
 
@@ -578,7 +579,7 @@ class ModalidadesManager {
         
         // 1. Mostrar Modal de Carga Global (Solo con nuestro spinner esmeralda)
         Swal.fire({
-            title: 'Generando ciclo de 20 menús...',
+            title: 'Generando ciclo de 20 Menus...',
             html: `
                 <div class="generating-spinner" style="margin: 20px auto;"></div>
                 <p style="font-weight: 500; color: #334155;">Por favor, espere un momento.</p>
@@ -612,16 +613,16 @@ class ModalidadesManager {
                 // 2. Actualizar Badge reactivamente
                 const badge = document.getElementById(`badge-${modalidadId}`);
                 if (badge) {
-                    badge.textContent = `${menusNuevos.length} / 20 menús`;
+                    badge.textContent = `${menusNuevos.length} / 20 Menus`;
                 }
 
-                // 3. Ocultar botón de generación
+                // 3. Ocultar botÃ³n de generaciÃ³n
                 const btnGenerar = document.querySelector(`#actions-${modalidadId} .btn-generar-auto`);
                 if (btnGenerar) {
                     btnGenerar.style.display = 'none';
                 }
                 
-                // 4. Renderizar con animación escalonada
+                // 4. Renderizar con animaciÃ³n escalonada
                 grid.innerHTML = this.generarTarjetasMenus(menusNuevos, true);
 
                 // 5. Cargar validadores semanales
@@ -629,20 +630,20 @@ class ModalidadesManager {
                     this.cargarValidadoresSemana(modalidadId);
                 }, 500);
 
-                // 6. Cerrar modal de carga y mostrar éxito
+                // 6. Cerrar modal de carga y mostrar Ã©xito
                 Swal.fire({
-                    title: '¡Éxito!',
-                    text: `Se han generado ${data.menus_creados} menús correctamente.`,
+                    title: 'Â¡Ã‰xito!',
+                    text: `Se han generado ${data.menus_creados} Menus correctamente.`,
                     icon: 'success',
                     timer: 2000,
                     showConfirmButton: false
                 });
             } else {
-                Swal.fire('Error', data.error || 'No se pudieron generar los menús', 'error');
+                Swal.fire('Error', data.error || 'No se pudieron generar los Menus', 'error');
             }
         } catch (error) {
-            console.error('Error al generar menús automáticos:', error);
-            Swal.fire('Error', 'Hubo un problema en la conexión con el servidor', 'error');
+            console.error('Error al generar Menus automÃ¡ticos:', error);
+            Swal.fire('Error', 'Hubo un problema en la conexiÃ³n con el servidor', 'error');
         }
     }
 
@@ -655,8 +656,8 @@ class ModalidadesManager {
     }
 
     /**
-     * Obtener datos de menús
-     * @returns {Object} Objeto con menús agrupados por modalidad
+     * Obtener datos de Menus
+     * @returns {Object} Objeto con Menus agrupados por modalidad
      */
     getMenusData() {
         return this.menusData;
@@ -672,16 +673,16 @@ class ModalidadesManager {
 
     /**
      * Establecer callback para cuando se recargan modalidades
-     * @param {Function} callback - Función a ejecutar
+     * @param {Function} callback - FunciÃ³n a ejecutar
      */
     setOnModalidadesRecargadas(callback) {
         this.onModalidadesRecargadas = callback;
     }
 
     /**
-     * Actualizar datos de menús para una modalidad específica
+     * Actualizar datos de Menus para una modalidad especÃ­fica
      * @param {string} modalidadId - ID de la modalidad
-     * @param {Array} menus - Array de menús
+     * @param {Array} menus - Array de Menus
      */
     actualizarMenusModalidad(modalidadId, menus) {
         this.menusData[modalidadId] = menus;
@@ -699,26 +700,26 @@ class ModalidadesManager {
     }
 
     /**
-     * Obtener menús de una modalidad específica
+     * Obtener Menus de una modalidad especÃ­fica
      * @param {string} modalidadId - ID de la modalidad
-     * @returns {Array} Array de menús
+     * @returns {Array} Array de Menus
      */
     getMenusModalidad(modalidadId) {
         return this.menusData[modalidadId] || [];
     }
 
     /**
-     * Verificar si una modalidad tiene menús
+     * Verificar si una modalidad tiene Menus
      * @param {string} modalidadId - ID de la modalidad
-     * @returns {boolean} True si tiene menús
+     * @returns {boolean} True si tiene Menus
      */
     tieneMenusModalidad(modalidadId) {
         return this.menusData[modalidadId] && this.menusData[modalidadId].length > 0;
     }
 
     /**
-     * Obtener estadísticas de modalidades
-     * @returns {Object} Estadísticas
+     * Obtener estadÃ­sticas de modalidades
+     * @returns {Object} EstadÃ­sticas
      */
     getEstadisticas() {
         const estadisticas = {
@@ -761,13 +762,13 @@ class ModalidadesManager {
     }
 
     /**
-     * Construye el HTML interno del tooltip de exclusión a partir del objeto exclusion.
-     * Se llama en tiempo de inicialización del tooltip (no en innerHTML).
-     * @param {Object} excl - Datos de exclusión del componente
+     * Construye el HTML interno del tooltip de exclusiÃ³n a partir del objeto exclusion.
+     * Se llama en tiempo de inicializaciÃ³n del tooltip (no en innerHTML).
+     * @param {Object} excl - Datos de exclusiÃ³n del componente
      * @returns {string} HTML para mostrar en el tooltip
      */
     _buildTooltipHtml(excl) {
-        const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+        const DIAS = ['Lunes', 'Martes', 'MiÃ©rcoles', 'Jueves', 'Viernes'];
         const nombresHermanos = excl.grupos_hermanos.map(g => g.nombre).join(', ');
 
         let partes = [];
@@ -780,10 +781,10 @@ class ModalidadesManager {
         }
 
         if (excl.aporte_hermanos.length === 0) {
-            partes.push(`<em>Ningún grupo hermano ha aportado aún</em>`);
+            partes.push(`<em>NingÃºn grupo hermano ha aportado aÃºn</em>`);
         } else {
             excl.aporte_hermanos.forEach(item => {
-                const dia = DIAS[item.menu_index] || `Día ${item.menu_index + 1}`;
+                const dia = DIAS[item.menu_index] || `DÃ­a ${item.menu_index + 1}`;
                 partes.push(`&bull; ${dia}: ${item.preparacion} <span style="opacity:.7">(${item.grupo_nombre})</span>`);
             });
         }
@@ -792,8 +793,8 @@ class ModalidadesManager {
     }
 
     /**
-     * Genera el icono de tooltip para una sub-restricción de alimentos.
-     * @param {Object} r - Sub-restricción del validador semanal
+     * Genera el icono de tooltip para una sub-restricciÃ³n de alimentos.
+     * @param {Object} r - Sub-restricciÃ³n del validador semanal
      * @returns {string} HTML del icono con el atributo data-tooltip-json
      */
     _generarTooltipSubRestriccion(r) {
@@ -809,28 +810,28 @@ class ModalidadesManager {
     }
 
     /**
-     * Construye el HTML interno del tooltip de una sub-restricción.
+     * Construye el HTML interno del tooltip de una sub-restricciÃ³n.
      * @param {Object} data - {nombre, nombres_validos, detalle}
      * @returns {string} HTML para mostrar en el tooltip
      */
     _buildTooltipSubRestriccionHtml(data) {
-        const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+        const DIAS = ['Lunes', 'Martes', 'MiÃ©rcoles', 'Jueves', 'Viernes'];
         const partes = [];
 
         partes.push(`<strong>${data.nombre}</strong>`);
 
         if (data.nombres_validos && data.nombres_validos.length > 0) {
-            partes.push(`<em>Válidos: ${data.nombres_validos.join(', ')}</em>`);
+            partes.push(`<em>VÃ¡lidos: ${data.nombres_validos.join(', ')}</em>`);
         }
 
         if (data.detalle && data.detalle.length > 0) {
             partes.push('');
             data.detalle.forEach(item => {
-                const dia = DIAS[item.menu_index] || `Día ${item.menu_index + 1}`;
+                const dia = DIAS[item.menu_index] || `DÃ­a ${item.menu_index + 1}`;
                 partes.push(`&bull; ${dia}: ${item.preparacion} <span style="opacity:.7">(${item.alimento_usado})</span>`);
             });
         } else {
-            partes.push('<em>Ningún alimento válido usado aún</em>');
+            partes.push('<em>NingÃºn alimento vÃ¡lido usado aÃºn</em>');
         }
 
         return partes.join('<br>');
@@ -840,7 +841,7 @@ class ModalidadesManager {
 
     /**
      * Abre el modal para copiar una modalidad desde otro programa.
-     * Carga la lista de programas disponibles vía API y renderiza opciones.
+     * Carga la lista de programas disponibles vÃ­a API y renderiza opciones.
      * @param {string} modalidadId - ID de la modalidad a copiar
      * @param {string} modalidadNombre - Nombre legible de la modalidad
      */
@@ -881,7 +882,7 @@ class ModalidadesManager {
 
     /**
      * Renderiza las tarjetas de programas origen disponibles para seleccionar.
-     * @param {Array} programas - Lista de programas con menús para la modalidad
+     * @param {Array} programas - Lista de programas con Menus para la modalidad
      */
     renderizarProgramasOrigen(programas) {
         const container = document.getElementById('programasOrigenContainer');
@@ -898,7 +899,7 @@ class ModalidadesManager {
                         Contrato: ${prog.contrato || 'N/A'} &nbsp;|&nbsp; Municipio: ${prog.municipio_nombre || 'N/A'}
                     </div>
                 </div>
-                <span class="programa-origen-badge">${prog.cantidad_menus} menús</span>
+                <span class="programa-origen-badge">${prog.cantidad_menus} Menus</span>
             `;
 
             // Seleccionar visualmente la tarjeta al hacer clic en el radio
@@ -919,7 +920,7 @@ class ModalidadesManager {
 
     /**
      * Ejecuta la copia de la modalidad tras confirmar con SweetAlert2.
-     * Llamado desde la función global ejecutarCopiaModalidad().
+     * Llamado desde la funciÃ³n global ejecutarCopiaModalidad().
      */
     async _ejecutarCopiaModalidad() {
         const modalidadId = document.getElementById('copiarModalidadId').value;
@@ -927,20 +928,20 @@ class ModalidadesManager {
         const programaDestinoId = this.programaActual?.id;
 
         if (!radioSeleccionado) {
-            Swal.fire('Atención', 'Selecciona un programa origen antes de continuar.', 'warning');
+            Swal.fire('AtenciÃ³n', 'Selecciona un programa origen antes de continuar.', 'warning');
             return;
         }
 
         const programaOrigenId = radioSeleccionado.value;
 
         const confirmacion = await Swal.fire({
-            title: '¿Copiar modalidad?',
-            text: 'Se copiarán todos los menús con preparaciones, ingredientes y gramajes por nivel educativo. Esta acción no se puede deshacer.',
+            title: 'Â¿Copiar modalidad?',
+            text: 'Se copiarÃ¡n todos los Menus con preparaciones, ingredientes y gramajes por nivel educativo. Esta acciÃ³n no se puede deshacer.',
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#6366f1',
             cancelButtonColor: '#64748b',
-            confirmButtonText: 'Sí, copiar',
+            confirmButtonText: 'SÃ­, copiar',
             cancelButtonText: 'Cancelar'
         });
 
@@ -978,17 +979,17 @@ class ModalidadesManager {
                 // Cerrar modal de copia
                 document.getElementById('modalCopiarModalidad').style.display = 'none';
 
-                // Recargar menús y actualizar UI
+                // Recargar Menus y actualizar UI
                 await this.cargarMenusExistentes(this.programaActual.id);
                 const menusNuevos = this.menusData[modalidadId] || [];
 
                 // Actualizar badge
                 const badge = document.getElementById(`badge-${modalidadId}`);
                 if (badge) {
-                    badge.textContent = `${menusNuevos.length} / 20 menús`;
+                    badge.textContent = `${menusNuevos.length} / 20 Menus`;
                 }
 
-                // Ocultar botones de acción inicial
+                // Ocultar botones de acciÃ³n inicial
                 const actionsDiv = document.getElementById(`actions-${modalidadId}`);
                 if (actionsDiv) {
                     actionsDiv.querySelectorAll('.btn-generar-auto, .btn-copiar-modalidad').forEach(b => {
@@ -996,7 +997,7 @@ class ModalidadesManager {
                     });
                 }
 
-                // Renderizar tarjetas con animación
+                // Renderizar tarjetas con animaciÃ³n
                 const grid = document.getElementById(`grid-${modalidadId}`);
                 if (grid) {
                     grid.innerHTML = this.generarTarjetasMenus(menusNuevos, true);
@@ -1006,8 +1007,8 @@ class ModalidadesManager {
                 }
 
                 Swal.fire({
-                    title: '¡Copia exitosa!',
-                    text: `Se copiaron ${data.menus_copiados} menús correctamente.`,
+                    title: 'Â¡Copia exitosa!',
+                    text: `Se copiaron ${data.menus_copiados} Menus correctamente.`,
                     icon: 'success',
                     timer: 2500,
                     showConfirmButton: false
@@ -1017,7 +1018,7 @@ class ModalidadesManager {
             }
         } catch (error) {
             console.error('[ModalidadesManager] Error al copiar modalidad:', error);
-            Swal.fire('Error', 'Hubo un problema en la conexión con el servidor.', 'error');
+            Swal.fire('Error', 'Hubo un problema en la conexiÃ³n con el servidor.', 'error');
         }
     }
 
@@ -1081,11 +1082,13 @@ function cerrarModalCopiar() {
 }
 
 /**
- * Delega la ejecución de la copia al ModalidadesManager activo.
- * Llamado desde onclick en el botón "Copiar Modalidad" del modal.
+ * Delega la ejecuciÃ³n de la copia al ModalidadesManager activo.
+ * Llamado desde onclick en el botÃ³n "Copiar Modalidad" del modal.
  */
 async function ejecutarCopiaModalidad() {
     if (window._modalidadesMgr) {
         await window._modalidadesMgr._ejecutarCopiaModalidad();
     }
 }
+
+
