@@ -5,4 +5,5 @@ app_name = 'costos'
 
 urlpatterns = [
     path('', views.costos_index, name='costos_index'),
+    path('matriz-nutricional/', views.matriz_nutricional, name='matriz_nutricional'),
 ]

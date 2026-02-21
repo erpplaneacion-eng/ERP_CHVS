@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Matriz Nutricional - Costos{% endblock %}
+
+{% block extra_css %}
+<style>
+    .matriz-table-container {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-top: 20px;
+        overflow-x: auto;
+    }
+    .filters-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        border-left: 5px solid #8e44ad;
+    }
+    .table-matriz thead th {
+        background-color: #8e44ad;
+        color: white;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        vertical-align: middle;
+        text-align: center;
+        border: none;
+    }
+    .table-matriz tbody td {
+        font-size: 0.9rem;
+        vertical-align: middle;
+    }
+    .peso-val {
+        text-align: right;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    .badge-modalidad {
+        background-color: #ebf5fb;
+        color: #2980b9;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="costos-container">
+    <div class="costos-header">
+        <div class="d-flex align-items-center">
+            <a href="{% url 'costos:costos_index' %}" class="btn btn-outline-secondary me-3" title="Volver al Dashboard de Costos">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <h1 class="mb-0"><i class="fas fa-calculator me-2"></i> Matriz Nutricional</h1>
+        </div>
+    </div>
+
+    <!-- Sección de Filtros -->
+    <div class="filters-section">
+        <form method="get" class="row g-3">
+            <div class="col-md-5">
+                <label for="municipio" class="form-label fw-bold">Municipio</label>
+                <select name="municipio" id="municipio" class="form-select" onchange="this.form.submit()">
+                    <option value="">Todos los Municipios</option>
+                    {% for m in municipios %}
+                        <option value="{{ m.id }}" {% if selected_municipio == m.id|stringformat:"s" %}selected{% endif %}>
+                            {{ m.nombre_municipio }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label for="programa" class="form-label fw-bold">Programa / Contrato</label>
+                <select name="programa" id="programa" class="form-select" onchange="this.form.submit()">
+                    <option value="">Todos los Programas</option>
+                    {% for p in programas %}
+                        <option value="{{ p.id }}" {% if selected_programa == p.id|stringformat:"s" %}selected{% endif %}>
+                            {{ p.programa }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <a href="{% url 'costos:matriz_nutricional' %}" class="btn btn-outline-secondary w-100">
+                    <i class="fas fa-sync-alt me-1"></i> Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabla de la Matriz -->
+    <div class="matriz-table-container">
+        <table class="table table-hover table-bordered table-matriz mb-0">
+            <thead>
+                <tr>
+                    <th>Modalidad</th>
+                    <th>Nivel Escolar</th>
+                    <th>Semana</th>
+                    <th>Menú</th>
+                    <th>Preparación</th>
+                    <th>Nombre del Alimento (Ingredientes)</th>
+                    <th>Peso Bruto (g)</th>
+                    <th>Peso Neto (g)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in matriz_data %}
+                <tr>
+                    <td><span class="badge badge-modalidad">{{ row.modalidad }}</span></td>
+                    <td>{{ row.nivel_escolar }}</td>
+                    <td class="text-center">{{ row.semana }}</td>
+                    <td class="text-center"><strong>{{ row.menu }}</strong></td>
+                    <td>{{ row.preparacion }}</td>
+                    <td>{{ row.ingrediente }}</td>
+                    <td class="peso-val">{{ row.peso_bruto|floatformat:2 }}</td>
+                    <td class="peso-val">{{ row.peso_neto|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-4 text-muted">
+                        <i class="fas fa-info-circle me-2"></i> No se encontraron datos para los filtros seleccionados. 
+                        Asegúrese de que existan análisis nutricionales guardados en el módulo de nutrición.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
