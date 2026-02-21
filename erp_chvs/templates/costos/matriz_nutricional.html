@@ -43,26 +43,40 @@
         color: #2980b9;
         font-weight: 600;
     }
+    .filter-label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #495057;
+        margin-bottom: 5px;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="costos-container">
     <div class="costos-header">
-        <div class="d-flex align-items-center">
-            <a href="{% url 'costos:costos_index' %}" class="btn btn-outline-secondary me-3" title="Volver al Dashboard de Costos">
-                <i class="fas fa-arrow-left"></i>
-            </a>
-            <h1 class="mb-0"><i class="fas fa-calculator me-2"></i> Matriz Nutricional</h1>
+        <div class="d-flex align-items-center justify-content-between w-100">
+            <div class="d-flex align-items-center">
+                <a href="{% url 'costos:costos_index' %}" class="btn btn-outline-secondary me-3" title="Volver al Dashboard de Costos">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <h1 class="mb-0"><i class="fas fa-calculator me-2"></i> Matriz Nutricional</h1>
+            </div>
+            <div>
+                <button id="btn-exportar-excel" class="btn btn-success">
+                    <i class="fas fa-file-excel me-2"></i> Descargar Excel
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Sección de Filtros -->
+    <!-- Sección de Filtros Extendida -->
     <div class="filters-section">
         <form method="get" class="row g-3">
-            <div class="col-md-5">
-                <label for="municipio" class="form-label fw-bold">Municipio</label>
-                <select name="municipio" id="municipio" class="form-select" onchange="this.form.submit()">
+            <!-- Fila 1: Geografía y Contrato -->
+            <div class="col-md-4">
+                <label for="municipio" class="filter-label">Municipio (con contrato)</label>
+                <select name="municipio" id="municipio" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">Todos los Municipios</option>
                     {% for m in municipios %}
                         <option value="{{ m.id }}" {% if selected_municipio == m.id|stringformat:"s" %}selected{% endif %}>
@@ -71,9 +85,9 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-5">
-                <label for="programa" class="form-label fw-bold">Programa / Contrato</label>
-                <select name="programa" id="programa" class="form-select" onchange="this.form.submit()">
+            <div class="col-md-4">
+                <label for="programa" class="filter-label">Programa / Contrato</label>
+                <select name="programa" id="programa" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">Todos los Programas</option>
                     {% for p in programas %}
                         <option value="{{ p.id }}" {% if selected_programa == p.id|stringformat:"s" %}selected{% endif %}>
@@ -82,8 +96,44 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <a href="{% url 'costos:matriz_nutricional' %}" class="btn btn-outline-secondary w-100">
+            <div class="col-md-4">
+                <label for="modalidad" class="filter-label">Modalidad</label>
+                <select name="modalidad" id="modalidad" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Todas las Modalidades</option>
+                    {% for mod in modalidades %}
+                        <option value="{{ mod.id_modalidades }}" {% if selected_modalidad == mod.id_modalidades %}selected{% endif %}>
+                            {{ mod.modalidad }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Fila 2: Ciclo y Búsqueda -->
+            <div class="col-md-2">
+                <label for="semana" class="filter-label">Semana</label>
+                <select name="semana" id="semana" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Todas</option>
+                    {% for s in semanas %}
+                        <option value="{{ s }}" {% if selected_semana == s|stringformat:"s" %}selected{% endif %}>
+                            Semana {{ s }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="menu" class="filter-label">Menú (Nombre)</label>
+                <input type="text" name="menu" id="menu" class="form-control form-control-sm" placeholder="Ej: 1, 5 o Especial" value="{{ selected_menu|default:'' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="preparacion" class="filter-label">Preparación</label>
+                <input type="text" name="preparacion" id="preparacion" class="form-control form-control-sm" placeholder="Ej: Arroz, Pollo..." value="{{ selected_preparacion|default:'' }}">
+            </div>
+            
+            <div class="col-md-4 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+                    <i class="fas fa-filter me-1"></i> Filtrar
+                </button>
+                <a href="{% url 'costos:matriz_nutricional' %}" class="btn btn-outline-secondary btn-sm flex-grow-1">
                     <i class="fas fa-sync-alt me-1"></i> Limpiar
                 </a>
             </div>
@@ -129,4 +179,22 @@
         </table>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const btnExportar = document.getElementById('btn-exportar-excel');
+        if (btnExportar) {
+            btnExportar.addEventListener('click', function() {
+                // Obtener los parámetros actuales de la URL
+                const urlParams = new URLSearchParams(window.location.search);
+                // Construir la URL de exportación con los mismos filtros
+                const exportUrl = "{% url 'costos:exportar_matriz_excel' %}?" + urlParams.toString();
+                // Redirigir para iniciar la descarga
+                window.location.href = exportUrl;
+            });
+        }
+    });
+</script>
 {% endblock %}
