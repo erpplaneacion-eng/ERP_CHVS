@@ -437,6 +437,10 @@ class Paso2PreparacionesEditorIntegrationTests(TestCase):
         TablaIngredientesPorNivel.objects.create(
             id_analisis=analisis,
             id_preparacion=self.preparacion,
+            id_preparacion_ingrediente=TablaPreparacionIngredientes.objects.get(
+                id_preparacion=self.preparacion,
+                id_ingrediente_siesa=self.alimento_icbf,
+            ),
             id_ingrediente_siesa=None,
             codigo_icbf=self.alimento_icbf.codigo,
             peso_neto=Decimal("222.00"),

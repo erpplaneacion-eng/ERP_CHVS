@@ -214,6 +214,11 @@ class MenuService:
                         if not ingrediente_siesa:
                             continue
 
+                        preparacion_ingrediente, _ = TablaPreparacionIngredientes.objects.get_or_create(
+                            id_preparacion=preparacion,
+                            id_ingrediente_siesa=alimento_icbf
+                        )
+
                         # Calcular valores nutricionales
                         valores_nutricionales = CalculoService.calcular_valores_nutricionales_alimento(
                             alimento_icbf,
@@ -228,6 +233,7 @@ class MenuService:
                         TablaIngredientesPorNivel.objects.create(
                             id_analisis=analisis,
                             id_preparacion=preparacion,
+                            id_preparacion_ingrediente=preparacion_ingrediente,
                             id_ingrediente_siesa=ingrediente_siesa,
                             peso_neto=peso_neto,
                             peso_bruto=peso_bruto,
@@ -446,26 +452,42 @@ class MenuService:
                 analisis_map[analisis_origen.id_analisis] = nuevo_analisis
 
                 # Copiar TablaIngredientesPorNivel (pesos por nivel educativo)
-                nuevos_niveles = [
-                    TablaIngredientesPorNivel(
-                        id_analisis=nuevo_analisis,
-                        id_preparacion=prep_map[ing_nivel.id_preparacion_id],
-                        id_ingrediente_siesa=ing_nivel.id_ingrediente_siesa,
-                        codigo_icbf=ing_nivel.codigo_icbf,
-                        peso_neto=ing_nivel.peso_neto,
-                        peso_bruto=ing_nivel.peso_bruto,
-                        parte_comestible=ing_nivel.parte_comestible,
-                        calorias=ing_nivel.calorias,
-                        proteina=ing_nivel.proteina,
-                        grasa=ing_nivel.grasa,
-                        cho=ing_nivel.cho,
-                        calcio=ing_nivel.calcio,
-                        hierro=ing_nivel.hierro,
-                        sodio=ing_nivel.sodio,
+                nuevos_niveles = []
+                for ing_nivel in analisis_origen.ingredientes_configurados.all():
+                    if ing_nivel.id_preparacion_id not in prep_map:
+                        continue
+
+                    codigo_icbf = ing_nivel.codigo_icbf
+                    nueva_preparacion = prep_map[ing_nivel.id_preparacion_id]
+                    if not codigo_icbf:
+                        continue
+
+                    preparacion_ingrediente = TablaPreparacionIngredientes.objects.filter(
+                        id_preparacion=nueva_preparacion,
+                        id_ingrediente_siesa_id=codigo_icbf
+                    ).first()
+                    if not preparacion_ingrediente:
+                        continue
+
+                    nuevos_niveles.append(
+                        TablaIngredientesPorNivel(
+                            id_analisis=nuevo_analisis,
+                            id_preparacion=nueva_preparacion,
+                            id_preparacion_ingrediente=preparacion_ingrediente,
+                            id_ingrediente_siesa=ing_nivel.id_ingrediente_siesa,
+                            codigo_icbf=codigo_icbf,
+                            peso_neto=ing_nivel.peso_neto,
+                            peso_bruto=ing_nivel.peso_bruto,
+                            parte_comestible=ing_nivel.parte_comestible,
+                            calorias=ing_nivel.calorias,
+                            proteina=ing_nivel.proteina,
+                            grasa=ing_nivel.grasa,
+                            cho=ing_nivel.cho,
+                            calcio=ing_nivel.calcio,
+                            hierro=ing_nivel.hierro,
+                            sodio=ing_nivel.sodio,
+                        )
                     )
-                    for ing_nivel in analisis_origen.ingredientes_configurados.all()
-                    if ing_nivel.id_preparacion_id in prep_map
-                ]
                 if nuevos_niveles:
                     TablaIngredientesPorNivel.objects.bulk_create(nuevos_niveles)
 

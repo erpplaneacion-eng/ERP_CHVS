@@ -12,6 +12,7 @@ from ..models import (
     TablaIngredientesPorNivel,
     TablaIngredientesSiesa,
     TablaMenus,
+    TablaPreparacionIngredientes,
     TablaPreparaciones,
 )
 from ..services import AnalisisNutricionalService
@@ -123,11 +124,22 @@ def _guardar_ingrediente_por_nivel(menu, analisis, ing_data):
         ingrediente_siesa = TablaIngredientesSiesa.objects.filter(
             id_ingrediente_siesa=str(id_ingrediente)
         ).first()
+        preparacion_ingrediente = TablaPreparacionIngredientes.objects.filter(
+            id_preparacion=preparacion,
+            id_ingrediente_siesa=ingrediente_icbf
+        ).first()
+        if not preparacion_ingrediente:
+            return False, (
+                f'La relación preparación-ingrediente no existe '
+                f'({preparacion.id_preparacion} - {id_ingrediente})'
+            )
+
         TablaIngredientesPorNivel.objects.update_or_create(
             id_analisis=analisis,
             id_preparacion=preparacion,
             codigo_icbf=str(id_ingrediente),
             defaults={
+                'id_preparacion_ingrediente': preparacion_ingrediente,
                 'id_ingrediente_siesa': ingrediente_siesa,
                 'peso_neto': peso_neto,
                 'peso_bruto': peso_bruto,

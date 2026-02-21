@@ -109,12 +109,12 @@ class GuiasPreparacionExcelTests(TestCase):
             id_menu=cls.menu_1,
             id_componente=cls.componente,
         )
-        TablaPreparacionIngredientes.objects.create(
+        cls.prep_1_ing_1 = TablaPreparacionIngredientes.objects.create(
             id_preparacion=cls.prep_1,
             id_ingrediente_siesa=cls.alimento_1,
             gramaje=Decimal("10.00"),
         )
-        TablaPreparacionIngredientes.objects.create(
+        cls.prep_1_ing_2 = TablaPreparacionIngredientes.objects.create(
             id_preparacion=cls.prep_1,
             id_ingrediente_siesa=cls.alimento_2,
             gramaje=Decimal("20.00"),
@@ -125,7 +125,7 @@ class GuiasPreparacionExcelTests(TestCase):
             id_menu=cls.menu_2,
             id_componente=cls.componente,
         )
-        TablaPreparacionIngredientes.objects.create(
+        cls.prep_2_ing_1 = TablaPreparacionIngredientes.objects.create(
             id_preparacion=cls.prep_2,
             id_ingrediente_siesa=cls.alimento_1,
             gramaje=Decimal("15.00"),
@@ -138,6 +138,7 @@ class GuiasPreparacionExcelTests(TestCase):
         TablaIngredientesPorNivel.objects.create(
             id_analisis=analisis_1,
             id_preparacion=cls.prep_1,
+            id_preparacion_ingrediente=cls.prep_1_ing_1,
             codigo_icbf="G001",
             peso_neto=Decimal("10.00"),
             peso_bruto=Decimal("10.00"),
@@ -145,6 +146,7 @@ class GuiasPreparacionExcelTests(TestCase):
         TablaIngredientesPorNivel.objects.create(
             id_analisis=analisis_1,
             id_preparacion=cls.prep_1,
+            id_preparacion_ingrediente=cls.prep_1_ing_2,
             codigo_icbf="G002",
             peso_neto=Decimal("20.00"),
             peso_bruto=Decimal("20.00"),

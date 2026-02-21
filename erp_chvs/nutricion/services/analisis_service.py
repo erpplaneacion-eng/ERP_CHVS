@@ -577,9 +577,17 @@ class AnalisisNutricionalService:
                     if not ingrediente:
                         continue
 
+                    preparacion_ingrediente = TablaPreparacionIngredientes.objects.filter(
+                        id_preparacion=preparacion,
+                        id_ingrediente_siesa_id=ingrediente_codigo
+                    ).first()
+                    if not preparacion_ingrediente:
+                        continue
+
                     TablaIngredientesPorNivel.objects.create(
                         id_analisis=analisis,
                         id_preparacion=preparacion,
+                        id_preparacion_ingrediente=preparacion_ingrediente,
                         id_ingrediente_siesa=ingrediente,
                         peso_neto=ing_data.get('peso_neto', 0),
                         peso_bruto=ing_data.get('peso_bruto', 0),

@@ -908,6 +908,13 @@ class TablaIngredientesPorNivel(models.Model):
         verbose_name="Preparación",
         related_name='ingredientes_por_nivel'
     )
+    id_preparacion_ingrediente = models.ForeignKey(
+        TablaPreparacionIngredientes,
+        on_delete=models.CASCADE,
+        db_column='id_preparacion_ingrediente',
+        verbose_name="Relación Preparación-Ingrediente",
+        related_name='configuraciones_por_nivel'
+    )
     id_ingrediente_siesa = models.ForeignKey(
         TablaIngredientesSiesa,
         on_delete=models.SET_NULL,
