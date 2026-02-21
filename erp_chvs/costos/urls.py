@@ -1,0 +1,8 @@
+from django.urls import path
+from . import views
+
+app_name = 'costos'
+
+urlpatterns = [
+    path('', views.costos_index, name='costos_index'),
+]

@@ -118,6 +118,7 @@ INSTALLED_APPS = [
     'nutricion',
     'planeacion',
     'facturacion',
+    'costos',
 ]
 
 # Cloudinary para MEDIA files (imágenes subidas por usuarios)

@@ -24,6 +24,8 @@
         <link rel="stylesheet" href="{% static 'css/modules/nutricion.css' %}">
     {% elif request.resolver_match.app_name == 'facturacion' %}
         <link rel="stylesheet" href="{% static 'css/modules/facturacion.css' %}">
+    {% elif request.resolver_match.app_name == 'costos' %}
+        <link rel="stylesheet" href="{% static 'css/modules/costos.css' %}">
     {% endif %}
 
     {% block extra_css %}{% endblock %}
@@ -64,6 +66,12 @@
                     {% if user|has_group:"ADMINISTRACION,FACTURACION" %}
                     <li><a href="{% url 'facturacion:facturacion_index' %}" class="{% if request.resolver_match.url_name == 'facturacion_index' %}active{% endif %}">
                         <i class="fas fa-file-invoice-dollar"></i><span>Facturación</span>
+                    </a></li>
+                    {% endif %}
+
+                    {% if user|has_group:"ADMINISTRACION" %}
+                    <li><a href="{% url 'costos:costos_index' %}" class="{% if request.resolver_match.url_name == 'costos_index' %}active{% endif %}">
+                        <i class="fas fa-coins"></i><span>Costos</span>
                     </a></li>
                     {% endif %}
                 </ul>

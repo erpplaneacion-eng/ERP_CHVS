@@ -1,0 +1,47 @@
+/* ===================================== */
+/* MÓDULO COSTOS                         */
+/* ===================================== */
+
+/* Contenedores de costos */
+.costos-container {
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Headers específicos de costos */
+.costos-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #8e44ad;
+}
+
+.costos-header h1 {
+    color: #8e44ad;
+    margin: 0;
+    font-size: 28px;
+    font-weight: 600;
+}
+
+/* Dashboard Background */
+#costos-dashboard-background {
+    background: linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), 
+                url('../../images/dashboard-bg.jpg'); /* Reutiliza si existe */
+    background-size: cover;
+    background-position: center;
+    min-height: calc(100vh - 120px);
+    padding: 30px;
+    border-radius: 15px;
+}
+
+/* Ajustes para las tarjetas en el dashboard de costos */
+#costos-dashboard-background .card {
+    border-left: 5px solid #8e44ad;
+}
+
+#costos-dashboard-background .card-icon i {
+    color: #8e44ad;
+}
