@@ -109,8 +109,10 @@ class AnalisisNutricionalService:
         if menu.id_contrato and menu.id_contrato.imagen:
             try:
                 logo_path = menu.id_contrato.imagen.path
-            except (FileNotFoundError, ValueError):
-                logo_path = None # Handle cases where file is missing or path is invalid
+            except (FileNotFoundError, ValueError, NotImplementedError):
+                # FileNotFoundError/ValueError: archivo local inexistente
+                # NotImplementedError: storage en nube (Cloudinary) no soporta .path
+                logo_path = None
 
         firma_cfg = FirmaNutricionalContrato.objects.filter(programa=menu.id_contrato).first()
         firma_data = None
@@ -120,7 +122,7 @@ class AnalisisNutricionalService:
                     return None
                 try:
                     return file_field.path
-                except (FileNotFoundError, ValueError):
+                except (FileNotFoundError, ValueError, NotImplementedError):
                     return None
 
             firma_data = {
