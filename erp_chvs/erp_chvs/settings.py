@@ -255,18 +255,24 @@ STORAGES = {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if not DEBUG else "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        # StaticFilesStorage de Django (sin Cloudinary)
-        # WhiteNoise middleware sirve archivos estáticos en producción
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        # WhiteNoise comprime los archivos estáticos en producción.
+        # En desarrollo usamos el storage estándar de Django.
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage" if not DEBUG else "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
 
 # Compatibilidad con django-cloudinary-storage durante collectstatic.
 # Aunque STORAGES es el mecanismo principal en Django 5.2, este paquete aún
 # consulta STATICFILES_STORAGE/DEFAULT_FILE_STORAGE directamente.
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage' if not DEBUG else 'django.contrib.staticfiles.storage.StaticFilesStorage'
 if not DEBUG:
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+# Seguridad: WhiteNoise también busca en STATICFILES_DIRS si un archivo no
+# está en STATIC_ROOT (p.ej. si collectstatic falla). Asegura que los
+# archivos estáticos siempre se sirvan correctamente en producción.
+if not DEBUG:
+    WHITENOISE_USE_FINDERS = True
 
 # Credenciales de Cloudinary
 CLOUDINARY_STORAGE = {
