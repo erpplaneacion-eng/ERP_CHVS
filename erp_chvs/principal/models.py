@@ -20,6 +20,7 @@ class PerfilUsuario(models.Model):
         ('NUTRICION', 'Nutrición'),
         ('FACTURACION', 'Facturación'),
         ('PLANEACION', 'Planeación'),
+        ('COSTOS', 'Costos'),
         ('ADMINISTRACION', 'Administración'),
     ]
 
@@ -190,6 +191,7 @@ class RegistroActividad(models.Model):
         ('facturacion', 'Facturación'),
         ('nutricion', 'Nutrición'),
         ('planeacion', 'Planeación'),
+        ('costos', 'Costos'),
         ('principal', 'Datos Maestros'),
         ('dashboard', 'Dashboard'),
     ]

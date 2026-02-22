@@ -26,11 +26,17 @@ def has_group(user, group_names):
     if not group_names:
         return False
 
-    # Convertir string a lista de grupos
-    grupos_buscar = [g.strip() for g in group_names.split(',')]
+    # Convertir string a lista normalizada de grupos
+    grupos_buscar = [g.strip().upper() for g in group_names.split(',') if g.strip()]
 
-    # Obtener grupos del usuario
-    user_groups = user.groups.values_list('name', flat=True)
+    if not grupos_buscar:
+        return False
+
+    # Obtener grupos del usuario (normalizados)
+    user_groups = {
+        str(group).strip().upper()
+        for group in user.groups.values_list('name', flat=True)
+    }
 
     # Verificar si alguno de los grupos del usuario coincide
     return any(grupo in user_groups for grupo in grupos_buscar)

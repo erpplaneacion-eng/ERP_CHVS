@@ -25,22 +25,27 @@ class RoleAccessMiddleware:
             'NUTRICION': ['nutricion', 'dashboard', 'principal'],
             'FACTURACION': ['facturacion', 'dashboard'],
             'PLANEACION': ['planeacion', 'dashboard'],
-            'ADMINISTRACION': ['nutricion', 'facturacion', 'planeacion', 'principal', 'dashboard']
+            'COSTOS': ['costos', 'dashboard'],
+            'ADMINISTRACION': ['nutricion', 'facturacion', 'planeacion', 'principal', 'costos', 'dashboard']
         }
 
         # Apps que siempre son accesibles para logueados (como el perfil o home)
         public_apps = ['admin', 'login', 'logout', ''] 
 
         if current_app and current_app not in public_apps:
-            user_groups = request.user.groups.values_list('name', flat=True)
-            
-            # Verificar si alguna de las apps permitidas para los grupos del usuario coincide con la actual
-            has_access = False
+            # Normalizar grupos evita errores por mayúsculas/minúsculas o espacios.
+            user_groups = [
+                str(name).strip().upper()
+                for name in request.user.groups.values_list('name', flat=True)
+            ]
+
+            # Unir permisos de todos los grupos del usuario.
+            allowed_apps = set()
             for group in user_groups:
-                if current_app in group_permissions.get(group, []):
-                    has_access = True
-                    break
-            
+                allowed_apps.update(group_permissions.get(group, []))
+
+            has_access = current_app in allowed_apps
+
             if not has_access and user_groups:
                 messages.error(request, f"No tienes permiso para acceder al módulo de {current_app.capitalize()}.")
                 return redirect('dashboard:dashboard')

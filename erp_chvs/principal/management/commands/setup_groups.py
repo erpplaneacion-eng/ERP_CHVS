@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 
+
 class Command(BaseCommand):
     help = 'Configura los grupos y permisos iniciales para el ERP'
 
@@ -9,18 +10,22 @@ class Command(BaseCommand):
         groups_config = {
             'NUTRICION': {
                 'apps': ['nutricion'],
-                'description': 'Acceso a gestión de menús y análisis nutricional'
+                'description': 'Acceso a gestion de menus y analisis nutricional'
             },
             'FACTURACION': {
                 'apps': ['facturacion'],
-                'description': 'Acceso a carga de listados y focalización'
+                'description': 'Acceso a carga de listados y focalizacion'
             },
             'PLANEACION': {
                 'apps': ['planeacion'],
-                'description': 'Acceso a configuración de programas y sedes'
+                'description': 'Acceso a configuracion de programas y sedes'
+            },
+            'COSTOS': {
+                'apps': ['costos'],
+                'description': 'Acceso a matriz nutricional y reportes de costos'
             },
             'ADMINISTRACION': {
-                'apps': ['nutricion', 'facturacion', 'planeacion', 'principal', 'dashboard'],
+                'apps': ['nutricion', 'facturacion', 'planeacion', 'principal', 'dashboard', 'costos'],
                 'description': 'Acceso total al sistema'
             }
         }
@@ -40,7 +45,7 @@ class Command(BaseCommand):
                 permissions = Permission.objects.filter(content_type__app_label=app_label)
                 for perm in permissions:
                     group.permissions.add(perm)
-            
+
             self.stdout.write(f'Permisos asignados a {group_name} para las apps: {", ".join(config["apps"])}')
 
-        self.stdout.write(self.style.SUCCESS('Configuración de grupos completada con éxito.'))
+        self.stdout.write(self.style.SUCCESS('Configuracion de grupos completada con exito.'))

@@ -69,7 +69,7 @@
                     </a></li>
                     {% endif %}
 
-                    {% if user|has_group:"ADMINISTRACION" %}
+                    {% if user|has_group:"ADMINISTRACION,COSTOS" %}
                     <li><a href="{% url 'costos:costos_index' %}" class="{% if request.resolver_match.url_name == 'costos_index' %}active{% endif %}">
                         <i class="fas fa-coins"></i><span>Costos</span>
                     </a></li>
