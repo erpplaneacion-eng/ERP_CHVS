@@ -34,7 +34,9 @@ python manage.py makemigrations && python manage.py migrate
 
 # Testing
 python manage.py test                  # All tests
-python manage.py test nutricion.tests_sincronizacion_pesos --verbosity=2  # Single module
+python manage.py test nutricion.tests_guias_preparacion_excel --verbosity=2  # Single module
+# Available test modules: nutricion.tests, nutricion.tests_guias_preparacion_excel,
+#   nutricion.tests_paso2_preparaciones_editor, facturacion.tests
 DJANGO_SETTINGS_MODULE=erp_chvs.settings pytest -v          # pytest (no pytest.ini)
 DJANGO_SETTINGS_MODULE=erp_chvs.settings pytest -k "test_name"
 DJANGO_SETTINGS_MODULE=erp_chvs.settings pytest facturacion/tests.py
@@ -84,6 +86,7 @@ ERP_CHVS/
 | `nutricion` | Menus, preparations, ingredients, nutritional analysis, AI generation |
 | `planeacion` | Programs, planning periods, ration configuration |
 | `facturacion` | Excel focalization list upload, validation, PDF attendance reports |
+| `costos` | Nutritional cost matrix (cross-tab menus × ingredients × levels), Excel export |
 | `dashboard` | Main dashboard after login |
 
 ### Service-Oriented Architecture
@@ -106,6 +109,9 @@ views.py → services.py → persistence_service.py → models.py
 - `exclusion_service.py` — Mutually exclusive food group sets: groups that share a weekly quota (e.g. G4+G6 must appear 2×/week combined, not individually). Used by `semanal.py` to adjust validator results.
 - `restriccion_subgrupo_service.py` — Sub-restrictions within a group: requires that N of a group's weekly appearances use a specific whitelist of foods (e.g. G4 must include ≥1 egg and ≥2 legumes per week). Used by `semanal.py`.
 - `preparacion_service.py`, `ingrediente_service.py`, `programa_service.py`
+
+**Nutricion other key files**:
+- `master_excel_generator.py` — Generates nutritional preparation guide Excel (`MasterNutritionalExcelGenerator`). Called from `exportes.py` → `GET /nutricion/exportar-guias-preparacion/<programa_id>/<modalidad_id>/`
 
 **Nutricion views** (`nutricion/views/` package):
 - `core.py` — Main views, `api_generar_menu_ia`
@@ -165,6 +171,8 @@ sorted(queryset, key=lambda n: _ORDEN_NIVELES.index(n.nivel_escolar_uapa) if n.n
 - `main.js` — Entry point
 - `menus_avanzado_refactorizado.js` — Main controller (dependency injection)
 - `preparaciones_editor.js` — Standalone editor: dynamic peso bruto (`(peso_neto×100)/parte_comestible`), slider sync, 4-state semaforización
+- `alimentos.js`, `menus.js` — Supplementary list views
+- `core/` — Shared utilities: `api-client.js`, `modal-manager.js`, `utils.js`
 - `modules/` — Single-responsibility managers:
   - `ModalesManager.js`, `FiltrosManager.js`, `ModalidadesManager.js`
   - `PreparacionesManager.js`, `IngredientesManager.js`
@@ -183,9 +191,9 @@ sorted(queryset, key=lambda n: _ORDEN_NIVELES.index(n.nivel_escolar_uapa) if n.n
 | `NUTRICION` | nutricion, dashboard, principal |
 | `FACTURACION` | facturacion, dashboard |
 | `PLANEACION` | planeacion, dashboard |
-| `ADMINISTRACION` | All modules |
+| `ADMINISTRACION` | nutricion, facturacion, planeacion, principal, dashboard |
 
-Superusers bypass all restrictions. Set up with `python manage.py setup_groups`.
+**Note**: `costos` is NOT included in `group_permissions` in `middleware.py` — only superusers can access it. Superusers bypass all restrictions. Set up with `python manage.py setup_groups`.
 
 ## Configuration (`.env` in `erp_chvs/`)
 
