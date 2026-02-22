@@ -320,6 +320,27 @@ ModalidadesManager.js → abrirModalCopiar()
 ```
 Key file: `nutricion/services/menu_service.py` — `copiar_modalidad_completa()`. Endpoints in `menus_api.py`.
 
+## Production Gotchas
+
+### Cloudinary y `FieldFile.path`
+En producción (`DEBUG=False`), los archivos de media (logos, firmas) usan Cloudinary. **`FieldFile.path` lanza `NotImplementedError`** en storages de nube — Cloudinary no implementa `.path()`.
+
+Siempre capturar las tres excepciones al acceder a `.path` de un `ImageField`/`FileField`:
+```python
+try:
+    ruta = instancia.imagen.path
+except (FileNotFoundError, ValueError, NotImplementedError):
+    ruta = None
+```
+- `FileNotFoundError` — archivo local borrado físicamente
+- `ValueError` — campo vacío o nombre inválido
+- `NotImplementedError` — storage en nube (Cloudinary) no implementa `.path()`
+
+**Archivos afectados**: `nutricion/services/analisis_service.py` — bloque `logo_path` y función `_path_or_none` (firmas).
+
+### Static files en Railway
+`WHITENOISE_USE_FINDERS = True` permite que WhiteNoise sirva archivos directamente desde `STATICFILES_DIRS` aunque `collectstatic` no los haya copiado a `STATIC_ROOT`. No usar `CompressedStaticFilesStorage` — genera `FileNotFoundError` con Python 3.13 por una condición de carrera en el ThreadPoolExecutor de compresión paralela.
+
 ## Database
 
 - **Engine**: PostgreSQL, `CONN_MAX_AGE=600`, `CONN_HEALTH_CHECKS=True`
