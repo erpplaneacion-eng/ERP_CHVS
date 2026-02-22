@@ -19,6 +19,8 @@ class MasterNutritionalExcelGenerator(ExcelReportDrawer):
 
     def __init__(self):
         super().__init__()
+        # Dejar 3 filas en blanco entre tablas de menús consecutivos.
+        self.menu_spacing_rows = 3
 
     def generate(self, masive_analysis_data: Dict) -> io.BytesIO:
         """
@@ -46,9 +48,14 @@ class MasterNutritionalExcelGenerator(ExcelReportDrawer):
             current_row = 1
             for i, menu_analisis in enumerate(menus_analisis):
                 try:
+                    menu_info = dict(menu_analisis['menu_info'])
+                    # El logo solo se muestra una vez, en la parte superior de la hoja.
+                    if i > 0:
+                        menu_info['logo_path'] = None
+
                     # Reconstruir la estructura de datos que espera `_draw_single_report`
                     reconstructed_data = {
-                        'menu': menu_analisis['menu_info'],
+                        'menu': menu_info,
                         'analisis_por_nivel': [menu_analisis['analisis']]
                     }
 
@@ -64,8 +71,8 @@ class MasterNutritionalExcelGenerator(ExcelReportDrawer):
                     if i < len(menus_analisis) - 1:
                         # Colocar el salto de página en la fila siguiente al final del reporte
                         ws.row_dimensions[end_row + 1].page_break = True
-                        # El siguiente reporte comienza 2 filas después del salto
-                        current_row = end_row + 2
+                        # El siguiente reporte comienza dejando 3 filas en blanco.
+                        current_row = end_row + self.menu_spacing_rows + 1
 
                 except Exception as e:
                     menu_nombre = menu_analisis['menu_info'].get('nombre', f'Menu {i+1}')
