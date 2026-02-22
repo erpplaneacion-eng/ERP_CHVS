@@ -3,7 +3,9 @@ builder = "nixpacks"
 buildCommand = "pip install -r requirements.txt"
 
 [deploy]
-startCommand = "cd erp_chvs && mkdir -p staticfiles && python manage.py migrate --noinput && python manage.py collectstatic --noinput --clear --upload-unhashed-files && gunicorn erp_chvs.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 300"
+# Gunicorn: 1 worker sync + 2 threads = menos RAM, ideal para Railway free tier.
+# --max-requests evita fugas de memoria; --worker-tmp-dir /dev/shm requerido en contenedores.
+startCommand = "cd erp_chvs && mkdir -p staticfiles && python manage.py migrate --noinput && python manage.py collectstatic --noinput --clear && gunicorn erp_chvs.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 600 --max-requests 100 --max-requests-jitter 10 --worker-class sync --worker-tmp-dir /dev/shm"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
 
@@ -11,6 +13,3 @@ restartPolicyMaxRetries = 10
 path = "/"
 timeout = 100
 interval = 60
-
-[env]
-PYTHON_VERSION = "3.13.1"

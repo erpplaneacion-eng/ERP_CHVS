@@ -223,11 +223,25 @@ GEMINI_API_KEY=your-key
 ## Deployment (Railway)
 
 - **Platform**: Railway.app
-- **Procfile**: Runs migrate + collectstatic + gunicorn on startup
-- **Static files**: WhiteNoise middleware (no nginx needed)
-- **Media**: Cloudinary in production (`DEBUG=False`)
-- `RAILWAY_STATIC_URL` env var auto-added to `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS`
+- **Config file**: `railway.toml` (Railway ignores `Procfile` when `railway.toml` exists — keep both in sync)
+- **Start sequence**: `migrate --noinput` → `collectstatic --noinput --clear` → gunicorn
+- **Gunicorn**: 1 worker sync + 2 threads, timeout 600s, max-requests 100, `--worker-tmp-dir /dev/shm`
+- **Static files**: WhiteNoise middleware (no nginx needed); `STATICFILES_STORAGE = StaticFilesStorage`
+- **Media**: Cloudinary in production (`DEBUG=False`); requires `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` env vars
+- **Domain auto-detection**: settings.py reads `RAILWAY_PUBLIC_DOMAIN` (built-in Railway variable) first, falls back to `RAILWAY_STATIC_URL` (manual). Both auto-add to `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS`
 - Python version pinned in `runtime.txt`: `python-3.13.1`
+
+**Required Railway env vars:**
+```
+DJANGO_SECRET_KEY=<generated>
+DJANGO_DEBUG=False
+GEMINI_API_KEY=<key>
+DATABASE_URL=<auto-set by Railway Postgres plugin>
+CLOUDINARY_CLOUD_NAME=<name>
+CLOUDINARY_API_KEY=<key>
+CLOUDINARY_API_SECRET=<secret>
+```
+`DJANGO_ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` are auto-populated from `RAILWAY_PUBLIC_DOMAIN`, but can be overridden manually.
 
 ## Conventions
 

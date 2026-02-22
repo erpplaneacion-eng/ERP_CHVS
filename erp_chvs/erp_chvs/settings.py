@@ -36,11 +36,20 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # Railway.app domain automático
+# RAILWAY_PUBLIC_DOMAIN es la variable built-in de Railway (solo el dominio, sin esquema).
+# RAILWAY_STATIC_URL es una variable legada/manual (URL completa con esquema).
+# Se soportan ambas para compatibilidad.
+RAILWAY_PUBLIC_DOMAIN = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
 RAILWAY_STATIC_URL = os.environ.get('RAILWAY_STATIC_URL')
-if RAILWAY_STATIC_URL:
-    railway_domain = RAILWAY_STATIC_URL.replace('https://', '').replace('http://', '')
-    if railway_domain not in ALLOWED_HOSTS:
-        ALLOWED_HOSTS.append(railway_domain)
+
+_railway_domain = None
+if RAILWAY_PUBLIC_DOMAIN:
+    _railway_domain = RAILWAY_PUBLIC_DOMAIN.strip()
+elif RAILWAY_STATIC_URL:
+    _railway_domain = RAILWAY_STATIC_URL.replace('https://', '').replace('http://', '').strip()
+
+if _railway_domain and _railway_domain not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_railway_domain)
 
 def _normalize_csrf_origin(origin: str) -> str:
     """
@@ -84,8 +93,9 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # Agregar Railway URL si existe (normalizado)
-if RAILWAY_STATIC_URL:
-    normalized_railway_url = _normalize_csrf_origin(RAILWAY_STATIC_URL)
+# Se usa _railway_domain calculado arriba (RAILWAY_PUBLIC_DOMAIN tiene prioridad)
+if _railway_domain:
+    normalized_railway_url = _normalize_csrf_origin(_railway_domain)
     if normalized_railway_url and normalized_railway_url not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(normalized_railway_url)
 

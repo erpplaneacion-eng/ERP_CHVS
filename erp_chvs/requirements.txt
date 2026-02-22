@@ -17,8 +17,6 @@ openpyxl==3.1.5
 
 # PDF Generation
 reportlab==4.4.4
-PyPDF2==3.0.1
-pdf2image==1.17.0
 Pillow==11.3.0
 
 # Fuzzy Matching
@@ -33,11 +31,6 @@ google-ai-generativelanguage==0.6.15
 google-api-python-client==2.184.0
 google-auth==2.41.1
 google-auth-httplib2==0.2.0
-
-# Vision / OCR (Optional)
-landingai-ade==0.17.1
-opencv-python==4.12.0.88
-pytesseract==0.3.13
 
 # Utilities
 python-dotenv==1.1.1
