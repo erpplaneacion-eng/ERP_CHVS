@@ -477,6 +477,15 @@ class TablaPreparacionIngredientes(models.Model):
         verbose_name="Ingrediente (ICBF 2018)",
         related_name='preparaciones'
     )
+    id_componente = models.ForeignKey(
+        ComponentesAlimentos,
+        on_delete=models.PROTECT,
+        db_column='id_componente',
+        verbose_name="Componente del Ingrediente en la Preparación",
+        related_name='ingredientes_preparacion',
+        null=True,
+        blank=True
+    )
     gramaje = models.DecimalField(
         max_digits=10,
         decimal_places=2,

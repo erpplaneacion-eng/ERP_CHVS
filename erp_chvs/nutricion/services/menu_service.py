@@ -154,7 +154,8 @@ class MenuService:
                     # Vincular a preparación (sin peso)
                     TablaPreparacionIngredientes.objects.get_or_create(
                         id_preparacion=preparacion,
-                        id_ingrediente_siesa=ingrediente_siesa
+                        id_ingrediente_siesa=ingrediente_siesa,
+                        defaults={'id_componente': alimento_icbf.id_componente or preparacion.id_componente}
                     )
 
             # 5.4 Crear análisis nutricional POR CADA NIVEL con pesos específicos
@@ -216,7 +217,8 @@ class MenuService:
 
                         preparacion_ingrediente, _ = TablaPreparacionIngredientes.objects.get_or_create(
                             id_preparacion=preparacion,
-                            id_ingrediente_siesa=alimento_icbf
+                            id_ingrediente_siesa=alimento_icbf,
+                            defaults={'id_componente': alimento_icbf.id_componente or preparacion.id_componente}
                         )
 
                         # Calcular valores nutricionales
@@ -413,6 +415,7 @@ class MenuService:
                     TablaPreparacionIngredientes(
                         id_preparacion=nueva_prep,
                         id_ingrediente_siesa=ing.id_ingrediente_siesa,
+                        id_componente=ing.id_componente or nueva_prep.id_componente,
                         gramaje=ing.gramaje
                     )
                     for ing in prep_origen.ingredientes.all()

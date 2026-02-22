@@ -152,7 +152,8 @@ class PreparacionService:
             # Intentar crear la relación
             relacion, created = TablaPreparacionIngredientes.objects.get_or_create(
                 id_preparacion=preparacion,
-                id_ingrediente_siesa=ingrediente
+                id_ingrediente_siesa=ingrediente,
+                defaults={'id_componente': ingrediente.id_componente or preparacion.id_componente}
             )
 
             if created:
@@ -335,7 +336,8 @@ class PreparacionService:
 
                     _, created = TablaPreparacionIngredientes.objects.get_or_create(
                         id_preparacion=preparacion,
-                        id_ingrediente_siesa=ingrediente
+                        id_ingrediente_siesa=ingrediente,
+                        defaults={'id_componente': ingrediente.id_componente or preparacion.id_componente}
                     )
 
                     if created:

@@ -26,7 +26,7 @@ from ..models import (
 from ..services.calculo_service import CalculoService
 
 
-def _resolver_grupo_y_rango(menu, preparacion, ingrediente_icbf):
+def _resolver_grupo_y_rango(menu, preparacion, ingrediente_icbf, componente=None):
     """
     Resuelve grupo de alimentos y rango [min, max] para un ingrediente dentro de una preparaciÃ³n.
     Usa MinutaPatronMeta por modalidad + componente + grupo.
@@ -35,11 +35,14 @@ def _resolver_grupo_y_rango(menu, preparacion, ingrediente_icbf):
     Para rangos especÃ­ficos por nivel, usar _resolver_grupo_y_rango_por_nivel()
     """
     grupo = None
-    componente_ingrediente = getattr(ingrediente_icbf, 'id_componente', None)
-    if componente_ingrediente and componente_ingrediente.id_grupo_alimentos:
-        grupo = componente_ingrediente.id_grupo_alimentos
-    elif preparacion.id_componente and preparacion.id_componente.id_grupo_alimentos:
-        grupo = preparacion.id_componente.id_grupo_alimentos
+    if componente and componente.id_grupo_alimentos:
+        grupo = componente.id_grupo_alimentos
+    else:
+        componente_ingrediente = getattr(ingrediente_icbf, 'id_componente', None)
+        if componente_ingrediente and componente_ingrediente.id_grupo_alimentos:
+            grupo = componente_ingrediente.id_grupo_alimentos
+        elif preparacion.id_componente and preparacion.id_componente.id_grupo_alimentos:
+            grupo = preparacion.id_componente.id_grupo_alimentos
 
     if not grupo:
         return {
@@ -53,8 +56,9 @@ def _resolver_grupo_y_rango(menu, preparacion, ingrediente_icbf):
         id_modalidad=menu.id_modalidad,
         id_grupo_alimentos=grupo
     )
-    if preparacion.id_componente:
-        metas = metas.filter(id_componente=preparacion.id_componente)
+    componente_meta = componente or preparacion.id_componente
+    if componente_meta:
+        metas = metas.filter(id_componente=componente_meta)
 
     agregados = metas.aggregate(
         minimo=Min('peso_neto_minimo'),
@@ -69,17 +73,20 @@ def _resolver_grupo_y_rango(menu, preparacion, ingrediente_icbf):
     }
 
 
-def _resolver_grupo_y_rango_por_nivel(menu, preparacion, ingrediente_icbf, nivel_escolar):
+def _resolver_grupo_y_rango_por_nivel(menu, preparacion, ingrediente_icbf, nivel_escolar, componente=None):
     """
     Resuelve grupo de alimentos y rango [min, max] para un ingrediente
     FILTRADO POR NIVEL ESCOLAR ESPECÃFICO.
     """
     grupo = None
-    componente_ingrediente = getattr(ingrediente_icbf, 'id_componente', None)
-    if componente_ingrediente and componente_ingrediente.id_grupo_alimentos:
-        grupo = componente_ingrediente.id_grupo_alimentos
-    elif preparacion.id_componente and preparacion.id_componente.id_grupo_alimentos:
-        grupo = preparacion.id_componente.id_grupo_alimentos
+    if componente and componente.id_grupo_alimentos:
+        grupo = componente.id_grupo_alimentos
+    else:
+        componente_ingrediente = getattr(ingrediente_icbf, 'id_componente', None)
+        if componente_ingrediente and componente_ingrediente.id_grupo_alimentos:
+            grupo = componente_ingrediente.id_grupo_alimentos
+        elif preparacion.id_componente and preparacion.id_componente.id_grupo_alimentos:
+            grupo = preparacion.id_componente.id_grupo_alimentos
 
     if not grupo:
         return {
@@ -98,8 +105,9 @@ def _resolver_grupo_y_rango_por_nivel(menu, preparacion, ingrediente_icbf, nivel
 
     # Primero intentamos buscar una meta especÃ­fica para el componente
     meta = None
-    if preparacion.id_componente:
-        meta = metas.filter(id_componente=preparacion.id_componente).first()
+    componente_meta = componente or preparacion.id_componente
+    if componente_meta:
+        meta = metas.filter(id_componente=componente_meta).first()
 
     # Si no hay meta especÃ­fica o no hay componente, buscamos la primera disponible para el grupo
     if not meta:
@@ -237,6 +245,8 @@ def _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados
     ).select_related(
         'id_preparacion',
         'id_preparacion__id_componente',
+        'id_componente',
+        'id_componente__id_grupo_alimentos',
         'id_ingrediente_siesa',
         'id_ingrediente_siesa__id_componente',
         'id_ingrediente_siesa__id_componente__id_grupo_alimentos'
@@ -247,7 +257,8 @@ def _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados
             menu,
             rel.id_preparacion,
             rel.id_ingrediente_siesa,
-            nivel
+            nivel,
+            componente=rel.id_componente
         )
 
         key = f"{rel.id_preparacion_id}_{rel.id_ingrediente_siesa.codigo}"
@@ -272,7 +283,14 @@ def _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados
                 peso_neto
             ) if rel.id_ingrediente_siesa else {}
 
-        componente_nombre = rel.id_preparacion.id_componente.componente if rel.id_preparacion.id_componente else 'SIN COMPONENTE'
+        componente_nombre = (
+            rel.id_componente.componente
+            if rel.id_componente
+            else (
+                rel.id_preparacion.id_componente.componente
+                if rel.id_preparacion.id_componente else 'SIN COMPONENTE'
+            )
+        )
 
         filas_nivel.append({
             'id_preparacion': rel.id_preparacion.id_preparacion,
@@ -487,32 +505,24 @@ def api_guardar_preparaciones_editor(request, id_menu):
                 if not id_ingrediente:
                     continue
 
-                # Resolver componente solo para nuevas preparaciones
+                componente_obj = None
+                if id_componente:
+                    try:
+                        componente_obj = ComponentesAlimentos.objects.get(id_componente=id_componente)
+                    except ComponentesAlimentos.DoesNotExist:
+                        errores.append(f"Fila {idx + 1}: componente {id_componente} no encontrado")
+                        continue
+
+                # Resolver componente y preparación
                 if id_preparacion:
                     preparacion = TablaPreparaciones.objects.get(id_preparacion=id_preparacion, id_menu=menu)
-                    if id_componente:
-                        try:
-                            componente_obj = ComponentesAlimentos.objects.get(id_componente=id_componente)
-                        except ComponentesAlimentos.DoesNotExist:
-                            errores.append(f"Fila {idx + 1}: componente {id_componente} no encontrado")
-                            continue
-
-                        if preparacion.id_componente_id != componente_obj.id_componente:
-                            preparacion.id_componente = componente_obj
-                            preparacion.save(update_fields=['id_componente'])
                 else:
                     if not preparacion_nombre:
                         errores.append(f"Fila {idx + 1}: nombre de preparación requerido")
                         continue
 
-                    if not id_componente:
+                    if componente_obj is None:
                         errores.append(f"Fila {idx + 1}: componente requerido para nueva preparación")
-                        continue
-
-                    try:
-                        componente_obj = ComponentesAlimentos.objects.get(id_componente=id_componente)
-                    except ComponentesAlimentos.DoesNotExist:
-                        errores.append(f"Fila {idx + 1}: componente {id_componente} no encontrado")
                         continue
 
                     preparacion, _ = TablaPreparaciones.objects.get_or_create(
@@ -532,7 +542,12 @@ def api_guardar_preparaciones_editor(request, id_menu):
                     if gramaje < 0:
                         raise InvalidOperation('Gramaje negativo')
 
-                rango = _resolver_grupo_y_rango(menu, preparacion, ingrediente)
+                rango = _resolver_grupo_y_rango(
+                    menu,
+                    preparacion,
+                    ingrediente,
+                    componente=componente_obj
+                )
                 minimo = Decimal(str(rango['minimo'])) if rango['minimo'] is not None else None
                 maximo = Decimal(str(rango['maximo'])) if rango['maximo'] is not None else None
 
@@ -547,8 +562,13 @@ def api_guardar_preparaciones_editor(request, id_menu):
                     id_preparacion=preparacion,
                     id_ingrediente_siesa=ingrediente
                 )
+                if componente_obj:
+                    rel.id_componente = componente_obj
                 rel.gramaje = gramaje
-                rel.save(update_fields=['gramaje'])
+                campos_update = ['gramaje']
+                if componente_obj:
+                    campos_update.append('id_componente')
+                rel.save(update_fields=campos_update)
                 guardadas += 1
 
             except (ValueError, InvalidOperation):

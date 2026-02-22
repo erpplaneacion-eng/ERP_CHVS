@@ -172,9 +172,14 @@ class AnalisisNutricionalService:
         for preparacion in preparaciones:
             ingredientes_prep = TablaPreparacionIngredientes.objects.filter(
                 id_preparacion=preparacion
-            ).select_related('id_ingrediente_siesa')
+            ).select_related(
+                'id_ingrediente_siesa',
+                'id_componente',
+                'id_componente__id_grupo_alimentos',
+            )
 
             ingredientes_data = []
+            grupos_ingredientes = []
 
             for ing_prep in ingredientes_prep:
                 ingrediente = ing_prep.id_ingrediente_siesa
@@ -190,6 +195,15 @@ class AnalisisNutricionalService:
                     ).first()
 
                 if alimento:
+                    componente_ing = ing_prep.id_componente or alimento.id_componente
+                    grupo_alimento = (
+                        componente_ing.id_grupo_alimentos.grupo_alimentos
+                        if componente_ing and componente_ing.id_grupo_alimentos
+                        else None
+                    )
+                    if grupo_alimento and grupo_alimento not in grupos_ingredientes:
+                        grupos_ingredientes.append(grupo_alimento)
+
                     # ✨ MEJORA: Usar gramaje de preparaciones como peso inicial
                     # Si existe gramaje guardado en TablaPreparacionIngredientes, usarlo
                     # Si no, usar el valor mínimo del rango como valor por defecto
@@ -197,7 +211,7 @@ class AnalisisNutricionalService:
                         peso_neto_base = float(ing_prep.gramaje)
                     elif nivel_escolar and menu.id_modalidad:
                         # Obtener el mínimo del rango para este nivel y componente
-                        componente = getattr(preparacion, 'id_componente', None)
+                        componente = ing_prep.id_componente or getattr(preparacion, 'id_componente', None)
                         if componente:
                             meta = MinutaPatronMeta.objects.filter(
                                 id_modalidad=menu.id_modalidad,
@@ -236,6 +250,8 @@ class AnalisisNutricionalService:
                         'id_ingrediente': ingrediente_codigo,
                         'nombre': ingrediente_nombre,
                         'codigo_icbf': alimento.codigo,
+                        'componente': componente_ing.componente if componente_ing else 'SIN COMPONENTE',
+                        'grupo_alimentos': grupo_alimento or 'SIN GRUPO',
                         'peso_neto_base': peso_neto_base,
                         'peso_bruto_base': round(peso_bruto_base, 1),
                         'parte_comestible': parte_comestible,
@@ -249,7 +265,7 @@ class AnalisisNutricionalService:
                         peso_neto_default = float(ing_prep.gramaje)
                     elif nivel_escolar and menu.id_modalidad:
                         # Obtener el mínimo del rango para este nivel
-                        componente = getattr(preparacion, 'id_componente', None)
+                        componente = ing_prep.id_componente or getattr(preparacion, 'id_componente', None)
                         if componente:
                             meta = MinutaPatronMeta.objects.filter(
                                 id_modalidad=menu.id_modalidad,
@@ -268,6 +284,15 @@ class AnalisisNutricionalService:
                     ingredientes_data.append({
                         'id_ingrediente': ingrediente_codigo,
                         'nombre': ingrediente_nombre,
+                        'componente': (
+                            ing_prep.id_componente.componente
+                            if ing_prep.id_componente else 'SIN COMPONENTE'
+                        ),
+                        'grupo_alimentos': (
+                            ing_prep.id_componente.id_grupo_alimentos.grupo_alimentos
+                            if ing_prep.id_componente and ing_prep.id_componente.id_grupo_alimentos
+                            else 'SIN GRUPO'
+                        ),
                         'peso_neto_base': peso_neto_default,
                         'peso_bruto_base': peso_neto_default,
                         'parte_comestible': 100,
@@ -280,11 +305,14 @@ class AnalisisNutricionalService:
 
             # Obtener componente y grupo de alimentos
             componente = preparacion.id_componente.componente if preparacion.id_componente else 'SIN COMPONENTE'
-            grupo_alimentos = (
-                preparacion.id_componente.id_grupo_alimentos.grupo_alimentos
-                if preparacion.id_componente and preparacion.id_componente.id_grupo_alimentos
-                else 'SIN GRUPO'
-            )
+            if grupos_ingredientes:
+                grupo_alimentos = ' | '.join(grupos_ingredientes)
+            else:
+                grupo_alimentos = (
+                    preparacion.id_componente.id_grupo_alimentos.grupo_alimentos
+                    if preparacion.id_componente and preparacion.id_componente.id_grupo_alimentos
+                    else 'SIN GRUPO'
+                )
 
             preparaciones_data.append({
                 'id_preparacion': preparacion.id_preparacion,

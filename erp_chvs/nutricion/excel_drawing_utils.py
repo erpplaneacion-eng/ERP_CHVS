@@ -238,11 +238,17 @@ class ExcelReportDrawer:
 
             total_ingredients_added += num_ingredients
 
-            ws.cell(row=start_row_for_prep, column=self.layout.COL_COMPONENTE).value = preparacion.get('componente', 'SIN COMPONENTE')
-            ws.cell(row=start_row_for_prep, column=self.layout.COL_GRUPO).value = preparacion.get('grupo_alimentos', 'SIN GRUPO')
             ws.cell(row=start_row_for_prep, column=self.layout.COL_PREPARACION).value = preparacion.get('nombre', '')
 
             for ingrediente in ingredients_in_prep:
+                ws.cell(row=current_row, column=self.layout.COL_COMPONENTE).value = ingrediente.get(
+                    'componente',
+                    preparacion.get('componente', 'SIN COMPONENTE')
+                )
+                ws.cell(row=current_row, column=self.layout.COL_GRUPO).value = ingrediente.get(
+                    'grupo_alimentos',
+                    preparacion.get('grupo_alimentos', 'SIN GRUPO')
+                )
                 ws.cell(row=current_row, column=self.layout.COL_INGREDIENTE).value = ingrediente.get('nombre', '')
                 ws.cell(row=current_row, column=self.layout.COL_CODIGO).value = ingrediente.get('codigo_icbf', '')
                 ws.cell(row=current_row, column=self.layout.COL_PESO_BRUTO).value = ingrediente.get('peso_bruto_base', 0)
@@ -279,7 +285,7 @@ class ExcelReportDrawer:
 
             if num_ingredients > 1:
                 end_row_for_prep = current_row - 1
-                cols_to_merge = [self.layout.COL_COMPONENTE, self.layout.COL_GRUPO, self.layout.COL_PREPARACION]
+                cols_to_merge = [self.layout.COL_PREPARACION]
                 for col_idx in cols_to_merge:
                     # Primero aplicar el alineamiento ANTES de combinar
                     cell_to_align = ws.cell(row=start_row_for_prep, column=col_idx)

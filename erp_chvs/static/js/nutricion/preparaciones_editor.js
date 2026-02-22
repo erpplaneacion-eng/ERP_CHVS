@@ -664,7 +664,7 @@
                         </select>
                         <small class="modal-help-text">
                             <i class="bi bi-info-circle"></i>
-                            Defina a qué componente pertenece esta preparación (ej: Proteína, Cereal)
+                            Defina a qué componente pertenece este ingrediente en la preparación
                         </small>
                     </div>
 
@@ -804,7 +804,7 @@
                     return Swal.showValidationMessage('Debes escribir el nombre de la nueva preparación');
                 }
 
-                if (modo === 'nueva' && !idComp) {
+                if (!idComp) {
                     return Swal.showValidationMessage('Debes seleccionar un componente');
                 }
 

@@ -148,7 +148,8 @@ def api_copiar_preparacion(request):
             nuevos_ingredientes.append(
                 TablaPreparacionIngredientes(
                     id_preparacion=new_preparacion,
-                    id_ingrediente_siesa=ing.id_ingrediente_siesa
+                    id_ingrediente_siesa=ing.id_ingrediente_siesa,
+                    id_componente=ing.id_componente or new_preparacion.id_componente,
                 )
             )
 
@@ -315,7 +316,8 @@ def api_preparacion_ingredientes(request, id_preparacion):
                 for ing_data in data['ingredientes']:
                     ingrediente, created = TablaPreparacionIngredientes.objects.get_or_create(
                         id_preparacion=preparacion,
-                        id_ingrediente_siesa_id=ing_data['id_ingrediente_siesa']
+                        id_ingrediente_siesa_id=ing_data['id_ingrediente_siesa'],
+                        defaults={'id_componente': preparacion.id_componente}
                     )
                     gramaje_raw = ing_data.get('gramaje')
                     if gramaje_raw not in (None, '', 'null'):
@@ -332,6 +334,7 @@ def api_preparacion_ingredientes(request, id_preparacion):
             TablaPreparacionIngredientes.objects.create(
                 id_preparacion=preparacion,
                 id_ingrediente_siesa_id=data['id_ingrediente_siesa'],
+                id_componente=preparacion.id_componente,
                 gramaje=Decimal(str(data['gramaje'])) if data.get('gramaje') not in (None, '', 'null') else None
             )
 

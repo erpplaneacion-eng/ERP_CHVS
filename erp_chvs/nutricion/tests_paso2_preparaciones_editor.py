@@ -311,8 +311,13 @@ class Paso2PreparacionesEditorIntegrationTests(TestCase):
             preparacion="Nueva preparación QA",
         )
         self.assertEqual(prep.id_componente, self.componente)
+        rel = TablaPreparacionIngredientes.objects.get(
+            id_preparacion=prep,
+            id_ingrediente_siesa=self.alimento_icbf,
+        )
+        self.assertEqual(rel.id_componente, self.componente)
 
-    def test_api_guardar_preparaciones_editor_existente_actualiza_componente(self):
+    def test_api_guardar_preparaciones_editor_existente_actualiza_componente_por_ingrediente(self):
         componente_alt = ComponentesAlimentos.objects.create(
             id_componente="comp_alt",
             componente="Componente Alterno",
@@ -337,7 +342,12 @@ class Paso2PreparacionesEditorIntegrationTests(TestCase):
         self.assertTrue(body["success"])
 
         self.preparacion.refresh_from_db()
-        self.assertEqual(self.preparacion.id_componente, componente_alt)
+        self.assertEqual(self.preparacion.id_componente, self.componente)
+        rel = TablaPreparacionIngredientes.objects.get(
+            id_preparacion=self.preparacion,
+            id_ingrediente_siesa=self.alimento_icbf,
+        )
+        self.assertEqual(rel.id_componente, componente_alt)
 
     def test_paso4_template_incluye_slider_y_labels_de_rango(self):
         url = reverse("nutricion:preparaciones_editor", args=[self.menu.id_menu])
@@ -428,6 +438,51 @@ class Paso2PreparacionesEditorIntegrationTests(TestCase):
 
         self.assertEqual(ws["D5"].value, "RACIÓN PARA PREPARAR EN SITIO")
         self.assertEqual(ws["D6"].value, self.modalidad.modalidad.upper())
+
+    def test_excel_export_muestra_componente_y_grupo_por_ingrediente(self):
+        grupo_verduras = GruposAlimentos.objects.create(
+            id_grupo_alimentos="grp_ver",
+            grupo_alimentos="Verduras",
+        )
+        componente_verduras = ComponentesAlimentos.objects.create(
+            id_componente="comp_ver",
+            componente="Verduras",
+            id_grupo_alimentos=grupo_verduras,
+        )
+        tomate = TablaAlimentos2018Icbf.objects.create(
+            codigo="A002",
+            nombre_del_alimento="Tomate",
+            humedad_g=Decimal("94.50"),
+            energia_kcal=Decimal("18.00"),
+            energia_kj=Decimal("75.00"),
+            proteina_g=Decimal("0.90"),
+            lipidos_g=Decimal("0.20"),
+            carbohidratos_totales_g=Decimal("3.90"),
+            calcio_mg=Decimal("10.00"),
+            hierro_mg=Decimal("0.30"),
+            sodio_mg=Decimal("5.00"),
+            parte_comestible_field=Decimal("95.00"),
+            id_componente=componente_verduras,
+        )
+        TablaIngredientesSiesa.objects.create(
+            id_ingrediente_siesa="A002",
+            nombre_ingrediente="Tomate",
+        )
+        TablaPreparacionIngredientes.objects.create(
+            id_preparacion=self.preparacion,
+            id_ingrediente_siesa=tomate,
+            id_componente=componente_verduras,
+            gramaje=Decimal("20.00"),
+        )
+
+        excel_stream = generate_menu_excel(self.menu.id_menu)
+        wb = load_workbook(filename=BytesIO(excel_stream.getvalue()))
+        ws = wb[wb.sheetnames[0]]
+
+        self.assertEqual(str(ws.cell(row=11, column=1).value or ""), "Bebida con leche")
+        self.assertEqual(str(ws.cell(row=11, column=2).value or ""), "Lacteos")
+        self.assertEqual(str(ws.cell(row=12, column=1).value or ""), "Verduras")
+        self.assertEqual(str(ws.cell(row=12, column=2).value or ""), "Verduras")
 
     def test_servicio_aplica_ingrediente_guardado_por_codigo_icbf_sin_siesa(self):
         analisis = TablaAnalisisNutricionalMenu.objects.create(
@@ -533,11 +588,12 @@ class Paso4FrontendContractsTests(TestCase):
         self.assertIn("const overlay = mostrarOverlayGuardando('Guardando cambios...');", js)
         self.assertIn("ocultarOverlayGuardando();", js)
 
-    def test_paso4_js_modal_aplica_regla_componente_solo_para_nueva(self):
+    def test_paso4_js_modal_componente_visible_y_requerido(self):
         js = self.js_source
-        self.assertIn("selectComponente.disabled = !esNueva;", js)
-        self.assertIn("if (modo === 'nueva' && !idComp)", js)
-        self.assertIn("id_componente: modo === 'nueva' ? idComp : null", js)
+        self.assertIn("bComponente.style.display = 'block';", js)
+        self.assertIn("selectComponente.disabled = false;", js)
+        self.assertIn("if (!idComp)", js)
+        self.assertIn("id_componente: idComp || null", js)
 
 
 class ExcelRulesTests(TestCase):
