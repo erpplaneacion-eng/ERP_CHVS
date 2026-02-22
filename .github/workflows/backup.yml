@@ -1,0 +1,37 @@
+name: Daily Database Backup
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # Todos los días a las 3 AM UTC (10 PM hora Colombia)
+  workflow_dispatch:        # Permite ejecutarlo manualmente desde GitHub Actions
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Instalar cliente PostgreSQL
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Crear backup con pg_dump
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_PUBLIC_URL }}
+        run: |
+          FECHA=$(date +%Y-%m-%d)
+          echo "Iniciando backup de la base de datos: $FECHA"
+          pg_dump "$DATABASE_URL" | gzip > backup_erp_chvs_$FECHA.sql.gz
+          echo "Backup completado: backup_erp_chvs_$FECHA.sql.gz"
+          ls -lh backup_erp_chvs_$FECHA.sql.gz
+
+      - name: Subir backup como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-erp-chvs-${{ github.run_id }}
+          path: backup_erp_chvs_*.sql.gz
+          retention-days: 30   # Conserva los últimos 30 días de backups
+
+      - name: Resumen
+        run: |
+          echo "✅ Backup diario completado exitosamente"
+          echo "Fecha: $(date '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "Artefacto disponible en: GitHub Actions → este workflow → Artifacts"
