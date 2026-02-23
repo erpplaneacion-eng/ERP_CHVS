@@ -200,7 +200,7 @@ class PDFAsistenciaService:
 
                 nombre_sede_educativa__in=sedes_con_registros_nombres
 
-            ).select_related('codigo_ie__id_municipios').order_by('nombre_sede_educativa')
+            ).select_related('codigo_ie__id_municipios').order_by('nombre_generico_sede')
 
 
 
@@ -273,10 +273,6 @@ class PDFAsistenciaService:
 
                     if zip_sede_buffer:
 
-                        nombre_carpeta_sede = f"{sede_obj.nombre_sede_educativa.replace(' ', '_').replace('/', '_')}"
-
-
-
                         with zipfile.ZipFile(zip_sede_buffer, 'r') as zip_sede:
                             num_pdfs = len(zip_sede.namelist())
                             logger.info(f"   📄 {num_pdfs} PDF(s) generado(s) para esta sede")
@@ -285,9 +281,7 @@ class PDFAsistenciaService:
 
                                 contenido_pdf = zip_sede.read(nombre_archivo)
 
-                                ruta_en_zip_principal = f"{nombre_carpeta_sede}/{nombre_archivo}"
-
-                                zip_file_principal.writestr(ruta_en_zip_principal, contenido_pdf)
+                                zip_file_principal.writestr(nombre_archivo, contenido_pdf)
 
 
 
