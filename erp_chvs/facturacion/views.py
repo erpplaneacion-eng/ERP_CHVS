@@ -12,8 +12,9 @@ from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 import base64
 import pandas as pd
-from io import StringIO
+from io import StringIO, BytesIO
 import json
+from datetime import datetime
 
 from .models import ListadosFocalizacion
 from principal.models import PrincipalDepartamento, PrincipalMunicipio, RegistroActividad
@@ -26,7 +27,6 @@ from .persistence_service import PersistenceService
 from .pdf_generator import crear_formato_asistencia
 from .pdf_service import PDFAsistenciaService
 import random
-from io import BytesIO
 import zipfile
 
 # Inicializar servicios
@@ -186,7 +186,9 @@ def procesar_listados_view(request):
                         'total_registros': resultado.get('total_registros', 0),
                         'dataframe_procesado_json': df_json,  # DataFrame ya procesado
                         'archivo_contenido_b64': base64.b64encode(archivo_contenido).decode('utf-8'),  # Solo backup
-                        'archivo_content_type': archivo.content_type
+                        'archivo_content_type': archivo.content_type,
+                        'agrupacion_sedes': resultado['agrupacion_sedes'],
+                        'fecha_procesamiento': datetime.now().strftime('%d/%m/%Y %H:%M'),
                     }
 
                     contexto.update({
@@ -197,6 +199,7 @@ def procesar_listados_view(request):
                         'coincidencias_parciales': resultado['coincidencias_parciales'],
                         'coincidencias_genericas': resultado['coincidencias_genericas'],
                         'agrupacion_sedes': resultado['agrupacion_sedes'],
+                        'fecha_procesamiento': request.session['datos_etapa_1']['fecha_procesamiento'],
                         'archivo_procesado_exitosamente': True,
                         'listo_para_guardar': len(resultado['invalid_sedes']) == 0,  # Solo si no hay sedes inválidas
                         'datos_procesados': request.session['datos_etapa_1']
@@ -640,6 +643,108 @@ def lista_listados(request):
     }
 
     return render(request, 'facturacion/lista_listados.html', context)
+
+
+@login_required
+def descargar_estadisticas_sedes_excel(request):
+    """Descarga las estadísticas por sede del último procesamiento como Excel."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+    datos = request.session.get('datos_etapa_1')
+    if not datos or not datos.get('agrupacion_sedes'):
+        return HttpResponse("No hay estadísticas disponibles. Procese un archivo primero.", status=400)
+
+    agrupacion = datos['agrupacion_sedes']
+    archivo_name = datos.get('archivo_name', 'archivo')
+    focalizacion = datos.get('focalizacion', '')
+    fecha = datos.get('fecha_procesamiento', '')
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Estadísticas por Sede"
+
+    # Estilos
+    header_fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True, size=11)
+    center = Alignment(horizontal="center", vertical="center")
+    thin = Side(style='thin', color="CCCCCC")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    # Título
+    ws.merge_cells('A1:J1')
+    titulo = ws['A1']
+    titulo.value = f"Estadísticas por Sede — {archivo_name} | Focalización: {focalizacion} | Procesado: {fecha}"
+    titulo.font = Font(bold=True, size=12)
+    titulo.alignment = center
+    ws.row_dimensions[1].height = 22
+
+    # Encabezados
+    columnas = [
+        ('#', 5),
+        ('Sede Oficial (BD)', 40),
+        ('Sede en Archivo', 35),
+        ('Total', 9),
+        ('Preescolar', 12),
+        ('Primaria 1-2-3', 14),
+        ('Primaria 4-5', 12),
+        ('Secundaria', 12),
+        ('Media / Ciclo Comp.', 18),
+        ('CAP AM / CAP PM / Alm JU / Ref', 30),
+    ]
+    for col_idx, (nombre, ancho) in enumerate(columnas, start=1):
+        cell = ws.cell(row=2, column=col_idx, value=nombre)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center
+        cell.border = border
+        ws.column_dimensions[cell.column_letter].width = ancho
+
+    # Datos
+    nivel_keys = ['prescolar', 'primaria_1_2_3', 'primaria_4_5', 'secundaria', 'media_ciclo_complementario']
+    alt_fill = PatternFill(start_color="EEF4FB", end_color="EEF4FB", fill_type="solid")
+
+    for row_idx, item in enumerate(agrupacion, start=1):
+        excel_row = row_idx + 2
+        fill = alt_fill if row_idx % 2 == 0 else None
+        complementos = (
+            f"{item.get('cap_am', 0)} / {item.get('cap_pm', 0)} / "
+            f"{item.get('almuerzo_ju', 0)} / {item.get('refuerzo', 0)}"
+        )
+        valores = [
+            row_idx,
+            item.get('sede_bd', ''),
+            item.get('sede_excel', ''),
+            item.get('cantidad', 0),
+            *[item.get(k, 0) for k in nivel_keys],
+            complementos,
+        ]
+        for col_idx, valor in enumerate(valores, start=1):
+            cell = ws.cell(row=excel_row, column=col_idx, value=valor)
+            cell.border = border
+            cell.alignment = center if col_idx not in (2, 3) else Alignment(vertical="center")
+            if fill:
+                cell.fill = fill
+
+    # Total final
+    total_row = len(agrupacion) + 3
+    ws.cell(row=total_row, column=1, value="TOTAL").font = Font(bold=True)
+    total_cell = ws.cell(row=total_row, column=4, value=sum(i.get('cantidad', 0) for i in agrupacion))
+    total_cell.font = Font(bold=True)
+    total_cell.alignment = center
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    nombre_archivo = f"estadisticas_sedes_{focalizacion}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    response = HttpResponse(
+        output.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
+    return response
+
 
 # ===== APIs PARA GESTIÓN DE LISTADOS FOCALIZACIÓN =====
 # NOTA: Las APIs de creación, edición, visualización y eliminación individual de registros

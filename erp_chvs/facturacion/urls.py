@@ -11,6 +11,9 @@ urlpatterns = [
     # Vista para gestión de listados focalización
     path('lista-listados/', views.lista_listados, name='lista_listados'),
 
+    # Descarga de estadísticas por sede del último procesamiento
+    path('descargar-estadisticas-sedes/', views.descargar_estadisticas_sedes_excel, name='descargar_estadisticas_sedes'),
+
     # Nueva vista para la interfaz de generación de reportes de asistencia
     path('reportes-asistencia/', views.reportes_asistencia_view, name='reportes_asistencia'),
     path('generar-asistencia/<int:programa_id>/<str:sede_cod_interprise>/<str:mes>/<str:focalizacion>/', views.generar_pdf_asistencia, name='generar_pdf_asistencia'),
