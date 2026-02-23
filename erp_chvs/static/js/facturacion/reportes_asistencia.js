@@ -35,9 +35,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const calCountLabel = document.getElementById('cal-count-label');
     const calBtnClear   = document.getElementById('cal-btn-clear');
 
-    let calActiveTarget = null;
-    let calActiveBtn    = null;
-    let calSelectedDays = new Set();
+    let calActiveTarget        = null;
+    let calActiveBtn           = null;
+    let calModoPrediligenciada = false;
+    let calSelectedDays        = new Set();
     const AÑO_ACTUAL    = new Date().getFullYear();
 
     function diasEnMes(mesNum, año) {
@@ -177,9 +178,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function closeCalendar() {
-        calPopover.style.display = 'none';
-        calActiveTarget = null;
-        calActiveBtn    = null;
+        calPopover.style.display   = 'none';
+        calActiveTarget            = null;
+        calActiveBtn               = null;
+        calModoPrediligenciada     = false;
     }
 
     // Clic en botón picker
@@ -211,7 +213,13 @@ document.addEventListener('DOMContentLoaded', function () {
     // Si cambia el mes mientras el popover está abierto, refrescar calendario
     document.addEventListener('change', function (e) {
         if (!e.target.id || calPopover.style.display !== 'block') return;
+        // Modo normal (Tab 1): refrescar según data-mes-target del botón activo
         if (calActiveBtn && e.target.id === calActiveBtn.dataset.mesTarget) {
+            calSelectedDays.clear();
+            renderCalendar(e.target.value, AÑO_ACTUAL);
+        }
+        // Modo prediligenciada (Tab 2): refrescar al cambiar pred-mes
+        if (calModoPrediligenciada && e.target.id === 'pred-mes') {
             calSelectedDays.clear();
             renderCalendar(e.target.value, AÑO_ACTUAL);
         }
@@ -360,24 +368,74 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        document.getElementById('btn-agregar-dia').addEventListener('click', function () {
-            const diaNumero = prompt('Ingrese el número del día (1-31):');
-            if (!diaNumero || isNaN(diaNumero) || diaNumero < 1 || diaNumero > 31) {
-                alert('Día inválido');
-                return;
-            }
+        // Botón "Agregar Día": abre el calendario en modo prediligenciada
+        const btnAgregarDia = document.getElementById('btn-agregar-dia');
+        if (btnAgregarDia) {
+            btnAgregarDia.addEventListener('click', function (e) {
+                e.stopPropagation();
 
-            const dia = parseInt(diaNumero);
-            if (configuracionDias.find(d => d.dia === dia)) {
-                alert('Este día ya está configurado');
-                return;
-            }
+                // Toggle: si el popover ya está abierto en modo prediligenciada, cerrarlo
+                if (calPopover.style.display === 'block' && calModoPrediligenciada) {
+                    closeCalendar();
+                    return;
+                }
 
-            configuracionDias.push({ dia, total: 0, preescolar: 0, primaria_1_3: 0, primaria_4_5: 0, secundaria: 0, media: 0 });
-            configuracionDias.sort((a, b) => a.dia - b.dia);
-            actualizarTablaDias();
-            actualizarTotales();
-        });
+                // Abrir calendario en modo prediligenciada (sin hidden input ni botón activo)
+                calModoPrediligenciada = true;
+                calActiveBtn           = null;
+                calActiveTarget        = null;
+                calSelectedDays        = new Set();
+
+                const mesNombre = document.getElementById('pred-mes')?.value || 'ENERO';
+                renderCalendar(mesNombre, AÑO_ACTUAL);
+
+                // Posicionar el popover relativo al botón (misma lógica que openCalendar)
+                calPopover.style.visibility = 'hidden';
+                calPopover.style.display    = 'block';
+
+                const rect = this.getBoundingClientRect();
+                const popW = calPopover.offsetWidth  || 280;
+                const popH = calPopover.offsetHeight || 300;
+                const vpW  = window.innerWidth;
+                const vpH  = window.innerHeight;
+
+                let left = rect.left;
+                if (left + popW > vpW - 8) left = vpW - popW - 8;
+                if (left < 8) left = 8;
+
+                let top;
+                if (rect.bottom + 6 + popH <= vpH) {
+                    top = rect.bottom + 6;
+                } else {
+                    top = Math.max(8, rect.top - popH - 6);
+                }
+
+                calPopover.style.left       = left + 'px';
+                calPopover.style.top        = top  + 'px';
+                calPopover.style.visibility = 'visible';
+            });
+        }
+
+        // Botón Aplicar del calendario: agrega los días seleccionados a configuracionDias
+        const calBtnAplicar = document.getElementById('cal-btn-aplicar');
+        if (calBtnAplicar) {
+            calBtnAplicar.addEventListener('click', function () {
+                if (calModoPrediligenciada && calSelectedDays.size > 0) {
+                    calSelectedDays.forEach(dia => {
+                        if (!configuracionDias.find(d => d.dia === dia)) {
+                            configuracionDias.push({
+                                dia, total: 0, preescolar: 0, primaria_1_3: 0,
+                                primaria_4_5: 0, secundaria: 0, media: 0
+                            });
+                        }
+                    });
+                    configuracionDias.sort((a, b) => a.dia - b.dia);
+                    actualizarTablaDias();
+                    actualizarTotales();
+                }
+                closeCalendar();
+            });
+        }
 
         document.getElementById('btn-generar-prediligenciado').addEventListener('click', async function () {
             if (configuracionDias.length === 0) {

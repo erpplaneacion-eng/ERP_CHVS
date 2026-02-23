@@ -842,11 +842,11 @@ class AsistenciaPDFGenerator:
                             centro_y = y_fila + self.alto_fila/2
                             radio = 1.5  # Radio pequeño para el punto
 
-                            c.setStrokeColorRGB(0.85, 0.85, 0.85)  # Color del borde igual al relleno
-                            c.setFillColorRGB(0.85, 0.85, 0.85)  # Color gris muy claro y tenue
+                            c.setStrokeColor(colors.Color(0.6, 0.6, 0.6, alpha=0.18))
+                            c.setFillColor(colors.Color(0.6, 0.6, 0.6, alpha=0.18))
                             c.circle(centro_x, centro_y, radio, fill=1)
-                            c.setStrokeColorRGB(0, 0, 0)  # Restaurar color de borde negro
-                            c.setFillColorRGB(0, 0, 0)  # Restaurar color de relleno negro
+                            c.setStrokeColor(colors.black)
+                            c.setFillColor(colors.black)
 
                     c.rect(x_col13 + num_dias * casilla_ancho, y_fila, ancho_total_dias, self.alto_fila)
 

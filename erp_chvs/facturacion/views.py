@@ -1467,7 +1467,7 @@ def generar_pdf_asistencia_prediligenciada(request):
             dane_ie = 'DANE no encontrado'
             es_industrializado = False
 
-        ano = estudiantes_ordenados[0].ano if estudiantes_ordenados else datetime.now().year
+        ano = datetime.now().year
 
         # Mapear complemento a código
         if es_industrializado:

@@ -2033,6 +2033,18 @@
 
 .cal-footer .btn-cal-clear:hover { background: #dc3545; color: #fff; }
 
+.cal-footer .btn-cal-aplicar {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 5px;
+    border: 1px solid #28a745;
+    background: #28a745;
+    color: #fff;
+    cursor: pointer;
+}
+
+.cal-footer .btn-cal-aplicar:hover { background: #218838; border-color: #218838; }
+
 .btn-dias-picker {
     font-size: 12px;
     white-space: nowrap;
