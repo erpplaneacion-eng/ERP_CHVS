@@ -149,7 +149,12 @@
                 <tr>
                     <td><strong>{{ item.sede }}</strong></td>
                     <td>{{ item.grado_base }}</td>
-                    <td><span class="badge badge-info">{{ item.focalizacion }}</span></td>
+                    <td>
+                        <span class="badge badge-info">{{ item.focalizacion }}</span>
+                        {% if item.ultima_subida %}
+                        <br><small class="text-muted">{{ item.ultima_subida|date:"d/m/Y" }}</small>
+                        {% endif %}
+                    </td>
                     <td>{{ item.programa__programa }}</td>
                     <td style="text-align: center;">
                         <span class="badge badge-success" style="font-size: 14px;">{{ item.total_raciones }}</span>

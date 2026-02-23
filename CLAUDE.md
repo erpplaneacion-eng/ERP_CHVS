@@ -132,12 +132,14 @@ PrincipalDepartamento → PrincipalMunicipio → InstitucionesEducativas → Sed
 
 TablaMenus
     ├─→ TablaPreparaciones (shared across levels)
-    │       └─→ TablaPreparacionIngredientes (M2M + optional gramaje field)
-    │               └─→ TablaAlimentos2018Icbf (via codigo_icbf)
+    │       └─→ TablaPreparacionIngredientes (M2M: gramaje + id_componente nullable)
+    │               └─→ TablaAlimentos2018Icbf (via id_ingrediente_siesa)
     └─→ TablaAnalisisNutricionalMenu (ONE per educational level)
             └─→ TablaIngredientesPorNivel (weights + nutrients PER LEVEL)
-                    Fields: peso_neto, peso_bruto, calorias, proteina, grasa,
-                            cho, calcio, hierro, sodio
+                    Fields: peso_neto, peso_bruto, parte_comestible, calorias,
+                            proteina, grasa, cho, calcio, hierro, sodio
+                    FK: id_preparacion_ingrediente → TablaPreparacionIngredientes
+                        (CASCADE; orphaned rows are deleted on migration 0029)
 
 ModalidadesDeConsumo
     ├─→ RequerimientoSemanal (GruposAlimentos × frecuencia/week)
@@ -151,7 +153,9 @@ TablaRequerimientosNutricionales (level + modality → nutritional targets)
     unique_together: [id_nivel_escolar_uapa, id_modalidad]
 ```
 
-**Critical**: Primary ingredient weights (per educational level) are stored in `TablaIngredientesPorNivel`. `TablaPreparacionIngredientes` also has a nullable `gramaje` field (added in migration 0016) for a base reference weight, but the authoritative per-level weights live in `TablaIngredientesPorNivel`.
+**Critical**: Primary ingredient weights (per educational level) are stored in `TablaIngredientesPorNivel`. `TablaPreparacionIngredientes` also has a nullable `gramaje` field (migration 0016) for a base reference weight and a nullable `id_componente` FK to `ComponentesAlimentos` (migration 0030) that overrides the ingredient's own component. Authoritative per-level weights always live in `TablaIngredientesPorNivel`.
+
+`TablaIngredientesPorNivel.id_preparacion_ingrediente` (migration 0029, non-nullable) is the direct FK to the M2M row — use it for efficient lookups instead of matching via `(id_preparacion, codigo_icbf)`. Rows without a matching `TablaPreparacionIngredientes` record were deleted during migration.
 
 **Level names** (database format): `prescolar`, `primaria_1_2_3`, `primaria_4_5`, `secundaria`, `media_ciclo_complementario`
 
@@ -290,7 +294,7 @@ Key files: `nutricion/services/analisis_service.py`, `nutricion/models.py` (`Tab
 Weekly validation (component frequency): `nutricion/views/semanal.py`
 - `GET /nutricion/api/validar-semana/?menu_ids=1,2,3&modalidad_id=5`
 - `GET /nutricion/api/requerimientos-modalidad/?modalidad_id=5`
-- Component lookup: checks `TablaPreparaciones.id_componente` first, then falls back to `TablaIngredientesSiesa.id_componente`
+- Component lookup (`_resolver_grupo_preparacion`): Priority 1 → `TablaPreparaciones.id_componente.id_grupo_alimentos`; Priority 2 → iterate `prep.ingredientes.all()` and return first `TablaAlimentos2018Icbf.id_componente.id_grupo_alimentos`
 
 ## Important Workflows
 

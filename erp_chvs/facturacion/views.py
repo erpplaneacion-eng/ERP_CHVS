@@ -503,7 +503,7 @@ def lista_listados(request):
     focalizacion_filter = request.GET.get('focalizacion', '').strip()
 
     # Query base con agregación
-    from django.db.models import Count, Func, CharField
+    from django.db.models import Count, Max, Func, CharField
 
     # Función personalizada para extraer el grado base usando regex de PostgreSQL
     # Ejemplo: "10-1001" -> "10", "-1-1" -> "-1"
@@ -518,7 +518,8 @@ def lista_listados(request):
     listados_grouped = ListadosFocalizacion.objects.annotate(
         grado_base=ExtractGradoBase('grado_grupos')
     ).values('sede', 'grado_base', 'programa__programa', 'focalizacion').annotate(
-        total_raciones=Count('id_listados')
+        total_raciones=Count('id_listados'),
+        ultima_subida=Max('fecha_actualizacion'),
     ).order_by('sede', 'grado_base')
 
     # Aplicar filtros a la consulta agrupada
