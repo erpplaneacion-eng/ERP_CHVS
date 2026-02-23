@@ -3,250 +3,6 @@
 
 {% block title %}Reportes de Asistencia{% endblock %}
 
-{% block extra_css %}
-<style>
-/* Estilos para las pestañas */
-.tabs-container {
-    margin-bottom: 20px;
-}
-
-.tabs-nav {
-    display: flex;
-    gap: 10px;
-    border-bottom: 2px solid #dee2e6;
-    margin-bottom: 20px;
-}
-
-.tab-button {
-    padding: 12px 24px;
-    background: none;
-    border: none;
-    border-bottom: 3px solid transparent;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 500;
-    color: #6c757d;
-    transition: all 0.3s ease;
-}
-
-.tab-button:hover {
-    color: #28a745;
-    background-color: #f8f9fa;
-}
-
-.tab-button.active {
-    color: #28a745;
-    border-bottom-color: #28a745;
-    font-weight: 600;
-}
-
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-.bulk-generation-container {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border: 2px solid #28a745;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 25px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* Estilos para la configuración prediligenciada */
-.config-prediligenciada-container {
-    background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
-    border: 2px solid #ff9800;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 25px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.info-estudiantes {
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    border-left: 4px solid #2196F3;
-}
-
-.info-estudiantes h4 {
-    color: #2196F3;
-    margin-bottom: 10px;
-}
-
-.info-niveles {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 10px;
-    margin-top: 10px;
-}
-
-.nivel-badge {
-    background: #e3f2fd;
-    padding: 8px 12px;
-    border-radius: 5px;
-    text-align: center;
-    font-weight: 600;
-}
-
-.tabla-dias-config {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-    background: white;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.tabla-dias-config th {
-    background: #ff9800;
-    color: white;
-    padding: 12px;
-    font-weight: 600;
-    text-align: center;
-}
-
-.tabla-dias-config td {
-    padding: 10px;
-    border-bottom: 1px solid #e0e0e0;
-    text-align: center;
-}
-
-.tabla-dias-config tr:hover {
-    background: #fff3e0;
-}
-
-.tabla-dias-config input[type="number"] {
-    width: 80px;
-    padding: 5px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    text-align: center;
-}
-
-.tabla-dias-config input[type="number"]:focus {
-    border-color: #ff9800;
-    outline: none;
-}
-
-.btn-agregar-dia {
-    background: #4caf50;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: 600;
-    margin-right: 10px;
-}
-
-.btn-agregar-dia:hover {
-    background: #45a049;
-}
-
-.btn-eliminar-dia {
-    background: #f44336;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-}
-
-.btn-eliminar-dia:hover {
-    background: #d32f2f;
-}
-
-.total-section {
-    background: #e8f5e9;
-    padding: 15px;
-    border-radius: 8px;
-    margin-top: 15px;
-    border-left: 4px solid #4caf50;
-}
-
-.total-section h4 {
-    color: #4caf50;
-    margin: 0;
-}
-
-.bulk-generation-container {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border: 2px solid #28a745;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 25px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.bulk-header h3 {
-    color: #28a745;
-    margin-bottom: 8px;
-}
-
-.bulk-header p {
-    color: #6c757d;
-    margin-bottom: 15px;
-}
-
-.bulk-form {
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
-    flex-wrap: wrap;
-}
-
-.bulk-field {
-    flex: 1;
-    min-width: 200px;
-}
-
-.bulk-field label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 5px;
-    color: #495057;
-}
-
-.bulk-field .form-select {
-    border: 2px solid #28a745;
-    border-radius: 6px;
-}
-
-.bulk-field .btn {
-    padding: 10px 20px;
-    font-weight: 600;
-}
-
-.bulk-actions {
-    display: flex;
-    align-items: flex-end;
-}
-
-.bulk-dias-field .form-text {
-    margin-top: 6px;
-}
-
-@media (max-width: 768px) {
-    .bulk-form {
-        flex-direction: column;
-    }
-    
-    .bulk-field {
-        min-width: 100%;
-    }
-}
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="sedes-container">
     <div class="page-header">
@@ -275,6 +31,7 @@
 
     <!-- TAB 1: Generación Normal -->
     <div id="tab-normal" class="tab-content active">
+
         <!-- Filtros -->
         <div class="filters-container">
             <form method="get" class="filters-form">
@@ -284,7 +41,10 @@
                         <select name="programa" id="programa" class="form-select">
                             <option value="">-- Seleccione un programa --</option>
                             {% for prog in programas %}
-                            <option value="{{ prog.id }}" {% if filtros_aplicados.programa.id == prog.id %}selected{% endif %}>{{ prog.programa }} ({{ prog.municipio.nombre_municipio }})</option>
+                            <option value="{{ prog.id }}"
+                                {% if filtros_aplicados.programa.id == prog.id %}selected{% endif %}>
+                                {{ prog.programa }} ({{ prog.municipio.nombre_municipio }})
+                            </option>
                             {% endfor %}
                         </select>
                     </div>
@@ -300,105 +60,120 @@
             </form>
         </div>
 
-    {% if filtros_aplicados.programa %}
-    <!-- Opción de generación masiva -->
-    <div class="bulk-generation-container">
-        <div class="bulk-header">
-            <h3><i class="fas fa-download"></i> Generación Masiva por Programa</h3>
-            <p>Generar reportes para todas las sedes de <strong>{{ filtros_aplicados.programa.programa }}</strong> con los mismos parámetros</p>
-        </div>
-        <div class="bulk-controls">
-            <div class="bulk-form">
-                <div class="bulk-field">
-                    <label for="bulk-mes">Mes para todas las sedes:</label>
-                    <select id="bulk-mes" class="form-select">
-                        {% for mes in meses_atencion %}
-                            <option value="{{ mes }}">{{ mes|title }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="bulk-field">
-                    <label for="bulk-focalizacion">Focalización para todas las sedes:</label>
-                    <select id="bulk-focalizacion" class="form-select">
-                        {% for focalizacion in focalizaciones_disponibles %}
-                            <option value="{{ focalizacion }}">{{ focalizacion }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="bulk-field bulk-dias-field">
-                    <label for="bulk-dias">Días de Atención (Opcional):</label>
-                    <input type="text" id="bulk-dias" class="form-control" placeholder="Ej: 1,2,3,10,11">
-                    <small class="form-text text-muted">Separados por comas. Si se deja vacío, se usarán los días hábiles del mes.</small>
-                </div>
-                <div class="bulk-field bulk-actions">
-                    <button type="button" class="btn btn-success btn-lg" id="btn-generar-masivo" 
-                            data-programa-id="{{ filtros_aplicados.programa.id }}">
-                        <i class="fas fa-archive"></i> Generar ZIP Masivo
-                    </button>
+        {% if filtros_aplicados.programa %}
+
+        <!-- Generación masiva -->
+        <div class="bulk-generation-container">
+            <div class="bulk-header">
+                <h3><i class="fas fa-download"></i> Generación Masiva por Programa</h3>
+                <p>Generar reportes para todas las sedes de <strong>{{ filtros_aplicados.programa.programa }}</strong> con los mismos parámetros</p>
+            </div>
+            <div class="bulk-controls">
+                <div class="bulk-form">
+                    <div class="bulk-field">
+                        <label for="bulk-mes">Mes para todas las sedes:</label>
+                        <select id="bulk-mes" class="form-select">
+                            {% for mes in meses_atencion %}
+                                <option value="{{ mes }}">{{ mes|title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="bulk-field">
+                        <label for="bulk-focalizacion">Focalización para todas las sedes:</label>
+                        <select id="bulk-focalizacion" class="form-select">
+                            {% for focalizacion in focalizaciones_disponibles %}
+                                <option value="{{ focalizacion }}">{{ focalizacion }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="bulk-field bulk-dias-field">
+                        <label>Días de Atención (Opcional):</label>
+                        <input type="hidden" id="bulk-dias" value="">
+                        <button type="button" class="btn btn-dias-picker w-100"
+                                data-target="bulk-dias"
+                                data-mes-target="bulk-mes">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            <span class="dias-label">Sin días (usa hábiles del mes)</span>
+                        </button>
+                        <small class="form-text text-muted">Si no seleccionas días, se usan los días hábiles del mes.</small>
+                    </div>
+                    <div class="bulk-field bulk-actions">
+                        <button type="button" class="btn btn-success btn-lg" id="btn-generar-masivo"
+                                data-programa-id="{{ filtros_aplicados.programa.id }}"
+                                data-programa-nombre="{{ filtros_aplicados.programa.programa|escapejs }}">
+                            <i class="fas fa-archive"></i> Generar ZIP Masivo
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="table-container">
-        <div class="section-header">
-            <h3>Sedes Educativas en: <strong>{{ filtros_aplicados.programa.programa }}</strong></h3>
-            <p><small>O generar reportes individualmente por sede:</small></p>
+        <!-- Tabla de sedes -->
+        <div class="table-container">
+            <div class="section-header">
+                <h3>Sedes Educativas en: <strong>{{ filtros_aplicados.programa.programa }}</strong></h3>
+                <p><small>O generar reportes individualmente por sede:</small></p>
+            </div>
+            <table class="data-table" id="sedesTable">
+                <thead>
+                    <tr>
+                        <th>Sede Educativa</th>
+                        <th>Mes de Atención</th>
+                        <th>Focalización</th>
+                        <th>Días de Atención (Opcional)</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sede in sedes %}
+                    <tr id="sede-row-{{ sede.cod_interprise }}">
+                        <td>
+                            <strong>{{ sede.nombre_sede_educativa }}</strong><br>
+                            <small class="text-muted">IE: {{ sede.codigo_ie.nombre_institucion }}</small>
+                        </td>
+                        <td>
+                            <select class="form-select form-select-sm" id="mes-{{ sede.cod_interprise }}">
+                                {% for mes in meses_atencion %}
+                                    <option value="{{ mes }}">{{ mes|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>
+                            <select class="form-select form-select-sm" id="focalizacion-{{ sede.cod_interprise }}">
+                                {% for focalizacion in focalizaciones_disponibles %}
+                                    <option value="{{ focalizacion }}">{{ focalizacion }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>
+                            <input type="hidden" id="dias-{{ sede.cod_interprise }}" value="">
+                            <button type="button" class="btn btn-dias-picker btn-sm w-100"
+                                    data-target="dias-{{ sede.cod_interprise }}"
+                                    data-mes-target="mes-{{ sede.cod_interprise }}">
+                                <i class="fas fa-calendar-alt me-1"></i>
+                                <span class="dias-label">Sin días</span>
+                            </button>
+                        </td>
+                        <td class="text-center">
+                            <button type="button"
+                                    class="btn btn-success btn-generar-asistencia"
+                                    data-sede-cod="{{ sede.cod_interprise }}"
+                                    data-programa-id="{{ filtros_aplicados.programa.id }}"
+                                    title="Generar formato de asistencia para esta sede">
+                                <i class="fas fa-download me-1"></i> Generar Reporte
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">No se encontraron sedes para este programa.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-        <table class="data-table" id="sedesTable">
-            <thead>
-                <tr>
-                    <th>Sede Educativa</th>
-                    <th>Mes de Atención</th>
-                    <th>Focalización</th>
-                    <th>Días de Atención (Opcional)</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody>
-                            {% for sede in sedes %}
-                            <tr id="sede-row-{{ sede.cod_interprise }}">
-                                <td>
-                                    <strong>{{ sede.nombre_sede_educativa }}</strong><br>
-                                    <small class="text-muted">IE: {{ sede.codigo_ie.nombre_institucion }}</small>
-                                </td>
-                                <td>
-                                    <select class="form-select form-select-sm" id="mes-{{ sede.cod_interprise }}">
-                                        {% for mes in meses_atencion %}
-                                            <option value="{{ mes }}">{{ mes|title }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </td>
-                                <td>
-                                    <select class="form-select form-select-sm" id="focalizacion-{{ sede.cod_interprise }}">
-                                        {% for focalizacion in focalizaciones_disponibles %}
-                                            <option value="{{ focalizacion }}">{{ focalizacion }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </td>
-                                <td>
-                                    <input type="text" id="dias-{{ sede.cod_interprise }}" class="form-control form-control-sm" placeholder="Ej: 1,2,3,10,11">
-                                </td>
-                                <td class="text-center">
-                                    <button 
-                                        type="button" 
-                                        class="btn btn-success btn-generar-asistencia"
-                                        data-sede-cod="{{ sede.cod_interprise }}"
-                                        data-programa-id="{{ filtros_aplicados.programa.id }}"
-                                        title="Generar formato de asistencia para esta sede">
-                                        <i class="fas fa-download me-1"></i> Generar Reporte
-                                    </button>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="5" class="text-center">No se encontraron sedes para este programa.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-    {% endif %}
+
+        {% endif %}
     </div>
     <!-- FIN TAB 1 -->
 
@@ -409,23 +184,25 @@
             <p>Configure las asistencias que desea marcar automáticamente en el PDF</p>
 
             <!-- Filtros básicos -->
-            <div class="filter-row" style="display: flex; gap: 15px; margin-bottom: 20px;">
-                <div class="filter-group" style="flex: 1;">
+            <div class="filter-row" style="display:flex;gap:15px;margin-bottom:20px;">
+                <div class="filter-group" style="flex:1;">
                     <label for="pred-programa"><strong>Programa:</strong></label>
                     <select id="pred-programa" class="form-select">
                         <option value="">-- Seleccione --</option>
                         {% for prog in programas %}
-                        <option value="{{ prog.id }}" data-municipio="{{ prog.municipio.nombre_municipio }}">{{ prog.programa }} ({{ prog.municipio.nombre_municipio }})</option>
+                        <option value="{{ prog.id }}" data-municipio="{{ prog.municipio.nombre_municipio }}">
+                            {{ prog.programa }} ({{ prog.municipio.nombre_municipio }})
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="filter-group" style="flex: 1;">
+                <div class="filter-group" style="flex:1;">
                     <label for="pred-sede"><strong>Sede:</strong></label>
                     <select id="pred-sede" class="form-select" disabled>
                         <option value="">-- Seleccione programa primero --</option>
                     </select>
                 </div>
-                <div class="filter-group" style="flex: 1;">
+                <div class="filter-group" style="flex:1;">
                     <label for="pred-focalizacion"><strong>Focalización:</strong></label>
                     <select id="pred-focalizacion" class="form-select" disabled>
                         <option value="">-- Seleccione sede primero --</option>
@@ -433,8 +210,8 @@
                 </div>
             </div>
 
-            <div class="filter-row" style="display: flex; gap: 15px; margin-bottom: 20px;">
-                <div class="filter-group" style="flex: 1;">
+            <div class="filter-row" style="display:flex;gap:15px;margin-bottom:20px;">
+                <div class="filter-group" style="flex:1;">
                     <label for="pred-mes"><strong>Mes:</strong></label>
                     <select id="pred-mes" class="form-select">
                         {% for mes in meses_atencion %}
@@ -442,7 +219,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="filter-group" style="flex: 1;">
+                <div class="filter-group" style="flex:1;">
                     <label for="pred-complemento"><strong>Complemento:</strong></label>
                     <select id="pred-complemento" class="form-select" disabled>
                         <option value="">-- Seleccione focalización primero --</option>
@@ -452,74 +229,55 @@
                         <option value="Refuerzo">Refuerzo</option>
                     </select>
                 </div>
-                <div class="filter-group" style="flex: 1; display: flex; align-items: flex-end;">
-                    <button type="button" id="btn-cargar-estudiantes" class="btn btn-primary" style="width: 100%;" disabled>
+                <div class="filter-group" style="flex:1;display:flex;align-items:flex-end;">
+                    <button type="button" id="btn-cargar-estudiantes" class="btn btn-primary" style="width:100%;" disabled>
                         <i class="fas fa-sync"></i> Cargar Estudiantes
                     </button>
                 </div>
             </div>
 
             <!-- Información de estudiantes -->
-            <div id="info-estudiantes-container" style="display: none;">
+            <div id="info-estudiantes-container" style="display:none;">
                 <div class="info-estudiantes">
                     <h4><i class="fas fa-users"></i> Estudiantes Disponibles</h4>
                     <div class="info-niveles">
-                        <div class="nivel-badge">
-                            <div>Preescolar</div>
-                            <strong id="count-preescolar">0</strong>
-                        </div>
-                        <div class="nivel-badge">
-                            <div>Primaria 1-3</div>
-                            <strong id="count-primaria-1-3">0</strong>
-                        </div>
-                        <div class="nivel-badge">
-                            <div>Primaria 4-5</div>
-                            <strong id="count-primaria-4-5">0</strong>
-                        </div>
-                        <div class="nivel-badge">
-                            <div>Secundaria</div>
-                            <strong id="count-secundaria">0</strong>
-                        </div>
-                        <div class="nivel-badge">
-                            <div>Media</div>
-                            <strong id="count-media">0</strong>
-                        </div>
-                        <div class="nivel-badge" style="background: #c8e6c9;">
-                            <div>TOTAL</div>
-                            <strong id="count-total">0</strong>
-                        </div>
+                        <div class="nivel-badge"><div>Preescolar</div><strong id="count-preescolar">0</strong></div>
+                        <div class="nivel-badge"><div>Primaria 1-3</div><strong id="count-primaria-1-3">0</strong></div>
+                        <div class="nivel-badge"><div>Primaria 4-5</div><strong id="count-primaria-4-5">0</strong></div>
+                        <div class="nivel-badge"><div>Secundaria</div><strong id="count-secundaria">0</strong></div>
+                        <div class="nivel-badge"><div>Media</div><strong id="count-media">0</strong></div>
+                        <div class="nivel-badge" style="background:#c8e6c9;"><div>TOTAL</div><strong id="count-total">0</strong></div>
                     </div>
                 </div>
 
-                <!-- Configuración de días -->
-                <div style="margin-top: 20px;">
+                <!-- Configuración de días (Tab 2) -->
+                <div style="margin-top:20px;">
                     <h4><i class="fas fa-calendar-alt"></i> Configuración de Días</h4>
-                    <div style="margin-bottom: 15px;">
+                    <div style="margin-bottom:15px;">
                         <button type="button" id="btn-agregar-dia" class="btn-agregar-dia">
                             <i class="fas fa-plus"></i> Agregar Día
                         </button>
-                        <small style="color: #666; margin-left: 10px;">
+                        <small style="color:#666;margin-left:10px;">
                             <i class="fas fa-info-circle"></i> Configure cuántos estudiantes deben marcar asistencia por día y nivel
                         </small>
                     </div>
-
-                    <div style="overflow-x: auto;">
+                    <div style="overflow-x:auto;">
                         <table class="tabla-dias-config">
                             <thead>
                                 <tr>
-                                    <th style="width: 70px;">Día</th>
-                                    <th style="width: 90px;">Total</th>
+                                    <th style="width:70px;">Día</th>
+                                    <th style="width:90px;">Total</th>
                                     <th>Preescolar</th>
                                     <th>Prim 1-3</th>
                                     <th>Prim 4-5</th>
                                     <th>Secundaria</th>
                                     <th>Media</th>
-                                    <th style="width: 90px;">Acciones</th>
+                                    <th style="width:90px;">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="tabla-dias-body">
                                 <tr>
-                                    <td colspan="8" style="text-align: center; color: #999; padding: 30px;">
+                                    <td colspan="8" style="text-align:center;color:#999;padding:30px;">
                                         No hay días configurados. Haga clic en "Agregar Día" para empezar.
                                     </td>
                                 </tr>
@@ -531,21 +289,20 @@
                 <!-- Totales -->
                 <div class="total-section">
                     <h4><i class="fas fa-calculator"></i> Resumen Total del Mes</h4>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-top: 10px;">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:10px;">
                         <div><strong>Preescolar:</strong> <span id="total-preescolar">0</span></div>
                         <div><strong>Prim 1-3:</strong> <span id="total-primaria-1-3">0</span></div>
                         <div><strong>Prim 4-5:</strong> <span id="total-primaria-4-5">0</span></div>
                         <div><strong>Secundaria:</strong> <span id="total-secundaria">0</span></div>
                         <div><strong>Media:</strong> <span id="total-media">0</span></div>
-                        <div style="background: white; padding: 10px; border-radius: 5px; grid-column: span 2;">
-                            <strong>TOTAL:</strong> <span id="total-general" style="font-size: 20px; color: #4caf50;">0</span>
+                        <div style="background:white;padding:10px;border-radius:5px;grid-column:span 2;">
+                            <strong>TOTAL:</strong> <span id="total-general" style="font-size:20px;color:#4caf50;">0</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Botón para generar -->
-                <div style="margin-top: 25px; text-align: center;">
-                    <button type="button" id="btn-generar-prediligenciado" class="btn btn-success btn-lg" style="min-width: 250px;" disabled>
+                <div style="margin-top:25px;text-align:center;">
+                    <button type="button" id="btn-generar-prediligenciado" class="btn btn-success btn-lg" style="min-width:250px;" disabled>
                         <i class="fas fa-file-pdf"></i> Generar PDF Prediligenciado
                     </button>
                 </div>
@@ -555,604 +312,23 @@
     <!-- FIN TAB 2 -->
 
 </div>
+
+<!-- Popover de calendario compartido -->
+<div id="dias-calendar-popover" style="display:none;" role="dialog" aria-label="Selector de días">
+    <div class="cal-header">
+        <span id="cal-month-label">MES AÑO</span>
+    </div>
+    <div class="cal-grid" id="cal-grid-body"></div>
+    <div class="cal-footer">
+        <button type="button" class="btn-cal-clear" id="cal-btn-clear">
+            <i class="fas fa-trash-alt me-1"></i>Limpiar
+        </button>
+        <span class="cal-count" id="cal-count-label">0 días sel.</span>
+    </div>
+</div>
+
 {% endblock %}
 
-{% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-
-    // ===== GESTIÓN DE PESTAÑAS =====
-    const tabButtons = document.querySelectorAll('.tab-button');
-    const tabContents = document.querySelectorAll('.tab-content');
-
-    tabButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const targetTab = this.dataset.tab;
-
-            // Desactivar todas las pestañas
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
-
-            // Activar la pestaña seleccionada
-            this.classList.add('active');
-            document.getElementById(targetTab).classList.add('active');
-        });
-    });
-
-    // ===== TAB 2: GENERACIÓN PREDILIGENCIADA =====
-    let conteoEstudiantes = {
-        total: 0,
-        preescolar: 0,
-        primaria_1_3: 0,
-        primaria_4_5: 0,
-        secundaria: 0,
-        media: 0
-    };
-
-    let configuracionDias = []; // Array de { dia, total, preescolar, primaria_1_3, primaria_4_5, secundaria, media }
-
-    // Cascada de selectores
-    const predPrograma = document.getElementById('pred-programa');
-    const predSede = document.getElementById('pred-sede');
-    const predFocalizacion = document.getElementById('pred-focalizacion');
-    const predComplemento = document.getElementById('pred-complemento');
-    const btnCargarEstudiantes = document.getElementById('btn-cargar-estudiantes');
-
-    // Al cambiar programa, cargar sedes con sus códigos interprise
-    predPrograma.addEventListener('change', async function() {
-        const programaId = this.value;
-        predSede.disabled = !programaId;
-        predFocalizacion.disabled = true;
-        predComplemento.disabled = true;
-        btnCargarEstudiantes.disabled = true;
-
-        if (!programaId) {
-            predSede.innerHTML = '<option value="">-- Seleccione programa primero --</option>';
-            return;
-        }
-
-        // Obtener sedes del programa con sus códigos interprise
-        try {
-            const response = await fetch(`/facturacion/api/get-sedes-completas/?programa_id=${programaId}`);
-            const data = await response.json();
-
-            if (data.success && data.sedes && data.sedes.length > 0) {
-                predSede.innerHTML = '<option value="">-- Seleccione una sede --</option>';
-
-                data.sedes.forEach(sedeObj => {
-                    const option = document.createElement('option');
-                    option.value = sedeObj.nombre; // El nombre de la sede
-                    option.textContent = sedeObj.nombre;
-                    option.dataset.codInterprise = sedeObj.cod_interprise; // Guardamos el cod_interprise
-                    option.dataset.sedeNombre = sedeObj.nombre; // Guardamos el nombre
-                    predSede.appendChild(option);
-                });
-            } else {
-                predSede.innerHTML = '<option value="">No hay sedes disponibles</option>';
-            }
-        } catch (error) {
-            console.error('Error al cargar sedes:', error);
-            alert('Error al cargar sedes');
-        }
-    });
-
-    // Al cambiar sede, cargar focalizaciones
-    predSede.addEventListener('change', async function() {
-        const programaId = predPrograma.value;
-        const sedeNombre = this.value;
-        predFocalizacion.disabled = !sedeNombre;
-        predComplemento.disabled = true;
-        btnCargarEstudiantes.disabled = true;
-
-        if (!sedeNombre) {
-            predFocalizacion.innerHTML = '<option value="">-- Seleccione sede primero --</option>';
-            return;
-        }
-
-        // Obtener focalizaciones disponibles
-        try {
-            const response = await fetch(`/facturacion/api/get-focalizaciones-for-programa/?programa_id=${programaId}`);
-            const data = await response.json();
-
-            if (data.focalizaciones && data.focalizaciones.length > 0) {
-                predFocalizacion.innerHTML = '<option value="">-- Seleccione una focalización --</option>';
-                data.focalizaciones.forEach(foc => {
-                    const option = document.createElement('option');
-                    option.value = foc;
-                    option.textContent = foc;
-                    predFocalizacion.appendChild(option);
-                });
-            } else {
-                predFocalizacion.innerHTML = '<option value="">No hay focalizaciones disponibles</option>';
-            }
-        } catch (error) {
-            console.error('Error al cargar focalizaciones:', error);
-            alert('Error al cargar focalizaciones');
-        }
-    });
-
-    // Al cambiar focalización, habilitar complemento
-    predFocalizacion.addEventListener('change', function() {
-        predComplemento.disabled = !this.value;
-    });
-
-    // Al cambiar complemento, habilitar botón de cargar
-    predComplemento.addEventListener('change', function() {
-        btnCargarEstudiantes.disabled = !this.value;
-    });
-
-    // Cargar estudiantes por nivel
-    btnCargarEstudiantes.addEventListener('click', async function() {
-        const programaId = predPrograma.value;
-        const sedeNombre = predSede.value;
-        const focalizacion = predFocalizacion.value;
-        const complemento = predComplemento.value;
-
-        if (!programaId || !sedeNombre || !focalizacion || !complemento) {
-            alert('Complete todos los campos');
-            return;
-        }
-
-        const originalText = this.innerHTML;
-        this.disabled = true;
-        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Cargando...';
-
-        try {
-            const url = `/facturacion/api/conteo-estudiantes-por-nivel/?programa_id=${programaId}&sede_nombre=${encodeURIComponent(sedeNombre)}&focalizacion=${focalizacion}&complemento=${encodeURIComponent(complemento)}`;
-            const response = await fetch(url);
-            const data = await response.json();
-
-            if (data.success) {
-                conteoEstudiantes = {
-                    total: data.total,
-                    preescolar: data.por_nivel.preescolar,
-                    primaria_1_3: data.por_nivel.primaria_1_3,
-                    primaria_4_5: data.por_nivel.primaria_4_5,
-                    secundaria: data.por_nivel.secundaria,
-                    media: data.por_nivel.media
-                };
-
-                // Actualizar UI
-                document.getElementById('count-preescolar').textContent = conteoEstudiantes.preescolar;
-                document.getElementById('count-primaria-1-3').textContent = conteoEstudiantes.primaria_1_3;
-                document.getElementById('count-primaria-4-5').textContent = conteoEstudiantes.primaria_4_5;
-                document.getElementById('count-secundaria').textContent = conteoEstudiantes.secundaria;
-                document.getElementById('count-media').textContent = conteoEstudiantes.media;
-                document.getElementById('count-total').textContent = conteoEstudiantes.total;
-
-                // Mostrar sección
-                document.getElementById('info-estudiantes-container').style.display = 'block';
-
-                // Limpiar tabla de días
-                configuracionDias = [];
-                actualizarTablaDias();
-                actualizarTotales();
-            } else {
-                alert('Error: ' + data.error);
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Error al cargar estudiantes');
-        } finally {
-            this.disabled = false;
-            this.innerHTML = originalText;
-        }
-    });
-
-    // Agregar día
-    document.getElementById('btn-agregar-dia').addEventListener('click', function() {
-        const diaNumero = prompt('Ingrese el número del día (1-31):');
-        if (!diaNumero || isNaN(diaNumero) || diaNumero < 1 || diaNumero > 31) {
-            alert('Día inválido');
-            return;
-        }
-
-        const dia = parseInt(diaNumero);
-
-        // Verificar que no exista
-        if (configuracionDias.find(d => d.dia === dia)) {
-            alert('Este día ya está configurado');
-            return;
-        }
-
-        configuracionDias.push({
-            dia: dia,
-            total: 0,
-            preescolar: 0,
-            primaria_1_3: 0,
-            primaria_4_5: 0,
-            secundaria: 0,
-            media: 0
-        });
-
-        // Ordenar por día
-        configuracionDias.sort((a, b) => a.dia - b.dia);
-
-        actualizarTablaDias();
-        actualizarTotales();
-    });
-
-    function actualizarTablaDias() {
-        const tbody = document.getElementById('tabla-dias-body');
-
-        if (configuracionDias.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="8" style="text-align: center; color: #999; padding: 30px;">
-                        No hay días configurados. Haga clic en "Agregar Día" para empezar.
-                    </td>
-                </tr>
-            `;
-            document.getElementById('btn-generar-prediligenciado').disabled = true;
-            return;
-        }
-
-        tbody.innerHTML = '';
-
-        configuracionDias.forEach((config, index) => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><strong>${config.dia}</strong></td>
-                <td><strong id="total-dia-${index}">${config.total}</strong></td>
-                <td><input type="number" min="0" max="${conteoEstudiantes.preescolar}" value="${config.preescolar}" data-index="${index}" data-nivel="preescolar" class="input-nivel"></td>
-                <td><input type="number" min="0" max="${conteoEstudiantes.primaria_1_3}" value="${config.primaria_1_3}" data-index="${index}" data-nivel="primaria_1_3" class="input-nivel"></td>
-                <td><input type="number" min="0" max="${conteoEstudiantes.primaria_4_5}" value="${config.primaria_4_5}" data-index="${index}" data-nivel="primaria_4_5" class="input-nivel"></td>
-                <td><input type="number" min="0" max="${conteoEstudiantes.secundaria}" value="${config.secundaria}" data-index="${index}" data-nivel="secundaria" class="input-nivel"></td>
-                <td><input type="number" min="0" max="${conteoEstudiantes.media}" value="${config.media}" data-index="${index}" data-nivel="media" class="input-nivel"></td>
-                <td>
-                    <button type="button" class="btn-eliminar-dia" data-index="${index}">
-                        <i class="fas fa-trash"></i> Eliminar
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        // Eventos para inputs
-        document.querySelectorAll('.input-nivel').forEach(input => {
-            input.addEventListener('change', function() {
-                const index = parseInt(this.dataset.index);
-                const nivel = this.dataset.nivel;
-                let valor = parseInt(this.value) || 0;
-
-                // Validar límites
-                const max = conteoEstudiantes[nivel];
-                if (valor > max) {
-                    alert(`No puede exceder ${max} estudiantes de ${nivel}`);
-                    valor = max;
-                    this.value = max;
-                }
-
-                if (valor < 0) {
-                    valor = 0;
-                    this.value = 0;
-                }
-
-                configuracionDias[index][nivel] = valor;
-                configuracionDias[index].total =
-                    configuracionDias[index].preescolar +
-                    configuracionDias[index].primaria_1_3 +
-                    configuracionDias[index].primaria_4_5 +
-                    configuracionDias[index].secundaria +
-                    configuracionDias[index].media;
-
-                document.getElementById(`total-dia-${index}`).textContent = configuracionDias[index].total;
-                actualizarTotales();
-            });
-        });
-
-        // Eventos para eliminar
-        document.querySelectorAll('.btn-eliminar-dia').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const index = parseInt(this.dataset.index);
-                configuracionDias.splice(index, 1);
-                actualizarTablaDias();
-                actualizarTotales();
-            });
-        });
-
-        document.getElementById('btn-generar-prediligenciado').disabled = false;
-    }
-
-    function actualizarTotales() {
-        const totales = {
-            preescolar: 0,
-            primaria_1_3: 0,
-            primaria_4_5: 0,
-            secundaria: 0,
-            media: 0,
-            general: 0
-        };
-
-        configuracionDias.forEach(config => {
-            totales.preescolar += config.preescolar;
-            totales.primaria_1_3 += config.primaria_1_3;
-            totales.primaria_4_5 += config.primaria_4_5;
-            totales.secundaria += config.secundaria;
-            totales.media += config.media;
-            totales.general += config.total;
-        });
-
-        // Actualizar y validar cada nivel
-        const niveles = ['preescolar', 'primaria_1_3', 'primaria_4_5', 'secundaria', 'media'];
-        niveles.forEach(nivel => {
-            const elem = document.getElementById(`total-${nivel.replace(/_/g, '-')}`);
-            elem.textContent = totales[nivel];
-            elem.style.color = totales[nivel] > conteoEstudiantes[nivel] ? 'red' : '';
-        });
-
-        // Validar total general
-        const elemGeneral = document.getElementById('total-general');
-        elemGeneral.textContent = totales.general;
-        elemGeneral.style.color = totales.general > conteoEstudiantes.total ? 'red' : '';
-    }
-
-    // Generar PDF prediligenciado
-    document.getElementById('btn-generar-prediligenciado').addEventListener('click', async function() {
-        if (configuracionDias.length === 0) {
-            alert('Configure al menos un día antes de generar');
-            return;
-        }
-
-        const programaId = predPrograma.value;
-        const sedeNombre = predSede.value;
-        const selectedOption = predSede.selectedOptions[0];
-        const sedeCodInterprise = selectedOption?.dataset.codInterprise;
-        const focalizacion = predFocalizacion.value;
-        const complemento = predComplemento.value;
-        const mes = document.getElementById('pred-mes').value;
-
-        if (!sedeCodInterprise) {
-            alert('Error: No se pudo obtener el código de la sede. Por favor, vuelva a seleccionar la sede.');
-            return;
-        }
-
-        console.log('Datos a enviar:', {
-            programaId,
-            sedeNombre,
-            sedeCodInterprise,
-            focalizacion,
-            complemento,
-            mes
-        });
-
-        const originalText = this.innerHTML;
-        this.disabled = true;
-        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generando PDF...';
-
-        try {
-            const response = await fetch('/facturacion/generar-asistencia-prediligenciada/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    programa_id: programaId,
-                    sede_cod_interprise: sedeCodInterprise,
-                    sede_nombre: sedeNombre,
-                    mes: mes,
-                    focalizacion: focalizacion,
-                    complemento: complemento,
-                    dias: configuracionDias
-                })
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Error del servidor: ${response.status} - ${errorText}`);
-            }
-
-            const blob = await response.blob();
-            const downloadUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = downloadUrl;
-            a.download = `Asistencia_Prediligenciada_${sedeNombre.replace(/ /g, '_')}_${complemento.replace(/ /g, '_')}_${mes}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(downloadUrl);
-            document.body.removeChild(a);
-
-            mostrarExito('¡PDF prediligenciado generado exitosamente!');
-        } catch (error) {
-            console.error('Error:', error);
-            mostrarError(error.message);
-        } finally {
-            this.disabled = false;
-            this.innerHTML = originalText;
-        }
-    });
-
-    // === GENERACIÓN INDIVIDUAL POR SEDE ===
-    document.addEventListener('click', async function(e) {
-        if (e.target.classList.contains('btn-generar-asistencia') ||
-            e.target.closest('.btn-generar-asistencia')) {
-
-            e.preventDefault();
-
-            const button = e.target.classList.contains('btn-generar-asistencia')
-                ? e.target
-                : e.target.closest('.btn-generar-asistencia');
-
-            let originalText = button.innerHTML;
-
-            try {
-                const sedeCod = button.dataset.sedeCod;
-                const programaId = button.dataset.programaId;
-
-                if (!sedeCod || !programaId) {
-                    alert('Error: No se pudo obtener el código de la sede o el ID del programa.');
-                    return;
-                }
-
-                const mesElement = document.getElementById(`mes-${sedeCod}`);
-                const focalizacionElement = document.getElementById(`focalizacion-${sedeCod}`);
-                const diasElement = document.getElementById(`dias-${sedeCod}`);
-
-                if (!mesElement || !focalizacionElement || !diasElement) {
-                    alert(`Error: No se encontraron los selectores para la sede ${sedeCod}`);
-                    return;
-                }
-
-                const mes = mesElement.value;
-                const focalizacion = focalizacionElement.value;
-                const dias = diasElement.value.trim();
-
-                if (!mes || !focalizacion) {
-                    alert('Error: Faltan parámetros (mes o focalización)');
-                    return;
-                }
-
-                button.disabled = true;
-                button.innerHTML = `
-                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    Generando...
-                `;
-
-                let url = `/facturacion/generar-asistencia/${programaId}/${sedeCod}/${mes}/${focalizacion}/`;
-                
-                if (dias) {
-                    const params = new URLSearchParams({ dias: dias });
-                    url += `?${params.toString()}`;
-                }
-
-                await descargarArchivo(url, button, originalText);
-
-            } catch (error) {
-                mostrarError(error.message);
-                button.disabled = false;
-                button.innerHTML = originalText;
-            }
-        }
-    });
-
-    // === GENERACIÓN MASIVA POR PROGRAMA ===
-    const btnGenerarMasivo = document.getElementById('btn-generar-masivo');
-    if (btnGenerarMasivo) {
-        btnGenerarMasivo.addEventListener('click', async function(e) {
-            e.preventDefault();
-
-            const programaId = this.dataset.programaId;
-            const mes = document.getElementById('bulk-mes').value;
-            const focalizacion = document.getElementById('bulk-focalizacion').value;
-            const dias = document.getElementById('bulk-dias').value.trim();
-
-            if (!programaId || !mes || !focalizacion) {
-                alert('Error: Faltan parámetros para la generación masiva.');
-                return;
-            }
-
-            // Confirmar la acción
-            const programaNombre = "{{ filtros_aplicados.programa.programa|escapejs }}";
-            let confirmacionMsg = `¿Está seguro de generar reportes para TODAS las sedes del programa "${programaNombre}" con los parámetros:\n\n` +
-                `• Mes: ${mes}\n` +
-                `• Focalización: ${focalizacion}\n`;
-
-            if (dias) {
-                confirmacionMsg += `• Días específicos: ${dias}\n`;
-            }
-            
-            confirmacionMsg += `\nEsta operación puede tomar varios minutos.`;
-
-            const confirmacion = confirm(confirmacionMsg);
-
-            if (!confirmacion) {
-                return;
-            }
-
-            const originalText = this.innerHTML;
-
-            try {
-                this.disabled = true;
-                this.innerHTML = `
-                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    Generando ZIP Masivo... Por favor espere
-                `;
-
-                let url = `/facturacion/generar-zip-masivo/${programaId}/${mes}/${encodeURIComponent(focalizacion)}/`;
-
-                if (dias) {
-                    const params = new URLSearchParams({ dias: dias });
-                    url += `?${params.toString()}`;
-                }
-
-                await descargarArchivo(url, this, originalText);
-
-            } catch (error) {
-                mostrarError(error.message);
-                this.disabled = false;
-                this.innerHTML = originalText;
-            }
-        });
-    }
-
-    // === FUNCIONES AUXILIARES ===
-    async function descargarArchivo(url, button, originalText) {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Error del servidor: ${response.status} - ${errorText}`);
-        }
-
-        const contentType = response.headers.get('content-type');
-
-        if (contentType && (contentType.includes('application/zip') || contentType.includes('application/pdf'))) {
-            const blob = await response.blob();
-            const downloadUrl = window.URL.createObjectURL(blob);
-
-            const contentDisposition = response.headers.get('content-disposition');
-            let filename = 'reporte.zip';
-
-            if (contentDisposition && contentDisposition.indexOf('attachment') !== -1) {
-                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                const matches = filenameRegex.exec(contentDisposition);
-                if (matches != null && matches[1]) {
-                    filename = matches[1].replace(/['"]/g, '');
-                }
-            }
-
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = downloadUrl;
-            a.download = filename;
-
-            document.body.appendChild(a);
-            a.click();
-
-            window.URL.revokeObjectURL(downloadUrl);
-            document.body.removeChild(a);
-
-            mostrarExito('¡Reporte generado exitosamente!');
-
-        } else {
-            throw new Error('La respuesta del servidor no es un archivo válido (PDF o ZIP)');
-        }
-
-        button.disabled = false;
-        button.innerHTML = originalText;
-    }
-
-    function mostrarExito(mensaje) {
-        if (window.showNotification) {
-            window.showNotification(mensaje, 'success');
-        } else {
-            alert(mensaje);
-        }
-    }
-
-    function mostrarError(mensaje) {
-        if (window.showNotification) {
-            window.showNotification(`Error: ${mensaje}`, 'error');
-        } else {
-            alert(`Error: ${mensaje}`);
-        }
-    }
-});
-</script>
+{% block extra_js %}
+<script src="{% static 'js/facturacion/reportes_asistencia.js' %}"></script>
 {% endblock %}

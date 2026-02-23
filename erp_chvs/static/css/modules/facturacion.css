@@ -1758,3 +1758,294 @@
 #transferModal .btn-remove-grado i {
     font-size: 18px;
 }
+
+/* ===================================== */
+/* REPORTES DE ASISTENCIA                */
+/* ===================================== */
+
+/* Pestañas */
+.tabs-container { margin-bottom: 20px; }
+
+.tabs-nav {
+    display: flex;
+    gap: 10px;
+    border-bottom: 2px solid #dee2e6;
+    margin-bottom: 20px;
+}
+
+.tab-button {
+    padding: 12px 24px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    color: #6c757d;
+    transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+}
+
+.tab-button:hover {
+    color: #28a745;
+    background-color: #f8f9fa;
+}
+
+.tab-button.active {
+    color: #28a745;
+    border-bottom-color: #28a745;
+    font-weight: 600;
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Generación masiva */
+.bulk-generation-container {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #28a745;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.bulk-header h3 { color: #28a745; margin-bottom: 8px; }
+.bulk-header p  { color: #6c757d; margin-bottom: 15px; }
+
+.bulk-form {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.bulk-field { flex: 1; min-width: 200px; }
+.bulk-field label { display: block; font-weight: 600; margin-bottom: 5px; color: #495057; }
+.bulk-field .form-select { border: 2px solid #28a745; border-radius: 6px; }
+.bulk-field .btn { padding: 10px 20px; font-weight: 600; }
+.bulk-actions { display: flex; align-items: flex-end; }
+.bulk-dias-field .form-text { margin-top: 6px; }
+
+/* Generación prediligenciada */
+.config-prediligenciada-container {
+    background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
+    border: 2px solid #ff9800;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.info-estudiantes {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid #2196F3;
+}
+
+.info-estudiantes h4 { color: #2196F3; margin-bottom: 10px; }
+
+.info-niveles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.nivel-badge {
+    background: #e3f2fd;
+    padding: 8px 12px;
+    border-radius: 5px;
+    text-align: center;
+    font-weight: 600;
+}
+
+/* Tabla configuración de días (Tab 2) */
+.tabla-dias-config {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.tabla-dias-config th {
+    background: #ff9800;
+    color: white;
+    padding: 12px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.tabla-dias-config td {
+    padding: 10px;
+    border-bottom: 1px solid #e0e0e0;
+    text-align: center;
+}
+
+.tabla-dias-config tr:hover { background: #fff3e0; }
+
+.tabla-dias-config input[type="number"] {
+    width: 80px;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.tabla-dias-config input[type="number"]:focus {
+    border-color: #ff9800;
+    outline: none;
+}
+
+.btn-agregar-dia {
+    background: #4caf50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-right: 10px;
+}
+
+.btn-agregar-dia:hover { background: #45a049; }
+
+.btn-eliminar-dia {
+    background: #f44336;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.btn-eliminar-dia:hover { background: #d32f2f; }
+
+.total-section {
+    background: #e8f5e9;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+    border-left: 4px solid #4caf50;
+}
+
+.total-section h4 { color: #4caf50; margin: 0; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .bulk-form { flex-direction: column; }
+    .bulk-field { min-width: 100%; }
+}
+
+/* ===================================== */
+/* CALENDARIO PICKER DE DÍAS             */
+/* ===================================== */
+
+#dias-calendar-popover {
+    position: fixed;
+    z-index: 9999;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    width: 280px;
+    overflow: hidden;
+}
+
+.cal-header {
+    background: #28a745;
+    color: #fff;
+    text-align: center;
+    padding: 10px 14px;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+}
+
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+    padding: 10px;
+}
+
+.cal-day-header {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #6c757d;
+    padding: 3px 0;
+}
+
+.cal-day {
+    text-align: center;
+    padding: 6px 2px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    color: #212529;
+    transition: background 0.15s, color 0.15s;
+    user-select: none;
+}
+
+.cal-day:hover  { background: #d4edda; color: #155724; }
+
+.cal-day.selected {
+    background: #28a745;
+    color: #fff;
+    font-weight: 700;
+}
+
+.cal-day.empty {
+    cursor: default;
+    pointer-events: none;
+}
+
+.cal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-top: 1px solid #e9ecef;
+    background: #f8f9fa;
+}
+
+.cal-footer .cal-count {
+    font-size: 13px;
+    font-weight: 600;
+    color: #28a745;
+}
+
+.cal-footer .btn-cal-clear {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 5px;
+    border: 1px solid #dc3545;
+    background: none;
+    color: #dc3545;
+    cursor: pointer;
+}
+
+.cal-footer .btn-cal-clear:hover { background: #dc3545; color: #fff; }
+
+.btn-dias-picker {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-color: #ced4da;
+    color: #495057;
+    background: #fff;
+    text-align: left;
+}
+
+.btn-dias-picker.has-dias {
+    border-color: #28a745;
+    color: #155724;
+    background: #f0fff4;
+}
