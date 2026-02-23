@@ -350,7 +350,8 @@ class PDFAsistenciaService:
 
         total_raciones_zip = len(estudiantes_sede)
         nombre_sede_limpio = sede_obj.nombre_generico_sede.replace(' ', '_').replace('/', '_')
-        nombre_archivo_zip = f"Asistencias_{nombre_sede_limpio}_{str(focalizacion)}_{str(mes)}_{total_raciones_zip}raciones.zip"
+        item_prefijo_zip = f"{sede_obj.item}_" if sede_obj.item is not None else ""
+        nombre_archivo_zip = f"Asistencias_{item_prefijo_zip}{nombre_sede_limpio}_{str(focalizacion)}_{str(mes)}_{total_raciones_zip}raciones.zip"
 
         response['Content-Disposition'] = f'attachment; filename="{nombre_archivo_zip}"'
 
@@ -501,7 +502,9 @@ class PDFAsistenciaService:
 
 
 
-                institucion_con_focalizacion = f"{focalizacion} {nombre_sede_focalizacion}"
+                item_sede = sede_obj.item
+                item_str = f"{item_sede} " if item_sede is not None else ""
+                institucion_con_focalizacion = f"{focalizacion} {item_str}{nombre_sede_focalizacion}"
 
 
 
@@ -545,7 +548,8 @@ class PDFAsistenciaService:
 
                 total_raciones_pdf = len(estudiantes_filtrados)
                 nombre_sede_limpio_pdf = sede_obj.nombre_generico_sede.replace(' ', '_').replace('/', '_')
-                nombre_archivo_pdf = f"Asistencia_{nombre_sede_limpio_pdf}_{str(codigo)}_{str(mes)}_{str(ano)}_{total_raciones_pdf}raciones.pdf"
+                item_prefijo_pdf = f"{sede_obj.item}_" if sede_obj.item is not None else ""
+                nombre_archivo_pdf = f"Asistencia_{item_prefijo_pdf}{nombre_sede_limpio_pdf}_{str(codigo)}_{str(mes)}_{str(ano)}_{total_raciones_pdf}raciones.pdf"
 
                 zip_file.writestr(nombre_archivo_pdf, pdf_buffer.getvalue())
 

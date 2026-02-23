@@ -52,6 +52,9 @@ class SedesEducativas(models.Model):
     # Industrializado
     industrializado = models.CharField(max_length=50, verbose_name="Industrializado")
 
+    # Ítem (número de referencia numérica)
+    item = models.IntegerField(blank=True, null=True, verbose_name="Ítem")
+
     # Relación con institución educativa (FK)
     codigo_ie = models.ForeignKey(
         InstitucionesEducativas,
