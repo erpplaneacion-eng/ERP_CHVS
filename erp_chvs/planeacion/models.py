@@ -32,7 +32,7 @@ class SedesEducativas(models.Model):
     cod_interprise = models.CharField(primary_key=True, max_length=50, verbose_name="Código Interprise")
 
     # Código DANE
-    cod_dane = models.CharField(max_length=50, verbose_name="Código DANE")
+    cod_dane = models.BigIntegerField(verbose_name="Código DANE")
 
     # Nombre de la sede educativa
     nombre_sede_educativa = models.CharField(max_length=255, verbose_name="Nombre Sede Educativa")
