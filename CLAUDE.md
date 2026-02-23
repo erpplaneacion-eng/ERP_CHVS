@@ -36,7 +36,7 @@ python manage.py makemigrations && python manage.py migrate
 python manage.py test                  # All tests
 python manage.py test nutricion.tests_guias_preparacion_excel --verbosity=2  # Single module
 # Available test modules: nutricion.tests, nutricion.tests_guias_preparacion_excel,
-#   nutricion.tests_paso2_preparaciones_editor, facturacion.tests
+#   nutricion.tests_paso2_preparaciones_editor, facturacion.tests, principal.tests
 DJANGO_SETTINGS_MODULE=erp_chvs.settings pytest -v          # pytest (no pytest.ini)
 DJANGO_SETTINGS_MODULE=erp_chvs.settings pytest -k "test_name"
 DJANGO_SETTINGS_MODULE=erp_chvs.settings pytest facturacion/tests.py
@@ -191,9 +191,12 @@ sorted(queryset, key=lambda n: _ORDEN_NIVELES.index(n.nivel_escolar_uapa) if n.n
 | `NUTRICION` | nutricion, dashboard, principal |
 | `FACTURACION` | facturacion, dashboard |
 | `PLANEACION` | planeacion, dashboard |
-| `ADMINISTRACION` | nutricion, facturacion, planeacion, principal, dashboard |
+| `COSTOS` | costos, dashboard |
+| `ADMINISTRACION` | nutricion, facturacion, planeacion, principal, costos, dashboard |
 
-**Note**: `costos` is NOT included in `group_permissions` in `middleware.py` — only superusers can access it. Superusers bypass all restrictions. Set up with `python manage.py setup_groups`.
+A user can belong to **multiple groups** — their allowed apps are the **union** of all group permissions. Superusers bypass all restrictions. Set up with `python manage.py setup_groups`.
+
+**Template tag** (`principal/templatetags/group_tags.py`): `{% if user|has_group:"NUTRICION,ADMINISTRACION" %}` — accepts comma-separated group names, case-insensitive, returns True for superusers.
 
 ## Configuration (`.env` in `erp_chvs/`)
 
