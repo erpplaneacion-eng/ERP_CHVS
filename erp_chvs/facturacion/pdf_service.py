@@ -354,7 +354,9 @@ class PDFAsistenciaService:
 
         response = HttpResponse(zip_buffer, content_type='application/zip')
 
-        nombre_archivo_zip = f"Asistencias_{sede_obj.nombre_sede_educativa.replace(' ', '_').replace('/', '_')}_{str(focalizacion)}_{str(mes)}.zip"
+        total_raciones_zip = len(estudiantes_sede)
+        nombre_sede_limpio = sede_obj.nombre_generico_sede.replace(' ', '_').replace('/', '_')
+        nombre_archivo_zip = f"Asistencias_{nombre_sede_limpio}_{str(focalizacion)}_{str(mes)}_{total_raciones_zip}raciones.zip"
 
         response['Content-Disposition'] = f'attachment; filename="{nombre_archivo_zip}"'
 
@@ -400,21 +402,10 @@ class PDFAsistenciaService:
 
 
 
-        nombre_sede_focalizacion = sede_obj.nombre_sede_educativa
+        nombre_sede_focalizacion = sede_obj.nombre_generico_sede
 
-        es_industrializado = False
-
-        try:
-
-            sede_info_dane = SedesEducativas.objects.get(nombre_sede_educativa=nombre_sede_focalizacion)
-
-            dane_ie = sede_info_dane.cod_dane
-
-            es_industrializado = sede_info_dane.industrializado == 'VERDADERO'
-
-        except SedesEducativas.DoesNotExist:
-
-            dane_ie = 'DANE no encontrado'
+        dane_ie = sede_obj.cod_dane
+        es_industrializado = sede_obj.industrializado == 'VERDADERO'
 
 
 
@@ -558,7 +549,9 @@ class PDFAsistenciaService:
 
                 
 
-                nombre_archivo_pdf = f"Asistencia_{sede_obj.nombre_sede_educativa.replace(' ', '_')}_{str(codigo)}_{str(mes)}_{str(ano)}.pdf"
+                total_raciones_pdf = len(estudiantes_filtrados)
+                nombre_sede_limpio_pdf = sede_obj.nombre_generico_sede.replace(' ', '_').replace('/', '_')
+                nombre_archivo_pdf = f"Asistencia_{nombre_sede_limpio_pdf}_{str(codigo)}_{str(mes)}_{str(ano)}_{total_raciones_pdf}raciones.pdf"
 
                 zip_file.writestr(nombre_archivo_pdf, pdf_buffer.getvalue())
 
