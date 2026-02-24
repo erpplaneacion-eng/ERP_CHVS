@@ -1,0 +1,37 @@
+[
+  {
+    "id": "TC001",
+    "title": "post facturacion procesar listados with valid excel file",
+    "description": "Test the POST /facturacion/procesar-listados/ endpoint with a valid Excel file to verify that the system processes the list correctly, returns a preview, validation summary, and fuzzy match suggestions."
+  },
+  {
+    "id": "TC002",
+    "title": "post facturacion procesar listados with confirmation",
+    "description": "Test the POST /facturacion/procesar-listados/ endpoint with confirm=true parameter to verify that the system persists the records successfully after preview and validation."
+  },
+  {
+    "id": "TC003",
+    "title": "get facturacion dashboard with valid session",
+    "description": "Test the GET /facturacion/ endpoint with a valid authenticated session to verify that the dashboard HTML page is returned successfully."
+  },
+  {
+    "id": "TC004",
+    "title": "get principal departamentos with authorization",
+    "description": "Test the GET /principal/api/departamentos/ endpoint with valid authorization to verify that the list of departments is returned as JSON."
+  },
+  {
+    "id": "TC005",
+    "title": "get principal municipios filtered by departamento id",
+    "description": "Test the GET /principal/api/municipios/ endpoint with a valid departamento_id parameter and authorization to verify that the list of municipalities filtered by the department is returned."
+  },
+  {
+    "id": "TC006",
+    "title": "get nutricion menus with authorization",
+    "description": "Test the GET /nutricion/api/menus/ endpoint with valid authorization to verify that the list of menus with metadata and nutrient totals is returned."
+  },
+  {
+    "id": "TC007",
+    "title": "get nutricion ingredientes filtered by menu id",
+    "description": "Test the GET /nutricion/api/ingredientes/ endpoint with a valid menu_id parameter and authorization to verify that the list of ingredients and gramajes for the specified menu is returned."
+  }
+]
