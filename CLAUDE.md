@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Requirements**: Python 3.13+, PostgreSQL
 
 **Deprecated**: `ocr_validation` and `iagenerativa` apps removed.
-**Not yet active**: `Api/` app (Siesa ERP integration) — not in `INSTALLED_APPS`.
+**Not yet active**: `Api/` app (Siesa ERP integration) — not in `INSTALLED_APPS`. See `erp_chvs/planeacion/PROPUESTA_INTEGRACION_SIESA.md` for the planned SC/RQI connectors (Solicitudes de Compra and Requisiciones de Inventario to SIESA ERP SAAS).
 
 ## Setup (run from `ERP_CHVS/`)
 
@@ -86,12 +86,12 @@ ERP_CHVS/
 | `nutricion` | Menus, preparations, ingredients, nutritional analysis, AI generation |
 | `planeacion` | Programs, planning periods, ration configuration |
 | `facturacion` | Excel focalization list upload, validation, PDF attendance reports |
-| `costos` | Nutritional cost matrix (cross-tab menus × ingredients × levels), Excel export |
+| `costos` | Nutritional cost matrix (cross-tab menus × ingredients × levels), Excel export. Key endpoints: `GET /costos/matriz-nutricional/`, `GET /costos/exportar-excel/` |
 | `dashboard` | Main dashboard after login |
 
 ### Service-Oriented Architecture
 
-Business logic lives in `services.py` or `services/` packages — **never in views**. Views only handle HTTP request/response.
+Business logic lives in `services.py` or `services/` packages — **never in views**. Views only handle HTTP request/response. **Exception**: `costos/views.py` and `planeacion/views.py` (`ciclos_menus`) contain query/transformation logic directly — do not replicate this pattern in new code.
 
 **Facturacion** reference pattern:
 ```
@@ -110,6 +110,10 @@ views.py → services.py → persistence_service.py → models.py
 - `restriccion_subgrupo_service.py` — Sub-restrictions within a group: requires that N of a group's weekly appearances use a specific whitelist of foods (e.g. G4 must include ≥1 egg and ≥2 legumes per week). Used by `semanal.py`.
 - `preparacion_service.py`, `ingrediente_service.py`, `programa_service.py`
 
+**Planeacion services** (`planeacion/services.py`):
+- `CloudinaryService` — Manual Cloudinary image upload/delete (most uploads auto-handled by Django Cloudinary Storage)
+- `ProgramaService` — Program image update helper
+
 **Nutricion other key files**:
 - `master_excel_generator.py` — Generates nutritional preparation guide Excel (`MasterNutritionalExcelGenerator`). Called from `exportes.py` → `GET /nutricion/exportar-guias-preparacion/<programa_id>/<modalidad_id>/`
 
@@ -122,6 +126,10 @@ views.py → services.py → persistence_service.py → models.py
 - `semanal.py` — Weekly menu validation (`api_validar_semana`, `api_requerimientos_modalidad`)
 - `preparaciones_editor.py` — Preparations editor view (standalone page with editable ingredient weights per level, dynamic peso bruto column, 4-state semaforización)
 - `firmas.py` — Nutritional contract signatures (`FirmaNutricionalContrato` model, per-program form at `/nutricion/firmas-contrato/`)
+
+### Planeacion Models
+
+`planeacion/models.py` defines its own `InstitucionesEducativas` (`db_table='instituciones_educativas'`) and `SedesEducativas` (`db_table='sedes_educativas'`) — separate from `principal` app models. `Programa` links to `PrincipalMunicipio` and has an auto-optimizing logo save (grayscale, max 400px, JPEG 75% for PDF use). `ProgramaModalidades` links `Programa` ↔ `ModalidadesDeConsumo`. `PlanificacionRaciones` unique constraint: `(etc, focalizacion, sede_educativa, nivel_escolar, ano)`.
 
 ### Key Model Relationships
 
@@ -314,6 +322,22 @@ MenuService.generar_menu_con_ia()
             TablaAnalisisNutricionalMenu
             TablaIngredientesPorNivel (peso_neto, peso_bruto, nutrients calculated)
 ```
+
+### Planeacion: Ration Planning from Focalization Lists
+Populates `PlanificacionRaciones` from existing `ListadosFocalizacion` data, grouped by sede + educational level:
+```
+ciclos_menus_view (GET /planeacion/ciclos-menus/)
+    → JS: POST /planeacion/ciclos-menus/inicializar/
+        {programa_id, focalizacion, ano, forzar_actualizacion?}
+        → groups ListadosFocalizacion by sede + nivel escolar
+        → Safe mode (forzar=false): get_or_create — preserves manual edits
+        → Force mode (forzar=true): update_or_create — overwrites all values
+    → If records exist + not forced → returns {requiere_confirmacion: true}
+    → Inline cell edit: POST /planeacion/ciclos-menus/actualizar-racion/
+        {id, campo: cap_am|cap_pm|almuerzo_ju|refuerzo, valor}
+    → GET /planeacion/ciclos-menus/datos/?programa_id=&focalizacion=&ano=
+```
+Grade-to-level mapping uses `NivelGradoEscolar.grados_sedes` first, then `_mapear_grado_a_nivel_manual()` fallback (both in `facturacion/utils.py`).
 
 ### Nutricion: Copy Modality Between Programs
 Button "Copiar desde otro programa" in `lista_menus.html` acordeón (visible only when a modality has 0 menus):
