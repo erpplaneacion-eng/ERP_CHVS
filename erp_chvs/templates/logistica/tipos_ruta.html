@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}Tipos de Ruta - ERP CHVS{% endblock %}
+
+{% block content %}
+<div class="logistica-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-tags"></i> Tipos de Ruta</h2>
+            <p>Total: <strong>{{ total_tipos_ruta }}</strong></p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="tiposRutaManager.showCreateModal()">
+                <i class="fas fa-plus"></i> Nuevo Tipo
+            </button>
+            <a href="{% url 'logistica:principal' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table" id="tiposRutaTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tipo de Ruta</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tipo in tipos_ruta %}
+                <tr>
+                    <td>{{ tipo.id }}</td>
+                    <td>{{ tipo.tipo }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="tiposRutaManager.editTipoRuta({{ tipo.id }})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="tiposRutaManager.deleteTipoRuta({{ tipo.id }})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-center">No hay tipos de ruta registrados</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if tipos_ruta.has_other_pages %}
+    <div class="pagination-container">
+        <div class="pagination">
+            {% if tipos_ruta.has_previous %}
+                <a href="?page=1" class="page-link">&laquo; Primera</a>
+                <a href="?page={{ tipos_ruta.previous_page_number }}" class="page-link">Anterior</a>
+            {% endif %}
+            <span class="page-info">Página {{ tipos_ruta.number }} de {{ tipos_ruta.paginator.num_pages }}</span>
+            {% if tipos_ruta.has_next %}
+                <a href="?page={{ tipos_ruta.next_page_number }}" class="page-link">Siguiente</a>
+                <a href="?page={{ tipos_ruta.paginator.num_pages }}" class="page-link">Última &raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Crear/Editar Tipo de Ruta -->
+<div id="tipoRutaModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="tipoRutaModalTitle">Nuevo Tipo de Ruta</h3>
+            <span class="close" onclick="tiposRutaManager.closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="tipoRutaForm">
+                <div class="form-group">
+                    <label for="tipo_nombre">Nombre del Tipo:</label>
+                    <input type="text" id="tipo_nombre" name="tipo" required maxlength="50"
+                           placeholder="Ej: Víveres secos, Congelados...">
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="tiposRutaManager.closeModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="tipoRutaSaveBtn" onclick="tiposRutaManager.saveTipoRuta()">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmación Eliminación -->
+<div id="tipoRutaConfirmModal" class="modal">
+    <div class="modal-content small">
+        <div class="modal-header">
+            <h3>Confirmar Eliminación</h3>
+            <span class="close" onclick="tiposRutaManager.closeConfirmModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>¿Está seguro que desea eliminar este tipo de ruta?</p>
+            <p class="text-muted small">Esta acción no se puede deshacer. No se puede eliminar si hay rutas que lo usan.</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="tiposRutaManager.closeConfirmModal()">Cancelar</button>
+            <button type="button" class="btn btn-danger" onclick="tiposRutaManager.confirmDelete()">Eliminar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

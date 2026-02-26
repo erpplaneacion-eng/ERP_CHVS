@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block title %}Rutas de Entrega - ERP CHVS{% endblock %}
+
+{% block content %}
+<div class="logistica-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-route"></i> Rutas de Entrega</h2>
+            <p>Total: <strong>{{ total_rutas }}</strong></p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="rutasManager.showCreateModal()">
+                <i class="fas fa-plus"></i> Nueva Ruta
+            </button>
+            <a href="{% url 'logistica:principal' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table" id="rutasTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre de la Ruta</th>
+                    <th>Tipo</th>
+                    <th>Programa</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ruta in rutas %}
+                <tr>
+                    <td>{{ ruta.id }}</td>
+                    <td>{{ ruta.nombre_ruta }}</td>
+                    <td>{{ ruta.id_tipo_ruta.tipo }}</td>
+                    <td>{{ ruta.id_programa.programa }}</td>
+                    <td>
+                        {% if ruta.activa %}
+                            <span class="badge badge-success">Activa</span>
+                        {% else %}
+                            <span class="badge badge-secondary">Inactiva</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="rutasManager.editRuta({{ ruta.id }})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="rutasManager.deleteRuta({{ ruta.id }})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">No hay rutas registradas</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if rutas.has_other_pages %}
+    <div class="pagination-container">
+        <div class="pagination">
+            {% if rutas.has_previous %}
+                <a href="?page=1" class="page-link">&laquo; Primera</a>
+                <a href="?page={{ rutas.previous_page_number }}" class="page-link">Anterior</a>
+            {% endif %}
+            <span class="page-info">Página {{ rutas.number }} de {{ rutas.paginator.num_pages }}</span>
+            {% if rutas.has_next %}
+                <a href="?page={{ rutas.next_page_number }}" class="page-link">Siguiente</a>
+                <a href="?page={{ rutas.paginator.num_pages }}" class="page-link">Última &raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Crear/Editar Ruta -->
+<div id="rutaModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="rutaModalTitle">Nueva Ruta</h3>
+            <span class="close" onclick="rutasManager.closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="rutaForm">
+                <div class="form-group">
+                    <label for="ruta_nombre">Nombre de la Ruta:</label>
+                    <input type="text" id="ruta_nombre" name="nombre_ruta" required maxlength="100"
+                           placeholder="Ej: Ruta 1, Ruta Norte...">
+                </div>
+                <div class="form-group">
+                    <label for="ruta_tipo">Tipo de Ruta:</label>
+                    <select id="ruta_tipo" name="id_tipo_ruta" required>
+                        <option value="">-- Seleccione un tipo --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ruta_programa">Programa/Contrato:</label>
+                    <select id="ruta_programa" name="id_programa" required>
+                        <option value="">-- Seleccione un programa --</option>
+                    </select>
+                </div>
+                <div class="form-group form-check-group">
+                    <label>
+                        <input type="checkbox" id="ruta_activa" name="activa" checked>
+                        Ruta Activa
+                    </label>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="rutasManager.closeModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="rutaSaveBtn" onclick="rutasManager.saveRuta()">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmación Eliminación -->
+<div id="rutaConfirmModal" class="modal">
+    <div class="modal-content small">
+        <div class="modal-header">
+            <h3>Confirmar Eliminación</h3>
+            <span class="close" onclick="rutasManager.closeConfirmModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>¿Está seguro que desea eliminar esta ruta?</p>
+            <p class="text-muted small">También se eliminarán las sedes asignadas a esta ruta.</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="rutasManager.closeConfirmModal()">Cancelar</button>
+            <button type="button" class="btn btn-danger" onclick="rutasManager.confirmDelete()">Eliminar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

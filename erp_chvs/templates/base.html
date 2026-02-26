@@ -201,6 +201,14 @@
     {% endif %}
     {% elif request.resolver_match.app_name == 'facturacion' %}
     <script src="{% static 'js/facturacion/facturacion.js' %}"></script>
+    {% elif request.resolver_match.app_name == 'logistica' %}
+    {% if 'tipos-ruta' in request.path %}
+    <script src="{% static 'js/logistica/tipos_ruta.js' %}"></script>
+    {% elif 'ruta-sedes' in request.path %}
+    <script src="{% static 'js/logistica/ruta_sedes.js' %}"></script>
+    {% elif 'rutas' in request.path %}
+    <script src="{% static 'js/logistica/rutas.js' %}"></script>
+    {% endif %}
     {% endif %}
 
     <!-- Scripts adicionales por página -->

@@ -7,7 +7,7 @@
 <div id="logistica-dashboard-background"> 
     <div class="module-dashboard">
         <!-- Tarjeta para Tipos de Rutas -->
-        <a href="#" class="card">
+        <a href="{% url 'logistica:lista_tipos_ruta' %}" class="card">
             <div class="card-icon">
                 <i class="fas fa-tags"></i>
             </div>
@@ -15,10 +15,10 @@
                 <h3>Tipos de Rutas</h3>
                 <p>Gestiona las categorías de entrega (ej: Víveres secos, Congelados).</p>
             </div>
-        </a>          
+        </a>
 
         <!-- Tarjeta para Rutas -->
-        <a href="#" class="card">
+        <a href="{% url 'logistica:lista_rutas' %}" class="card">
             <div class="card-icon">
                 <i class="fas fa-route"></i>
             </div>
@@ -29,7 +29,7 @@
         </a>
 
         <!-- Tarjeta para Asignar Sedes a Rutas -->
-        <a href="#" class="card">
+        <a href="{% url 'logistica:lista_ruta_sedes' %}" class="card">
             <div class="card-icon">
                 <i class="fas fa-map-marked-alt"></i>
             </div>

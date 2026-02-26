@@ -87,6 +87,7 @@ ERP_CHVS/
 | `planeacion` | Programs, planning periods, ration configuration |
 | `facturacion` | Excel focalization list upload, validation, PDF attendance reports |
 | `costos` | Nutritional cost matrix (cross-tab menus × ingredients × levels), Excel export. Key endpoints: `GET /costos/matriz-nutricional/`, `GET /costos/exportar-excel/` |
+| `logistica` | Delivery route management: routes, route types, sede assignment with visit order |
 | `dashboard` | Main dashboard after login |
 
 ### Service-Oriented Architecture
@@ -126,6 +127,29 @@ views.py → services.py → persistence_service.py → models.py
 - `semanal.py` — Weekly menu validation (`api_validar_semana`, `api_requerimientos_modalidad`)
 - `preparaciones_editor.py` — Preparations editor view (standalone page with editable ingredient weights per level, dynamic peso bruto column, 4-state semaforización)
 - `firmas.py` — Nutritional contract signatures (`FirmaNutricionalContrato` model, per-program form at `/nutricion/firmas-contrato/`)
+
+### Logistica Models
+
+`logistica/models.py` — gestión de rutas de entrega PAE.
+
+```
+TipoRuta (db_table='logistica_tipos_rutas')
+    ↓ PROTECT
+Ruta (db_table='logistica_rutas')
+    ├─ FK → TipoRuta (PROTECT)
+    ├─ FK → Programa (CASCADE)
+    ├─ activa: BooleanField
+    └─ unique_together: (nombre_ruta, id_programa, id_tipo_ruta)
+        ↓ CASCADE
+RutaSedes (db_table='logistica_ruta_sedes')
+    ├─ FK → Ruta (CASCADE)
+    ├─ FK → SedesEducativas/planeacion (CASCADE)
+    └─ orden_visita: PositiveIntegerField — ordering del recorrido
+```
+
+**Estado actual**: esqueleto funcional. Modelos migrados, vista index y template creados. **Pendiente**: CRUD API endpoints, JS, formularios. Las tarjetas del dashboard (`index.html`) aún enlazan a `#`.
+
+Migration dependency: `planeacion.0004_add_item_to_sedes_educativas`.
 
 ### Planeacion Models
 
@@ -204,7 +228,8 @@ sorted(queryset, key=lambda n: _ORDEN_NIVELES.index(n.nivel_escolar_uapa) if n.n
 | `FACTURACION` | facturacion, dashboard |
 | `PLANEACION` | planeacion, dashboard |
 | `COSTOS` | costos, dashboard |
-| `ADMINISTRACION` | nutricion, facturacion, planeacion, principal, costos, dashboard |
+| `LOGISTICA` | logistica, dashboard |
+| `ADMINISTRACION` | nutricion, facturacion, planeacion, principal, costos, logistica, dashboard |
 
 A user can belong to **multiple groups** — their allowed apps are the **union** of all group permissions. Superusers bypass all restrictions. Set up with `python manage.py setup_groups`.
 
@@ -388,6 +413,36 @@ except (FileNotFoundError, ValueError, NotImplementedError):
 - **Engine**: PostgreSQL, `CONN_MAX_AGE=600`, `CONN_HEALTH_CHECKS=True`
 - **Migrations**: Per-app `migrations/` directories
 - **Fixture backup**: `python manage.py loaddata backup_utf8.json`
+
+## Audit Logging — `RegistroActividad`
+
+Model: `principal.models.RegistroActividad` → DB table `principal_registro_actividad`.
+
+Fields: `usuario` (FK User), `modulo`, `accion`, `descripcion`, `ip`, `fecha` (auto), `exitoso`.
+
+**Usage pattern** (silently ignores errors to never break the main flow):
+```python
+from principal.models import RegistroActividad
+RegistroActividad.registrar(request, 'nutricion', 'crear_menu', f"Menú: {menu.menu}")
+```
+
+Call **after a successful write** (POST/PUT/DELETE), never inside GET handlers. Never inside `except` blocks.
+
+**Registered actions per module:**
+
+| Módulo | Acciones registradas |
+|--------|----------------------|
+| `facturacion` | `cargue_excel`, `guardar_listados`, `transferir_grados`, `generar_pdf`, `generar_zip_masivo`, `reemplazar_focalizacion`, `pdf_prediligenciado` |
+| `nutricion` | `generar_menu_ia`, `generar_menus_automaticos`, `crear_menu`, `crear_menu_especial`, `editar_menu`, `eliminar_menu`, `copiar_modalidad`, `crear_preparacion`, `editar_preparacion`, `eliminar_preparacion`, `copiar_preparacion`, `agregar_ingredientes`, `eliminar_ingrediente`, `guardar_analisis`, `guardar_ingredientes_nivel`, `exportar_excel`, `guardar_firmas`, `editar_alimento`, `eliminar_alimento` |
+| `planeacion` | `crear_programa`, `editar_programa`, `eliminar_programa`, `inicializar_ciclos`, `actualizar_racion` |
+| `costos` | `exportar_excel` |
+| `logistica` | *(pendiente — sin writes implementados aún)* |
+| `principal` | `crear/editar/eliminar_departamento`, `crear/editar/eliminar_municipio`, `crear/editar/eliminar_tipo_documento`, `crear/editar/eliminar_tipo_genero`, `crear/editar/eliminar_modalidad`, `crear/editar/eliminar_institucion`, `crear/editar/eliminar_sede`, `crear/editar/eliminar_nivel_grado`, `guardar_programa_modalidades` |
+
+Consultable desde Django admin (`/admin/principal/registroactividad/`) o por ORM:
+```python
+RegistroActividad.objects.filter(modulo='nutricion').order_by('-fecha')
+```
 
 ## Logging
 

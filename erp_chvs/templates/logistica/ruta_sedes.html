@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Asignación de Sedes - ERP CHVS{% endblock %}
+
+{% block content %}
+<div class="logistica-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-map-marked-alt"></i> Asignación de Sedes a Rutas</h2>
+            <p>Total: <strong>{{ total_ruta_sedes }}</strong></p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="rutaSedesManager.showCreateModal()">
+                <i class="fas fa-plus"></i> Nueva Asignación
+            </button>
+            <a href="{% url 'logistica:principal' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtro por ruta -->
+    <div class="filter-bar">
+        <label for="filtroRuta"><i class="fas fa-filter"></i> Filtrar por ruta:</label>
+        <select id="filtroRuta" onchange="rutaSedesManager.filtrarPorRuta(this.value)">
+            <option value="">-- Todas las rutas --</option>
+        </select>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table" id="rutaSedesTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Ruta</th>
+                    <th>Tipo</th>
+                    <th>Sede Educativa</th>
+                    <th>Orden de Visita</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rs in ruta_sedes %}
+                <tr>
+                    <td>{{ rs.id }}</td>
+                    <td>{{ rs.id_ruta.nombre_ruta }}</td>
+                    <td>{{ rs.id_ruta.id_tipo_ruta.tipo }}</td>
+                    <td>{{ rs.sede_educativa.nombre_sede_educativa }}</td>
+                    <td>
+                        <span class="orden-badge">{{ rs.orden_visita }}</span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="rutaSedesManager.editRutaSede({{ rs.id }})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="rutaSedesManager.deleteRutaSede({{ rs.id }})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">No hay asignaciones registradas</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if ruta_sedes.has_other_pages %}
+    <div class="pagination-container">
+        <div class="pagination">
+            {% if ruta_sedes.has_previous %}
+                <a href="?page=1" class="page-link">&laquo; Primera</a>
+                <a href="?page={{ ruta_sedes.previous_page_number }}" class="page-link">Anterior</a>
+            {% endif %}
+            <span class="page-info">Página {{ ruta_sedes.number }} de {{ ruta_sedes.paginator.num_pages }}</span>
+            {% if ruta_sedes.has_next %}
+                <a href="?page={{ ruta_sedes.next_page_number }}" class="page-link">Siguiente</a>
+                <a href="?page={{ ruta_sedes.paginator.num_pages }}" class="page-link">Última &raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Crear/Editar Asignación -->
+<div id="rutaSedeModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="rutaSedeModalTitle">Nueva Asignación</h3>
+            <span class="close" onclick="rutaSedesManager.closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="rutaSedeForm">
+                <div class="form-group">
+                    <label for="rs_ruta">Ruta:</label>
+                    <select id="rs_ruta" name="id_ruta" required>
+                        <option value="">-- Seleccione una ruta --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="rs_sede">Sede Educativa:</label>
+                    <select id="rs_sede" name="sede_educativa" required>
+                        <option value="">-- Seleccione una sede --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="rs_orden">Orden de Visita:</label>
+                    <input type="number" id="rs_orden" name="orden_visita" required min="1" value="1"
+                           placeholder="Ej: 1, 2, 3...">
+                    <small class="form-text">Indica el orden en que se visita esta sede dentro de la ruta.</small>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="rutaSedesManager.closeModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="rutaSedeSaveBtn" onclick="rutaSedesManager.saveRutaSede()">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmación Eliminación -->
+<div id="rutaSedeConfirmModal" class="modal">
+    <div class="modal-content small">
+        <div class="modal-header">
+            <h3>Confirmar Eliminación</h3>
+            <span class="close" onclick="rutaSedesManager.closeConfirmModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>¿Está seguro que desea eliminar esta asignación?</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="rutaSedesManager.closeConfirmModal()">Cancelar</button>
+            <button type="button" class="btn btn-danger" onclick="rutaSedesManager.confirmDelete()">Eliminar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

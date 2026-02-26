@@ -24,8 +24,12 @@ class Command(BaseCommand):
                 'apps': ['costos'],
                 'description': 'Acceso a matriz nutricional y reportes de costos'
             },
+            'LOGISTICA': {
+                'apps': ['logistica'],
+                'description': 'Acceso a rutas de entrega y asignación de sedes'
+            },
             'ADMINISTRACION': {
-                'apps': ['nutricion', 'facturacion', 'planeacion', 'principal', 'dashboard', 'costos'],
+                'apps': ['nutricion', 'facturacion', 'planeacion', 'principal', 'dashboard', 'costos', 'logistica'],
                 'description': 'Acceso total al sistema'
             }
         }

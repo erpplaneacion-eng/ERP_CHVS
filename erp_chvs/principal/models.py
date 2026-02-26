@@ -192,6 +192,7 @@ class RegistroActividad(models.Model):
         ('nutricion', 'Nutrición'),
         ('planeacion', 'Planeación'),
         ('costos', 'Costos'),
+        ('logistica', 'Logística'),
         ('principal', 'Datos Maestros'),
         ('dashboard', 'Dashboard'),
     ]
