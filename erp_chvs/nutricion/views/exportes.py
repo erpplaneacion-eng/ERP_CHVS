@@ -1,6 +1,8 @@
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 
+from principal.models import RegistroActividad
+
 from ..master_excel_generator import MasterNutritionalExcelGenerator
 from ..excel_generator import generate_advanced_nutritional_excel, generate_excel_from_service
 from ..guia_preparacion_excel_generator import GuiaPreparacionExcelGenerator
@@ -20,6 +22,10 @@ def download_menu_excel(request, menu_id):
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
         response['Content-Disposition'] = f'attachment; filename="menu_{menu_id}_analisis_nutricional.xlsx"'
+        RegistroActividad.registrar(
+            request, 'nutricion', 'exportar_excel',
+            f"Menú ID: {menu_id} | Tipo: análisis nutricional"
+        )
         return response
 
     except Exception as e:
@@ -87,6 +93,10 @@ def download_modalidad_excel(request, programa_id, modalidad_id):
         )
         filename = f"reporte_maestro_{masive_data['programa_nombre']}_{masive_data['modalidad_nombre']}.xlsx"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        RegistroActividad.registrar(
+            request, 'nutricion', 'exportar_excel',
+            f"Programa: {programa_id} | Modalidad: {modalidad_id} | Tipo: reporte maestro"
+        )
         return response
 
     except Exception as e:
@@ -109,6 +119,10 @@ def download_guias_preparacion_excel(request, programa_id, modalidad_id):
         )
         response['Content-Disposition'] = (
             f'attachment; filename="guias_preparacion_programa_{programa_id}_modalidad_{modalidad_id}.xlsx"'
+        )
+        RegistroActividad.registrar(
+            request, 'nutricion', 'exportar_excel',
+            f"Programa: {programa_id} | Modalidad: {modalidad_id} | Tipo: guías de preparación"
         )
         return response
     except Exception as e:

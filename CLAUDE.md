@@ -310,6 +310,17 @@ Weekly validation (component frequency): `nutricion/views/semanal.py`
 1. **Upload**: `excel_utils` → `data_processors` → `fuzzy_matching` (validate sedes) → show results
 2. **Save**: User confirms → `PersistenceService.guardar_listados_focalizacion()` → `bulk_create` in atomic transaction
 
+### Facturacion: PDF Attendance Reports
+Generates per-sede attendance format PDFs from focalization list data. Two generation modes:
+- **Individual**: `GET /facturacion/generar-asistencia/<programa_id>/<sede_cod_interprise>/<mes>/<focalizacion>/` — single sede PDF, optionally with `dias_personalizados` param
+- **Bulk ZIP**: `GET /facturacion/generar-zip-masivo/<programa_id>/<mes>/<focalizacion>/` — ZIP of all sedes in a program. Logo pre-caching: `optimizar_logos` management command writes optimized logos to disk; the PDF generator reads them for mass generation.
+- **Pre-filled**: `POST /facturacion/generar-asistencia-prediligenciada/` — PDF with student names pre-filled, grouped by grado
+
+Service layer: `facturacion/pdf_service.py` (`PDFAsistenciaService`), PDF layout: `facturacion/pdf_generator.py` (`crear_formato_asistencia`).
+Helper APIs: `GET /facturacion/api/conteo-estudiantes-por-nivel/`, `GET /facturacion/api/get-sedes-completas/`.
+
+Grade transfer between sedes: `GET /facturacion/api/obtener-sedes-con-grados/`, `POST /facturacion/api/transferir-grados/`.
+
 ### Nutricion: AI Menu Generation
 Single Gemini API call generates menus for ALL 5 educational levels:
 ```

@@ -7,7 +7,7 @@ from django.core.paginator import Paginator
 from django.db import IntegrityError
 from django.db.models.deletion import ProtectedError
 import json
-from .models import PrincipalDepartamento, PrincipalMunicipio, TipoDocumento, TipoGenero, ModalidadesDeConsumo, NivelGradoEscolar
+from .models import PrincipalDepartamento, PrincipalMunicipio, TipoDocumento, TipoGenero, ModalidadesDeConsumo, NivelGradoEscolar, RegistroActividad
 from planeacion.models import InstitucionesEducativas, SedesEducativas, Programa, ProgramaModalidades
 from django.db.models import Count
 
@@ -73,7 +73,10 @@ def api_departamentos(request):
                 codigo_departamento=data['codigo_departamento'],
                 nombre_departamento=data['nombre_departamento']
             )
-
+            RegistroActividad.registrar(
+                request, 'principal', 'crear_departamento',
+                f"Código: {departamento.codigo_departamento} | Nombre: {departamento.nombre_departamento}"
+            )
             return JsonResponse({
                 'success': True,
                 'departamento': {
@@ -104,13 +107,22 @@ def api_departamento_detail(request, codigo):
             data = json.loads(request.body)
             departamento.nombre_departamento = data['nombre_departamento']
             departamento.save()
+            RegistroActividad.registrar(
+                request, 'principal', 'editar_departamento',
+                f"Código: {codigo} | Nombre: {departamento.nombre_departamento}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al actualizar: {str(e)}'})
 
     elif request.method == 'DELETE':
         try:
+            nombre_dep = departamento.nombre_departamento
             departamento.delete()
+            RegistroActividad.registrar(
+                request, 'principal', 'eliminar_departamento',
+                f"Código: {codigo} | Nombre: {nombre_dep}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
@@ -141,7 +153,10 @@ def api_municipios(request):
                 nombre_municipio=data['nombre_municipio'],
                 codigo_departamento=data['codigo_departamento']
             )
-
+            RegistroActividad.registrar(
+                request, 'principal', 'crear_municipio',
+                f"Código: {municipio.codigo_municipio} | Nombre: {municipio.nombre_municipio}"
+            )
             return JsonResponse({
                 'success': True,
                 'municipio': {
@@ -178,6 +193,10 @@ def api_municipio_detail(request, id):
             municipio.nombre_municipio = data['nombre_municipio']
             municipio.codigo_departamento = data['codigo_departamento']
             municipio.save()
+            RegistroActividad.registrar(
+                request, 'principal', 'editar_municipio',
+                f"ID: {id} | Nombre: {municipio.nombre_municipio}"
+            )
             return JsonResponse({'success': True})
         except IntegrityError:
             return JsonResponse({'success': False, 'error': 'Error: Ya existe un municipio con este código'})
@@ -186,7 +205,12 @@ def api_municipio_detail(request, id):
 
     elif request.method == 'DELETE':
         try:
+            nombre_mun = municipio.nombre_municipio
             municipio.delete()
+            RegistroActividad.registrar(
+                request, 'principal', 'eliminar_municipio',
+                f"ID: {id} | Nombre: {nombre_mun}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
@@ -229,7 +253,10 @@ def api_tipos_documento(request):
                 tipo_documento=data['tipo_documento'],
                 codigo_documento=data['codigo_documento']
             )
-
+            RegistroActividad.registrar(
+                request, 'principal', 'crear_tipo_documento',
+                f"ID: {tipo_documento.id_documento} | Tipo: {tipo_documento.tipo_documento}"
+            )
             return JsonResponse({
                 'success': True,
                 'tipo_documento': {
@@ -263,13 +290,22 @@ def api_tipo_documento_detail(request, id_documento):
             tipo_documento.tipo_documento = data['tipo_documento']
             tipo_documento.codigo_documento = data['codigo_documento']
             tipo_documento.save()
+            RegistroActividad.registrar(
+                request, 'principal', 'editar_tipo_documento',
+                f"ID: {id_documento} | Tipo: {tipo_documento.tipo_documento}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al actualizar: {str(e)}'})
 
     elif request.method == 'DELETE':
         try:
+            nombre_td = tipo_documento.tipo_documento
             tipo_documento.delete()
+            RegistroActividad.registrar(
+                request, 'principal', 'eliminar_tipo_documento',
+                f"ID: {id_documento} | Tipo: {nombre_td}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
@@ -312,7 +348,10 @@ def api_tipos_genero(request):
                 genero=data['genero'],
                 codigo_genero=data['codigo_genero']
             )
-
+            RegistroActividad.registrar(
+                request, 'principal', 'crear_tipo_genero',
+                f"ID: {tipo_genero.id_genero} | Género: {tipo_genero.genero}"
+            )
             return JsonResponse({
                 'success': True,
                 'tipo_genero': {
@@ -346,13 +385,22 @@ def api_tipo_genero_detail(request, id_genero):
             tipo_genero.genero = data['genero']
             tipo_genero.codigo_genero = data['codigo_genero']
             tipo_genero.save()
+            RegistroActividad.registrar(
+                request, 'principal', 'editar_tipo_genero',
+                f"ID: {id_genero} | Género: {tipo_genero.genero}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al actualizar: {str(e)}'})
 
     elif request.method == 'DELETE':
         try:
+            nombre_genero = tipo_genero.genero
             tipo_genero.delete()
+            RegistroActividad.registrar(
+                request, 'principal', 'eliminar_tipo_genero',
+                f"ID: {id_genero} | Género: {nombre_genero}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
@@ -398,7 +446,10 @@ def api_modalidades_consumo(request):
                 modalidad=modalidad_nombre,
                 cod_modalidad=cod_modalidad
             )
-
+            RegistroActividad.registrar(
+                request, 'principal', 'crear_modalidad',
+                f"ID: {modalidad.id_modalidades} | Modalidad: {modalidad.modalidad}"
+            )
             return JsonResponse({
                 'success': True,
                 'modalidad': {
@@ -432,13 +483,22 @@ def api_modalidad_consumo_detail(request, id_modalidades):
             modalidad.modalidad = data['modalidad'].strip().upper()
             modalidad.cod_modalidad = data['cod_modalidad'].strip().upper()
             modalidad.save()
+            RegistroActividad.registrar(
+                request, 'principal', 'editar_modalidad',
+                f"ID: {id_modalidades} | Modalidad: {modalidad.modalidad}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al actualizar: {str(e)}'})
 
     elif request.method == 'DELETE':
         try:
+            nombre_mod = modalidad.modalidad
             modalidad.delete()
+            RegistroActividad.registrar(
+                request, 'principal', 'eliminar_modalidad',
+                f"ID: {id_modalidades} | Modalidad: {nombre_mod}"
+            )
             return JsonResponse({'success': True})
         except ProtectedError as e:
             dependencias = {}
@@ -498,7 +558,10 @@ def api_instituciones(request):
                 nombre_institucion=data['nombre_institucion'],
                 id_municipios_id=data['id_municipios']
             )
-
+            RegistroActividad.registrar(
+                request, 'principal', 'crear_institucion',
+                f"Código IE: {institucion.codigo_ie} | Nombre: {institucion.nombre_institucion}"
+            )
             return JsonResponse({
                 'success': True,
                 'institucion': {
@@ -532,13 +595,22 @@ def api_institucion_detail(request, codigo_ie):
             institucion.nombre_institucion = data['nombre_institucion']
             institucion.id_municipios_id = data['id_municipios']
             institucion.save()
+            RegistroActividad.registrar(
+                request, 'principal', 'editar_institucion',
+                f"Código IE: {codigo_ie} | Nombre: {institucion.nombre_institucion}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al actualizar: {str(e)}'})
 
     elif request.method == 'DELETE':
         try:
+            nombre_inst = institucion.nombre_institucion
             institucion.delete()
+            RegistroActividad.registrar(
+                request, 'principal', 'eliminar_institucion',
+                f"Código IE: {codigo_ie} | Nombre: {nombre_inst}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
@@ -588,7 +660,10 @@ def api_sedes(request):
                 preparado=data['preparado'],
                 industrializado=data['industrializado']
             )
-
+            RegistroActividad.registrar(
+                request, 'principal', 'crear_sede',
+                f"Código: {sede.cod_interprise} | Sede: {sede.nombre_sede_educativa}"
+            )
             return JsonResponse({
                 'success': True,
                 'sede': {
@@ -635,13 +710,22 @@ def api_sede_detail(request, cod_interprise):
             sede.preparado = data['preparado']
             sede.industrializado = data['industrializado']
             sede.save()
+            RegistroActividad.registrar(
+                request, 'principal', 'editar_sede',
+                f"Código: {cod_interprise} | Sede: {sede.nombre_sede_educativa}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al actualizar: {str(e)}'})
 
     elif request.method == 'DELETE':
         try:
+            nombre_sede = sede.nombre_sede_educativa
             sede.delete()
+            RegistroActividad.registrar(
+                request, 'principal', 'eliminar_sede',
+                f"Código: {cod_interprise} | Sede: {nombre_sede}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
@@ -709,6 +793,10 @@ def api_niveles_grado(request):
                 nivel_escolar_uapa_id=data['nivel_escolar_uapa']
             )
             nivel_grado.save()
+            RegistroActividad.registrar(
+                request, 'principal', 'crear_nivel_grado',
+                f"ID: {nivel_grado.id_grado_escolar} | Grado: {nivel_grado.grados_sedes}"
+            )
             return JsonResponse({
                 'success': True,
                 'id_grado_escolar': nivel_grado.id_grado_escolar,
@@ -747,13 +835,22 @@ def api_nivel_grado_detail(request, id_grado_escolar):
             nivel_grado.grados_sedes = data['grados_sedes']
             nivel_grado.nivel_escolar_uapa_id = data['nivel_escolar_uapa']
             nivel_grado.save()
+            RegistroActividad.registrar(
+                request, 'principal', 'editar_nivel_grado',
+                f"ID: {id_grado_escolar} | Grado: {nivel_grado.grados_sedes}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al actualizar: {str(e)}'})
 
     elif request.method == 'DELETE':
         try:
+            grado_desc = nivel_grado.grados_sedes
             nivel_grado.delete()
+            RegistroActividad.registrar(
+                request, 'principal', 'eliminar_nivel_grado',
+                f"ID: {id_grado_escolar} | Grado: {grado_desc}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
@@ -829,6 +926,10 @@ def api_guardar_programa_modalidades(request):
                 ).delete()
                 cambios_realizados += 1
 
+        RegistroActividad.registrar(
+            request, 'principal', 'guardar_programa_modalidades',
+            f"Programas afectados: {len(cambios)} | Cambios realizados: {cambios_realizados}"
+        )
         return JsonResponse({
             'success': True,
             'cambios_realizados': cambios_realizados,

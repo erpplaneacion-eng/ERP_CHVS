@@ -8,6 +8,8 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.csrf import csrf_exempt
 
+from principal.models import RegistroActividad
+
 from ..models import (
     ComponentesAlimentos,
     TablaAlimentos2018Icbf,
@@ -62,7 +64,10 @@ def api_preparaciones(request):
                 id_menu_id=data['id_menu'],
                 id_componente_id=id_componente if id_componente else None
             )
-
+            RegistroActividad.registrar(
+                request, 'nutricion', 'crear_preparacion',
+                f"Preparación: {preparacion.preparacion} | Menú ID: {preparacion.id_menu.id_menu}"
+            )
             return JsonResponse({
                 'success': True,
                 'preparacion': {
@@ -100,13 +105,22 @@ def api_preparacion_detail(request, id_preparacion):
             preparacion.preparacion = data['preparacion']
             preparacion.id_menu_id = data['id_menu']
             preparacion.save()
+            RegistroActividad.registrar(
+                request, 'nutricion', 'editar_preparacion',
+                f"Preparación ID: {id_preparacion} | Nombre: {preparacion.preparacion}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al actualizar: {str(e)}'})
 
     if request.method == 'DELETE':
         try:
+            nombre_prep = preparacion.preparacion
             preparacion.delete()
+            RegistroActividad.registrar(
+                request, 'nutricion', 'eliminar_preparacion',
+                f"Preparación ID: {id_preparacion} | Nombre: {nombre_prep}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
@@ -156,6 +170,10 @@ def api_copiar_preparacion(request):
         if nuevos_ingredientes:
             TablaPreparacionIngredientes.objects.bulk_create(nuevos_ingredientes)
 
+        RegistroActividad.registrar(
+            request, 'nutricion', 'copiar_preparacion',
+            f"Origen ID: {source_preparacion_id} → Menú destino ID: {target_menu_id} | Nueva: {new_preparacion.preparacion}"
+        )
         return JsonResponse({
             'success': True,
             'message': f'Preparación "{new_preparacion.preparacion}" copiada exitosamente.',
@@ -326,6 +344,10 @@ def api_preparacion_ingredientes(request, id_preparacion):
                     if created:
                         ingredientes_creados.append(ingrediente.id_ingrediente_siesa.nombre_del_alimento)
 
+                RegistroActividad.registrar(
+                    request, 'nutricion', 'agregar_ingredientes',
+                    f"Preparación ID: {id_preparacion} | Ingredientes agregados: {len(ingredientes_creados)}"
+                )
                 return JsonResponse({
                     'success': True,
                     'mensaje': f'{len(ingredientes_creados)} ingrediente(s) agregado(s) exitosamente'
@@ -363,6 +385,10 @@ def api_preparacion_ingrediente_delete(request, id_preparacion, id_ingrediente):
                 id_ingrediente_siesa_id=id_ingrediente
             )
             ingrediente.delete()
+            RegistroActividad.registrar(
+                request, 'nutricion', 'eliminar_ingrediente',
+                f"Preparación ID: {id_preparacion} | Ingrediente: {id_ingrediente}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})

@@ -5,7 +5,7 @@ from nutricion.models import (
     TablaMenus, TablaPreparaciones, TablaPreparacionIngredientes, 
     TablaIngredientesPorNivel, TablaAlimentos2018Icbf
 )
-from principal.models import PrincipalMunicipio, TablaGradosEscolaresUapa, ModalidadesDeConsumo
+from principal.models import PrincipalMunicipio, TablaGradosEscolaresUapa, ModalidadesDeConsumo, RegistroActividad
 from planeacion.models import Programa
 from django.db.models import Q
 import io
@@ -216,5 +216,8 @@ def exportar_matriz_excel(request):
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     response['Content-Disposition'] = 'attachment; filename=matriz_nutricional.xlsx'
-    
+    RegistroActividad.registrar(
+        request, 'costos', 'exportar_excel',
+        f"Programa ID: {request.GET.get('programa', 'todos')} | Modalidad: {request.GET.get('modalidad', 'todas')}"
+    )
     return response

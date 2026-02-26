@@ -12,7 +12,7 @@ from ..models import (
     TablaMenus,
 )
 from ..forms import AlimentoForm
-from principal.models import ModalidadesDeConsumo
+from principal.models import ModalidadesDeConsumo, RegistroActividad
 from planeacion.models import Programa
 from ..services import MenuService
 
@@ -44,6 +44,10 @@ def api_generar_menu_ia(request):
         if not menu:
             return JsonResponse({'error': 'La IA no pudo generar una propuesta válida. Intente nuevamente.'}, status=500)
 
+        RegistroActividad.registrar(
+            request, 'nutricion', 'generar_menu_ia',
+            f"Programa: {programa_id} | Modalidad: {modalidad_id} | Menú: {menu.id_menu} ({menu.menu})"
+        )
         return JsonResponse({
             'success': True,
             'menu': {
@@ -110,6 +114,10 @@ def editar_alimento(request, codigo):
         form = AlimentoForm(request.POST, instance=alimento_a_editar)
         if form.is_valid():
             form.save()
+            RegistroActividad.registrar(
+                request, 'nutricion', 'editar_alimento',
+                f"Código: {codigo} | Alimento: {alimento_a_editar.nombre_del_alimento}"
+            )
             messages.success(request, f'Alimento "{alimento_a_editar.nombre_del_alimento}" actualizado correctamente.')
             return redirect('nutricion:lista_alimentos')
         else:
@@ -130,6 +138,10 @@ def eliminar_alimento(request, codigo):
         alimento = get_object_or_404(TablaAlimentos2018Icbf, pk=codigo)
         nombre = alimento.nombre_del_alimento
         alimento.delete()
+        RegistroActividad.registrar(
+            request, 'nutricion', 'eliminar_alimento',
+            f"Código: {codigo} | Alimento: {nombre}"
+        )
         return JsonResponse({'success': True, 'message': f'Alimento "{nombre}" eliminado correctamente.'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})

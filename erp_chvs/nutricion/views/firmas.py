@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
 from planeacion.models import Programa
+from principal.models import RegistroActividad
 
 from ..forms import FirmaNutricionalContratoForm
 from ..models import FirmaNutricionalContrato
@@ -36,6 +37,10 @@ def firmas_contrato(request):
                 firma.programa = programa_obj
                 firma.usuario_modificacion = request.user.username if request.user.is_authenticated else None
                 firma.save()
+                RegistroActividad.registrar(
+                    request, 'nutricion', 'guardar_firmas',
+                    f"Programa: {programa_obj.programa} (ID: {programa_obj.id})"
+                )
                 messages.success(request, "Firmas nutricionales actualizadas correctamente.")
                 return redirect(f"{request.path}?programa={programa_obj.id}")
             messages.error(request, "No fue posible guardar. Revisa los campos obligatorios.")

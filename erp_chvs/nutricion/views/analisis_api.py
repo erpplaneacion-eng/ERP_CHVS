@@ -15,6 +15,7 @@ from ..models import (
     TablaPreparacionIngredientes,
     TablaPreparaciones,
 )
+from principal.models import RegistroActividad
 from ..services import AnalisisNutricionalService
 from ..services.calculo_service import CalculoService
 
@@ -64,7 +65,11 @@ def guardar_analisis_nutricional(request):
             ingredientes=data['ingredientes'],
             usuario=request.user.username if hasattr(request.user, 'username') else 'sistema'
         )
-
+        if resultado.get('success'):
+            RegistroActividad.registrar(
+                request, 'nutricion', 'guardar_analisis',
+                f"Menú ID: {data['id_menu']} | Nivel: {data['id_nivel_escolar']}"
+            )
         return JsonResponse(resultado)
 
     except KeyError as e:
@@ -212,6 +217,10 @@ def api_guardar_ingredientes_por_nivel(request, id_menu):
                 registros_actualizados += actualizados_nivel
                 errores.extend(errores_nivel)
 
+        RegistroActividad.registrar(
+            request, 'nutricion', 'guardar_ingredientes_nivel',
+            f"Menú ID: {id_menu} | Niveles: {len(niveles)} | Registros actualizados: {registros_actualizados}"
+        )
         return JsonResponse({
             'success': True,
             'registros_actualizados': registros_actualizados,

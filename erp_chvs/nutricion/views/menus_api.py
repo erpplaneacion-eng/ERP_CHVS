@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 
-from principal.models import ModalidadesDeConsumo
+from principal.models import ModalidadesDeConsumo, RegistroActividad
 from planeacion.models import Programa, ProgramaModalidades
 
 from ..models import TablaMenus
@@ -121,6 +121,10 @@ def api_generar_menus_automaticos(request):
                     'modalidad': modalidad.modalidad
                 })
 
+        RegistroActividad.registrar(
+            request, 'nutricion', 'generar_menus_automaticos',
+            f"Programa: {programa_id} | Modalidad: {modalidad_id} | Menús creados: {len(menus_creados)}"
+        )
         return JsonResponse({
             'success': True,
             'menus_creados': len(menus_creados),
@@ -170,7 +174,10 @@ def api_crear_menu_especial(request):
             id_modalidad=modalidad,
             id_contrato=programa
         )
-
+        RegistroActividad.registrar(
+            request, 'nutricion', 'crear_menu_especial',
+            f"Programa: {programa_id} | Modalidad: {modalidad_id} | Menú: {nombre_menu}"
+        )
         return JsonResponse({
             'success': True,
             'menu': {
@@ -224,7 +231,10 @@ def api_menus(request):
                 id_modalidad_id=data['id_modalidad'],
                 id_contrato_id=data['id_contrato']
             )
-
+            RegistroActividad.registrar(
+                request, 'nutricion', 'crear_menu',
+                f"Menú: {menu.menu} | Modalidad: {menu.id_modalidad.modalidad} | Programa: {menu.id_contrato.programa}"
+            )
             return JsonResponse({
                 'success': True,
                 'menu': {
@@ -267,13 +277,22 @@ def api_menu_detail(request, id_menu):
             if 'id_contrato' in data:
                 menu.id_contrato_id = data['id_contrato']
             menu.save()
+            RegistroActividad.registrar(
+                request, 'nutricion', 'editar_menu',
+                f"Menú ID: {id_menu} | Nuevo nombre: {menu.menu}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al actualizar: {str(e)}'})
 
     if request.method == 'DELETE':
         try:
+            nombre_menu = menu.menu
             menu.delete()
+            RegistroActividad.registrar(
+                request, 'nutricion', 'eliminar_menu',
+                f"Menú ID: {id_menu} | Nombre: {nombre_menu}"
+            )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
@@ -360,7 +379,10 @@ def api_copiar_modalidad(request):
             programa_destino_id=int(programa_destino_id),
             modalidad_id=str(modalidad_id)
         )
-
+        RegistroActividad.registrar(
+            request, 'nutricion', 'copiar_modalidad',
+            f"Origen: {programa_origen_id} → Destino: {programa_destino_id} | Modalidad: {modalidad_id} | Menús copiados: {menus_copiados}"
+        )
         return JsonResponse({
             'success': True,
             'menus_copiados': menus_copiados

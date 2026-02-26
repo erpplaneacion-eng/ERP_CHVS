@@ -10,7 +10,7 @@ from collections import defaultdict
 
 from .models import Programa, PlanificacionRaciones, SedesEducativas
 from .forms import ProgramaForm
-from principal.models import PrincipalMunicipio, NivelGradoEscolar
+from principal.models import PrincipalMunicipio, NivelGradoEscolar, RegistroActividad
 from facturacion.models import ListadosFocalizacion
 from facturacion.config import FOCALIZACIONES_DISPONIBLES
 from facturacion.utils import _extraer_grado_base, _mapear_grado_a_nivel_manual
@@ -30,7 +30,11 @@ def lista_programas(request):
     if request.method == 'POST':
         form = ProgramaForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            programa = form.save()
+            RegistroActividad.registrar(
+                request, 'planeacion', 'crear_programa',
+                f"Programa: {programa.programa} | Contrato: {programa.contrato}"
+            )
             return redirect('planeacion:lista_programas')
     else:
         form = ProgramaForm()
@@ -52,6 +56,10 @@ def editar_programa(request, pk):
         form = ProgramaForm(request.POST, request.FILES, instance=programa_a_editar)
         if form.is_valid():
             form.save()
+            RegistroActividad.registrar(
+                request, 'planeacion', 'editar_programa',
+                f"Programa ID: {pk} | Nombre: {programa_a_editar.programa}"
+            )
             return redirect('planeacion:lista_programas')
         else:
             # Si el formulario es inválido, mostramos la lista de nuevo con los errores
@@ -83,7 +91,12 @@ def eliminar_programa(request, pk):
         except Exception as e:
             print(f"Error al eliminar imagen de Cloudinary: {e}")
 
+    nombre_prog = programa.programa
     programa.delete()
+    RegistroActividad.registrar(
+        request, 'planeacion', 'eliminar_programa',
+        f"Programa ID: {pk} | Nombre: {nombre_prog}"
+    )
     return redirect('planeacion:lista_programas')
 
 
@@ -284,6 +297,11 @@ def inicializar_ciclos_menus(request):
         # Obtener datos para respuesta
         datos_respuesta = _obtener_datos_planificacion(municipio_obj, focalizacion, ano)
 
+        RegistroActividad.registrar(
+            request, 'planeacion', 'inicializar_ciclos',
+            f"Programa: {programa_id} | Focalización: {focalizacion} | Año: {ano} | "
+            f"Forzar: {modo_forzar} | Creados: {registros_creados} | Actualizados: {registros_actualizados}"
+        )
         return JsonResponse({
             'success': True,
             'message': f'Inicialización exitosa: {registros_creados} registros creados, {registros_actualizados} actualizados',
@@ -347,6 +365,10 @@ def actualizar_racion(request):
         setattr(planificacion, campo, valor_int)
         planificacion.save()
 
+        RegistroActividad.registrar(
+            request, 'planeacion', 'actualizar_racion',
+            f"Registro ID: {registro_id} | Campo: {campo} | Valor: {valor_int}"
+        )
         return JsonResponse({
             'success': True,
             'message': 'Registro actualizado exitosamente',
