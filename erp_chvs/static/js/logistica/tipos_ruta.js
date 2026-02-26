@@ -38,6 +38,9 @@ class TiposRutaManager {
         const tbody = document.querySelector('#tiposRutaTable tbody');
         if (!tbody) return;
 
+        const totalEl = document.getElementById('total-tipos-ruta');
+        if (totalEl) totalEl.textContent = tipos.length;
+
         tbody.innerHTML = '';
 
         if (!tipos.length) {

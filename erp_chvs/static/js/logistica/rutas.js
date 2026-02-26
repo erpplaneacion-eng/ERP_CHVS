@@ -8,6 +8,7 @@ class RutasManager {
         this.editingId = null;
         this.deleteId = null;
         this.saving = false;
+        this.allRutas = [];  // cache completo para filtrado en cliente
         this.init();
     }
 
@@ -35,26 +36,37 @@ class RutasManager {
             const tiposData = await tiposResp.json();
             const programasData = await programasResp.json();
 
+            // Selects del modal
             const tipoSelect = document.getElementById('ruta_tipo');
             const progSelect = document.getElementById('ruta_programa');
 
-            if (tipoSelect) {
-                tiposData.tipos_ruta.forEach(t => {
-                    const opt = document.createElement('option');
-                    opt.value = t.id;
-                    opt.textContent = t.tipo;
-                    tipoSelect.appendChild(opt);
-                });
-            }
+            // Selects de filtro
+            const filtroTipo = document.getElementById('filtro-tipo');
+            const filtroPrograma = document.getElementById('filtro-programa');
 
-            if (progSelect) {
-                programasData.programas.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p.id;
-                    opt.textContent = `${p.programa} (${p.contrato || 'Sin contrato'})`;
-                    progSelect.appendChild(opt);
-                });
-            }
+            tiposData.tipos_ruta.forEach(t => {
+                const opt = () => {
+                    const o = document.createElement('option');
+                    o.value = t.id;
+                    o.textContent = t.tipo;
+                    return o;
+                };
+                if (tipoSelect) tipoSelect.appendChild(opt());
+                if (filtroTipo) filtroTipo.appendChild(opt());
+            });
+
+            programasData.programas.forEach(p => {
+                const label = `${p.programa}${p.contrato ? ' (' + p.contrato + ')' : ''}`;
+                const opt = () => {
+                    const o = document.createElement('option');
+                    o.value = p.id;
+                    o.textContent = label;
+                    return o;
+                };
+                if (progSelect) progSelect.appendChild(opt());
+                if (filtroPrograma) filtroPrograma.appendChild(opt());
+            });
+
         } catch (error) {
             console.error('Error al cargar selects:', error);
         }
@@ -64,21 +76,51 @@ class RutasManager {
         try {
             const response = await fetch(this.baseUrl);
             const data = await response.json();
-            this.updateTable(data.rutas);
+            this.allRutas = data.rutas;
+            this.applyFilters();
         } catch (error) {
             console.error('Error al cargar rutas:', error);
             this.showAlert('Error al cargar los datos', 'error');
         }
     }
 
+    applyFilters() {
+        const nombre = (document.getElementById('filtro-nombre')?.value || '').toLowerCase().trim();
+        const tipoId = document.getElementById('filtro-tipo')?.value || '';
+        const programaId = document.getElementById('filtro-programa')?.value || '';
+        const estado = document.getElementById('filtro-estado')?.value || '';
+
+        const filtradas = this.allRutas.filter(r => {
+            const matchNombre  = !nombre    || r.nombre_ruta.toLowerCase().includes(nombre);
+            const matchTipo    = !tipoId    || String(r.id_tipo_ruta) === tipoId;
+            const matchPrograma= !programaId|| String(r.id_programa) === programaId;
+            const matchEstado  = !estado    || String(r.activa) === estado;
+            return matchNombre && matchTipo && matchPrograma && matchEstado;
+        });
+
+        this.updateTable(filtradas);
+    }
+
+    clearFilters() {
+        const ids = ['filtro-nombre', 'filtro-tipo', 'filtro-programa', 'filtro-estado'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        this.applyFilters();
+    }
+
     updateTable(rutas) {
         const tbody = document.querySelector('#rutasTable tbody');
         if (!tbody) return;
 
+        const totalEl = document.getElementById('total-rutas');
+        if (totalEl) totalEl.textContent = rutas.length;
+
         tbody.innerHTML = '';
 
         if (!rutas.length) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay rutas registradas</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">No se encontraron rutas</td></tr>';
             return;
         }
 

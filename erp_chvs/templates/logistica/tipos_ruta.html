@@ -7,7 +7,7 @@
     <div class="page-header">
         <div class="header-left">
             <h2><i class="fas fa-tags"></i> Tipos de Ruta</h2>
-            <p>Total: <strong>{{ total_tipos_ruta }}</strong></p>
+            <p>Total: <strong id="total-tipos-ruta">{{ total_tipos_ruta }}</strong></p>
         </div>
         <div class="header-actions">
             <button class="btn btn-primary" onclick="tiposRutaManager.showCreateModal()">
@@ -94,7 +94,7 @@
 <!-- Modal Confirmación Eliminación -->
 <div id="tipoRutaConfirmModal" class="modal">
     <div class="modal-content small">
-        <div class="modal-header">
+        <div class="modal-header modal-header-danger">
             <h3>Confirmar Eliminación</h3>
             <span class="close" onclick="tiposRutaManager.closeConfirmModal()">&times;</span>
         </div>

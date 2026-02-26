@@ -85,6 +85,9 @@ class RutaSedesManager {
         const tbody = document.querySelector('#rutaSedesTable tbody');
         if (!tbody) return;
 
+        const totalEl = document.getElementById('total-ruta-sedes');
+        if (totalEl) totalEl.textContent = items.length;
+
         tbody.innerHTML = '';
 
         if (!items.length) {

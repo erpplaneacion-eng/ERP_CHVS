@@ -7,7 +7,7 @@
     <div class="page-header">
         <div class="header-left">
             <h2><i class="fas fa-route"></i> Rutas de Entrega</h2>
-            <p>Total: <strong>{{ total_rutas }}</strong></p>
+            <p>Total: <strong id="total-rutas">{{ total_rutas }}</strong></p>
         </div>
         <div class="header-actions">
             <button class="btn btn-primary" onclick="rutasManager.showCreateModal()">
@@ -17,6 +17,37 @@
                 <i class="fas fa-arrow-left"></i> Volver
             </a>
         </div>
+    </div>
+
+    <!-- Barra de filtros -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label for="filtro-nombre"><i class="fas fa-search"></i></label>
+            <input type="text" id="filtro-nombre" placeholder="Buscar por nombre..." oninput="rutasManager.applyFilters()">
+        </div>
+        <div class="filter-group">
+            <label for="filtro-tipo">Tipo:</label>
+            <select id="filtro-tipo" onchange="rutasManager.applyFilters()">
+                <option value="">Todos</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filtro-programa">Programa:</label>
+            <select id="filtro-programa" onchange="rutasManager.applyFilters()">
+                <option value="">Todos</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filtro-estado">Estado:</label>
+            <select id="filtro-estado" onchange="rutasManager.applyFilters()">
+                <option value="">Todos</option>
+                <option value="true">Activa</option>
+                <option value="false">Inactiva</option>
+            </select>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" onclick="rutasManager.clearFilters()">
+            <i class="fas fa-times"></i> Limpiar
+        </button>
     </div>
 
     <div class="table-container">
@@ -124,7 +155,7 @@
 <!-- Modal Confirmación Eliminación -->
 <div id="rutaConfirmModal" class="modal">
     <div class="modal-content small">
-        <div class="modal-header">
+        <div class="modal-header modal-header-danger">
             <h3>Confirmar Eliminación</h3>
             <span class="close" onclick="rutasManager.closeConfirmModal()">&times;</span>
         </div>
