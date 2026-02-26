@@ -147,9 +147,28 @@ RutaSedes (db_table='logistica_ruta_sedes')
     └─ orden_visita: PositiveIntegerField — ordering del recorrido
 ```
 
-**Estado actual**: esqueleto funcional. Modelos migrados, vista index y template creados. **Pendiente**: CRUD API endpoints, JS, formularios. Las tarjetas del dashboard (`index.html`) aún enlazan a `#`.
-
 Migration dependency: `planeacion.0004_add_item_to_sedes_educativas`.
+
+**CRUD implementado** — vistas de página + API endpoints completos:
+
+| URL | Vista | Descripción |
+|-----|-------|-------------|
+| `GET /logistica/` | `logistica_principal` | Dashboard con 3 cards |
+| `GET /logistica/tipos-ruta/` | `lista_tipos_ruta` | CRUD tipos de ruta |
+| `GET /logistica/rutas/` | `lista_rutas` | CRUD rutas (con filtros por nombre/tipo/programa/estado) |
+| `GET /logistica/ruta-sedes/` | `lista_ruta_sedes` | CRUD asignación sedes (con filtro por ruta) |
+| `* /logistica/api/tipos-ruta/[<pk>/]` | API | GET list / POST / PUT / DELETE |
+| `* /logistica/api/rutas/[<pk>/]` | API | GET list / POST / PUT / DELETE |
+| `* /logistica/api/ruta-sedes/[<pk>/]` | API | GET list (`?ruta_id=`) / POST / PUT / DELETE |
+| `GET /logistica/api/programas/` | auxiliar | Para poblar selects del modal |
+| `GET /logistica/api/sedes/` | auxiliar | Para poblar selects del modal |
+| `GET /logistica/api/rutas-activas/` | auxiliar | Rutas activas para select de asignación |
+
+**JS** (`static/js/logistica/`): `tipos_ruta.js` (`TiposRutaManager`), `rutas.js` (`RutasManager`), `ruta_sedes.js` (`RutaSedesManager`). Siguen el patrón class-based de `principal/departamentos.js`: cache local `this.allRutas`, `applyFilters()` en cliente, anti-double-submit `this.saving`, `modal.style.display = 'block'` (no Bootstrap Modal API).
+
+**Imagen de fondo**: `static/logistica/images/background_logistica.png` — usada como background del dashboard (`#logistica-dashboard-background`). El fuente está en `static/`, no solo en `staticfiles/`.
+
+**CSS**: `static/css/modules/logistica.css` — modales de confirmación de eliminación usan `.modal-header-danger` (rojo `#c0392b`) para diferenciarse de los modales de edición (azul `#1e3a8a`).
 
 ### Planeacion Models
 
@@ -436,7 +455,7 @@ Call **after a successful write** (POST/PUT/DELETE), never inside GET handlers. 
 | `nutricion` | `generar_menu_ia`, `generar_menus_automaticos`, `crear_menu`, `crear_menu_especial`, `editar_menu`, `eliminar_menu`, `copiar_modalidad`, `crear_preparacion`, `editar_preparacion`, `eliminar_preparacion`, `copiar_preparacion`, `agregar_ingredientes`, `eliminar_ingrediente`, `guardar_analisis`, `guardar_ingredientes_nivel`, `exportar_excel`, `guardar_firmas`, `editar_alimento`, `eliminar_alimento` |
 | `planeacion` | `crear_programa`, `editar_programa`, `eliminar_programa`, `inicializar_ciclos`, `actualizar_racion` |
 | `costos` | `exportar_excel` |
-| `logistica` | *(pendiente — sin writes implementados aún)* |
+| `logistica` | `crear/editar/eliminar_tipo_ruta`, `crear/editar/eliminar_ruta`, `asignar_sede_ruta`, `editar_asignacion_ruta`, `eliminar_asignacion_ruta` |
 | `principal` | `crear/editar/eliminar_departamento`, `crear/editar/eliminar_municipio`, `crear/editar/eliminar_tipo_documento`, `crear/editar/eliminar_tipo_genero`, `crear/editar/eliminar_modalidad`, `crear/editar/eliminar_institucion`, `crear/editar/eliminar_sede`, `crear/editar/eliminar_nivel_grado`, `guardar_programa_modalidades` |
 
 Consultable desde Django admin (`/admin/principal/registroactividad/`) o por ORM:
