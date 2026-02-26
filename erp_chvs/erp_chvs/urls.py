@@ -34,6 +34,7 @@ urlpatterns = [
     path('planeacion/', include(('planeacion.urls', 'planeacion'), namespace='planeacion')),
     path('facturacion/', include(('facturacion.urls', 'facturacion'), namespace='facturacion')),
     path('costos/', include(('costos.urls', 'costos'), namespace='costos')),
+    path('logistica/', include(('logistica.urls', 'logistica'), namespace='logistica')),
 ]
 
 # Servir archivos media en desarrollo Y producción

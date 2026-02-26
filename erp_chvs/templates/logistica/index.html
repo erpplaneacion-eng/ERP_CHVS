@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard de Logística{% endblock %}
+
+{% block content %}
+<div id="logistica-dashboard-background"> 
+    <div class="module-dashboard">
+        <!-- Tarjeta para Tipos de Rutas -->
+        <a href="#" class="card">
+            <div class="card-icon">
+                <i class="fas fa-tags"></i>
+            </div>
+            <div class="card-content">
+                <h3>Tipos de Rutas</h3>
+                <p>Gestiona las categorías de entrega (ej: Víveres secos, Congelados).</p>
+            </div>
+        </a>          
+
+        <!-- Tarjeta para Rutas -->
+        <a href="#" class="card">
+            <div class="card-icon">
+                <i class="fas fa-route"></i>
+            </div>
+            <div class="card-content">
+                <h3>Rutas de Entrega</h3>
+                <p>Crea y administra los recorridos principales separados por Programa y Tipo de Carga.</p>
+            </div>
+        </a>
+
+        <!-- Tarjeta para Asignar Sedes a Rutas -->
+        <a href="#" class="card">
+            <div class="card-icon">
+                <i class="fas fa-map-marked-alt"></i>
+            </div>
+            <div class="card-content">
+                <h3>Asignación de Sedes</h3>
+                <p>Configura las sedes educativas que visita cada ruta y su orden de recorrido.</p>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}
