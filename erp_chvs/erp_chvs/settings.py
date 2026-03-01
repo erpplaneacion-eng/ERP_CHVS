@@ -207,6 +207,9 @@ else:
 # BD externa de empleados (read-only, usada por calidad/services.py)
 EMPLEADOS_DB_URL = os.environ.get('EMPLEADOS_DB_URL', '')
 
+# Clave compartida entre el ERP y el servicio apiw para el endpoint de WhatsApp
+CALIDAD_WA_API_KEY = os.environ.get('CALIDAD_WA_API_KEY', '')
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 

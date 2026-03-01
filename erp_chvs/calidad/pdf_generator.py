@@ -2,7 +2,7 @@
 from pathlib import Path
 
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.pagesizes import LETTER, landscape
 from reportlab.lib.units import cm
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
@@ -52,8 +52,8 @@ def _fecha_es(fecha) -> str:
 
 def generar_certificado_calidad_pdf(certificado) -> BytesIO:
     buffer = BytesIO()
-    ancho, alto = landscape(A4)
-    c = canvas.Canvas(buffer, pagesize=landscape(A4))
+    ancho, alto = landscape(LETTER)
+    c = canvas.Canvas(buffer, pagesize=landscape(LETTER))
     _dibujar_pagina(c, certificado, ancho, alto)
     c.save()
     buffer.seek(0)
@@ -127,6 +127,57 @@ def _draw_wrapped_text(c: canvas.Canvas, text: str, x: float, y: float, width: f
     return text_obj.getY()
 
 
+def _draw_justified_text(c: canvas.Canvas, text: str, x: float, y: float, width: float, leading: float):
+    words = (text or "").split()
+    if not words:
+        return y
+
+    font_name = c._fontname
+    font_size = c._fontsize
+    space_w = c.stringWidth(" ", font_name, font_size)
+
+    lines = []
+    line_words = []
+    line_w = 0.0
+
+    for word in words:
+        word_w = c.stringWidth(word, font_name, font_size)
+        projected = word_w if not line_words else line_w + space_w + word_w
+        if projected <= width:
+            line_words.append(word)
+            line_w = projected
+            continue
+        lines.append(line_words)
+        line_words = [word]
+        line_w = word_w
+
+    if line_words:
+        lines.append(line_words)
+
+    current_y = y
+    for i, lw in enumerate(lines):
+        is_last = i == len(lines) - 1
+        if len(lw) == 1 or is_last:
+            c.drawString(x, current_y, _safe(" ".join(lw)))
+            current_y -= leading
+            continue
+
+        words_w = sum(c.stringWidth(wd, font_name, font_size) for wd in lw)
+        gaps = len(lw) - 1
+        extra = max(0.0, width - words_w)
+        gap_w = extra / gaps if gaps else space_w
+
+        cursor_x = x
+        for idx, wd in enumerate(lw):
+            c.drawString(cursor_x, current_y, _safe(wd))
+            cursor_x += c.stringWidth(wd, font_name, font_size)
+            if idx < gaps:
+                cursor_x += gap_w
+        current_y -= leading
+
+    return current_y
+
+
 def _dibujar_placeholder_logo(c: canvas.Canvas, x: float, y: float):
     c.setStrokeColor(colors.lightgrey)
     c.setLineWidth(0.6)
@@ -170,15 +221,17 @@ def _dibujar_contenido_izquierdo(c: canvas.Canvas, cert, x: float, y: float, w: 
     pad = 1.0 * cm
     top_y = y + h - 1.4 * cm
 
-    logo_x = x + pad
-    logo_y = top_y - 1.8 * cm
+    _dibujar_marca_agua_somos_q(c, x, y, w, h)
+
+    logo_x = x + pad - 0.55 * cm
+    logo_y = top_y - 1.05 * cm
     logo_ok = _dibujar_imagen_ajustada(
         c,
         LOGO_PATH,
         logo_x,
         logo_y,
-        max_w=3.0 * cm,
-        max_h=2.2 * cm,
+        max_w=1.95 * cm,
+        max_h=1.35 * cm,
         anchor_top=True,
     )
     if not logo_ok:
@@ -197,29 +250,35 @@ def _dibujar_contenido_izquierdo(c: canvas.Canvas, cert, x: float, y: float, w: 
         "certificar el desarrollo de actividades de Manipulacion de Alimentos, de acuerdo a la "
         "Resolucion 2674 de 2013 expedido por el Ministerio de Salud y Proteccion Social"
     )
-    c.setFont("Times-BoldItalic", 10)
-    y_text = _draw_wrapped_text(c, intro, x + pad, top_y - 1.3 * cm, w - 2 * pad, 13)
+    c.setFont("Times-BoldItalic", 8.8)
+    y_text = _draw_wrapped_text(c, intro, x + pad, top_y - 1.65 * cm, w - 2 * pad, 11.6)
 
-    c.setFont("Times-BoldItalic", 10.5)
+    c.setFont("Times-BoldItalic", 9.2)
     y_text -= 0.55 * cm
     c.drawCentredString(x + w / 2, y_text, _safe("Certifica que:"))
 
     tipo = TIPO_LABELS.get(cert.tipo_empleado, cert.tipo_empleado)
+    fecha_curso = _fecha_es(cert.fecha_emision)
     parrafo = (
-        f"Que {(_safe(cert.nombre_completo)).upper()} identificado(a) con cedula de ciudadania C.C. "
-        f"{_safe(cert.cedula)} quien se desempena como {(_safe(cert.cargo or tipo)).upper()} asistio al "
-        "modulo del curso basico de manipulacion de alimentos implementado en las instalaciones de la "
-        "CORPORACION HACIA UN VALLE SOLIDARIO CL 15 # 26 - 101 BG 34 COMPLEJO INDUSTRIAL Y COMERCIAL IC 1, "
-        "en el Municipio de YUMBO; de acuerdo a la normatividad sanitaria vigente."
+        f"Que {(_safe(cert.nombre_completo)).upper()} Identificado con cédula de ciudadanía C.C. "
+        f"{_safe(cert.cedula)} quien se desempeña como {(_safe(cert.cargo or tipo)).upper()} asistió a módulo del curso básico de manipulación de "
+        f"alimentos realizado el día {fecha_curso} en las instalaciones de la "
+        "CORPORACION HACIA UN VALLE SOLIDARIO CL 15 # 26 - 101 BG 34 COMPLEJO "
+        "INDUSTRIAL Y COMERCIAL CIC 1, en el Municipio de YUMBO; de acuerdo a lo ordenado en "
+        "el Articulo 12 y 13 de la Resolución 2674 de 2013 y el Decreto 3075 de 1997. Adicionalmente, "
+        "el titular de esta certificación ha sido capacitado en higiene y saneamiento en el manejo de "
+        "cárnicos, cadena de frío, transporte sanitario de productos cárnicos, control de temperatura, "
+        "trazabilidad y prevención de contaminación cruzada, conforme a la normativa sanitaria vigente, "
+        "Decreto 1500 de 2007."
     )
-    c.setFont("Helvetica", 11)
-    y_text = _draw_wrapped_text(c, parrafo, x + pad, y_text - 0.9 * cm, w - 2 * pad, 15)
+    c.setFont("Helvetica", 9.0)
+    y_text = _draw_justified_text(c, parrafo, x + pad, y_text - 0.9 * cm, w - 2 * pad, 12.2)
 
     cierre_1 = "El curso se reforzara con las capacitaciones contempladas mensualmente, para la vigencia de 1 ano."
     cierre_2 = f"Para constancia de lo anterior, la presente certificacion se firma en Yumbo el {_fecha_es(cert.fecha_emision)}."
-    c.setFont("Helvetica", 11)
-    y_text = _draw_wrapped_text(c, cierre_1, x + pad, y_text - 0.45 * cm, w - 2 * pad, 15)
-    _draw_wrapped_text(c, cierre_2, x + pad, y_text - 0.55 * cm, w - 2 * pad, 15)
+    c.setFont("Helvetica", 9.0)
+    y_text = _draw_justified_text(c, cierre_1, x + pad, y_text - 0.45 * cm, w - 2 * pad, 12.2)
+    _draw_justified_text(c, cierre_2, x + pad, y_text - 0.55 * cm, w - 2 * pad, 12.2)
 
     firma_y = y + 1.95 * cm
     firma_ok = _dibujar_imagen_ajustada(
@@ -244,54 +303,79 @@ def _dibujar_contenido_izquierdo(c: canvas.Canvas, cert, x: float, y: float, w: 
         c.setFillColor(NEGRO)
         c.setFont("Helvetica", 8.3)
 
-    c.drawCentredString(x + w * 0.5, firma_y - 0.35 * cm, _safe("JEFE DE ASEGURAMIENTO DE CALIDAD"))
-    c.drawCentredString(x + w * 0.5, firma_y - 0.75 * cm, _safe("INGENIERA DE ALIMENTOS"))
-    c.drawCentredString(x + w * 0.5, firma_y - 1.15 * cm, _safe("CORPORACION HACIA UN VALLE SOLIDARIO"))
+    c.drawCentredString(x + w * 0.5, firma_y - 0.35 * cm, _safe("ING. Msc. SANDRA HENAO TORO"))
+    c.drawCentredString(x + w * 0.5, firma_y - 0.75 * cm, _safe("JEFE DE ASEGURAMIENTO DE CALIDAD"))
+    c.drawCentredString(x + w * 0.5, firma_y - 1.15 * cm, _safe("INGENIERA DE ALIMENTOS / MP 26254-244061 VLL"))
+    c.drawCentredString(x + w * 0.5, firma_y - 1.55 * cm, _safe("CORPORACION HACIA UN VALLE SOLIDARIO"))
 
-    pie = f"Certificado N. {_safe(cert.numero_certificado)}"
-    c.setFillColor(GRIS)
-    c.setFont("Helvetica", 8)
-    c.drawString(x + pad, y + 0.65 * cm, pie)
+    # Se elimina el pie de "Certificado N." por requerimiento.
+
+
+def _dibujar_marca_agua_somos_q(c: canvas.Canvas, x: float, y: float, w: float, h: float):
+    c.saveState()
+    c.translate(x + w * 0.34, y + h * 0.20)
+    c.rotate(28)
+
+    c.setFillColor(colors.Color(0.38, 0.62, 0.38, alpha=0.10))
+    c.setFont("Helvetica-Bold", 22)
+    c.drawCentredString(0, 40, _safe("SOMOS"))
+
+    c.setFillColor(colors.Color(0.30, 0.54, 0.30, alpha=0.14))
+    c.setFont("Times-BoldItalic", 72)
+    c.drawCentredString(0, -2, _safe("Q."))
+
+    c.setStrokeColor(colors.Color(0.36, 0.60, 0.36, alpha=0.10))
+    c.setLineWidth(1.6)
+    c.circle(0, 8, 36, stroke=1, fill=0)
+    c.restoreState()
 
 
 def _dibujar_contenido_derecho(c: canvas.Canvas, cert, x: float, y: float, w: float, h: float):
-    del cert
-
     pad = 1.0 * cm
     top_y = y + h - 2.0 * cm
 
     c.setFillColor(NEGRO)
     c.setFont("Helvetica-Bold", 12)
-    c.drawString(x + pad, top_y, _safe("CERTIFICADO 16 #- DEPARTAMENTO DE CALIDAD"))
+    cert_id = getattr(cert, "id", None) or getattr(cert, "pk", "")
+    c.drawString(x + pad, top_y, _safe(f"CERTIFICADO # {cert_id} - DEPARTAMENTO DE CALIDAD"))
 
     bloque_12 = (
-        "Articulo 12. Educacion y capacitacion. Todas las personas que realizan actividades de manipulacion "
-        "de alimentos deben tener formacion en educacion sanitaria, principios basicos de Buenas Practicas de "
-        "Manufactura y practicas higienicas en manipulacion de alimentos. Igualmente, deben estar capacitados "
-        "para llevar a cabo las tareas que se les asignen o desempenen, con el fin de que se encuentren en "
-        "capacidad de adoptar las precauciones y medidas preventivas necesarias para evitar la contaminacion o "
-        "deterioro de los alimentos. Las empresas deben tener un plan de capacitacion continuo y permanente para "
-        "el personal MANIPULADOR(A) de alimentos desde el momento de su contratacion y luego ser reforzado "
-        "mediante charlas, cursos u otros medios efectivos de actualizacion."
+        "Artículo 12. Educación y capacitación. Todas las personas que realizan actividades de manipulación de alimentos "
+        "deben tener formación en educación sanitaria, principios básicos de Buenas Prácticas de Manufactura y prácticas "
+        "higiénicas en manipulación de alimentos. Igualmente, deben estar capacitados para llevar a cabo las tareas que se "
+        "les asignen o desempeñen, con el fin de que se encuentren en capacidad de adoptar las precauciones y medidas "
+        "preventivas necesarias para evitar la contaminación o deterioro de los alimentos. Las empresas deben tener un "
+        "plan de capacitación continuo y permanente para el personal MANIPULADOR(A) de alimentos desde el momento "
+        "de su contratación y luego ser reforzado mediante charlas, cursos u otros medios efectivos de actualización. Dicho "
+        "plan debe ser de por lo menos 10 horas anuales, sobre asuntos específicos de que trata la presente resolución. Esta "
+        "capacitación estará bajo la responsabilidad de la empresa y podrá ser efectuada por esta, por personas naturales "
+        "o jurídicas contratadas y por las autoridades sanitarias. Cuando el plan de capacitación se realice a través de "
+        "personas naturales o jurídicas diferentes a la empresa, estas deben demostrar su idoneidad técnica y científica y "
+        "su formación y experiencia específica en las áreas de higiene de los alimentos, Buenas Prácticas de Manufactura y "
+        "sistemas preventivos de aseguramiento de la inocuidad."
     )
-    c.setFont("Helvetica", 10)
-    y_text = _draw_wrapped_text(c, bloque_12, x + pad, top_y - 0.8 * cm, w - 2 * pad, 14.5)
+    c.setFont("Helvetica", 8.6)
+    y_text = _draw_justified_text(c, bloque_12, x + pad, top_y - 0.8 * cm, w - 2 * pad, 12.0)
 
     bloque_13 = (
-        "Articulo 13. Plan de capacitacion. El plan de capacitacion debe contener, al menos, los siguientes "
-        "aspectos: metodologia, duracion, docentes, cronograma y temas especificos a impartir. El enfoque, "
-        "contenido y alcance de la capacitacion impartida debe ser acorde con la empresa, el proceso tecnologico "
-        "y tipo de establecimiento de que se trate. En todo caso, la empresa debe demostrar a traves del desempeno "
-        "de los operarios y la condicion sanitaria del establecimiento la efectividad e impacto de la capacitacion "
-        "impartida."
+        "Artículo 13. Plan de capacitación. El plan de capacitación debe contener, al menos, los siguientes aspectos: "
+        "Metodología, duración, docentes, cronograma y temas específicos a impartir. El enfoque, contenido y alcance de "
+        "la capacitación impartida debe ser acorde con la empresa, el proceso tecnológico y tipo de establecimiento de que "
+        "se trate. En todo caso, la empresa debe demostrar a través del desempeño de los operarios y la condición sanitaria "
+        "del establecimiento la efectividad e impacto de la capacitación impartida. Parágrafo 1°. Para reforzar el "
+        "cumplimiento de las prácticas higiénicas, se colocarán en sitios estratégicos avisos alusivos a la obligatoriedad y "
+        "necesidad de su observancia durante la manipulación de alimentos. Parágrafo 2°. El MANIPULADOR(A)(A) de "
+        "alimentos debe ser entrenado para comprender y manejar el control de los puntos del proceso que están bajo su "
+        "responsabilidad y la importancia de su vigilancia o monitoreo; además, debe conocer los límites del punto del "
+        "proceso y las acciones correctivas a tomar cuando existan desviaciones en dichos límites."
     )
-    c.setFont("Helvetica", 10)
-    _draw_wrapped_text(c, bloque_13, x + pad, y_text - 1.1 * cm, w - 2 * pad, 14.5)
+    c.setFont("Helvetica", 8.6)
+    _draw_justified_text(c, bloque_13, x + pad, y_text - 1.0 * cm, w - 2 * pad, 12.0)
 
     c.saveState()
-    c.translate(x + w * 0.56, y + h * 0.43)
-    c.rotate(45)
-    c.setFont("Helvetica-Bold", 46)
-    c.setFillColor(colors.Color(0.55, 0.72, 0.55, alpha=0.15))
-    c.drawCentredString(0, 0, _safe("CHVS"))
+    c.translate(x + w * 0.54, y + h * 0.35)
+    c.rotate(40)
+    c.setFont("Helvetica-Bold", 44)
+    c.setFillColor(colors.Color(0.55, 0.72, 0.55, alpha=0.18))
+    c.drawCentredString(0, 0, _safe("COPIA CONTROLADA"))
     c.restoreState()
