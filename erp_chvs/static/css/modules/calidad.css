@@ -1,0 +1,358 @@
+/* ═══════════════════════════════════════════════════════════
+   CALIDAD — Módulo de Certificados de Calidad
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Variables ─────────────────────────────────────────────── */
+:root {
+    --cal-primary:   #1e3a8a;
+    --cal-primary-h: #162d6e;
+    --cal-success:   #16a34a;
+    --cal-success-h: #15803d;
+    --cal-danger:    #c0392b;
+    --cal-secondary: #64748b;
+    --cal-border:    #e2e8f0;
+    --cal-bg:        #f8fafc;
+    --cal-text:      #1e293b;
+    --cal-muted:     #64748b;
+    --cal-gold:      #c9a227;
+}
+
+/* ── Dashboard background ───────────────────────────────────── */
+#calidad-dashboard-background {
+    min-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #1e40af 100%);
+    padding: 2rem;
+}
+
+/* ── Página principal ───────────────────────────────────────── */
+.calidad-page {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* ── Encabezado de página ───────────────────────────────────── */
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.page-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.btn-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 50%;
+    background: var(--cal-bg);
+    border: 1px solid var(--cal-border);
+    color: var(--cal-primary);
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s;
+}
+.btn-back:hover { background: var(--cal-primary); color: #fff; }
+
+.page-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--cal-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.page-title i { color: var(--cal-gold); }
+
+/* ── Panel de generación ────────────────────────────────────── */
+.gen-panel {
+    background: #fff;
+    border: 1px solid var(--cal-border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.gen-panel-header {
+    background: var(--cal-primary);
+    color: #fff;
+    padding: 0.85rem 1.25rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.gen-panel-header i { color: var(--cal-gold); }
+
+.gen-panel-body { padding: 1.5rem; }
+
+/* ── Barra de búsqueda ──────────────────────────────────────── */
+.search-bar { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+.search-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    flex: 1;
+    min-width: 260px;
+    max-width: 460px;
+}
+.search-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--cal-text);
+}
+
+.search-input-wrap {
+    display: flex;
+    gap: 0.5rem;
+}
+.search-input-wrap input {
+    flex: 1;
+    padding: 0.6rem 0.9rem;
+    border: 1.5px solid var(--cal-border);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    color: var(--cal-text);
+    transition: border-color 0.2s;
+}
+.search-input-wrap input:focus {
+    outline: none;
+    border-color: var(--cal-primary);
+}
+
+/* ── Panel de datos del empleado ────────────────────────────── */
+.empleado-panel {
+    margin-top: 1.25rem;
+    border: 1.5px solid #c7d2fe;
+    border-radius: 8px;
+    overflow: hidden;
+    animation: slideDown 0.25s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.empleado-header {
+    background: #eff6ff;
+    padding: 0.7rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 600;
+    color: var(--cal-primary);
+    border-bottom: 1px solid #c7d2fe;
+}
+.empleado-header i { font-size: 1.1rem; }
+
+.tipo-badge {
+    margin-left: auto;
+    padding: 0.2rem 0.7rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--cal-primary);
+    color: #fff;
+}
+.tipo-badge.manipuladora { background: #0369a1; }
+.tipo-badge.planta        { background: #15803d; }
+.tipo-badge.aprendiz      { background: #7c3aed; }
+
+.empleado-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+}
+.empleado-field--wide { grid-column: 1 / -1; }
+
+.empleado-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+.field-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--cal-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.field-value {
+    font-size: 0.95rem;
+    color: var(--cal-text);
+    font-weight: 500;
+}
+
+.obs-group {
+    padding: 0 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.obs-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--cal-text);
+}
+.obs-group .optional { font-weight: 400; color: var(--cal-muted); font-size: 0.8rem; }
+.obs-group textarea {
+    padding: 0.6rem 0.9rem;
+    border: 1.5px solid var(--cal-border);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    resize: vertical;
+    color: var(--cal-text);
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+.obs-group textarea:focus { outline: none; border-color: var(--cal-primary); }
+
+.gen-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem 1rem;
+    border-top: 1px solid var(--cal-border);
+}
+
+/* ── Botones ─────────────────────────────────────────────────── */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 1.1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.1s;
+    white-space: nowrap;
+}
+.btn:active { transform: scale(0.97); }
+
+.btn-primary  { background: var(--cal-primary); color: #fff; }
+.btn-primary:hover  { background: var(--cal-primary-h); }
+
+.btn-success  { background: var(--cal-success); color: #fff; }
+.btn-success:hover  { background: var(--cal-success-h); }
+
+.btn-secondary { background: var(--cal-secondary); color: #fff; }
+.btn-secondary:hover { background: #475569; }
+
+.btn-outline {
+    background: transparent;
+    border: 1.5px solid var(--cal-border);
+    color: var(--cal-muted);
+}
+.btn-outline:hover { border-color: var(--cal-primary); color: var(--cal-primary); }
+
+.btn-sm { padding: 0.35rem 0.75rem; font-size: 0.82rem; }
+
+.btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* ── Panel de tabla ──────────────────────────────────────────── */
+.table-panel {
+    background: #fff;
+    border: 1px solid var(--cal-border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.table-panel-header {
+    background: #f1f5f9;
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    color: var(--cal-text);
+    font-size: 0.92rem;
+    border-bottom: 1px solid var(--cal-border);
+}
+.table-panel-header i { color: var(--cal-primary); }
+
+.table-responsive { overflow-x: auto; }
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+.data-table th {
+    background: var(--cal-primary);
+    color: #fff;
+    padding: 0.65rem 0.9rem;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.data-table td {
+    padding: 0.6rem 0.9rem;
+    border-bottom: 1px solid var(--cal-border);
+    color: var(--cal-text);
+}
+.data-table tbody tr:hover { background: #f8fafc; }
+.data-table tbody tr:last-child td { border-bottom: none; }
+
+.text-center { text-align: center; }
+.text-muted  { color: var(--cal-muted); }
+
+/* Badges de tipo en tabla */
+.badge-tipo {
+    display: inline-block;
+    padding: 0.18rem 0.6rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+}
+.badge-manipuladora { background: #0369a1; }
+.badge-planta        { background: #15803d; }
+.badge-aprendiz      { background: #7c3aed; }
+
+/* ── Notificación flotante ───────────────────────────────────── */
+.calidad-alert {
+    position: fixed;
+    top: 1.2rem;
+    right: 1.5rem;
+    z-index: 9999;
+    padding: 0.75rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    animation: slideInRight 0.3s ease;
+    max-width: 380px;
+}
+.calidad-alert.success { background: var(--cal-success); }
+.calidad-alert.error   { background: var(--cal-danger); }
+.calidad-alert.warning { background: #d97706; }
+.calidad-alert.info    { background: var(--cal-primary); }
+
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(40px); }
+    to   { opacity: 1; transform: translateX(0); }
+}

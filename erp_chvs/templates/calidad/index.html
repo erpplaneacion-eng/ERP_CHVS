@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Calidad{% endblock %}
+
+{% block content %}
+<div id="calidad-dashboard-background">
+    <div class="module-dashboard">
+
+        <a href="{% url 'calidad:lista_certificados' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-certificate"></i>
+            </div>
+            <div class="card-content">
+                <h3>Certificados de Calidad</h3>
+                <p>Genera y gestiona los certificados de calidad del personal vinculado al programa.</p>
+            </div>
+        </a>
+
+    </div>
+</div>
+{% endblock %}

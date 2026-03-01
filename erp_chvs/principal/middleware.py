@@ -27,7 +27,8 @@ class RoleAccessMiddleware:
             'PLANEACION': ['planeacion', 'dashboard'],
             'COSTOS': ['costos', 'dashboard'],
             'LOGISTICA': ['logistica', 'dashboard'],
-            'ADMINISTRACION': ['nutricion', 'facturacion', 'planeacion', 'principal', 'costos', 'logistica', 'dashboard']
+            'CALIDAD': ['calidad', 'dashboard'],
+            'ADMINISTRACION': ['nutricion', 'facturacion', 'planeacion', 'principal', 'costos', 'logistica', 'calidad', 'dashboard']
         }
 
         # Apps que siempre son accesibles para logueados (como el perfil o home)

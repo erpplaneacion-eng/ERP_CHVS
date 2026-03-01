@@ -30,6 +30,8 @@
     <link rel="stylesheet" href="{% static 'css/modules/costos.css' %}">
     {% elif request.resolver_match.app_name == 'logistica' %}
     <link rel="stylesheet" href="{% static 'css/modules/logistica.css' %}">
+    {% elif request.resolver_match.app_name == 'calidad' %}
+    <link rel="stylesheet" href="{% static 'css/modules/calidad.css' %}">
     {% endif %}
 
     {% block extra_css %}{% endblock %}
@@ -90,6 +92,13 @@
                     <li><a href="{% url 'logistica:principal' %}"
                             class="{% if request.resolver_match.app_name == 'logistica' %}active{% endif %}">
                             <i class="fas fa-truck-loading"></i><span>Logística</span>
+                        </a></li>
+                    {% endif %}
+
+                    {% if user|has_group:"ADMINISTRACION,CALIDAD" %}
+                    <li><a href="{% url 'calidad:principal' %}"
+                            class="{% if request.resolver_match.app_name == 'calidad' %}active{% endif %}">
+                            <i class="fas fa-certificate"></i><span>Calidad</span>
                         </a></li>
                     {% endif %}
                 </ul>

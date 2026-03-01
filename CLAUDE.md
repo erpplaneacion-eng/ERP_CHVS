@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Requirements**: Python 3.13+, PostgreSQL
 
 **Deprecated**: `ocr_validation` and `iagenerativa` apps removed.
-**Not yet active**: `Api/` app (Siesa ERP integration) — not in `INSTALLED_APPS`. See `erp_chvs/planeacion/PROPUESTA_INTEGRACION_SIESA.md` for the planned SC/RQI connectors (Solicitudes de Compra and Requisiciones de Inventario to SIESA ERP SAAS).
+**Not yet active**: `Api/` app (Siesa ERP integration) and `calidad/` app — both not in `INSTALLED_APPS`, both are empty stubs. See `erp_chvs/planeacion/PROPUESTA_INTEGRACION_SIESA.md` for the planned SC/RQI connectors (Solicitudes de Compra and Requisiciones de Inventario to SIESA ERP SAAS).
 
 ## Setup (run from `ERP_CHVS/`)
 
@@ -35,8 +35,9 @@ python manage.py makemigrations && python manage.py migrate
 # Testing
 python manage.py test                  # All tests
 python manage.py test nutricion.tests_guias_preparacion_excel --verbosity=2  # Single module
-# Available test modules: nutricion.tests, nutricion.tests_guias_preparacion_excel,
+# Modules with real tests: nutricion.tests, nutricion.tests_guias_preparacion_excel,
 #   nutricion.tests_paso2_preparaciones_editor, facturacion.tests, principal.tests
+# Stub-only (empty): logistica.tests, costos.tests, planeacion.tests, dashboard.tests
 DJANGO_SETTINGS_MODULE=erp_chvs.settings pytest -v          # pytest (no pytest.ini)
 DJANGO_SETTINGS_MODULE=erp_chvs.settings pytest -k "test_name"
 DJANGO_SETTINGS_MODULE=erp_chvs.settings pytest facturacion/tests.py
@@ -88,11 +89,12 @@ ERP_CHVS/
 | `facturacion` | Excel focalization list upload, validation, PDF attendance reports |
 | `costos` | Nutritional cost matrix (cross-tab menus × ingredients × levels), Excel export. Key endpoints: `GET /costos/matriz-nutricional/`, `GET /costos/exportar-excel/` |
 | `logistica` | Delivery route management: routes, route types, sede assignment with visit order |
+| `calidad` | Employee quality certificates: search by ID from external DB, generate landscape A4 PDF |
 | `dashboard` | Main dashboard after login |
 
 ### Service-Oriented Architecture
 
-Business logic lives in `services.py` or `services/` packages — **never in views**. Views only handle HTTP request/response. **Exception**: `costos/views.py` and `planeacion/views.py` (`ciclos_menus`) contain query/transformation logic directly — do not replicate this pattern in new code.
+Business logic lives in `services.py` or `services/` packages — **never in views**. Views only handle HTTP request/response. **Exception**: `costos/views.py`, `logistica/views.py`, and `planeacion/views.py` (`ciclos_menus`) contain query/transformation logic directly — do not replicate this pattern in new code.
 
 **Facturacion** reference pattern:
 ```
@@ -248,7 +250,8 @@ sorted(queryset, key=lambda n: _ORDEN_NIVELES.index(n.nivel_escolar_uapa) if n.n
 | `PLANEACION` | planeacion, dashboard |
 | `COSTOS` | costos, dashboard |
 | `LOGISTICA` | logistica, dashboard |
-| `ADMINISTRACION` | nutricion, facturacion, planeacion, principal, costos, logistica, dashboard |
+| `CALIDAD` | calidad, dashboard |
+| `ADMINISTRACION` | nutricion, facturacion, planeacion, principal, costos, logistica, calidad, dashboard |
 
 A user can belong to **multiple groups** — their allowed apps are the **union** of all group permissions. Superusers bypass all restrictions. Set up with `python manage.py setup_groups`.
 

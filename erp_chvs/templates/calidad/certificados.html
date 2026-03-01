@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Certificados de Calidad{% endblock %}
+
+{% block content %}
+<div class="calidad-page">
+
+    <!-- ── Encabezado ──────────────────────────────────────────────────── -->
+    <div class="page-header">
+        <div class="page-header-left">
+            <a href="{% url 'calidad:principal' %}" class="btn-back">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <h1 class="page-title">
+                <i class="fas fa-certificate"></i> Certificados de Calidad
+            </h1>
+        </div>
+    </div>
+
+    <!-- ── Panel de generación ────────────────────────────────────────── -->
+    <div class="gen-panel">
+        <div class="gen-panel-header">
+            <i class="fas fa-plus-circle"></i>
+            <span>Nuevo Certificado</span>
+        </div>
+        <div class="gen-panel-body">
+
+            <!-- Búsqueda de empleado -->
+            <div class="search-bar">
+                <div class="search-group">
+                    <label for="cedulaBusqueda">Cédula del empleado</label>
+                    <div class="search-input-wrap">
+                        <input type="text" id="cedulaBusqueda" placeholder="Ej: 1001234567"
+                               autocomplete="off" inputmode="numeric">
+                        <button id="buscarEmpleadoBtn" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel con datos del empleado encontrado -->
+            <div id="empleadoPanel" class="empleado-panel" style="display:none">
+                <div class="empleado-header">
+                    <i class="fas fa-user-check"></i>
+                    <span id="empNombreHeader">Empleado encontrado</span>
+                    <span id="empTipoBadge" class="tipo-badge"></span>
+                </div>
+                <div class="empleado-grid">
+                    <div class="empleado-field">
+                        <span class="field-label">Nombre completo</span>
+                        <span class="field-value" id="empNombre">—</span>
+                    </div>
+                    <div class="empleado-field">
+                        <span class="field-label">Cédula</span>
+                        <span class="field-value" id="empCedula">—</span>
+                    </div>
+                    <div class="empleado-field">
+                        <span class="field-label">Cargo</span>
+                        <span class="field-value" id="empCargo">—</span>
+                    </div>
+                    <div class="empleado-field">
+                        <span class="field-label">EPS</span>
+                        <span class="field-value" id="empEps">—</span>
+                    </div>
+                    <div class="empleado-field empleado-field--wide">
+                        <span class="field-label">Programa / Empresa</span>
+                        <span class="field-value" id="empPrograma">—</span>
+                    </div>
+                </div>
+
+                <div class="obs-group">
+                    <label for="observaciones">Observaciones <span class="optional">(opcional)</span></label>
+                    <textarea id="observaciones" rows="2"
+                              placeholder="Ej: Aprobó capacitación BPM — Resolución 719 de 2015"></textarea>
+                </div>
+
+                <div class="gen-actions">
+                    <button id="cancelarBtn" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button id="generarCertBtn" class="btn btn-success">
+                        <i class="fas fa-file-pdf"></i> Generar y Descargar Certificado
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── Tabla de certificados emitidos ─────────────────────────────── -->
+    <div class="table-panel">
+        <div class="table-panel-header">
+            <span><i class="fas fa-list"></i> Certificados Emitidos</span>
+            <button id="recargarBtn" class="btn btn-sm btn-outline" title="Recargar lista">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table" id="certificadosTable">
+                <thead>
+                    <tr>
+                        <th>N° Certificado</th>
+                        <th>Cédula</th>
+                        <th>Nombre</th>
+                        <th>Cargo</th>
+                        <th>Tipo</th>
+                        <th>Fecha</th>
+                        <th>Elaborado por</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="certificadosTbody">
+                    <tr><td colspan="8" class="text-center text-muted">Cargando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/calidad/certificados.js' %}"></script>
+{% endblock %}

@@ -130,6 +130,7 @@ INSTALLED_APPS = [
     'facturacion',
     'costos',
     'logistica',
+    'calidad',
 ]
 
 # Cloudinary para MEDIA files (imágenes subidas por usuarios)
@@ -202,6 +203,9 @@ else:
     }
 
 
+
+# BD externa de empleados (read-only, usada por calidad/services.py)
+EMPLEADOS_DB_URL = os.environ.get('EMPLEADOS_DB_URL', '')
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

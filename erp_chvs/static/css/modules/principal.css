@@ -1,5 +1,5 @@
-/* ===================================== */
-/* MÓDULO PRINCIPAL - CONFIGURACIÓN     */
+﻿/* ===================================== */
+/* MÃ“DULO PRINCIPAL - CONFIGURACIÃ“N     */
 /* ===================================== */
 
 .configuration-container {
@@ -28,6 +28,15 @@
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 30px;
     margin-top: 20px;
+}
+
+#principal-dashboard-background {
+    background-image: url('/static/principal/images/fondo_principal.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 12px;
+    padding: 24px;
 }
 
 .config-card {
@@ -98,7 +107,7 @@
 }
 
 /* ===================================== */
-/* GESTIÓN DE DEPARTAMENTOS Y MUNICIPIOS */
+/* GESTIÃ“N DE DEPARTAMENTOS Y MUNICIPIOS */
 /* ===================================== */
 
 .departamentos-container,
@@ -255,7 +264,7 @@
     text-align: center;
 }
 
-/* Estilos específicos para municipios */
+/* Estilos especÃ­ficos para municipios */
 .municipios-container .data-table {
     font-size: 14px;
 }
@@ -317,7 +326,7 @@
     font-style: italic;
 }
 
-/* Estilos específicos para los dropdowns de VERDADERO/FALSO */
+/* Estilos especÃ­ficos para los dropdowns de VERDADERO/FALSO */
 .modal select[name="preparado"],
 .modal select[name="industrializado"] {
     font-weight: 500;
@@ -542,7 +551,7 @@
 }
 
 .search-results-info::before {
-    content: '📊';
+    content: 'ðŸ“Š';
     font-size: 16px;
 }
 
@@ -572,7 +581,7 @@
     padding: 20px;
 }
 
-/* Animaciones para la búsqueda */
+/* Animaciones para la bÃºsqueda */
 @keyframes searchPulse {
     0% { transform: scale(1); }
     50% { transform: scale(1.02); }
@@ -604,7 +613,7 @@
     animation: fadeInUp 0.6s ease-out;
 }
 
-/* Efecto de carga para el botón de limpiar */
+/* Efecto de carga para el botÃ³n de limpiar */
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
@@ -636,7 +645,7 @@
     transform: scale(1.01);
 }
 
-/* Efecto de partículas para el botón de limpiar */
+/* Efecto de partÃ­culas para el botÃ³n de limpiar */
 .btn-clear-search::after {
     content: '';
     position: absolute;

@@ -28,8 +28,12 @@ class Command(BaseCommand):
                 'apps': ['logistica'],
                 'description': 'Acceso a rutas de entrega y asignación de sedes'
             },
+            'CALIDAD': {
+                'apps': ['calidad'],
+                'description': 'Acceso a certificados de calidad del personal'
+            },
             'ADMINISTRACION': {
-                'apps': ['nutricion', 'facturacion', 'planeacion', 'principal', 'dashboard', 'costos', 'logistica'],
+                'apps': ['nutricion', 'facturacion', 'planeacion', 'principal', 'dashboard', 'costos', 'logistica', 'calidad'],
                 'description': 'Acceso total al sistema'
             }
         }
