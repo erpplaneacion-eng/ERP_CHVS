@@ -150,6 +150,36 @@ def _draw_wrapped_text(c: canvas.Canvas, text: str, x: float, y: float, width: f
     return text_obj.getY()
 
 
+def _draw_centered_wrapped_text(c: canvas.Canvas, text: str, x: float, y: float, width: float, leading: float):
+    words = (text or "").split()
+    if not words:
+        return y
+
+    font_name = c._fontname
+    font_size = c._fontsize
+    lines = []
+    current = ""
+
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if c.stringWidth(candidate, font_name, font_size) <= width:
+            current = candidate
+            continue
+        if current:
+            lines.append(current)
+        current = word
+
+    if current:
+        lines.append(current)
+
+    current_y = y
+    for line in lines:
+        c.drawCentredString(x + (width / 2), current_y, _safe(line))
+        current_y -= leading
+
+    return current_y
+
+
 def _draw_justified_text(c: canvas.Canvas, text: str, x: float, y: float, width: float, leading: float):
     words = (text or "").split()
     if not words:
@@ -275,7 +305,7 @@ def _dibujar_contenido_izquierdo(c: canvas.Canvas, cert, x: float, y: float, w: 
         "Resolucion 2674 de 2013 expedido por el Ministerio de Salud y Proteccion Social"
     )
     c.setFont("Times-BoldItalic", 8.8)
-    y_text = _draw_wrapped_text(c, intro, x + pad, top_y - 1.65 * cm, w - 2 * pad, 11.6)
+    y_text = _draw_centered_wrapped_text(c, intro, x + pad, top_y - 1.65 * cm, w - 2 * pad, 11.6)
 
     c.setFont("Times-BoldItalic", 9.2)
     y_text -= 0.55 * cm
