@@ -1,6 +1,7 @@
 from io import BytesIO
 from pathlib import Path
 
+from django.contrib.staticfiles import finders
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import LETTER, landscape
 from reportlab.lib.units import cm
@@ -34,9 +35,31 @@ TIPO_LABELS = {
     "aprendiz": "Aprendiz SENA",
 }
 
-IMAGES_DIR = Path(__file__).resolve().parent.parent / "staticfiles" / "calidad" / "images"
-LOGO_PATH = IMAGES_DIR / "logo.jpeg"
-FIRMA_PATH = IMAGES_DIR / "firma.png"
+BASE_DIR = Path(__file__).resolve().parent.parent
+LOGO_STATIC_REL = "calidad/images/logo.jpeg"
+FIRMA_STATIC_REL = "calidad/images/firma.png"
+
+
+def _resolver_static_image(static_rel_path: str) -> Path | None:
+    """Resuelve un estático en dev/prod para uso de ReportLab (ruta de archivo local)."""
+    found = finders.find(static_rel_path)
+    if found:
+        # finders.find puede devolver lista/tupla en algunos backends.
+        if isinstance(found, (list, tuple)):
+            if found:
+                return Path(found[0])
+        return Path(found)
+
+    # Fallback explícito por si staticfiles finders no lo ubica en este entorno.
+    candidate_paths = (
+        BASE_DIR / "static" / static_rel_path,
+        BASE_DIR / "staticfiles" / static_rel_path,
+    )
+    for candidate in candidate_paths:
+        if candidate.exists():
+            return candidate
+
+    return None
 
 
 def _safe(value, max_len: int = 0) -> str:
@@ -189,14 +212,14 @@ def _dibujar_placeholder_logo(c: canvas.Canvas, x: float, y: float):
 
 def _dibujar_imagen_ajustada(
     c: canvas.Canvas,
-    image_path: Path,
+    image_path: Path | None,
     x: float,
     y: float,
     max_w: float,
     max_h: float,
     anchor_top: bool = False,
 ) -> bool:
-    if not image_path.exists():
+    if not image_path or not image_path.exists():
         return False
 
     try:
@@ -225,9 +248,10 @@ def _dibujar_contenido_izquierdo(c: canvas.Canvas, cert, x: float, y: float, w: 
 
     logo_x = x + pad - 0.55 * cm
     logo_y = top_y - 1.05 * cm
+    logo_path = _resolver_static_image(LOGO_STATIC_REL)
     logo_ok = _dibujar_imagen_ajustada(
         c,
-        LOGO_PATH,
+        logo_path,
         logo_x,
         logo_y,
         max_w=1.95 * cm,
@@ -281,9 +305,10 @@ def _dibujar_contenido_izquierdo(c: canvas.Canvas, cert, x: float, y: float, w: 
     _draw_justified_text(c, cierre_2, x + pad, y_text - 0.55 * cm, w - 2 * pad, 12.2)
 
     firma_y = y + 1.95 * cm
+    firma_path = _resolver_static_image(FIRMA_STATIC_REL)
     firma_ok = _dibujar_imagen_ajustada(
         c,
-        FIRMA_PATH,
+        firma_path,
         x + w * 0.37,
         firma_y + 0.05 * cm,
         max_w=w * 0.26,

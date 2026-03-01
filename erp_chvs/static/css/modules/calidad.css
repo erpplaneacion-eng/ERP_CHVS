@@ -23,7 +23,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #1e40af 100%);
+    background-image: url('/static/calidad/images/calidad.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     padding: 2rem;
 }
 
