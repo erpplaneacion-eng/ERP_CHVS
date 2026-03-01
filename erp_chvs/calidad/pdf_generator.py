@@ -1,4 +1,4 @@
-﻿from io import BytesIO
+from io import BytesIO
 from pathlib import Path
 
 from reportlab.lib import colors
