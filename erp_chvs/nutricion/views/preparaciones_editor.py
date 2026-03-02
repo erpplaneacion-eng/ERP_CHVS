@@ -266,16 +266,25 @@ def _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados
             peso_neto = ingredientes_configurados[key]['peso_neto']
             valores_nutricionales = ingredientes_configurados[key]
         else:
-            # Si no hay configuraciÃ³n especÃ­fica para el nivel, intentamos usar el gramaje de la preparaciÃ³n
-            # Pero si el gramaje es 0 o no existe, usamos el mÃ­nimo del rango
+            # Si no hay configuración específica para el nivel, intentamos usar el gramaje de la preparación
+            # Pero si el gramaje es 0 o no existe, usamos el valor apropiado del rango:
+            # - Si el rango tiene mínimo > 0: usar el mínimo
+            # - Si el rango tiene máximo > 0: usar el máximo (para grupos como Grasas donde mínimo=0)
+            # - Si no hay rango definido (ambos None o 0): usar 100g como último fallback
             gramaje_base = float(rel.gramaje) if rel.gramaje else 0
             minimo_rango = float(rango['minimo']) if rango['minimo'] is not None else 0
+            maximo_rango = float(rango['maximo']) if rango['maximo'] is not None else 0
 
             if gramaje_base > 0:
                 peso_neto = gramaje_base
             elif minimo_rango > 0:
+                # Caso normal: rango con mínimo definido (ej: frutas 100g+), usar el mínimo
                 peso_neto = minimo_rango
+            elif maximo_rango > 0:
+                # Caso especial: rango con máximo pero mínimo=0 (ej: Grasas 0-3g), usar el máximo
+                peso_neto = maximo_rango
             else:
+                # No hay rango definido (ambos son 0 o None), usar fallback
                 peso_neto = 100.0
 
             valores_nutricionales = CalculoService.calcular_valores_nutricionales_alimento(
