@@ -346,7 +346,7 @@ def _dibujar_contenido_izquierdo(c: canvas.Canvas, cert, x: float, y: float, w: 
     c.setFont("Helvetica", 9.0)
     y_text = _draw_justified_text(c, parrafo, x + pad, y_text - 0.9 * cm, w - 2 * pad, 12.2)
 
-    cierre_1 = "El curso se reforzara con las capacitaciones contempladas mensualmente, para la vigencia de 1 ano."
+    cierre_1 = "El curso se reforzara con las capacitaciones contempladas mensualmente, para la vigencia de 1 año."
     cierre_2 = f"Para constancia de lo anterior, la presente certificacion se firma en Yumbo el {_fecha_es(cert.fecha_emision)}."
     c.setFont("Helvetica", 9.0)
     y_text = _draw_justified_text(c, cierre_1, x + pad, y_text - 0.45 * cm, w - 2 * pad, 12.2)
@@ -452,3 +452,4 @@ def _dibujar_contenido_derecho(c: canvas.Canvas, cert, x: float, y: float, w: fl
     c.setFillColor(colors.Color(0.55, 0.72, 0.55, alpha=0.18))
     c.drawCentredString(0, 0, _safe("COPIA CONTROLADA"))
     c.restoreState()
+

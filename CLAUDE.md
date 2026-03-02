@@ -9,7 +9,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Requirements**: Python 3.13+, PostgreSQL
 
 **Deprecated**: `ocr_validation` and `iagenerativa` apps removed.
-**Not yet active**: `Api/` app (Siesa ERP integration) and `calidad/` app — both not in `INSTALLED_APPS`, both are empty stubs. See `erp_chvs/planeacion/PROPUESTA_INTEGRACION_SIESA.md` for the planned SC/RQI connectors (Solicitudes de Compra and Requisiciones de Inventario to SIESA ERP SAAS).
+**Not yet active**: `Api/` app (Siesa ERP integration) — not in `INSTALLED_APPS`, empty stub. See `erp_chvs/planeacion/PROPUESTA_INTEGRACION_SIESA.md` for the planned SC/RQI connectors (Solicitudes de Compra and Requisiciones de Inventario to SIESA ERP SAAS).
+**`calidad/` app**: ACTIVE — employee quality certificates (BPM), external employee DB lookup, landscape A4 PDF generation, and WhatsApp bot integration via external `apiw` service (Railway). See `erp_chvs/WHATSAPP_BOT_INTEGRACION.md` for full setup documentation.
 
 ## Setup (run from `ERP_CHVS/`)
 
@@ -272,6 +273,10 @@ DB_PORT=5432
 
 GEMINI_API_KEY=your-key
 
+# Calidad — WhatsApp bot integration
+CALIDAD_WA_API_KEY=<shared with ERP_API_KEY in apiw Railway service>
+EMPLEADOS_DB_URL=<PostgreSQL connection URL for external employee database>
+
 # Production only (Cloudinary for media):
 # CLOUDINARY_CLOUD_NAME=, CLOUDINARY_API_KEY=, CLOUDINARY_API_SECRET=
 ```
@@ -302,6 +307,8 @@ DATABASE_URL=<auto-set by Railway Postgres plugin>
 CLOUDINARY_CLOUD_NAME=<name>
 CLOUDINARY_API_KEY=<key>
 CLOUDINARY_API_SECRET=<secret>
+CALIDAD_WA_API_KEY=<shared secret with apiw service>
+EMPLEADOS_DB_URL=<external PostgreSQL URL for employee lookup>
 ```
 `DJANGO_ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` are auto-populated from `RAILWAY_PUBLIC_DOMAIN`, but can be overridden manually.
 
@@ -408,6 +415,26 @@ ModalidadesManager.js → abrirModalCopiar()
                 TablaAnalisisNutricionalMenu → TablaIngredientesPorNivel
 ```
 Key file: `nutricion/services/menu_service.py` — `copiar_modalidad_completa()`. Endpoints in `menus_api.py`.
+
+### Calidad: WhatsApp Bot — Certificados BPM
+
+External service `apiw` (FastAPI, Railway project `developers-facebook`, repo `Dalopezos28/apiw`) receives WhatsApp messages and calls the ERP to generate certificates.
+
+```
+User sends cédula via WhatsApp → Meta Cloud API webhook → apiw
+    → POST /calidad/api/whatsapp/generar/  (Header: X-CALIDAD-API-KEY)
+    → ERP looks up employee in external PostgreSQL (EMPLEADOS_DB_URL)
+    → Creates CertificadoCalidad + HMAC-signed download token (24h TTL)
+    → Returns {success, numero, nombre, url_certificado}
+apiw → sends WhatsApp reply with download link
+User → opens link → GET /calidad/certificados/<pk>/descargar/?token=<hmac>
+```
+
+Key files: `calidad/views.py` (`api_whatsapp_generar_certificado`, `descargar_certificado`), `calidad/services.py` (`buscar_empleado_por_cedula`).
+
+**No whitelist** — the bot responds to ANY number that sends a 6–12 digit number (cédula validation in `apiw._es_cedula`). Users must send the cédula digits only, no extra text.
+
+**Full setup documentation** (Meta config, WABA subscription, token management, known errors): `erp_chvs/WHATSAPP_BOT_INTEGRACION.md`
 
 ## Production Gotchas
 
