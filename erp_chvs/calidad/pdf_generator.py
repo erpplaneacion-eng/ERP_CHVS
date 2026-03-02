@@ -1,3 +1,4 @@
+import logging
 from io import BytesIO
 from pathlib import Path
 
@@ -7,6 +8,8 @@ from reportlab.lib.pagesizes import LETTER, landscape
 from reportlab.lib.units import cm
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
+
+logger = logging.getLogger(__name__)
 
 VERDE_BANDA = colors.HexColor("#7FA36A")
 VERDE_BANDA_SUAVE = colors.HexColor("#C8DDBA")
@@ -47,8 +50,12 @@ def _resolver_static_image(static_rel_path: str) -> Path | None:
         # finders.find puede devolver lista/tupla en algunos backends.
         if isinstance(found, (list, tuple)):
             if found:
-                return Path(found[0])
-        return Path(found)
+                resolved = Path(found[0])
+                logger.debug("Imagen resuelta via finders (lista): %s", resolved)
+                return resolved
+        resolved = Path(found)
+        logger.debug("Imagen resuelta via finders: %s", resolved)
+        return resolved
 
     # Fallback explícito por si staticfiles finders no lo ubica en este entorno.
     candidate_paths = (
@@ -57,8 +64,10 @@ def _resolver_static_image(static_rel_path: str) -> Path | None:
     )
     for candidate in candidate_paths:
         if candidate.exists():
+            logger.debug("Imagen resuelta via fallback directo: %s", candidate)
             return candidate
 
+    logger.warning("No se encontro imagen estatica: %s (BASE_DIR=%s)", static_rel_path, BASE_DIR)
     return None
 
 
@@ -249,13 +258,17 @@ def _dibujar_imagen_ajustada(
     max_h: float,
     anchor_top: bool = False,
 ) -> bool:
-    if not image_path or not image_path.exists():
+    if not image_path:
+        return False
+    if not image_path.exists():
+        logger.warning("Archivo de imagen no encontrado: %s", image_path)
         return False
 
     try:
         img = ImageReader(str(image_path))
         img_w, img_h = img.getSize()
         if not img_w or not img_h:
+            logger.warning("Imagen con dimensiones invalidas: %s (%sx%s)", image_path, img_w, img_h)
             return False
 
         scale = min(max_w / img_w, max_h / img_h)
@@ -264,9 +277,14 @@ def _dibujar_imagen_ajustada(
         draw_x = x + (max_w - draw_w) / 2
         draw_y = y + (max_h - draw_h) if anchor_top else y
 
-        c.drawImage(img, draw_x, draw_y, width=draw_w, height=draw_h, mask="auto")
+        # Usar mask="auto" solo para PNG (que puede tener canal alpha); JPEG no lo necesita
+        suffix = image_path.suffix.lower()
+        mask = "auto" if suffix in ('.png', '.gif') else None
+        c.drawImage(img, draw_x, draw_y, width=draw_w, height=draw_h, mask=mask)
+        logger.debug("Imagen dibujada correctamente: %s (%.1fpx x %.1fpx)", image_path.name, draw_w, draw_h)
         return True
-    except Exception:
+    except Exception as e:
+        logger.error("Error al dibujar imagen %s: %s", image_path, e, exc_info=True)
         return False
 
 
