@@ -262,6 +262,7 @@ class AnalisisNutricionalService:
                         'id_ingrediente': ingrediente_codigo,
                         'nombre': ingrediente_nombre,
                         'codigo_icbf': alimento.codigo,
+                        'id_componente': componente_ing.id_componente if componente_ing else None,
                         'componente': componente_ing.componente if componente_ing else 'SIN COMPONENTE',
                         'grupo_alimentos': grupo_alimento or 'SIN GRUPO',
                         'peso_neto_base': peso_neto_base,
@@ -304,6 +305,10 @@ class AnalisisNutricionalService:
                     ingredientes_data.append({
                         'id_ingrediente': ingrediente_codigo,
                         'nombre': ingrediente_nombre,
+                        'id_componente': (
+                            componente_no_icbf.id_componente
+                            if componente_no_icbf else None
+                        ),
                         'componente': (
                             componente_no_icbf.componente
                             if componente_no_icbf else 'SIN COMPONENTE'
@@ -321,6 +326,17 @@ class AnalisisNutricionalService:
 
             # Obtener componente y grupo de alimentos
             componente = preparacion.id_componente.componente if preparacion.id_componente else 'SIN COMPONENTE'
+            # Para orden en Excel, priorizar componente real de ingredientes (evita arrastrar
+            # componentes desactualizados en TablaPreparaciones).
+            componentes_ingredientes = [
+                ing.get('id_componente')
+                for ing in ingredientes_data
+                if ing.get('id_componente')
+            ]
+            id_componente_orden = (
+                componentes_ingredientes[0]
+                if componentes_ingredientes else preparacion.id_componente_id
+            )
             if grupos_ingredientes:
                 grupo_alimentos = ' | '.join(grupos_ingredientes)
             else:
@@ -333,7 +349,7 @@ class AnalisisNutricionalService:
             preparaciones_data.append({
                 'id_preparacion': preparacion.id_preparacion,
                 'nombre': preparacion.preparacion,
-                'id_componente_id': preparacion.id_componente_id,
+                'id_componente_id': id_componente_orden,
                 'componente': componente,
                 'grupo_alimentos': grupo_alimentos,
                 'ingredientes': ingredientes_data
