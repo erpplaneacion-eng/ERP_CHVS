@@ -110,6 +110,18 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
+/* Fila header de preparación */
+.prep-header-row td {
+    background: #f0f4ff;
+    border-bottom: 1px solid #c7d2fe;
+    padding: 6px 8px;
+}
+
+.prep-header-nombre {
+    color: #1e3a8a;
+    font-size: 13px;
+}
+
 /* Columnas de tabla */
 .col-preparacion { width: 200px; }
 .col-ingrediente { width: 250px; }
@@ -479,6 +491,12 @@
     margin: 0 auto 15px auto;
 }
 
+.guardando-mensaje {
+    margin: 0;
+    color: #374151;
+    font-size: 16px;
+}
+
 /* ========================================
    ANIMACIONES
    ======================================== */
@@ -518,4 +536,197 @@
     to {
         transform: rotate(360deg);
     }
+}
+
+/* ========================================
+   MODAL AGREGAR PREPARACIÓN (SweetAlert2)
+   ======================================== */
+
+.swal-popup-modern {
+    border-radius: 16px !important;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
+}
+
+.swal-title-modern {
+    padding: 24px 24px 0 !important;
+    font-size: 1.35rem !important;
+}
+
+.swal-title-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.swal-title-icon {
+    color: #667eea;
+    font-size: 1.8rem;
+}
+
+.swal-title-text {
+    color: #1f2937;
+}
+
+.swal-confirm-modern {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border: none !important;
+    border-radius: 10px !important;
+    padding: 12px 28px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+    transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+.swal-confirm-modern:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+}
+
+.swal-cancel-modern {
+    background-color: #6b7280 !important;
+    border: none !important;
+    border-radius: 10px !important;
+    padding: 12px 28px !important;
+    font-weight: 600 !important;
+}
+
+.swal-cancel-modern:hover {
+    background-color: #4b5563 !important;
+}
+
+.swal-body-padding {
+    padding: 8px 24px 24px;
+}
+
+.modal-field-group {
+    text-align: left;
+    margin-bottom: 24px;
+}
+
+.modal-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.modal-label i {
+    font-size: 1.1rem;
+}
+
+.modal-label-top-spacing {
+    margin-top: 10px;
+}
+
+.modal-label-icon-purple { color: #667eea; }
+.modal-label-icon-yellow  { color: #f59e0b; }
+.modal-label-icon-green   { color: #10b981; }
+
+.required-star {
+    color: #ef4444;
+}
+
+.modal-select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    background-color: white;
+}
+
+.modal-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.modal-select-multirow {
+    height: auto;
+    overflow-y: auto;
+}
+
+.modal-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.modal-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.modal-help-text {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #6b7280;
+    font-size: 12px;
+    margin-top: 6px;
+}
+
+.modal-info-box {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 2px solid #0ea5e9;
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 24px;
+    text-align: left;
+}
+
+.modal-info-box-content {
+    display: flex;
+    align-items: start;
+    gap: 12px;
+}
+
+.modal-info-icon {
+    color: #0ea5e9;
+    font-size: 1.4rem;
+    margin-top: 2px;
+}
+
+.modal-info-text {
+    flex: 1;
+}
+
+.modal-info-title {
+    color: #0c4a6e;
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+
+.modal-info-desc {
+    color: #0c4a6e;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.input-search-wrapper {
+    position: relative;
+    margin-bottom: 8px;
+}
+
+.input-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.modal-input-search {
+    padding-left: 38px;
 }

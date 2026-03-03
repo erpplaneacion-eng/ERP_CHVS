@@ -86,6 +86,24 @@
                     </thead>
                     <tbody class="tbody-ingredientes" data-nivel-id="{{ nivel_data.nivel.id }}">
                         {% for fila in nivel_data.filas %}
+                        {% if fila.first_in_group %}
+                        <tr class="prep-header-row">
+                            <td colspan="7">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <strong class="prep-header-nombre">{{ fila.preparacion }}</strong>
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-danger btn-sm btn-eliminar-preparacion-editor"
+                                        data-id-preparacion="{{ fila.id_preparacion }}"
+                                        data-nombre-preparacion="{{ fila.preparacion }}"
+                                        title="Eliminar preparación completa con todos sus ingredientes"
+                                    >
+                                        <i class="bi bi-x-circle"></i> Eliminar preparación
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
                         <tr
                             data-id-preparacion="{{ fila.id_preparacion }}"
                             data-id-ingrediente="{{ fila.id_ingrediente }}"
@@ -332,6 +350,37 @@
         {% endfor %}
     </div>
 </div>
+
+{% if preparaciones_vacias %}
+<!-- ========================================
+     PREPARACIONES SIN INGREDIENTES
+     ======================================== -->
+<div class="prep-editor-card" style="margin-top: 16px; border-left: 4px solid #f59e0b;">
+    <h5 style="color: #92400e; margin-bottom: 8px;">
+        <i class="bi bi-exclamation-triangle-fill" style="color: #f59e0b;"></i>
+        Preparaciones sin ingredientes
+    </h5>
+    <p class="text-muted" style="font-size: 13px; margin-bottom: 12px;">
+        Estas preparaciones no tienen ingredientes asignados y no aparecen en las tablas anteriores.
+    </p>
+    <ul class="list-group list-group-flush">
+        {% for prep in preparaciones_vacias %}
+        <li class="list-group-item d-flex justify-content-between align-items-center" style="padding: 8px 0;">
+            <span><i class="bi bi-dash-circle text-warning"></i> {{ prep.preparacion }}</span>
+            <button
+                type="button"
+                class="btn btn-outline-danger btn-sm btn-eliminar-preparacion-editor"
+                data-id-preparacion="{{ prep.id_preparacion }}"
+                data-nombre-preparacion="{{ prep.preparacion }}"
+                title="Eliminar esta preparación vacía"
+            >
+                <i class="bi bi-trash"></i> Eliminar
+            </button>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
 
 <!-- ========================================
      DATOS JSON PARA JAVASCRIPT

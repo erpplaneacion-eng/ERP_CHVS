@@ -63,7 +63,7 @@
         overlay.innerHTML = `
             <div class="guardando-card">
                 <div class="guardando-spinner"></div>
-                <h4 style="margin: 0; color: #374151; font-size: 16px;">${mensaje}</h4>
+                <h4 class="guardando-mensaje">${mensaje}</h4>
             </div>
         `;
         document.body.appendChild(overlay);
@@ -508,9 +508,71 @@
 
             quitarFilasDeIngredienteEnTodosLosNiveles(idPreparacion, idIngrediente);
             showNotification('Ingrediente eliminado correctamente.', 'success');
+            setTimeout(() => window.location.reload(), 1200);
         } catch (error) {
             console.error('Error al eliminar ingrediente:', error);
-            showNotification(error.message || 'Error al eliminar ingrediente', 'error');
+            ocultarOverlayGuardando();
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Error al eliminar',
+                    text: error.message || 'No fue posible eliminar el ingrediente. Intente de nuevo.',
+                    icon: 'error',
+                    confirmButtonText: 'Aceptar'
+                });
+            } else {
+                alert(error.message || 'Error al eliminar ingrediente');
+            }
+            return;
+        } finally {
+            ocultarOverlayGuardando();
+        }
+    }
+
+    async function eliminarPreparacion(idPreparacion, nombrePrep) {
+        const confirmado = typeof Swal !== 'undefined'
+            ? (await Swal.fire({
+                title: 'Eliminar preparación',
+                text: `¿Eliminar "${nombrePrep}" con todos sus ingredientes? Esta acción no se puede deshacer.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#dc3545'
+            })).isConfirmed
+            : confirm(`¿Eliminar la preparación "${nombrePrep}"?`);
+
+        if (!confirmado) return;
+
+        const overlay = mostrarOverlayGuardando('Eliminando preparación...');
+        try {
+            const response = await fetch(
+                `/nutricion/api/preparaciones/${idPreparacion}/`,
+                {
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                }
+            );
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'No fue posible eliminar la preparación');
+            }
+
+            showNotification(`Preparación "${nombrePrep}" eliminada correctamente.`, 'success');
+            setTimeout(() => window.location.reload(), 1200);
+        } catch (error) {
+            console.error('Error al eliminar preparación:', error);
+            ocultarOverlayGuardando();
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Error al eliminar',
+                    text: error.message || 'No fue posible eliminar la preparación. Intente de nuevo.',
+                    icon: 'error',
+                    confirmButtonText: 'Aceptar'
+                });
+            } else {
+                alert(error.message || 'Error al eliminar preparación');
+            }
+            return;
         } finally {
             ocultarOverlayGuardando();
         }
@@ -535,7 +597,7 @@
         )).join('');
 
         const result = await Swal.fire({
-            title: '<div style="display:flex;align-items:center;gap:12px;"><i class="bi bi-plus-circle-fill" style="color:#667eea;font-size:1.8rem;"></i><span style="color:#1f2937;">Agregar Preparación</span></div>',
+            title: '<div class="swal-title-inner"><i class="bi bi-plus-circle-fill swal-title-icon"></i><span class="swal-title-text">Agregar Preparación</span></div>',
             width: 700,
             showCancelButton: true,
             confirmButtonText: '<i class="bi bi-check-circle-fill"></i> Agregar',
@@ -547,128 +609,12 @@
                 cancelButton: 'swal-cancel-modern'
             },
             html: `
-                <style>
-                    .swal-popup-modern {
-                        border-radius: 16px !important;
-                        box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
-                    }
-                    .swal-title-modern {
-                        padding: 24px 24px 0 !important;
-                        font-size: 1.35rem !important;
-                    }
-                    .swal-confirm-modern {
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-                        border: none !important;
-                        border-radius: 10px !important;
-                        padding: 12px 28px !important;
-                        font-weight: 600 !important;
-                        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
-                        transition: all 0.3s !important;
-                    }
-                    .swal-confirm-modern:hover {
-                        transform: translateY(-2px) !important;
-                        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
-                    }
-                    .swal-cancel-modern {
-                        background-color: #6b7280 !important;
-                        border: none !important;
-                        border-radius: 10px !important;
-                        padding: 12px 28px !important;
-                        font-weight: 600 !important;
-                    }
-                    .swal-cancel-modern:hover {
-                        background-color: #4b5563 !important;
-                    }
-                    .modal-field-group {
-                        text-align: left;
-                        margin-bottom: 24px;
-                    }
-                    .modal-label {
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
-                        font-size: 14px;
-                        font-weight: 600;
-                        color: #374151;
-                        margin-bottom: 8px;
-                    }
-                    .modal-label i {
-                        font-size: 1.1rem;
-                    }
-                    .modal-select {
-                        width: 100%;
-                        padding: 12px 16px;
-                        border: 2px solid #e5e7eb;
-                        border-radius: 10px;
-                        font-size: 0.95rem;
-                        transition: all 0.3s;
-                        background-color: white;
-                    }
-                    .modal-select:focus {
-                        outline: none;
-                        border-color: #667eea;
-                        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-                    }
-                    .modal-input {
-                        width: 100%;
-                        padding: 12px 16px;
-                        border: 2px solid #e5e7eb;
-                        border-radius: 10px;
-                        font-size: 0.95rem;
-                        transition: all 0.3s;
-                    }
-                    .modal-input:focus {
-                        outline: none;
-                        border-color: #667eea;
-                        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-                    }
-                    .modal-help-text {
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                        color: #6b7280;
-                        font-size: 12px;
-                        margin-top: 6px;
-                    }
-                    .modal-info-box {
-                        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-                        border: 2px solid #0ea5e9;
-                        border-radius: 12px;
-                        padding: 16px;
-                        margin-top: 24px;
-                        text-align: left;
-                    }
-                    .modal-info-box-content {
-                        display: flex;
-                        align-items: start;
-                        gap: 12px;
-                    }
-                    .modal-info-icon {
-                        color: #0ea5e9;
-                        font-size: 1.4rem;
-                        margin-top: 2px;
-                    }
-                    .modal-info-text {
-                        flex: 1;
-                    }
-                    .modal-info-title {
-                        color: #0c4a6e;
-                        font-weight: 600;
-                        margin-bottom: 6px;
-                        font-size: 13px;
-                    }
-                    .modal-info-desc {
-                        color: #0c4a6e;
-                        font-size: 12px;
-                        line-height: 1.5;
-                    }
-                </style>
-                <div style="padding: 8px 24px 24px;">
+                <div class="swal-body-padding">
                     <div class="modal-field-group">
                         <label class="modal-label">
-                            <i class="bi bi-egg-fried" style="color:#667eea;"></i>
+                            <i class="bi bi-egg-fried modal-label-icon-purple"></i>
                             Preparación
-                            <span style="color:#ef4444;">*</span>
+                            <span class="required-star">*</span>
                         </label>
                         <select id="agregarModoPrep" class="modal-select">
                             <option value="existente">Usar preparación existente</option>
@@ -697,18 +643,18 @@
 
                     <div id="bloqueComponente" class="modal-field-group">
                         <label class="modal-label">
-                            <i class="bi bi-grid-3x3-gap-fill" style="color:#f59e0b;"></i>
+                            <i class="bi bi-grid-3x3-gap-fill modal-label-icon-yellow"></i>
                             Grupo de Alimento
-                            <span style="color:#ef4444;">*</span>
+                            <span class="required-star">*</span>
                         </label>
                         <select id="agregarGrupoId" class="modal-select">
                             <option value="">— seleccione grupo —</option>
                             ${opcionesGrupos}
                         </select>
-                        <label class="modal-label" style="margin-top:10px;">
-                            <i class="bi bi-tag-fill" style="color:#f59e0b;"></i>
+                        <label class="modal-label modal-label-top-spacing">
+                            <i class="bi bi-tag-fill modal-label-icon-yellow"></i>
                             Componente
-                            <span style="color:#ef4444;">*</span>
+                            <span class="required-star">*</span>
                         </label>
                         <select id="agregarComponenteId" class="modal-select">
                             <option value="">— seleccione componente —</option>
@@ -721,18 +667,17 @@
 
                     <div class="modal-field-group">
                         <label class="modal-label">
-                            <i class="bi bi-basket3" style="color:#10b981;"></i>
+                            <i class="bi bi-basket3 modal-label-icon-green"></i>
                             Ingrediente ICBF
-                            <span style="color:#ef4444;">*</span>
+                            <span class="required-star">*</span>
                         </label>
-                        <div style="position:relative; margin-bottom:8px;">
-                            <i class="bi bi-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; pointer-events:none; z-index:1;"></i>
-                            <input id="filtroIngrediente" class="modal-input"
+                        <div class="input-search-wrapper">
+                            <i class="bi bi-search input-search-icon"></i>
+                            <input id="filtroIngrediente" class="modal-input modal-input-search"
                                    placeholder="Filtrar por nombre o código..."
-                                   autocomplete="off"
-                                   style="padding-left:38px;" />
+                                   autocomplete="off" />
                         </div>
-                        <select id="agregarIngredienteId" class="modal-select" size="5" style="height:auto; overflow-y:auto;">
+                        <select id="agregarIngredienteId" class="modal-select modal-select-multirow" size="5">
                             <option value="">— seleccione —</option>
                             ${opcionesIngredientes}
                         </select>
@@ -1051,12 +996,22 @@
     }
 
     document.addEventListener('click', (e) => {
-        const btnEliminar = e.target.closest('.btn-eliminar-ingrediente-editor');
-        if (!btnEliminar) return;
-        const idPreparacion = btnEliminar.dataset.idPreparacion;
-        const idIngrediente = btnEliminar.dataset.idIngrediente;
-        if (!idPreparacion || !idIngrediente) return;
-        eliminarIngredienteDePreparacion(idPreparacion, idIngrediente);
+        const btnEliminarIngrediente = e.target.closest('.btn-eliminar-ingrediente-editor');
+        if (btnEliminarIngrediente) {
+            const idPreparacion = btnEliminarIngrediente.dataset.idPreparacion;
+            const idIngrediente = btnEliminarIngrediente.dataset.idIngrediente;
+            if (!idPreparacion || !idIngrediente) return;
+            eliminarIngredienteDePreparacion(idPreparacion, idIngrediente);
+            return;
+        }
+
+        const btnEliminarPrep = e.target.closest('.btn-eliminar-preparacion-editor');
+        if (btnEliminarPrep) {
+            const idPreparacion = btnEliminarPrep.dataset.idPreparacion;
+            const nombrePrep = btnEliminarPrep.dataset.nombrePreparacion || 'esta preparación';
+            if (!idPreparacion) return;
+            eliminarPreparacion(idPreparacion, nombrePrep);
+        }
     });
 
     if (document.readyState === 'loading') {

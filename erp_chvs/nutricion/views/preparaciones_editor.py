@@ -245,6 +245,7 @@ def _obtener_ingredientes_configurados_por_analisis(analisis):
 
 def _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados):
     filas_nivel = []
+    prev_prep_id = None
     relaciones = TablaPreparacionIngredientes.objects.filter(
         id_preparacion__in=preparaciones
     ).select_related(
@@ -318,9 +319,11 @@ def _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados
                 id_grupo_actual = rel.id_preparacion.id_componente.id_grupo_alimentos_id
                 id_componente_actual = id_componente_actual or rel.id_preparacion.id_componente_id
 
+        prep_id = rel.id_preparacion.id_preparacion
         filas_nivel.append({
-            'id_preparacion': rel.id_preparacion.id_preparacion,
+            'id_preparacion': prep_id,
             'preparacion': rel.id_preparacion.preparacion,
+            'first_in_group': prep_id != prev_prep_id,
             'componente': componente_nombre,
             'id_componente_actual': id_componente_actual,
             'id_grupo_actual': id_grupo_actual,
@@ -341,6 +344,7 @@ def _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados
             ),
             **valores_nutricionales
         })
+        prev_prep_id = prep_id
 
     return filas_nivel
 
@@ -502,9 +506,17 @@ def vista_preparaciones_editor(request, id_menu):
 
     grupos_catalogo = [{'id': k, 'nombre': v} for k, v in sorted(grupos_dict.items())]
 
+    ids_con_ingredientes = set(
+        TablaPreparacionIngredientes.objects.filter(
+            id_preparacion__in=preparaciones
+        ).values_list('id_preparacion_id', flat=True)
+    )
+    preparaciones_vacias = [p for p in preparaciones if p.id_preparacion not in ids_con_ingredientes]
+
     context = {
         'menu': menu,
         'niveles_data': niveles_data,
+        'preparaciones_vacias': preparaciones_vacias,
         'niveles_json': json.dumps(niveles_data, default=str),
         'ingredientes_json': json.dumps(ingredientes_catalogo),
         'preparaciones_json': json.dumps(preparaciones_catalogo),
