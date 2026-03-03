@@ -168,7 +168,7 @@
         Swal.fire({
             icon: "{% if message.tags == 'error' %}error{% else %}success{% endif %}",
             title: "Notificación",
-            text: "{{ message }}",
+            text: "{{ message|escapejs }}",
             confirmButtonColor: '#1e3a8a'
         });
         {% endfor %}

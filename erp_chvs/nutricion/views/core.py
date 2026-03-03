@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
@@ -79,8 +80,10 @@ def lista_alimentos(request):
     if request.method == 'POST':
         form = AlimentoForm(request.POST)
         if form.is_valid():
-            form.save()
+            alimento = form.save()
+            messages.success(request, f'Alimento "{alimento.nombre_del_alimento}" agregado correctamente.')
             return redirect('nutricion:lista_alimentos')
+        messages.error(request, 'Error al agregar el alimento. Por favor, revise los datos ingresados.')
     else:
         form = AlimentoForm()
 
@@ -114,8 +117,6 @@ def editar_alimento(request, codigo):
     Actualiza un alimento existente identificado por su código.
     Solo procesa POST; en cualquier otro caso redirige al listado.
     """
-    from django.contrib import messages
-
     alimento_a_editar = get_object_or_404(TablaAlimentos2018Icbf, pk=codigo)
 
     if request.method == 'POST':

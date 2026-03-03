@@ -68,8 +68,8 @@ class AlimentosManager {
             });
         });
 
-        // Botones de cerrar modal
-        const closeBtns = document.querySelectorAll('.modal-close-btn, .modal-cancel-btn');
+        // Botones de cerrar del modal principal (crear/editar)
+        const closeBtns = this.modal.querySelectorAll('.modal-close-btn, .modal-cancel-btn');
         closeBtns.forEach(btn => {
             btn.addEventListener('click', () => this.closeModal());
         });
@@ -88,6 +88,13 @@ class AlimentosManager {
                 if (e.target === detailModal) {
                     this.closeDetailModal();
                 }
+            });
+        }
+
+        // Botones de cierre del modal de detalle (X y botón "Cancelar")
+        if (detailModal) {
+            detailModal.querySelectorAll('.modal-close-btn, .modal-cancel-btn, .modal-detail-close-btn').forEach(btn => {
+                btn.addEventListener('click', () => this.closeDetailModal());
             });
         }
 
@@ -141,9 +148,22 @@ class AlimentosManager {
     // Valida límites esperados por campo numérico y muestra error contextual.
     validateNumericField(input) {
         const fieldName = input.name;
-        const value = parseFloat(input.value);
+        const rawValue = (input.value || '').trim();
 
-        if (!value) return;
+        // Si el campo está vacío, limpiamos estado visual y dejamos que el
+        // navegador resuelva la validación de required según corresponda.
+        if (rawValue === '') {
+            input.style.borderColor = '#ced4da';
+            this.removeFieldError(input);
+            return true;
+        }
+
+        const value = parseFloat(rawValue);
+        if (Number.isNaN(value)) {
+            input.style.borderColor = '#e74c3c';
+            this.showFieldError(input, 'Ingresa un número válido.');
+            return false;
+        }
 
         let maxValue = null;
         const fieldLimits = {
@@ -167,9 +187,11 @@ class AlimentosManager {
         if (maxValue && value > maxValue) {
             input.style.borderColor = '#e74c3c';
             this.showFieldError(input, `El valor máximo para ${fieldName} es ${maxValue}`);
+            return false;
         } else {
             input.style.borderColor = '#ced4da';
             this.removeFieldError(input);
+            return true;
         }
     }
 
@@ -378,7 +400,16 @@ class AlimentosManager {
         const numericInputs = this.alimentoForm.querySelectorAll('input[type="number"]');
         let emptyRequiredFields = [];
 
+        let hasRangeErrors = false;
+
         numericInputs.forEach(input => {
+            // Revalidar en submit para evitar estados visuales "pegados"
+            // cuando el usuario corrige un valor y guarda sin salir del campo.
+            const isValid = this.validateNumericField(input);
+            if (!isValid) {
+                hasRangeErrors = true;
+            }
+
             if (input.value && input.value.trim() !== '') {
                 console.log(`✅ ${input.name}: "${input.value}" (manteniendo punto decimal)`);
             } else if (input.hasAttribute('required')) {
@@ -389,6 +420,13 @@ class AlimentosManager {
 
         if (emptyRequiredFields.length > 0) {
             console.error('❌ Campos requeridos vacíos:', emptyRequiredFields);
+        }
+
+        // Si hay errores de rango/valor, detenemos el envío.
+        if (hasRangeErrors) {
+            event.preventDefault();
+            console.error('❌ Hay campos numéricos fuera de rango.');
+            return;
         }
 
         console.log('✅ Formulario listo para enviar con formato estándar (punto decimal)');
