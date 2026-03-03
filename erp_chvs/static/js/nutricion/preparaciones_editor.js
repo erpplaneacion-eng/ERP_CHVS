@@ -56,6 +56,24 @@
         }
     }
 
+    function obtenerComponentesPorGrupo(grupoId) {
+        if (!grupoId) return [];
+        const esGrupoEspecias = String(grupoId).trim().toLowerCase() === 'g8';
+        const base = esGrupoEspecias
+            ? componentesCatalogo
+            : (componentesPorGrupo[grupoId] || []);
+
+        // Unificar estructura de datos:
+        // - componentesCatalogo: {id_componente, componente}
+        // - componentesPorGrupo: {id, nombre}
+        return base
+            .map(c => ({
+                id: c?.id ?? c?.id_componente ?? '',
+                nombre: c?.nombre ?? c?.componente ?? ''
+            }))
+            .filter(c => c.id && c.nombre);
+    }
+
     function mostrarOverlayGuardando(mensaje = 'Guardando cambios...') {
         const overlay = document.createElement('div');
         overlay.className = 'guardando-overlay';
@@ -713,7 +731,7 @@
                 const actualizarComponentesModal = (grupoId, compActual) => {
                     selectComponente.innerHTML = '<option value="">— seleccione componente —</option>';
                     if (!grupoId) return;
-                    const comps = componentesPorGrupo[grupoId] || [];
+                    const comps = obtenerComponentesPorGrupo(grupoId);
                     comps.forEach(c => {
                         const opt = document.createElement('option');
                         opt.value = c.id;
@@ -884,7 +902,7 @@
     function poblarSelectComponente(selectComp, grupoId, componenteActual) {
         selectComp.innerHTML = '<option value="">— Componente —</option>';
         if (!grupoId) return;
-        const comps = componentesPorGrupo[grupoId] || [];
+        const comps = obtenerComponentesPorGrupo(grupoId);
         comps.forEach(c => {
             const opt = document.createElement('option');
             opt.value = c.id;
