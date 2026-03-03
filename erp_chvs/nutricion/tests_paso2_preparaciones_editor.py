@@ -439,7 +439,7 @@ class Paso2PreparacionesEditorIntegrationTests(TestCase):
         self.assertEqual(ws["D5"].value, "RACIÓN PARA PREPARAR EN SITIO")
         self.assertEqual(ws["D6"].value, self.modalidad.modalidad.upper())
 
-    def test_excel_export_muestra_componente_y_grupo_por_ingrediente(self):
+    def test_excel_export_muestra_componente_combinado_por_preparacion(self):
         grupo_verduras = GruposAlimentos.objects.create(
             id_grupo_alimentos="grp_ver",
             grupo_alimentos="Verduras",
@@ -480,8 +480,9 @@ class Paso2PreparacionesEditorIntegrationTests(TestCase):
         ws = wb[wb.sheetnames[0]]
 
         self.assertEqual(str(ws.cell(row=11, column=1).value or ""), "Bebida con leche")
+        self.assertIsNone(ws.cell(row=12, column=1).value)
+        self.assertIn("A11:A12", {str(rng) for rng in ws.merged_cells.ranges})
         self.assertEqual(str(ws.cell(row=11, column=2).value or ""), "Lacteos")
-        self.assertEqual(str(ws.cell(row=12, column=1).value or ""), "Verduras")
         self.assertEqual(str(ws.cell(row=12, column=2).value or ""), "Verduras")
 
     def test_servicio_aplica_ingrediente_guardado_por_codigo_icbf_sin_siesa(self):
