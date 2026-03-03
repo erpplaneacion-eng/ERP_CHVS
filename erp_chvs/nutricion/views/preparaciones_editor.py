@@ -13,6 +13,7 @@ from principal.models import TablaGradosEscolaresUapa
 from ..models import (
     AdecuacionTotalPorcentaje,
     ComponentesAlimentos,
+    GruposAlimentos,
     MinutaPatronMeta,
     RecomendacionDiariaGradoMod,
     TablaAlimentos2018Icbf,
@@ -26,7 +27,7 @@ from ..models import (
 from ..services.calculo_service import CalculoService
 
 
-def _resolver_grupo_y_rango(menu, preparacion, ingrediente_icbf, componente=None):
+def _resolver_grupo_y_rango(menu, preparacion, ingrediente_icbf, componente=None, grupo_override=None):
     """
     Resuelve grupo de alimentos y rango [min, max] para un ingrediente dentro de una preparaciÃ³n.
     Usa MinutaPatronMeta por modalidad + componente + grupo.
@@ -35,7 +36,9 @@ def _resolver_grupo_y_rango(menu, preparacion, ingrediente_icbf, componente=None
     Para rangos especÃ­ficos por nivel, usar _resolver_grupo_y_rango_por_nivel()
     """
     grupo = None
-    if componente and componente.id_grupo_alimentos:
+    if grupo_override:
+        grupo = grupo_override
+    elif componente and componente.id_grupo_alimentos:
         grupo = componente.id_grupo_alimentos
     else:
         componente_ingrediente = getattr(ingrediente_icbf, 'id_componente', None)
@@ -73,13 +76,15 @@ def _resolver_grupo_y_rango(menu, preparacion, ingrediente_icbf, componente=None
     }
 
 
-def _resolver_grupo_y_rango_por_nivel(menu, preparacion, ingrediente_icbf, nivel_escolar, componente=None):
+def _resolver_grupo_y_rango_por_nivel(menu, preparacion, ingrediente_icbf, nivel_escolar, componente=None, grupo_override=None):
     """
     Resuelve grupo de alimentos y rango [min, max] para un ingrediente
     FILTRADO POR NIVEL ESCOLAR ESPECÃFICO.
     """
     grupo = None
-    if componente and componente.id_grupo_alimentos:
+    if grupo_override:
+        grupo = grupo_override
+    elif componente and componente.id_grupo_alimentos:
         grupo = componente.id_grupo_alimentos
     else:
         componente_ingrediente = getattr(ingrediente_icbf, 'id_componente', None)
@@ -247,6 +252,7 @@ def _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados
         'id_preparacion__id_componente',
         'id_componente',
         'id_componente__id_grupo_alimentos',
+        'id_grupo_alimentos',
         'id_ingrediente_siesa',
         'id_ingrediente_siesa__id_componente',
         'id_ingrediente_siesa__id_componente__id_grupo_alimentos'
@@ -258,7 +264,8 @@ def _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados
             rel.id_preparacion,
             rel.id_ingrediente_siesa,
             nivel,
-            componente=rel.id_componente
+            componente=rel.id_componente,
+            grupo_override=rel.id_grupo_alimentos
         )
 
         key = f"{rel.id_preparacion_id}_{rel.id_ingrediente_siesa.codigo}"
@@ -301,10 +308,22 @@ def _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados
             )
         )
 
+        # IDs actuales para pre-seleccionar en los dropdowns del editor
+        id_componente_actual = rel.id_componente_id
+        id_grupo_actual = rel.id_grupo_alimentos_id
+        if not id_grupo_actual:
+            if rel.id_componente:
+                id_grupo_actual = rel.id_componente.id_grupo_alimentos_id
+            elif rel.id_preparacion.id_componente:
+                id_grupo_actual = rel.id_preparacion.id_componente.id_grupo_alimentos_id
+                id_componente_actual = id_componente_actual or rel.id_preparacion.id_componente_id
+
         filas_nivel.append({
             'id_preparacion': rel.id_preparacion.id_preparacion,
             'preparacion': rel.id_preparacion.preparacion,
             'componente': componente_nombre,
+            'id_componente_actual': id_componente_actual,
+            'id_grupo_actual': id_grupo_actual,
             'id_ingrediente': rel.id_ingrediente_siesa.codigo,
             'ingrediente': rel.id_ingrediente_siesa.nombre_del_alimento,
             'codigo_icbf': rel.id_ingrediente_siesa.codigo,
@@ -458,6 +477,31 @@ def vista_preparaciones_editor(request, id_menu):
         ComponentesAlimentos.objects.values('id_componente', 'componente').order_by('componente')
     )
 
+    # Catálogos de grupos y componentes por modalidad (para cascade dropdowns en el editor)
+    minuta_rows = MinutaPatronMeta.objects.filter(
+        id_modalidad=menu.id_modalidad
+    ).select_related(
+        'id_grupo_alimentos', 'id_componente'
+    ).values(
+        'id_grupo_alimentos', 'id_grupo_alimentos__grupo_alimentos',
+        'id_componente', 'id_componente__componente'
+    ).distinct()
+
+    grupos_dict = {}  # id_grupo → nombre
+    componentes_por_grupo = {}  # id_grupo → [{'id': ..., 'nombre': ...}]
+    for row in minuta_rows:
+        gid = row['id_grupo_alimentos']
+        gnombre = row['id_grupo_alimentos__grupo_alimentos']
+        cid = row['id_componente']
+        cnombre = row['id_componente__componente']
+        if gid and gid not in grupos_dict:
+            grupos_dict[gid] = gnombre
+            componentes_por_grupo[gid] = []
+        if gid and cid and not any(c['id'] == cid for c in componentes_por_grupo.get(gid, [])):
+            componentes_por_grupo[gid].append({'id': cid, 'nombre': cnombre})
+
+    grupos_catalogo = [{'id': k, 'nombre': v} for k, v in sorted(grupos_dict.items())]
+
     context = {
         'menu': menu,
         'niveles_data': niveles_data,
@@ -465,6 +509,8 @@ def vista_preparaciones_editor(request, id_menu):
         'ingredientes_json': json.dumps(ingredientes_catalogo),
         'preparaciones_json': json.dumps(preparaciones_catalogo),
         'componentes_json': json.dumps(componentes_catalogo),
+        'grupos_json': json.dumps(grupos_catalogo),
+        'componentes_por_grupo_json': json.dumps(componentes_por_grupo),
     }
     return render(request, 'nutricion/preparaciones_editor.html', context)
 
@@ -509,6 +555,7 @@ def api_guardar_preparaciones_editor(request, id_menu):
                 id_ingrediente = str(fila.get('id_ingrediente', '')).strip()
                 preparacion_nombre = str(fila.get('preparacion_nombre', '')).strip()
                 id_componente = str(fila.get('id_componente', '')).strip()
+                id_grupo = str(fila.get('id_grupo', '')).strip()
                 gramaje_raw = fila.get('gramaje')
 
                 if not id_ingrediente:
@@ -520,6 +567,14 @@ def api_guardar_preparaciones_editor(request, id_menu):
                         componente_obj = ComponentesAlimentos.objects.get(id_componente=id_componente)
                     except ComponentesAlimentos.DoesNotExist:
                         errores.append(f"Fila {idx + 1}: componente {id_componente} no encontrado")
+                        continue
+
+                grupo_obj = None
+                if id_grupo:
+                    try:
+                        grupo_obj = GruposAlimentos.objects.get(id_grupo_alimentos=id_grupo)
+                    except GruposAlimentos.DoesNotExist:
+                        errores.append(f"Fila {idx + 1}: grupo {id_grupo} no encontrado")
                         continue
 
                 # Resolver componente y preparación
@@ -555,7 +610,8 @@ def api_guardar_preparaciones_editor(request, id_menu):
                     menu,
                     preparacion,
                     ingrediente,
-                    componente=componente_obj
+                    componente=componente_obj,
+                    grupo_override=grupo_obj
                 )
                 minimo = Decimal(str(rango['minimo'])) if rango['minimo'] is not None else None
                 maximo = Decimal(str(rango['maximo'])) if rango['maximo'] is not None else None
@@ -573,10 +629,14 @@ def api_guardar_preparaciones_editor(request, id_menu):
                 )
                 if componente_obj:
                     rel.id_componente = componente_obj
+                if grupo_obj:
+                    rel.id_grupo_alimentos = grupo_obj
                 rel.gramaje = gramaje
                 campos_update = ['gramaje']
                 if componente_obj:
                     campos_update.append('id_componente')
+                if grupo_obj:
+                    campos_update.append('id_grupo_alimentos')
                 rel.save(update_fields=campos_update)
                 guardadas += 1
 

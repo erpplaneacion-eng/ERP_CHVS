@@ -486,6 +486,15 @@ class TablaPreparacionIngredientes(models.Model):
         null=True,
         blank=True
     )
+    id_grupo_alimentos = models.ForeignKey(
+        GruposAlimentos,
+        on_delete=models.PROTECT,
+        db_column='id_grupo_alimentos',
+        verbose_name="Grupo del Ingrediente en la Preparación",
+        related_name='ingredientes_preparacion',
+        null=True,
+        blank=True
+    )
     gramaje = models.DecimalField(
         max_digits=10,
         decimal_places=2,

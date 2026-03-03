@@ -15,6 +15,16 @@
     const ingredientesCatalogo = JSON.parse(document.getElementById('ingredientes-catalogo')?.textContent || '[]');
     const preparacionesCatalogo = JSON.parse(document.getElementById('preparaciones-catalogo')?.textContent || '[]');
     const componentesCatalogo = JSON.parse(document.getElementById('componentes-catalogo')?.textContent || '[]');
+    const gruposCatalogo = JSON.parse(document.getElementById('grupos-catalogo')?.textContent || '[]');
+    const componentesPorGrupo = JSON.parse(document.getElementById('componentes-por-grupo')?.textContent || '{}');
+
+    // Diagnóstico: verificar que los catálogos se cargaron correctamente
+    console.log('[PrepEditor] Catálogos cargados:', {
+        grupos: gruposCatalogo.length,
+        componentesPorGrupo: Object.keys(componentesPorGrupo).length,
+        ingredientes: ingredientesCatalogo.length,
+        preparaciones: preparacionesCatalogo.length
+    });
 
     // Crear mapa de ingredientes para cálculos nutricionales
     const ingredientesMap = new Map();
@@ -354,12 +364,32 @@
                 });
             });
 
+            // Recoger cambios de grupo/componente desde el primer nivel (son iguales para todos)
+            const filasGrupoComp = [];
+            const primerPanel = document.querySelector('.tab-pane.show.active .tbody-ingredientes')
+                             || document.querySelector('.tbody-ingredientes');
+            if (primerPanel) {
+                primerPanel.querySelectorAll('tr').forEach(row => {
+                    const selectGrupo = row.querySelector('.select-grupo');
+                    const selectComp = row.querySelector('.select-componente');
+                    if (!selectGrupo) return;
+                    filasGrupoComp.push({
+                        id_preparacion: parseInt(row.dataset.idPreparacion),
+                        id_ingrediente: row.dataset.idIngrediente,
+                        id_grupo: selectGrupo.value || null,
+                        id_componente: selectComp?.value || null,
+                        gramaje: null
+                    });
+                });
+            }
+
             const overlay = mostrarOverlayGuardando('Guardando cambios...');
 
             try {
                 btnGuardarCambios.disabled = true;
                 btnGuardarCambios.innerHTML = '<i class="bi bi-hourglass-split"></i> Guardando...';
 
+                // 1. Guardar pesos por nivel
                 const response = await fetch(`/nutricion/api/menus/${menuId}/guardar-ingredientes-por-nivel/`, {
                     method: 'POST',
                     headers: {
@@ -372,6 +402,19 @@
                 const data = await response.json();
                 if (!response.ok || !data.success) {
                     throw new Error(data.error || 'Error al guardar cambios');
+                }
+
+                // 2. Guardar grupo/componente por ingrediente (solo si hay cambios)
+                if (filasGrupoComp.length > 0) {
+                    await fetch(`/nutricion/api/menus/${menuId}/guardar-preparaciones-editor/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({ filas: filasGrupoComp })
+                    });
+                    // Ignoramos errores de esta segunda llamada para no bloquear el flujo principal
                 }
 
                 ocultarOverlayGuardando();
@@ -487,8 +530,8 @@
             `<option value="${escaparHtml(ing.codigo)}">${escaparHtml(ing.codigo)} - ${escaparHtml(ing.nombre_del_alimento)}</option>`
         )).join('');
 
-        const opcionesComponentes = componentesCatalogo.map((comp) => (
-            `<option value="${comp.id_componente}">${escaparHtml(comp.componente)}</option>`
+        const opcionesGrupos = gruposCatalogo.map((g) => (
+            `<option value="${g.id}">${escaparHtml(g.nombre)}</option>`
         )).join('');
 
         const result = await Swal.fire({
@@ -655,16 +698,24 @@
                     <div id="bloqueComponente" class="modal-field-group">
                         <label class="modal-label">
                             <i class="bi bi-grid-3x3-gap-fill" style="color:#f59e0b;"></i>
-                            Componente de Alimento
+                            Grupo de Alimento
+                            <span style="color:#ef4444;">*</span>
+                        </label>
+                        <select id="agregarGrupoId" class="modal-select">
+                            <option value="">— seleccione grupo —</option>
+                            ${opcionesGrupos}
+                        </select>
+                        <label class="modal-label" style="margin-top:10px;">
+                            <i class="bi bi-tag-fill" style="color:#f59e0b;"></i>
+                            Componente
                             <span style="color:#ef4444;">*</span>
                         </label>
                         <select id="agregarComponenteId" class="modal-select">
-                            <option value="">— seleccione —</option>
-                            ${opcionesComponentes}
+                            <option value="">— seleccione componente —</option>
                         </select>
                         <small class="modal-help-text">
                             <i class="bi bi-info-circle"></i>
-                            Defina a qué componente pertenece este ingrediente en la preparación
+                            Seleccione primero el grupo para filtrar los componentes disponibles
                         </small>
                     </div>
 
@@ -710,21 +761,32 @@
                 const bExistente = document.getElementById('bloquePrepExistente');
                 const bNueva = document.getElementById('bloquePrepNueva');
                 const bComponente = document.getElementById('bloqueComponente');
+                const selectGrupo = document.getElementById('agregarGrupoId');
                 const selectComponente = document.getElementById('agregarComponenteId');
+
+                // Cascade: al cambiar grupo, filtrar componentes
+                const actualizarComponentesModal = (grupoId, compActual) => {
+                    selectComponente.innerHTML = '<option value="">— seleccione componente —</option>';
+                    if (!grupoId) return;
+                    const comps = componentesPorGrupo[grupoId] || [];
+                    comps.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.id;
+                        opt.textContent = c.nombre;
+                        if (c.id === compActual) opt.selected = true;
+                        selectComponente.appendChild(opt);
+                    });
+                };
+
+                selectGrupo.addEventListener('change', () => {
+                    actualizarComponentesModal(selectGrupo.value, '');
+                });
 
                 const actualizarVistaModo = () => {
                     const esNueva = modo.value === 'nueva';
                     bExistente.style.display = esNueva ? 'none' : 'block';
                     bNueva.style.display = esNueva ? 'block' : 'none';
                     bComponente.style.display = 'block';
-                    selectComponente.disabled = false;
-                    if (!esNueva) {
-                        const idPrepSeleccionada = document.getElementById('agregarPreparacionExistente').value;
-                        const prepSeleccionada = preparacionesCatalogo.find(
-                            (prep) => String(prep.id_preparacion) === String(idPrepSeleccionada)
-                        );
-                        selectComponente.value = prepSeleccionada?.id_componente || '';
-                    }
                 };
 
                 modo.addEventListener('change', () => {
@@ -788,6 +850,7 @@
                 const modo = document.getElementById('agregarModoPrep').value;
                 const idPrep = document.getElementById('agregarPreparacionExistente').value;
                 const nomPrep = document.getElementById('agregarPreparacionNueva').value.trim();
+                const idGrupo = document.getElementById('agregarGrupoId').value;
                 const idComp = document.getElementById('agregarComponenteId').value;
                 const idIng = document.getElementById('agregarIngredienteId').value;
 
@@ -804,6 +867,10 @@
                     return Swal.showValidationMessage('Debes escribir el nombre de la nueva preparación');
                 }
 
+                if (!idGrupo) {
+                    return Swal.showValidationMessage('Debes seleccionar un grupo de alimento');
+                }
+
                 if (!idComp) {
                     return Swal.showValidationMessage('Debes seleccionar un componente');
                 }
@@ -811,6 +878,7 @@
                 return {
                     id_preparacion: modo === 'existente' ? parseInt(idPrep) : null,
                     preparacion_nombre: modo === 'nueva' ? nomPrep : '',
+                    id_grupo: idGrupo || null,
                     id_componente: idComp || null,
                     id_ingrediente: idIng,
                     gramaje: null  // Siempre null, se usarán valores predeterminados por nivel
@@ -853,6 +921,111 @@
     }
 
     // ========================================
+    // DROPDOWNS CASCADE GRUPO → COMPONENTE
+    // ========================================
+
+    function poblarSelectGrupo(selectGrupo) {
+        const grupoActual = selectGrupo.dataset.grupoActual || '';
+        selectGrupo.innerHTML = '<option value="">— Grupo —</option>';
+        gruposCatalogo.forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = g.id;
+            opt.textContent = g.nombre;
+            if (g.id === grupoActual) opt.selected = true;
+            selectGrupo.appendChild(opt);
+        });
+    }
+
+    function poblarSelectComponente(selectComp, grupoId, componenteActual) {
+        selectComp.innerHTML = '<option value="">— Componente —</option>';
+        if (!grupoId) return;
+        const comps = componentesPorGrupo[grupoId] || [];
+        comps.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.nombre;
+            if (c.id === componenteActual) opt.selected = true;
+            selectComp.appendChild(opt);
+        });
+    }
+
+    function inicializarSelectsGrupoComponente() {
+        const selects = document.querySelectorAll('.select-grupo');
+        console.log(`[PrepEditor] inicializarSelectsGrupoComponente: ${selects.length} selects encontrados, ${gruposCatalogo.length} grupos disponibles`);
+        selects.forEach(selectGrupo => {
+            const row = selectGrupo.closest('tr');
+            if (!row) return;
+            poblarSelectGrupo(selectGrupo);
+
+            // Poblar componente con el valor actual
+            const selectComp = row.querySelector('.select-componente');
+            if (selectComp) {
+                const grupoId = selectGrupo.value;
+                const compActual = selectComp.dataset.componenteActual || '';
+                poblarSelectComponente(selectComp, grupoId, compActual);
+            }
+        });
+    }
+
+    // Sincronizar selects del mismo ingrediente en todos los niveles
+    function sincronizarSelectsEnNiveles(idPreparacion, idIngrediente, grupoId, compId) {
+        document.querySelectorAll('.select-grupo').forEach(sg => {
+            if (
+                String(sg.dataset.idPreparacion) === String(idPreparacion) &&
+                String(sg.dataset.idIngrediente) === String(idIngrediente) &&
+                sg.value !== grupoId
+            ) {
+                sg.value = grupoId;
+                const row = sg.closest('tr');
+                const sc = row?.querySelector('.select-componente');
+                if (sc) {
+                    poblarSelectComponente(sc, grupoId, compId);
+                }
+            }
+        });
+    }
+
+    // Listener delegado para cambio en select-grupo
+    document.addEventListener('change', (e) => {
+        if (e.target.classList.contains('select-grupo')) {
+            const selectGrupo = e.target;
+            const row = selectGrupo.closest('tr');
+            if (!row) return;
+            const selectComp = row.querySelector('.select-componente');
+            if (selectComp) {
+                poblarSelectComponente(selectComp, selectGrupo.value, '');
+            }
+            // Sincronizar en otros niveles
+            sincronizarSelectsEnNiveles(
+                selectGrupo.dataset.idPreparacion,
+                selectGrupo.dataset.idIngrediente,
+                selectGrupo.value,
+                ''
+            );
+        }
+        if (e.target.classList.contains('select-componente')) {
+            const selectComp = e.target;
+            const row = selectComp.closest('tr');
+            if (!row) return;
+            const selectGrupo = row.querySelector('.select-grupo');
+            const grupoId = selectGrupo?.value || '';
+            const compId = selectComp.value;
+            // Sincronizar componente en otros niveles
+            document.querySelectorAll('.select-componente').forEach(sc => {
+                if (
+                    String(sc.dataset.idPreparacion) === String(selectComp.dataset.idPreparacion) &&
+                    String(sc.dataset.idIngrediente) === String(selectComp.dataset.idIngrediente) &&
+                    sc !== selectComp
+                ) {
+                    if (sc.value !== compId) {
+                        poblarSelectComponente(sc, grupoId, compId);
+                    }
+                }
+            });
+        }
+    });
+
+    // ========================================
     // INICIALIZACIÓN
     // ========================================
 
@@ -864,6 +1037,8 @@
                 actualizarEstadoFila(row);
             }
         });
+
+        inicializarSelectsGrupoComponente();
 
         if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
             const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));

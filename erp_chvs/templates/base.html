@@ -199,6 +199,8 @@
     {% elif request.resolver_match.app_name == 'nutricion' %}
     {% if 'alimentos' in request.path %}
     <script src="{% static 'js/nutricion/alimentos.js' %}"></script>
+    {% elif 'preparaciones-editor' in request.path %}
+    {# El editor usa preparaciones_editor.js cargado en block extra_js del template #}
     {% else %}
     <script src="{% static 'js/nutricion/main.js' %}"></script>
     {% endif %}

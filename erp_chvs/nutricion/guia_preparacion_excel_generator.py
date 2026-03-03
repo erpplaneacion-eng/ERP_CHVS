@@ -289,7 +289,11 @@ class GuiaPreparacionExcelGenerator:
 
     def _draw_table_body(self, ws, start_row: int, menu: TablaMenus) -> int:
         niveles_por_columna = self._get_niveles_por_columna()
-        preps = list(TablaPreparaciones.objects.filter(id_menu=menu).order_by("preparacion"))
+        from nutricion.utils.orden_componentes import sort_preparaciones_objetos
+        preps_qs = list(
+            TablaPreparaciones.objects.filter(id_menu=menu).select_related('id_componente')
+        )
+        preps = sort_preparaciones_objetos(preps_qs, menu.id_modalidad_id)
         rels = list(
             TablaPreparacionIngredientes.objects.filter(id_preparacion__in=preps)
             .select_related("id_preparacion", "id_ingrediente_siesa")

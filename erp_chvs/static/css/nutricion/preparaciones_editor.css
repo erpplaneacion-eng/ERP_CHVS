@@ -113,11 +113,22 @@
 /* Columnas de tabla */
 .col-preparacion { width: 200px; }
 .col-ingrediente { width: 250px; }
-.col-grupo { width: 140px; }
+.col-grupo-comp { width: 220px; }
 .col-rango { width: 120px; }
 .col-peso { width: 220px; }
 .col-peso-bruto { width: 120px; text-align: center; }
 .col-acciones { width: 130px; text-align: center; }
+
+/* Contenedor para los dos selects grupo/componente */
+.grupo-comp-selects {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.grupo-comp-selects .form-select-sm {
+    font-size: 11px;
+    padding: 3px 6px;
+}
 
 .peso-bruto-cell {
     font-family: 'Courier New', monospace;

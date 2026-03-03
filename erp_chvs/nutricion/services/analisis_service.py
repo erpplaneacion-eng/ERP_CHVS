@@ -178,6 +178,7 @@ class AnalisisNutricionalService:
                 'id_ingrediente_siesa',
                 'id_componente',
                 'id_componente__id_grupo_alimentos',
+                'id_grupo_alimentos',
             )
 
             ingredientes_data = []
@@ -197,12 +198,15 @@ class AnalisisNutricionalService:
                     ).first()
 
                 if alimento:
-                    componente_ing = ing_prep.id_componente or alimento.id_componente
-                    grupo_alimento = (
-                        componente_ing.id_grupo_alimentos.grupo_alimentos
-                        if componente_ing and componente_ing.id_grupo_alimentos
-                        else None
-                    )
+                    # Componente: override del ingrediente, fallback al de la preparación (NO desde ICBF)
+                    componente_ing = ing_prep.id_componente or preparacion.id_componente
+                    # Grupo: override explícito tiene prioridad; si no, derivar del componente
+                    if ing_prep.id_grupo_alimentos:
+                        grupo_alimento = ing_prep.id_grupo_alimentos.grupo_alimentos
+                    elif componente_ing and componente_ing.id_grupo_alimentos:
+                        grupo_alimento = componente_ing.id_grupo_alimentos.grupo_alimentos
+                    else:
+                        grupo_alimento = None
                     if grupo_alimento and grupo_alimento not in grupos_ingredientes:
                         grupos_ingredientes.append(grupo_alimento)
 
@@ -283,18 +287,22 @@ class AnalisisNutricionalService:
                     else:
                         peso_neto_default = 100.0
 
+                    # Resolver componente y grupo para ingrediente sin datos ICBF
+                    componente_no_icbf = ing_prep.id_componente or preparacion.id_componente
+                    if ing_prep.id_grupo_alimentos:
+                        grupo_no_icbf = ing_prep.id_grupo_alimentos.grupo_alimentos
+                    elif componente_no_icbf and componente_no_icbf.id_grupo_alimentos:
+                        grupo_no_icbf = componente_no_icbf.id_grupo_alimentos.grupo_alimentos
+                    else:
+                        grupo_no_icbf = 'SIN GRUPO'
                     ingredientes_data.append({
                         'id_ingrediente': ingrediente_codigo,
                         'nombre': ingrediente_nombre,
                         'componente': (
-                            ing_prep.id_componente.componente
-                            if ing_prep.id_componente else 'SIN COMPONENTE'
+                            componente_no_icbf.componente
+                            if componente_no_icbf else 'SIN COMPONENTE'
                         ),
-                        'grupo_alimentos': (
-                            ing_prep.id_componente.id_grupo_alimentos.grupo_alimentos
-                            if ing_prep.id_componente and ing_prep.id_componente.id_grupo_alimentos
-                            else 'SIN GRUPO'
-                        ),
+                        'grupo_alimentos': grupo_no_icbf,
                         'peso_neto_base': peso_neto_default,
                         'peso_bruto_base': peso_neto_default,
                         'parte_comestible': 100,
@@ -319,12 +327,15 @@ class AnalisisNutricionalService:
             preparaciones_data.append({
                 'id_preparacion': preparacion.id_preparacion,
                 'nombre': preparacion.preparacion,
+                'id_componente_id': preparacion.id_componente_id,
                 'componente': componente,
                 'grupo_alimentos': grupo_alimentos,
                 'ingredientes': ingredientes_data
             })
 
-        return preparaciones_data
+        from nutricion.utils.orden_componentes import sort_preparaciones_dicts
+        modalidad_id = menu.id_modalidad_id if menu.id_modalidad_id else ''
+        return sort_preparaciones_dicts(preparaciones_data, modalidad_id)
 
     @staticmethod
     def _cargar_analisis_guardados(
