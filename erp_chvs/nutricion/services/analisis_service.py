@@ -106,6 +106,7 @@ class AnalisisNutricionalService:
 
         # 5. Preparar respuesta
         logo_path = None
+        logo_url = None
         if menu.id_contrato and menu.id_contrato.imagen:
             try:
                 logo_path = menu.id_contrato.imagen.path
@@ -113,6 +114,10 @@ class AnalisisNutricionalService:
                 # FileNotFoundError/ValueError: archivo local inexistente
                 # NotImplementedError: storage en nube (Cloudinary) no soporta .path
                 logo_path = None
+            try:
+                logo_url = menu.id_contrato.imagen.url
+            except (ValueError, NotImplementedError):
+                logo_url = None
 
         firma_cfg = FirmaNutricionalContrato.objects.filter(programa=menu.id_contrato).first()
         firma_data = None
@@ -145,6 +150,7 @@ class AnalisisNutricionalService:
                 'modalidad': menu.id_modalidad.modalidad if menu.id_modalidad else 'N/A',
                 'programa': menu.id_contrato.programa if menu.id_contrato else 'N/A',
                 'logo_path': logo_path,
+                'logo_url': logo_url,
                 'firmas': firma_data,
             },
             'analisis_por_nivel': analisis_por_nivel

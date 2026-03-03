@@ -6,8 +6,12 @@ las diferentes secciones de un reporte de análisis nutricional.
 """
 
 import io
+import os
+import tempfile
+import urllib.request
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
+from urllib.parse import urlparse
 
 from openpyxl.drawing.image import Image
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -133,15 +137,45 @@ class ExcelReportDrawer:
         if not logo_path:
             return
 
+        temp_file = None
         try:
-            img = Image(logo_path)
+            source = str(logo_path).strip()
+            parsed = urlparse(source)
+
+            # Si es URL remota, descargar temporalmente para openpyxl.
+            if parsed.scheme in ('http', 'https'):
+                fd, temp_file = tempfile.mkstemp(suffix=os.path.splitext(parsed.path or "logo.png")[1] or ".png")
+                os.close(fd)
+                urllib.request.urlretrieve(source, temp_file)
+                source = temp_file
+
+            # Si es ruta web local (/media/...) intentar resolverla a MEDIA_ROOT.
+            elif source.startswith('/'):
+                try:
+                    from django.conf import settings
+                    media_root = getattr(settings, 'MEDIA_ROOT', '') or ''
+                    media_url = getattr(settings, 'MEDIA_URL', '/media/') or '/media/'
+                    if source.startswith(media_url) and media_root:
+                        relative = source[len(media_url):].lstrip('/\\')
+                        candidate = os.path.join(media_root, relative)
+                        if os.path.exists(candidate):
+                            source = candidate
+                except Exception:
+                    pass
+
+            img = Image(source)
             img.height = 60
             img.width = 200
             ws.add_image(img, start_cell)
             ws.row_dimensions[int(start_cell[1:])].height = 50
-        except FileNotFoundError:
-            print(f"Warning: Logo file not found at {logo_path}")
-            pass
+        except Exception as e:
+            print(f"Warning: no se pudo insertar logo '{logo_path}': {e}")
+        finally:
+            if temp_file and os.path.exists(temp_file):
+                try:
+                    os.remove(temp_file)
+                except OSError:
+                    pass
 
     def _populate_title(self, ws: Worksheet, start_row: int) -> None:
         """Poblar título principal en una fila específica."""
@@ -223,7 +257,7 @@ class ExcelReportDrawer:
     def _populate_ingredients_from_analysis(self, ws: Worksheet, start_row: int, nivel_data: Dict) -> int:
         """Poblar ingredientes desde datos de análisis."""
         current_row = start_row
-        center_align = Alignment(vertical='center', horizontal='center', wrap_text=True)
+        left_align = Alignment(vertical='center', horizontal='left', wrap_text=True)
 
         # Contador de ingredientes totales procesados
         total_ingredients_added = 0
@@ -239,10 +273,17 @@ class ExcelReportDrawer:
             total_ingredients_added += num_ingredients
 
             ws.cell(row=start_row_for_prep, column=self.layout.COL_PREPARACION).value = preparacion.get('nombre', '')
-            ws.cell(row=start_row_for_prep, column=self.layout.COL_COMPONENTE).value = preparacion.get(
-                'componente',
-                ingredients_in_prep[0].get('componente', 'SIN COMPONENTE')
-            )
+            componentes_ingredientes = [
+                str(ing.get('componente', '')).strip()
+                for ing in ingredients_in_prep
+                if str(ing.get('componente', '')).strip()
+            ]
+            componente_mostrado = preparacion.get('componente', 'SIN COMPONENTE')
+            if componentes_ingredientes:
+                componente_mostrado = componentes_ingredientes[0]
+            ws.cell(row=start_row_for_prep, column=self.layout.COL_COMPONENTE).value = componente_mostrado
+            ws.cell(row=start_row_for_prep, column=self.layout.COL_COMPONENTE).alignment = left_align
+            ws.cell(row=start_row_for_prep, column=self.layout.COL_PREPARACION).alignment = left_align
 
             for ingrediente in ingredients_in_prep:
                 ws.cell(row=current_row, column=self.layout.COL_GRUPO).value = ingrediente.get(
@@ -289,7 +330,7 @@ class ExcelReportDrawer:
                 for col_idx in cols_to_merge:
                     # Primero aplicar el alineamiento ANTES de combinar
                     cell_to_align = ws.cell(row=start_row_for_prep, column=col_idx)
-                    cell_to_align.alignment = center_align
+                    cell_to_align.alignment = left_align
                     # Luego combinar
                     ws.merge_cells(start_row=start_row_for_prep, start_column=col_idx, end_row=end_row_for_prep, end_column=col_idx)
 
@@ -542,8 +583,8 @@ class ExcelReportDrawer:
             int: La última fila utilizada por el reporte (incluyendo firmas).
         """
         menu_info = analisis_data.get('menu', {})
-        logo_path = menu_info.get('logo_path')
-        self._insert_logo(ws, logo_path, f'A{start_row}')
+        logo_ref = menu_info.get('logo_path') or menu_info.get('logo_url')
+        self._insert_logo(ws, logo_ref, f'A{start_row}')
 
         self._populate_title(ws, start_row=start_row)
 

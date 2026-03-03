@@ -317,7 +317,7 @@ class Paso2PreparacionesEditorIntegrationTests(TestCase):
         )
         self.assertEqual(rel.id_componente, self.componente)
 
-    def test_api_guardar_preparaciones_editor_existente_actualiza_componente_por_ingrediente(self):
+    def test_api_guardar_preparaciones_editor_existente_actualiza_componente_en_preparacion_e_ingrediente(self):
         componente_alt = ComponentesAlimentos.objects.create(
             id_componente="comp_alt",
             componente="Componente Alterno",
@@ -342,7 +342,7 @@ class Paso2PreparacionesEditorIntegrationTests(TestCase):
         self.assertTrue(body["success"])
 
         self.preparacion.refresh_from_db()
-        self.assertEqual(self.preparacion.id_componente, self.componente)
+        self.assertEqual(self.preparacion.id_componente, componente_alt)
         rel = TablaPreparacionIngredientes.objects.get(
             id_preparacion=self.preparacion,
             id_ingrediente_siesa=self.alimento_icbf,
