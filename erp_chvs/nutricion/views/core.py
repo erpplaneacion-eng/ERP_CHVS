@@ -18,6 +18,31 @@ from planeacion.models import Programa
 from ..services import MenuService
 
 
+def _resumen_errores_form(form) -> str:
+    """Compacta errores de formulario en un texto legible para alertas."""
+    errores = []
+    for campo, mensajes in form.errors.items():
+        if campo == '__all__':
+            etiqueta = 'Validación general'
+        else:
+            etiqueta = form.fields.get(campo).label if campo in form.fields else campo
+        for msg in mensajes:
+            errores.append(f"{etiqueta}: {msg}")
+    return " | ".join(errores)
+
+
+def _errores_form_por_campo(form) -> dict:
+    """Devuelve errores serializados por campo para consumo en frontend."""
+    data = {}
+    for campo, mensajes in form.errors.items():
+        if campo == '__all__':
+            data[campo] = [str(m) for m in mensajes]
+            continue
+        etiqueta = form.fields.get(campo).label if campo in form.fields else campo
+        data[campo] = [f"{etiqueta}: {str(m)}" for m in mensajes]
+    return data
+
+
 @login_required
 @csrf_exempt
 def api_generar_menu_ia(request):
@@ -81,9 +106,23 @@ def lista_alimentos(request):
         form = AlimentoForm(request.POST)
         if form.is_valid():
             alimento = form.save()
+            mensaje_ok = f'Alimento "{alimento.nombre_del_alimento}" agregado correctamente.'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': mensaje_ok})
             messages.success(request, f'Alimento "{alimento.nombre_del_alimento}" agregado correctamente.')
             return redirect('nutricion:lista_alimentos')
-        messages.error(request, 'Error al agregar el alimento. Por favor, revise los datos ingresados.')
+        detalle = _resumen_errores_form(form)
+        base = 'No se pudo guardar el alimento.'
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse(
+                {
+                    'success': False,
+                    'message': f'{base} {detalle}' if detalle else base,
+                    'errors': _errores_form_por_campo(form),
+                },
+                status=400
+            )
+        messages.error(request, f'{base} {detalle}' if detalle else base)
     else:
         form = AlimentoForm()
 
@@ -128,13 +167,27 @@ def editar_alimento(request, codigo):
                 request, 'nutricion', 'editar_alimento',
                 f"Código: {codigo} | Alimento: {alimento_a_editar.nombre_del_alimento}"
             )
+            mensaje_ok = f'Alimento "{alimento_a_editar.nombre_del_alimento}" actualizado correctamente.'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': mensaje_ok})
             messages.success(request, f'Alimento "{alimento_a_editar.nombre_del_alimento}" actualizado correctamente.')
             return redirect('nutricion:lista_alimentos')
         else:
             print("ERROR: Formulario no válido al editar alimento")
             print(f"Código: {codigo}")
             print(f"Errores: {form.errors}")
-            messages.error(request, 'Error al actualizar el alimento. Por favor, revise los datos ingresados.')
+            detalle = _resumen_errores_form(form)
+            base = 'No se pudo actualizar el alimento.'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse(
+                    {
+                        'success': False,
+                        'message': f'{base} {detalle}' if detalle else base,
+                        'errors': _errores_form_por_campo(form),
+                    },
+                    status=400
+                )
+            messages.error(request, f'{base} {detalle}' if detalle else base)
             return redirect('nutricion:lista_alimentos')
 
     return redirect('nutricion:lista_alimentos')

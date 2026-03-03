@@ -204,6 +204,8 @@
         <div class="modal-body">
             <form id="alimento-form" method="POST" action="">
                 {% csrf_token %}
+                <div id="formValidationSummary" style="display:none; margin-bottom:12px; padding:10px 12px; border:1px solid #f5c2c7; background:#fff5f5; color:#842029; border-radius:8px; font-size:0.9rem;"></div>
+                <div id="macroBalanceIndicator" style="display:none; margin-bottom:12px; padding:8px 12px; border:1px solid #d1ecf1; background:#f4fbff; color:#0c5460; border-radius:8px; font-size:0.88rem;"></div>
                 <div class="form-scroll-container modal-alimentos-scroll">
                     <div class="form-grid">
                         <!-- Campos básicos -->

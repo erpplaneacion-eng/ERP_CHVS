@@ -7,6 +7,8 @@ class AlimentosManager {
         this.modalTitle = null;
         this.alimentoForm = null;
         this.submitBtn = null;
+        this.validationSummary = null;
+        this.macroBalanceIndicator = null;
         this.isEditing = false;
         this.currentSearchTerm = '';
         this.init();
@@ -19,6 +21,8 @@ class AlimentosManager {
         this.modalTitle = document.getElementById('modal-title');
         this.alimentoForm = document.getElementById('alimento-form');
         this.submitBtn = document.getElementById('modal-submit-btn');
+        this.validationSummary = document.getElementById('formValidationSummary');
+        this.macroBalanceIndicator = document.getElementById('macroBalanceIndicator');
 
         if (!this.modal || !this.alimentoForm) {
             console.warn('AlimentosManager: Elementos del modal no encontrados');
@@ -131,17 +135,29 @@ class AlimentosManager {
         // Validar números positivos para campos numéricos
         const numericInputs = this.alimentoForm.querySelectorAll('input[type="number"]');
         numericInputs.forEach(input => {
-            input.addEventListener('input', function() {
-                if (parseFloat(this.value) < 0) {
-                    this.value = '';
-                    this.style.borderColor = '#e74c3c';
+            input.addEventListener('input', () => {
+                if (parseFloat(input.value) < 0) {
+                    input.value = '';
+                    input.style.borderColor = '#e74c3c';
                 } else {
-                    this.style.borderColor = '#ced4da';
+                    input.style.borderColor = '#ced4da';
                 }
+                this.validateNumericField(input);
+                this.runFormValidation();
             });
 
             // Validar límites específicos según el campo
-            input.addEventListener('blur', (e) => this.validateNumericField(e.target));
+            input.addEventListener('blur', (e) => {
+                this.validateNumericField(e.target);
+                this.runFormValidation();
+            });
+        });
+
+        // Revalidar también cuando cambian campos no numéricos requeridos.
+        const requiredTextInputs = this.alimentoForm.querySelectorAll('input[required]:not([type="number"]), select[required], textarea[required]');
+        requiredTextInputs.forEach(input => {
+            input.addEventListener('input', () => this.runFormValidation());
+            input.addEventListener('change', () => this.runFormValidation());
         });
     }
 
@@ -240,6 +256,7 @@ class AlimentosManager {
         }
 
         this.openModal();
+        this.runFormValidation();
     }
 
     // Prepara y abre el modal en modo edición usando data-* de la fila.
@@ -269,6 +286,7 @@ class AlimentosManager {
         }
 
         this.openModal();
+        this.runFormValidation();
     }
 
     // Mapea dataset -> inputs del formulario para cargar datos existentes.
@@ -369,6 +387,15 @@ class AlimentosManager {
             codigoInput.style.backgroundColor = '';
             codigoInput.style.cursor = '';
         }
+
+        if (this.validationSummary) {
+            this.validationSummary.style.display = 'none';
+            this.validationSummary.innerHTML = '';
+        }
+        if (this.macroBalanceIndicator) {
+            this.macroBalanceIndicator.style.display = 'none';
+            this.macroBalanceIndicator.innerHTML = '';
+        }
     }
 
     // Abre modal principal y bloquea scroll de fondo.
@@ -390,48 +417,186 @@ class AlimentosManager {
         this.clearForm();
     }
 
-    handleFormSubmit(event) {
+    getNumericFieldValue(fieldId) {
+        const el = document.getElementById(fieldId);
+        if (!el) return 0;
+        const raw = (el.value || '').trim();
+        if (!raw) return 0;
+        const parsed = parseFloat(raw);
+        return Number.isNaN(parsed) ? 0 : parsed;
+    }
+
+    validateMacronutrientBalance() {
+        const proteina = this.getNumericFieldValue('id_proteina_g');
+        const lipidos = this.getNumericFieldValue('id_lipidos_g');
+        const carbohidratos = this.getNumericFieldValue('id_carbohidratos_totales_g');
+        const humedad = this.getNumericFieldValue('id_humedad_g');
+        const cenizas = this.getNumericFieldValue('id_cenizas_g');
+        const suma = proteina + lipidos + carbohidratos + humedad + cenizas;
+        const limite = 105;
+        const esValido = suma <= limite;
+
+        if (this.macroBalanceIndicator) {
+            this.macroBalanceIndicator.style.display = 'block';
+            this.macroBalanceIndicator.style.borderColor = esValido ? '#b7e4c7' : '#f5c2c7';
+            this.macroBalanceIndicator.style.background = esValido ? '#f3fff6' : '#fff5f5';
+            this.macroBalanceIndicator.style.color = esValido ? '#1e6b36' : '#842029';
+            this.macroBalanceIndicator.innerHTML = `Suma componentes principales: <strong>${suma.toFixed(2)}</strong>/105 (proteína + lípidos + carbohidratos + humedad + cenizas)`;
+        }
+
+        return {
+            isValid: esValido,
+            message: esValido ? '' : 'La suma de proteína + lípidos + carbohidratos + humedad + cenizas no puede exceder 105.'
+        };
+    }
+
+    renderValidationSummary(errors) {
+        if (!this.validationSummary) return;
+
+        if (!errors.length) {
+            this.validationSummary.style.display = 'none';
+            this.validationSummary.innerHTML = '';
+            return;
+        }
+
+        const items = errors.map(err => `<li>${err}</li>`).join('');
+        this.validationSummary.innerHTML = `<strong>Corrige lo siguiente antes de guardar:</strong><ul style="margin:8px 0 0 18px; padding:0;">${items}</ul>`;
+        this.validationSummary.style.display = 'block';
+    }
+
+    runFormValidation() {
+        const errors = [];
+        const numericInputs = this.alimentoForm.querySelectorAll('input[type="number"]');
+        let hasNumericErrors = false;
+
+        numericInputs.forEach(input => {
+            const isValid = this.validateNumericField(input);
+            if (!isValid) {
+                hasNumericErrors = true;
+            }
+        });
+
+        const balance = this.validateMacronutrientBalance();
+        if (!balance.isValid) {
+            errors.push(balance.message);
+        }
+
+        const requiredFields = [
+            { id: 'id_codigo', name: 'Código' },
+            { id: 'id_nombre_del_alimento', name: 'Nombre del alimento' },
+            { id: 'id_humedad_g', name: 'Humedad (g)' },
+            { id: 'id_energia_kcal', name: 'Energía (kcal)' },
+            { id: 'id_energia_kj', name: 'Energía (kJ)' },
+            { id: 'id_proteina_g', name: 'Proteína (g)' },
+            { id: 'id_lipidos_g', name: 'Lípidos (g)' },
+            { id: 'id_carbohidratos_totales_g', name: 'Carbohidratos Totales (g)' }
+        ];
+
+        const missingRequired = requiredFields
+            .filter(f => {
+                const el = document.getElementById(f.id);
+                return el && !(el.value || '').trim();
+            })
+            .map(f => `Campo requerido: ${f.name}`);
+
+        errors.push(...missingRequired);
+        if (hasNumericErrors && !errors.includes('Hay valores fuera de rango.')) {
+            errors.unshift('Hay valores fuera de rango.');
+        }
+
+        this.renderValidationSummary(errors);
+        if (this.submitBtn) {
+            const isValid = errors.length === 0;
+            this.submitBtn.disabled = !isValid;
+            this.submitBtn.title = isValid ? '' : 'Corrige las validaciones antes de guardar.';
+        }
+
+        return errors.length === 0;
+    }
+
+    markServerErrors(errorsByField = {}) {
+        if (!errorsByField || typeof errorsByField !== 'object') return;
+
+        const summaryErrors = [];
+        Object.entries(errorsByField).forEach(([field, messages]) => {
+            if (field !== '__all__') {
+                const input = document.getElementById(`id_${field}`);
+                if (input) {
+                    input.style.borderColor = '#e74c3c';
+                    if (Array.isArray(messages) && messages.length) {
+                        this.showFieldError(input, messages[0]);
+                    }
+                }
+            }
+            if (Array.isArray(messages)) {
+                summaryErrors.push(...messages);
+            }
+        });
+
+        if (summaryErrors.length) {
+            this.renderValidationSummary(summaryErrors);
+        }
+    }
+
+    async handleFormSubmit(event) {
+        event.preventDefault();
         console.log('📤 Preparando envío del formulario...');
 
         // ESTRATEGIA: Mantener los valores con PUNTO (formato estándar)
         // Los inputs type="number" ya tienen el formato correcto
         // Solo necesitamos asegurar que no haya problemas de envío
 
-        const numericInputs = this.alimentoForm.querySelectorAll('input[type="number"]');
-        let emptyRequiredFields = [];
-
-        let hasRangeErrors = false;
-
-        numericInputs.forEach(input => {
-            // Revalidar en submit para evitar estados visuales "pegados"
-            // cuando el usuario corrige un valor y guarda sin salir del campo.
-            const isValid = this.validateNumericField(input);
-            if (!isValid) {
-                hasRangeErrors = true;
-            }
-
-            if (input.value && input.value.trim() !== '') {
-                console.log(`✅ ${input.name}: "${input.value}" (manteniendo punto decimal)`);
-            } else if (input.hasAttribute('required')) {
-                emptyRequiredFields.push(input.name);
-                console.warn(`⚠️ ${input.name}: campo requerido vacío`);
-            }
-        });
-
-        if (emptyRequiredFields.length > 0) {
-            console.error('❌ Campos requeridos vacíos:', emptyRequiredFields);
-        }
-
-        // Si hay errores de rango/valor, detenemos el envío.
-        if (hasRangeErrors) {
-            event.preventDefault();
-            console.error('❌ Hay campos numéricos fuera de rango.');
+        const clientValid = this.runFormValidation();
+        if (!clientValid) {
+            console.error('❌ El formulario tiene errores de validación.');
             return;
         }
 
-        console.log('✅ Formulario listo para enviar con formato estándar (punto decimal)');
-        // Permitir que el formulario se envíe normalmente con punto decimal
-        // Django debe aceptar el formato estándar
+        const formData = new FormData(this.alimentoForm);
+        const submitOriginal = this.submitBtn ? this.submitBtn.innerHTML : '';
+        if (this.submitBtn) {
+            this.submitBtn.disabled = true;
+            this.submitBtn.innerHTML = 'Guardando...';
+        }
+
+        try {
+            const response = await fetch(this.alimentoForm.action || window.location.pathname, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                this.markServerErrors(data.errors || {});
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire('No se guardó', data.message || 'Hay validaciones pendientes.', 'warning');
+                } else {
+                    alert(data.message || 'No se pudo guardar el alimento.');
+                }
+                this.runFormValidation();
+                return;
+            }
+
+            if (typeof Swal !== 'undefined') {
+                await Swal.fire('Éxito', data.message || 'Alimento guardado correctamente.', 'success');
+            }
+            window.location.reload();
+        } catch (error) {
+            console.error('Error al guardar alimento:', error);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Error', 'Error de conexión al guardar el alimento.', 'error');
+            } else {
+                alert('Error de conexión al guardar el alimento.');
+            }
+        } finally {
+            if (this.submitBtn) {
+                this.submitBtn.disabled = false;
+                this.submitBtn.innerHTML = submitOriginal || (this.isEditing ? 'Actualizar Alimento' : 'Guardar Alimento');
+            }
+        }
     }
 
     // Función para validar formulario antes de enviar
