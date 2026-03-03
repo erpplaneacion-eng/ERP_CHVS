@@ -191,14 +191,6 @@ class MenusAvanzadosController {
         }
     }
 
-    /**
-     * Configurar event listeners principales
-     */
-    setupEventListeners() {
-        // Los event listeners ahora están manejados por cada manager individual
-        // Los botones del modal se configuran dinámicamente cuando se abre el modal
-    }
-
     // =================== MÉTODOS DE COORDINACIÓN ===================
 
     // =================== MÉTODOS DE CARGA DE DATOS ===================
@@ -384,16 +376,6 @@ class MenusAvanzadosController {
         }
     }
 
-    /**
-     * Cargar ingredientes de una preparación
-     * @param {number} preparacionId - ID de la preparación
-     */
-    async cargarIngredientesPreparacion(preparacionId) {
-        if (this.ingredientesManager) {
-            await this.ingredientesManager.cargarIngredientesPreparacion(preparacionId);
-        }
-    }
-
     // =================== MÉTODOS DE ANÁLISIS NUTRICIONAL ===================
 
     /**
@@ -522,17 +504,6 @@ class MenusAvanzadosController {
     }
 
     // =================== MÉTODOS DE UTILIDAD ===================
-
-    /**
-     * Generar menús automáticos
-     * @param {string} modalidadId - ID de la modalidad
-     * @param {string} modalidadNombre - Nombre de la modalidad
-     */
-    async generarMenusAutomaticos(modalidadId, modalidadNombre) {
-        if (this.modalidadesManager) {
-            await this.modalidadesManager.generarMenusAutomaticos(modalidadId, modalidadNombre);
-        }
-    }
 
     /**
      * Resetear filtros
@@ -681,5 +652,3 @@ document.addEventListener('DOMContentLoaded', function() {
     window.menusController = new MenusAvanzadosController();
 });
 
-// Exportar para uso global
-window.MenusAvanzadosController = MenusAvanzadosController;

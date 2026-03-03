@@ -91,8 +91,6 @@ class NutricionManager {
         }
 
         try {
-            console.log('🚀 Inicializando módulo de nutrición v' + NutricionConfig.version);
-            
             // Cargar módulos core en orden
             await this.cargarModulosCore();
             
@@ -103,8 +101,7 @@ class NutricionManager {
             this.configurarEventosGlobales();
             
             this.initialized = true;
-            console.log('✅ Módulo de nutrición inicializado correctamente');
-            
+
             // Emitir evento de inicialización completa
             this.emitirEvento('nutricion:ready');
             
@@ -156,7 +153,7 @@ class NutricionManager {
     detectarPaginaActual() {
         const path = window.location.pathname;
         
-        if (path.includes('lista-menus') || path.includes('menus-avanzado')) {
+        if (path.includes('lista-menus') || path.includes('menus-avanzado') || path === '/nutricion/menus/') {
             return 'lista_menus';
         } else if (path.includes('lista-preparaciones')) {
             return 'lista_preparaciones';
@@ -203,36 +200,6 @@ class NutricionManager {
             }
         });
 
-        // Auto-save para campos de texto largos
-        this.configurarAutoSave();
-    }
-
-    /**
-     * Configura auto-save para formularios largos
-     */
-    configurarAutoSave() {
-        const textareas = document.querySelectorAll('textarea[data-autosave]');
-        textareas.forEach(textarea => {
-            const debouncedSave = this.debounce(() => {
-                const data = {
-                    field: textarea.name,
-                    value: textarea.value,
-                    timestamp: Date.now()
-                };
-                localStorage.setItem(`autosave_${textarea.name}`, JSON.stringify(data));
-            }, 2000);
-
-            textarea.addEventListener('input', debouncedSave);
-            
-            // Restaurar al cargar
-            const saved = localStorage.getItem(`autosave_${textarea.name}`);
-            if (saved && !textarea.value.trim()) {
-                const data = JSON.parse(saved);
-                if (Date.now() - data.timestamp < 24 * 60 * 60 * 1000) { // 24 horas
-                    textarea.value = data.value;
-                }
-            }
-        });
     }
 
     /**
@@ -243,46 +210,6 @@ class NutricionManager {
     emitirEvento(eventName, detail = {}) {
         const event = new CustomEvent(eventName, { detail });
         document.dispatchEvent(event);
-    }
-
-    /**
-     * Función debounce
-     * @param {Function} func - Función a ejecutar
-     * @param {number} wait - Tiempo de espera
-     * @returns {Function} - Función debounced
-     */
-    debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-
-    /**
-     * Recarga un módulo específico
-     * @param {string} moduleName - Nombre del módulo
-     */
-    async recargarModulo(moduleName) {
-        if (this.loader.loadedModules.has(moduleName)) {
-            this.loader.loadedModules.delete(moduleName);
-            this.loader.loadingPromises.delete(moduleName);
-        }
-        
-        // Recargar según el tipo de módulo
-        const moduleFiles = {
-            'utils': 'core/utils.js',
-            'modals': 'core/modal-manager.js',
-            'api': 'core/api-client.js'
-        };
-        
-        if (moduleFiles[moduleName]) {
-            await this.loader.loadScript(this.baseJSPath + moduleFiles[moduleName], moduleName);
-        }
     }
 
     /**
@@ -313,11 +240,3 @@ if (NutricionConfig.autoInit) {
     }
 }
 
-// API global para depuración y control manual
-window.NutricionManager = nutricionManager;
-window.NutricionConfig = NutricionConfig;
-
-// Evento para módulos que dependan de la inicialización
-document.addEventListener('nutricion:ready', () => {
-    console.log('🎉 Sistema de nutrición listo para usar');
-});

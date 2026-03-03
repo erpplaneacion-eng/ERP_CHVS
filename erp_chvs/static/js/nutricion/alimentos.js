@@ -1,6 +1,7 @@
 // alimentos.js - Funcionalidad para gestión de alimentos ICBF
 
 class AlimentosManager {
+    // Constructor: define estado de UI y arranca la inicialización del módulo.
     constructor() {
         this.modal = null;
         this.modalTitle = null;
@@ -11,6 +12,7 @@ class AlimentosManager {
         this.init();
     }
 
+    // Inicializa referencias del DOM y activa listeners, validaciones y búsqueda.
     init() {
         // Inicializar elementos del DOM
         this.modal = document.getElementById('alimento-modal');
@@ -28,6 +30,7 @@ class AlimentosManager {
         this.setupSearch();
     }
 
+    // Conecta eventos de botones, modales y teclado para todo el ciclo CRUD.
     setupEventListeners() {
         // Botón añadir alimento
         const addBtn = document.getElementById('add-alimento-btn');
@@ -106,6 +109,7 @@ class AlimentosManager {
         this.alimentoForm.addEventListener('submit', (e) => this.handleFormSubmit(e));
     }
 
+    // Configura validaciones de campos (formato de código y rangos numéricos).
     setupValidations() {
         if (!this.alimentoForm) return;
 
@@ -134,6 +138,7 @@ class AlimentosManager {
         });
     }
 
+    // Valida límites esperados por campo numérico y muestra error contextual.
     validateNumericField(input) {
         const fieldName = input.name;
         const value = parseFloat(input.value);
@@ -168,6 +173,7 @@ class AlimentosManager {
         }
     }
 
+    // Inserta un mensaje de error temporal junto al input.
     showFieldError(input, message) {
         // Remover error anterior
         this.removeFieldError(input);
@@ -188,6 +194,7 @@ class AlimentosManager {
         }, 3000);
     }
 
+    // Elimina el mensaje de error visual asociado a un campo.
     removeFieldError(input) {
         const errorSpan = input.parentNode.querySelector('.error-message');
         if (errorSpan) {
@@ -195,6 +202,7 @@ class AlimentosManager {
         }
     }
 
+    // Prepara y abre el modal en modo creación.
     showCreateModal() {
         this.isEditing = false;
         this.clearForm();
@@ -212,6 +220,7 @@ class AlimentosManager {
         this.openModal();
     }
 
+    // Prepara y abre el modal en modo edición usando data-* de la fila.
     showEditModal(button) {
         this.isEditing = true;
         const data = button.dataset;
@@ -240,6 +249,7 @@ class AlimentosManager {
         this.openModal();
     }
 
+    // Mapea dataset -> inputs del formulario para cargar datos existentes.
     populateForm(data) {
         // Mapeo directo: data-attribute en HTML → ID del input en el formulario
         const fieldMappings = {
@@ -312,6 +322,7 @@ class AlimentosManager {
         console.log('✨ Formulario poblado completamente');
     }
 
+    // Restablece formulario, estilos y estado base del modal.
     clearForm() {
         this.alimentoForm.reset();
 
@@ -338,6 +349,7 @@ class AlimentosManager {
         }
     }
 
+    // Abre modal principal y bloquea scroll de fondo.
     openModal() {
         this.modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
@@ -349,6 +361,7 @@ class AlimentosManager {
         }
     }
 
+    // Cierra modal principal, restaura scroll y limpia formulario.
     closeModal() {
         this.modal.style.display = 'none';
         document.body.style.overflow = 'auto';
@@ -404,6 +417,7 @@ class AlimentosManager {
     // FUNCIONALIDAD DE VER DETALLES
     // =====================================
 
+    // Construye y muestra el modal de detalle en modo solo lectura.
     showDetailModal(button) {
         const data = button.dataset;
         const detailContent = document.getElementById('detailContent');
@@ -559,6 +573,7 @@ class AlimentosManager {
         document.getElementById('detailModal').style.display = 'flex';
     }
 
+    // Cierra el modal de detalle.
     closeDetailModal() {
         const detailModal = document.getElementById('detailModal');
         if (detailModal) {
@@ -570,6 +585,7 @@ class AlimentosManager {
     // FUNCIONALIDAD DE ELIMINAR
     // =====================================
 
+    // Elimina un alimento vía API DELETE con confirmación previa.
     async deleteAlimento(button) {
         const codigo = button.dataset.codigo;
         const nombre = button.dataset.nombre;
@@ -641,6 +657,7 @@ class AlimentosManager {
     // FUNCIONALIDAD DE BÚSQUEDA (SERVER-SIDE)
     // =====================================
 
+    // Inicializa búsqueda server-side usando el parámetro `q` en URL.
     setupSearch() {
         const searchInput = document.getElementById('searchInput');
         const clearButton = document.getElementById('clearSearch');
@@ -684,6 +701,7 @@ class AlimentosManager {
         });
     }
 
+    // Envía búsqueda redirigiendo con querystring para filtrado en backend.
     submitSearch() {
         const searchTerm = this.currentSearchTerm.trim();
 
@@ -696,6 +714,7 @@ class AlimentosManager {
         }
     }
 
+    // Actualiza etiqueta de resultados según término buscado y filas visibles.
     updateResultsInfo(searchTerm) {
         const resultsCount = document.getElementById('searchResultsCount');
         const rows = document.querySelectorAll('.alimentos-table tbody tr');
@@ -706,6 +725,7 @@ class AlimentosManager {
         }
     }
 
+    // Muestra u oculta el botón "limpiar" según el estado del input.
     updateClearButton() {
         const clearButton = document.getElementById('clearSearch');
         if (clearButton) {
@@ -718,7 +738,7 @@ class AlimentosManager {
     }
 }
 
-// Inicializar manager cuando el DOM esté listo
+// Punto de entrada: inicializa el manager solo en la vista que contiene el modal.
 let alimentosManager;
 
 document.addEventListener('DOMContentLoaded', function() {

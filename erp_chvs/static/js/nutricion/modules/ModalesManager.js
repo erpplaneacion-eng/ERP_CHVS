@@ -23,30 +23,9 @@ class ModalesManager {
     }
 
     init() {
-        this.setupGlobalFunctions();
         this.ocultarTodosLosModales();
         this.configurarBotonesCerrar();
         this.configurarEventListeners();
-    }
-
-    /**
-     * Configurar funciones globales para compatibilidad con onclick
-     */
-    setupGlobalFunctions() {
-        // Función para cerrar modal de preparación
-        window.cerrarModalPreparacion = () => {
-            this.cerrarModalPreparacion();
-        };
-
-        // Función para cerrar modal de ingredientes
-        window.cerrarModalIngredientes = () => {
-            this.cerrarModalIngredientes();
-        };
-
-        // Función para cerrar modal de análisis nutricional
-        window.cerrarModalAnalisisNutricional = () => {
-            this.cerrarModalAnalisisNutricional();
-        };
     }
 
     /**
@@ -238,24 +217,6 @@ class ModalesManager {
     }
 
     /**
-     * Obtener el z-index apropiado para un modal
-     * @param {string} modalId - ID del modal
-     * @returns {number} Z-index
-     */
-    getZIndex(modalId) {
-        const zIndexMap = {
-            [this.modales.preparaciones]: 1000,
-            [this.modales.nuevaPreparacion]: 1100,
-            [this.modales.agregarIngredientes]: 1150,
-            [this.modales.analisisNutricional]: 1200,
-            [this.modales.menuEspecial]: 1100,
-            [this.modales.editarMenuEspecial]: 1100
-        };
-        
-        return zIndexMap[modalId] || 1000;
-    }
-
-    /**
      * Verificar si un modal está abierto
      * @param {string} modalId - ID del modal
      * @returns {boolean} True si está abierto
@@ -265,95 +226,6 @@ class ModalesManager {
         return modal && modal.style.display !== 'none';
     }
 
-    /**
-     * Obtener lista de modales abiertos
-     * @returns {Array} Lista de IDs de modales abiertos
-     */
-    getOpenModals() {
-        return Object.values(this.modales).filter(modalId => this.isModalOpen(modalId));
-    }
-
-    /**
-     * Cerrar todos los modales
-     */
-    cerrarTodosLosModales() {
-        Object.values(this.modales).forEach(modalId => {
-            this.cerrarModal(modalId);
-        });
-    }
-
-    /**
-     * Configurar modal para que aparezca sobre otros
-     * @param {string} modalId - ID del modal
-     * @param {number} zIndex - Z-index personalizado
-     */
-    traerAlFrente(modalId, zIndex = null) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.style.zIndex = zIndex || (this.getZIndex(modalId) + 1000);
-        }
-    }
-
-    /**
-     * Muestra un modal de confirmación con Promise
-     * @param {string} mensaje - Mensaje principal de confirmación
-     * @param {string} subtitulo - Mensaje secundario (opcional)
-     * @returns {Promise<boolean>} - True si confirma, false si cancela
-     */
-    confirmar(mensaje, subtitulo = '') {
-        return new Promise((resolve) => {
-            const modalId = 'modal-confirmacion-dinamico';
-
-            // Remover modal anterior si existe
-            const modalAnterior = document.getElementById(modalId);
-            if (modalAnterior) {
-                modalAnterior.remove();
-            }
-
-            // Crear modal dinámicamente
-            const modalHTML = `
-                <div id="${modalId}" class="modal" style="display: none; z-index: 10000;">
-                    <div class="modal-content" style="max-width: 500px; margin: 10% auto;">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Confirmación</h5>
-                        </div>
-                        <div class="modal-body">
-                            <p><strong>${mensaje}</strong></p>
-                            ${subtitulo ? `<p class="text-muted">${subtitulo}</p>` : ''}
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-action="cancelar">Cancelar</button>
-                            <button type="button" class="btn btn-danger" data-action="confirmar">Confirmar</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            document.body.insertAdjacentHTML('beforeend', modalHTML);
-            const modal = document.getElementById(modalId);
-
-            // Event listeners para botones
-            modal.querySelector('[data-action="cancelar"]').addEventListener('click', () => {
-                modal.style.display = 'none';
-                setTimeout(() => modal.remove(), 300);
-                resolve(false);
-            });
-
-            modal.querySelector('[data-action="confirmar"]').addEventListener('click', () => {
-                modal.style.display = 'none';
-                setTimeout(() => modal.remove(), 300);
-                resolve(true);
-            });
-
-            // Mostrar modal
-            modal.style.display = 'block';
-
-            // Enfocar botón de confirmar
-            setTimeout(() => {
-                modal.querySelector('[data-action="confirmar"]').focus();
-            }, 100);
-        });
-    }
 }
 
 // Exportar para uso global

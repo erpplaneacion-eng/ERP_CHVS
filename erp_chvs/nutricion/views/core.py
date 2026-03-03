@@ -72,7 +72,10 @@ def nutricion_index(request):
 
 @login_required
 def lista_alimentos(request):
-    """Vista para listar alimentos ICBF"""
+    """
+    Lista alimentos ICBF con búsqueda y paginación, y también crea un nuevo
+    alimento cuando llega un POST con un formulario válido.
+    """
     if request.method == 'POST':
         form = AlimentoForm(request.POST)
         if form.is_valid():
@@ -81,6 +84,7 @@ def lista_alimentos(request):
     else:
         form = AlimentoForm()
 
+    # La búsqueda por nombre/código se resuelve en base de datos (server-side).
     search_query = request.GET.get('q', '')
     alimentos_list = TablaAlimentos2018Icbf.objects.select_related('id_componente').order_by('nombre_del_alimento')
 
@@ -90,6 +94,7 @@ def lista_alimentos(request):
             Q(codigo__icontains=search_query)
         )
 
+    # Se limita a 20 registros por página para mantener respuesta y render estables.
     paginator = Paginator(alimentos_list, 20)
     page_number = request.GET.get('page')
     alimentos_page = paginator.get_page(page_number)
@@ -105,7 +110,10 @@ def lista_alimentos(request):
 
 @login_required
 def editar_alimento(request, codigo):
-    """Vista para editar un alimento"""
+    """
+    Actualiza un alimento existente identificado por su código.
+    Solo procesa POST; en cualquier otro caso redirige al listado.
+    """
     from django.contrib import messages
 
     alimento_a_editar = get_object_or_404(TablaAlimentos2018Icbf, pk=codigo)
@@ -113,6 +121,7 @@ def editar_alimento(request, codigo):
     if request.method == 'POST':
         form = AlimentoForm(request.POST, instance=alimento_a_editar)
         if form.is_valid():
+            # Se guarda sobre la misma instancia para conservar el código original.
             form.save()
             RegistroActividad.registrar(
                 request, 'nutricion', 'editar_alimento',
@@ -133,10 +142,13 @@ def editar_alimento(request, codigo):
 @login_required
 @require_http_methods(["DELETE"])
 def eliminar_alimento(request, codigo):
-    """Vista para eliminar un alimento"""
+    """
+    Elimina un alimento por código y devuelve respuesta JSON para consumo AJAX.
+    """
     try:
         alimento = get_object_or_404(TablaAlimentos2018Icbf, pk=codigo)
         nombre = alimento.nombre_del_alimento
+        # Eliminación física del registro; no hay soft-delete en este flujo.
         alimento.delete()
         RegistroActividad.registrar(
             request, 'nutricion', 'eliminar_alimento',

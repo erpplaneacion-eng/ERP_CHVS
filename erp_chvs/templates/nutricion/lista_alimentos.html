@@ -12,29 +12,6 @@
     <h1>Lista de Alimentos Resolucion 335.</h1>
     <p>Gestión de alimentos según la Resolucion 335.</p>
 
-    <!-- Mensajes de Django -->
-    {% if messages %}
-    <div class="messages-container">
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {% if message.tags == 'success' %}
-                <i class="fas fa-check-circle"></i>
-            {% elif message.tags == 'error' %}
-                <i class="fas fa-exclamation-circle"></i>
-            {% elif message.tags == 'warning' %}
-                <i class="fas fa-exclamation-triangle"></i>
-            {% else %}
-                <i class="fas fa-info-circle"></i>
-            {% endif %}
-            {{ message }}
-            <button type="button" class="close" onclick="this.parentElement.remove()">
-                <span>&times;</span>
-            </button>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
     <!-- Barra de búsqueda -->
     <div class="search-container">
         <div class="search-box">
@@ -429,13 +406,13 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Detalles del Alimento</h3>
-                <span class="modal-close" onclick="closeDetailModal()">&times;</span>
+                <span class="modal-close modal-detail-close-btn">&times;</span>
             </div>
             <div class="modal-body" id="detailContent">
                 <!-- Contenido dinámico -->
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeDetailModal()">Cerrar</button>
+                <button type="button" class="btn btn-secondary modal-detail-close-btn">Cerrar</button>
             </div>
         </div>
     </div>
