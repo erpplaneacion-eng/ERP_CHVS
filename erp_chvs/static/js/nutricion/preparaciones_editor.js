@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
     'use strict';
 
     // ========================================
@@ -58,19 +58,12 @@
     }
 
     function obtenerComponentesPorGrupo(grupoId) {
-        if (!grupoId) return [];
-        const esGrupoEspecias = String(grupoId).trim().toLowerCase() === 'g8';
-        const base = esGrupoEspecias
-            ? componentesCatalogo
-            : (componentesPorGrupo[grupoId] || []);
-
-        // Unificar estructura de datos:
-        // - componentesCatalogo: {id_componente, componente}
-        // - componentesPorGrupo: {id, nombre}
-        return base
+        // ✨ AJUSTE: Ahora devolvemos todos los componentes sin filtrar por grupo
+        // para que sean independientes en la UI.
+        return componentesCatalogo
             .map(c => ({
-                id: c?.id ?? c?.id_componente ?? '',
-                nombre: c?.nombre ?? c?.componente ?? ''
+                id: c?.id_componente ?? '',
+                nombre: c?.componente ?? ''
             }))
             .filter(c => c.id && c.nombre);
     }
