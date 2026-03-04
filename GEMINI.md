@@ -32,7 +32,7 @@ The project follows a modular Django structure with a **Service-Oriented Archite
 ### A. Facturación (`facturacion/`)
 Handles the ingestion and validation of beneficiary lists.
 *   **Service Layer:** Logic resides in `services.py`, `persistence_service.py`, and `data_processors.py`.
-*   **Fuzzy Matching:** Uses `fuzzywuzzy` and `RapidFuzz` to map non-standardized school names from Excel files to the official database.
+*   **Fuzzy Matching:** Uses `RapidFuzz` to map non-standardized school names from Excel files to the official database.
 *   **Validators:** Strict validation of Excel structures (supports "Original" and "Lote 3" formats).
 *   **Multi-Location Support:** The Google Sheets integration now supports multiple locations (Cali and Yumbo). Services and Views accept a `sede` parameter to switch between `GOOGLE_SHEET_ID` (Cali) and `GOOGLE_SHEET_ID_YUMBO` (Yumbo).
 
@@ -42,6 +42,7 @@ The core engine for nutritional compliance and menu planning.
 *   **Semaforización:** Visual validation of nutritional adequacy (e.g., 20% for snacks, 30% for lunch).
 *   **Weekly Validator:** A recently implemented system that groups 20 menus into 4 weeks and validates component frequency against resolution requirements.
 *   **AI Menus:** Integration with Gemini to generate menus that meet specific nutritional targets.
+*   **PDF Generation:** `CicloMenusPdfService` generates a comprehensive 1-20 menu cycle PDF on a single page, tailored by consumption modality and compliant with professional signature requirements.
 
 ### C. Dashboard & Principal
 Central hubs for user management, geographic data (Departments/Municipalities), and system-wide statistics.
@@ -86,6 +87,10 @@ python erp_chvs/manage.py runserver
 # Run tests
 pytest
 python erp_chvs/manage.py test nutricion
+
+# Sincronización de Pesos
+.\erp_chvs\run_tests_paso1.bat  # Windows
+bash erp_chvs/run_tests_paso1.sh # Linux/Mac
 ```
 
 ### Key Reference Files
@@ -93,6 +98,7 @@ python erp_chvs/manage.py test nutricion
 *   `erp_chvs/mapeo_nutricion.json`: Nutritional field mapping.
 *   `PLAN_VALIDADOR_SEMANAL.md`: Detailed implementation plan for the weekly validator.
 *   `REPORTE_BUGS_CORREGIDOS.md`: History of bug fixes and system stability notes.
+*   `erp_chvs/nutricion/services/ciclo_menus_pdf_service.py`: Logic for cycle menu PDF generation.
 *   `erp_chvs/diagnostico_excluyentes.py`: Diagnostic script for exclusive groups in nutrition.
 *   `erp_chvs/diagnostico_validador_semanal.py`: Diagnostic script for the weekly validator.
 
@@ -100,7 +106,7 @@ python erp_chvs/manage.py test nutricion
 
 ## 6. AI Agent Guidelines
 When assisting with this project:
-1.  **Respect the Service Layer:** Check for an existing `services.py` before adding logic to a `view.py`.
+1.  **Respect the Service Layer:** Check for an existing `services.py` or `services/` directory before adding logic to a `view.py`.
 2.  **Multilingual Context:** Ensure comments and user-facing strings are in Spanish.
 3.  **Data Integrity:** Be cautious with migrations in the `nutricion` app as it handles critical resolution data.
 4.  **Frontend Logic:** Much of the new interactivity (like the Weekly Validator) is driven by modular JavaScript in `static/js/`.
