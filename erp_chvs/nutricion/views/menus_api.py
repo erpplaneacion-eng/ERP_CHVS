@@ -11,7 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from principal.models import ModalidadesDeConsumo, RegistroActividad
 from planeacion.models import Programa, ProgramaModalidades
 
-from ..models import TablaMenus
+from ..models import TablaMenus, TablaPreparaciones
 
 
 @login_required
@@ -221,7 +221,26 @@ def api_menus(request):
             'id_contrato__id', 'id_contrato__programa', 'fecha_creacion'
         ).order_by('id_modalidad__id_modalidades', 'menu_numerico')
 
-        return JsonResponse({'menus': list(menus)})
+        menus_list = list(menus)
+        menu_ids = [m['id_menu'] for m in menus_list]
+
+        preparaciones_por_menu = {menu_id: [] for menu_id in menu_ids}
+        if menu_ids:
+            preparaciones_rows = (
+                TablaPreparaciones.objects
+                .filter(id_menu_id__in=menu_ids)
+                .values('id_menu_id', 'preparacion')
+                .order_by('id_menu_id', 'preparacion')
+            )
+            for row in preparaciones_rows:
+                preparaciones_por_menu[row['id_menu_id']].append(row['preparacion'])
+
+        for menu in menus_list:
+            preps = preparaciones_por_menu.get(menu['id_menu'], [])
+            menu['preparaciones'] = preps
+            menu['tiene_preparaciones'] = len(preps) > 0
+
+        return JsonResponse({'menus': menus_list})
 
     if request.method == 'POST':
         try:

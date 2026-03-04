@@ -197,6 +197,80 @@
     flex-wrap: wrap; /* Permitir que los botones se envuelvan si es necesario */
 }
 
+.menu-preparaciones-resumen {
+    margin-top: 8px;
+    font-size: 11px;
+    line-height: 1.2;
+    color: #0f5132;
+    background: #d1e7dd;
+    border: 1px solid #badbcc;
+    border-radius: 12px;
+    padding: 4px 8px;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+button.menu-preparaciones-resumen {
+    cursor: pointer;
+}
+
+.menu-preparaciones-resumen.sin-preparaciones {
+    color: #6b7280;
+    background: #f3f4f6;
+    border-color: #e5e7eb;
+}
+
+.menu-preparaciones-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(320px, calc(100vw - 32px));
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+    padding: 8px 10px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 20;
+}
+
+.menu-card:hover .menu-preparaciones-panel,
+.menu-card.show-preparaciones .menu-preparaciones-panel {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+}
+
+.menu-preparaciones-panel-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.menu-preparaciones-lista {
+    margin: 0;
+    padding-left: 14px;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.menu-preparaciones-lista li {
+    font-size: 10px;
+    line-height: 1.25;
+    color: #334155;
+    margin: 0 0 2px 0;
+}
+
 /* Animación de entrada escalonada */
 .menu-card-anim {
     animation: menuFadeIn 0.5s ease backwards;

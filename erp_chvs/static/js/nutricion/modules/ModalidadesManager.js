@@ -254,6 +254,45 @@ class ModalidadesManager {
         return html;
     }
 
+    _escapeHtml(texto) {
+        return String(texto ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    _renderPreparacionesInfo(menu) {
+        const preparaciones = Array.isArray(menu.preparaciones) ? menu.preparaciones : [];
+        const total = preparaciones.length;
+
+        if (total === 0) {
+            return '<div class="menu-preparaciones-resumen sin-preparaciones">Sin preparaciones</div>';
+        }
+
+        const items = preparaciones
+            .map((prep) => `<li>${this._escapeHtml(prep)}</li>`)
+            .join('');
+
+        return `
+            <button
+                type="button"
+                class="menu-preparaciones-resumen"
+                onclick="event.stopPropagation(); togglePreparacionesCard(this);"
+                aria-label="Ver preparaciones del menu"
+            >
+                ${total} preparaciones
+            </button>
+            <div class="menu-preparaciones-panel">
+                <div class="menu-preparaciones-panel-title">Preparaciones</div>
+                <ul class="menu-preparaciones-lista">
+                    ${items}
+                </ul>
+            </div>
+        `;
+    }
+
     /**
      * Generar secciÃ³n de una semana con validador
      * @param {number} numSemana - NÃºmero de semana (1-4)
@@ -267,10 +306,10 @@ class ModalidadesManager {
         const containerId = `validador-semana-${modalidadId}-${numSemana}`;
 
         let tarjetasMenus = menus.map((menu, index) => {
-            const menuEscaped = String(menu.menu).replace(/'/g, "\\'");
             const downloadUrl = `/nutricion/exportar-excel/${menu.id_menu}/`;
             const animStyle = animate ? `style="animation-delay: ${index * 0.05}s"` : '';
             const animClass = animate ? 'menu-card-anim' : '';
+            const preparacionesInfo = this._renderPreparacionesInfo(menu);
 
             return `
                 <div class="menu-card ${animClass} ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
@@ -285,6 +324,7 @@ class ModalidadesManager {
                             <i class="fas fa-utensils"></i> Preparaciones
                         </button>
                     </div>
+                    ${preparacionesInfo}
                 </div>
             `;
         }).join('');
@@ -338,6 +378,7 @@ class ModalidadesManager {
             const downloadUrl = `/nutricion/exportar-excel/${menu.id_menu}/`;
             const animStyle = animate ? `style="animation-delay: ${delayBase + index * 0.05}s"` : '';
             const animClass = animate ? 'menu-card-anim' : '';
+            const preparacionesInfo = this._renderPreparacionesInfo(menu);
 
             return `
                 <div class="menu-card menu-card-especial ${animClass} ${menu.tiene_preparaciones ? 'has-preparaciones' : ''}"
@@ -357,6 +398,7 @@ class ModalidadesManager {
                             <i class="fas fa-edit"></i>
                         </button>
                     </div>
+                    ${preparacionesInfo}
                 </div>
             `;
         }).join('');
@@ -1107,6 +1149,12 @@ async function ejecutarCopiaModalidad() {
     if (window._modalidadesMgr) {
         await window._modalidadesMgr._ejecutarCopiaModalidad();
     }
+}
+
+function togglePreparacionesCard(triggerEl) {
+    const card = triggerEl && triggerEl.closest('.menu-card');
+    if (!card) return;
+    card.classList.toggle('show-preparaciones');
 }
 
 
