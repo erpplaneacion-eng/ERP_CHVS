@@ -140,6 +140,7 @@ def api_copiar_preparacion(request):
         data = json.loads(request.body)
         source_preparacion_id = data.get('source_preparacion_id')
         target_menu_id = data.get('target_menu_id')
+        ingredient_ids = data.get('ingredient_ids') or []
 
         if not source_preparacion_id or not target_menu_id:
             return JsonResponse({'error': 'Faltan parámetros requeridos.'}, status=400)
@@ -147,14 +148,31 @@ def api_copiar_preparacion(request):
         source_preparacion = get_object_or_404(TablaPreparaciones, pk=source_preparacion_id)
         target_menu = get_object_or_404(TablaMenus, pk=target_menu_id)
 
+        if source_preparacion.id_menu.id_modalidad_id != target_menu.id_modalidad_id:
+            return JsonResponse(
+                {'success': False, 'error': 'Solo se puede copiar desde menús de la misma modalidad.'},
+                status=400
+            )
+
+        source_ingredientes = TablaPreparacionIngredientes.objects.filter(
+            id_preparacion=source_preparacion
+        )
+        if ingredient_ids:
+            ingredient_ids_norm = {str(i).strip() for i in ingredient_ids if str(i).strip()}
+            source_ingredientes = source_ingredientes.filter(
+                id_ingrediente_siesa_id__in=ingredient_ids_norm
+            )
+
+        if not source_ingredientes.exists():
+            return JsonResponse(
+                {'success': False, 'error': 'La preparación origen no tiene ingredientes para copiar.'},
+                status=400
+            )
+
         new_preparacion = TablaPreparaciones.objects.create(
             preparacion=source_preparacion.preparacion,
             id_menu=target_menu,
             id_componente=source_preparacion.id_componente
-        )
-
-        source_ingredientes = TablaPreparacionIngredientes.objects.filter(
-            id_preparacion=source_preparacion
         )
 
         nuevos_ingredientes = []
@@ -164,6 +182,8 @@ def api_copiar_preparacion(request):
                     id_preparacion=new_preparacion,
                     id_ingrediente_siesa=ing.id_ingrediente_siesa,
                     id_componente=ing.id_componente or new_preparacion.id_componente,
+                    id_grupo_alimentos=ing.id_grupo_alimentos,
+                    gramaje=ing.gramaje,
                 )
             )
 
@@ -214,6 +234,62 @@ def api_preparaciones_por_modalidad(request, modalidad_id):
 
     except Exception as e:
         return JsonResponse({'error': f'Ocurrió un error inesperado: {str(e)}'}, status=500)
+
+
+@login_required
+def api_menus_misma_modalidad_para_copia(request, id_menu):
+    """Lista menús de la misma modalidad para usar como origen de copia."""
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+
+    menu_actual = get_object_or_404(
+        TablaMenus.objects.select_related('id_modalidad', 'id_contrato'),
+        id_menu=id_menu
+    )
+    menus = (
+        TablaMenus.objects
+        .filter(id_modalidad=menu_actual.id_modalidad)
+        .select_related('id_contrato')
+        .order_by('menu', 'id_menu')
+    )
+
+    data = [
+        {
+            'id_menu': m.id_menu,
+            'menu': m.menu,
+            'programa': str(m.id_contrato),
+            'es_actual': m.id_menu == menu_actual.id_menu,
+        }
+        for m in menus
+    ]
+    return JsonResponse({'success': True, 'menus': data})
+
+
+@login_required
+def api_preparaciones_por_menu_para_copia(request, id_menu_origen):
+    """Lista preparaciones de un menú origen para flujo de copia."""
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+
+    menu_origen = get_object_or_404(TablaMenus, id_menu=id_menu_origen)
+    preparaciones = (
+        TablaPreparaciones.objects
+        .filter(id_menu=menu_origen)
+        .order_by('preparacion', 'id_preparacion')
+    )
+
+    data = []
+    for prep in preparaciones:
+        total_ingredientes = TablaPreparacionIngredientes.objects.filter(
+            id_preparacion=prep
+        ).count()
+        data.append({
+            'id_preparacion': prep.id_preparacion,
+            'preparacion': prep.preparacion,
+            'total_ingredientes': total_ingredientes,
+        })
+
+    return JsonResponse({'success': True, 'preparaciones': data})
 
 
 @login_required
