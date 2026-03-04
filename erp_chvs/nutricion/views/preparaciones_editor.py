@@ -437,16 +437,35 @@ def vista_preparaciones_editor(request, id_menu):
         .order_by('preparacion')
     )
 
+    # Limpieza defensiva: si el menú no tiene relaciones preparación-ingrediente,
+    # no debe mantener análisis nutricionales residuales.
+    tiene_relaciones_menu = TablaPreparacionIngredientes.objects.filter(
+        id_preparacion__id_menu=menu
+    ).exists()
+    if not tiene_relaciones_menu:
+        TablaAnalisisNutricionalMenu.objects.filter(id_menu=menu).delete()
+
     niveles_data = []
 
     for nivel in niveles_escolares:
-        analisis, _ = TablaAnalisisNutricionalMenu.objects.get_or_create(
+        analisis = TablaAnalisisNutricionalMenu.objects.filter(
             id_menu=menu,
             id_nivel_escolar_uapa=nivel
-        )
+        ).first()
 
-        ingredientes_configurados = _obtener_ingredientes_configurados_por_analisis(analisis)
+        ingredientes_configurados = (
+            _obtener_ingredientes_configurados_por_analisis(analisis)
+            if analisis else {}
+        )
         filas_nivel = _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados)
+
+        # Crear registro de análisis solo si realmente hay ingredientes a analizar en ese nivel.
+        if filas_nivel and not analisis:
+            analisis = TablaAnalisisNutricionalMenu.objects.create(
+                id_menu=menu,
+                id_nivel_escolar_uapa=nivel
+            )
+
         totales = _calcular_totales_filas(filas_nivel)
         requerimientos = requerimientos_por_nivel.get(nivel.id_grado_escolar_uapa, {})
         referencias = referencias_por_nivel.get(nivel.id_grado_escolar_uapa, {})
@@ -463,7 +482,7 @@ def vista_preparaciones_editor(request, id_menu):
             'referencias': referencias,
             'porcentajes': porcentajes,
             'estados': estados,
-            'id_analisis': analisis.id_analisis
+            'id_analisis': analisis.id_analisis if analisis else None
         })
 
     ingredientes_catalogo = list(

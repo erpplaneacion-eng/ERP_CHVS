@@ -381,11 +381,13 @@
                     });
                 });
 
-                cambiosPorNivel.push({
-                    id_nivel_escolar: nivelData.nivel.id,
-                    id_analisis: nivelData.id_analisis,
-                    ingredientes: ingredientes
-                });
+                if (ingredientes.length > 0 && nivelData.id_analisis) {
+                    cambiosPorNivel.push({
+                        id_nivel_escolar: nivelData.nivel.id,
+                        id_analisis: nivelData.id_analisis,
+                        ingredientes: ingredientes
+                    });
+                }
             });
 
             // Recoger cambios de grupo/componente desde el primer nivel (son iguales para todos)
@@ -412,6 +414,12 @@
             try {
                 btnGuardarCambios.disabled = true;
                 btnGuardarCambios.innerHTML = '<i class="bi bi-hourglass-split"></i> Guardando...';
+
+                if (cambiosPorNivel.length === 0) {
+                    ocultarOverlayGuardando();
+                    showNotification('No hay ingredientes configurados para guardar en este menu.', 'info');
+                    return;
+                }
 
                 // 1. Guardar pesos por nivel
                 const response = await fetch(`/nutricion/api/menus/${menuId}/guardar-ingredientes-por-nivel/`, {

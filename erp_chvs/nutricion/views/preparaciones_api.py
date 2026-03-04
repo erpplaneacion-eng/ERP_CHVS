@@ -1,4 +1,4 @@
-import json
+﻿import json
 from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
@@ -13,10 +13,23 @@ from principal.models import RegistroActividad
 from ..models import (
     ComponentesAlimentos,
     TablaAlimentos2018Icbf,
+    TablaAnalisisNutricionalMenu,
     TablaMenus,
     TablaPreparacionIngredientes,
     TablaPreparaciones,
 )
+
+
+def _limpiar_analisis_si_menu_sin_ingredientes(menu):
+    """
+    Elimina registros de anÃ¡lisis nutricional cuando el menÃº ya no tiene
+    relaciones preparaciÃ³n-ingrediente.
+    """
+    tiene_relaciones = TablaPreparacionIngredientes.objects.filter(
+        id_preparacion__id_menu=menu
+    ).exists()
+    if not tiene_relaciones:
+        TablaAnalisisNutricionalMenu.objects.filter(id_menu=menu).delete()
 
 
 @login_required
@@ -66,7 +79,7 @@ def api_preparaciones(request):
             )
             RegistroActividad.registrar(
                 request, 'nutricion', 'crear_preparacion',
-                f"Preparación: {preparacion.preparacion} | Menú ID: {preparacion.id_menu.id_menu}"
+                f"PreparaciÃ³n: {preparacion.preparacion} | MenÃº ID: {preparacion.id_menu.id_menu}"
             )
             return JsonResponse({
                 'success': True,
@@ -83,13 +96,13 @@ def api_preparaciones(request):
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})
 
-    return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    return JsonResponse({'success': False, 'error': 'MÃ©todo no permitido'}, status=405)
 
 
 @login_required
 @csrf_exempt
 def api_preparacion_detail(request, id_preparacion):
-    """API para manejar una preparación específica"""
+    """API para manejar una preparaciÃ³n especÃ­fica"""
     preparacion = get_object_or_404(TablaPreparaciones, id_preparacion=id_preparacion)
 
     if request.method == 'GET':
@@ -107,7 +120,7 @@ def api_preparacion_detail(request, id_preparacion):
             preparacion.save()
             RegistroActividad.registrar(
                 request, 'nutricion', 'editar_preparacion',
-                f"Preparación ID: {id_preparacion} | Nombre: {preparacion.preparacion}"
+                f"PreparaciÃ³n ID: {id_preparacion} | Nombre: {preparacion.preparacion}"
             )
             return JsonResponse({'success': True})
         except Exception as e:
@@ -116,25 +129,27 @@ def api_preparacion_detail(request, id_preparacion):
     if request.method == 'DELETE':
         try:
             nombre_prep = preparacion.preparacion
+            menu = preparacion.id_menu
             preparacion.delete()
+            _limpiar_analisis_si_menu_sin_ingredientes(menu)
             RegistroActividad.registrar(
                 request, 'nutricion', 'eliminar_preparacion',
-                f"Preparación ID: {id_preparacion} | Nombre: {nombre_prep}"
+                f"PreparaciÃ³n ID: {id_preparacion} | Nombre: {nombre_prep}"
             )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
 
-    return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    return JsonResponse({'success': False, 'error': 'MÃ©todo no permitido'}, status=405)
 
 
 @login_required
 @csrf_exempt
 @transaction.atomic
 def api_copiar_preparacion(request):
-    """API para copiar una preparación completa a un nuevo menú."""
+    """API para copiar una preparaciÃ³n completa a un nuevo menÃº."""
     if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
+        return JsonResponse({'error': 'MÃ©todo no permitido'}, status=405)
 
     try:
         data = json.loads(request.body)
@@ -143,14 +158,14 @@ def api_copiar_preparacion(request):
         ingredient_ids = data.get('ingredient_ids') or []
 
         if not source_preparacion_id or not target_menu_id:
-            return JsonResponse({'error': 'Faltan parámetros requeridos.'}, status=400)
+            return JsonResponse({'error': 'Faltan parÃ¡metros requeridos.'}, status=400)
 
         source_preparacion = get_object_or_404(TablaPreparaciones, pk=source_preparacion_id)
         target_menu = get_object_or_404(TablaMenus, pk=target_menu_id)
 
         if source_preparacion.id_menu.id_modalidad_id != target_menu.id_modalidad_id:
             return JsonResponse(
-                {'success': False, 'error': 'Solo se puede copiar desde menús de la misma modalidad.'},
+                {'success': False, 'error': 'Solo se puede copiar desde menÃºs de la misma modalidad.'},
                 status=400
             )
 
@@ -166,7 +181,7 @@ def api_copiar_preparacion(request):
 
         if not source_ingredientes.exists():
             return JsonResponse(
-                {'success': False, 'error': 'La preparación origen no tiene ingredientes para copiar.'},
+                {'success': False, 'error': 'La preparaciÃ³n origen no tiene ingredientes para copiar.'},
                 status=400
             )
 
@@ -197,14 +212,14 @@ def api_copiar_preparacion(request):
         RegistroActividad.registrar(
             request, 'nutricion', 'copiar_preparacion',
             (
-                f"Origen ID: {source_preparacion_id} -> Menú destino ID: {target_menu_id} | "
+                f"Origen ID: {source_preparacion_id} -> MenÃº destino ID: {target_menu_id} | "
                 f"Nueva: {new_preparacion.preparacion} | "
                 f"Ingredientes origen: {total_origen}, copiados: {total_copiados}, excluidos: {total_excluidos}"
             )
         )
         return JsonResponse({
             'success': True,
-            'message': f'Preparación "{new_preparacion.preparacion}" copiada exitosamente.',
+            'message': f'PreparaciÃ³n "{new_preparacion.preparacion}" copiada exitosamente.',
             'nueva_preparacion': {
                 'id_preparacion': new_preparacion.id_preparacion,
                 'preparacion': new_preparacion.preparacion,
@@ -213,16 +228,16 @@ def api_copiar_preparacion(request):
         })
 
     except (TablaPreparaciones.DoesNotExist, TablaMenus.DoesNotExist):
-        return JsonResponse({'error': 'La preparación o el menú de destino no existen.'}, status=404)
+        return JsonResponse({'error': 'La preparaciÃ³n o el menÃº de destino no existen.'}, status=404)
     except Exception as e:
-        return JsonResponse({'error': f'Ocurrió un error inesperado: {str(e)}'}, status=500)
+        return JsonResponse({'error': f'OcurriÃ³ un error inesperado: {str(e)}'}, status=500)
 
 
 @login_required
 def api_preparaciones_por_modalidad(request, modalidad_id):
-    """API para listar todas las preparaciones únicas dentro de una modalidad."""
+    """API para listar todas las preparaciones Ãºnicas dentro de una modalidad."""
     if request.method != 'GET':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
+        return JsonResponse({'error': 'MÃ©todo no permitido'}, status=405)
 
     try:
         menus_en_modalidad = TablaMenus.objects.filter(id_modalidad_id=modalidad_id)
@@ -241,14 +256,14 @@ def api_preparaciones_por_modalidad(request, modalidad_id):
         return JsonResponse({'preparaciones': preparaciones_data})
 
     except Exception as e:
-        return JsonResponse({'error': f'Ocurrió un error inesperado: {str(e)}'}, status=500)
+        return JsonResponse({'error': f'OcurriÃ³ un error inesperado: {str(e)}'}, status=500)
 
 
 @login_required
 def api_menus_misma_modalidad_para_copia(request, id_menu):
-    """Lista menús de la misma modalidad para usar como origen de copia."""
+    """Lista menÃºs de la misma modalidad para usar como origen de copia."""
     if request.method != 'GET':
-        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+        return JsonResponse({'success': False, 'error': 'MÃ©todo no permitido'}, status=405)
 
     menu_actual = get_object_or_404(
         TablaMenus.objects.select_related('id_modalidad', 'id_contrato'),
@@ -275,9 +290,9 @@ def api_menus_misma_modalidad_para_copia(request, id_menu):
 
 @login_required
 def api_preparaciones_por_menu_para_copia(request, id_menu_origen):
-    """Lista preparaciones de un menú origen para flujo de copia."""
+    """Lista preparaciones de un menÃº origen para flujo de copia."""
     if request.method != 'GET':
-        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+        return JsonResponse({'success': False, 'error': 'MÃ©todo no permitido'}, status=405)
 
     menu_origen = get_object_or_404(TablaMenus, id_menu=id_menu_origen)
     preparaciones = (
@@ -334,7 +349,7 @@ def api_ingredientes(request):
         ]
         return JsonResponse({'ingredientes': data})
 
-    return JsonResponse({'error': 'Método no permitido para catálogo ICBF'}, status=405)
+    return JsonResponse({'error': 'MÃ©todo no permitido para catÃ¡logo ICBF'}, status=405)
 
 
 @login_required
@@ -367,12 +382,12 @@ def api_componentes_alimentos(request):
 
         return JsonResponse({'componentes': list(componentes)})
 
-    return JsonResponse({'error': 'Método no permitido'}, status=405)
+    return JsonResponse({'error': 'MÃ©todo no permitido'}, status=405)
 
 
 @login_required
 def detalle_preparacion(request, id_preparacion):
-    """Vista para ver y gestionar ingredientes de una preparación"""
+    """Vista para ver y gestionar ingredientes de una preparaciÃ³n"""
     preparacion = get_object_or_404(TablaPreparaciones, id_preparacion=id_preparacion)
     ingredientes_preparacion = TablaPreparacionIngredientes.objects.filter(
         id_preparacion=preparacion
@@ -390,7 +405,7 @@ def detalle_preparacion(request, id_preparacion):
 @login_required
 @csrf_exempt
 def api_preparacion_ingredientes(request, id_preparacion):
-    """API para manejar ingredientes de una preparación"""
+    """API para manejar ingredientes de una preparaciÃ³n"""
     preparacion = get_object_or_404(TablaPreparaciones, id_preparacion=id_preparacion)
 
     if request.method == 'GET':
@@ -430,7 +445,7 @@ def api_preparacion_ingredientes(request, id_preparacion):
 
                 RegistroActividad.registrar(
                     request, 'nutricion', 'agregar_ingredientes',
-                    f"Preparación ID: {id_preparacion} | Ingredientes agregados: {len(ingredientes_creados)}"
+                    f"PreparaciÃ³n ID: {id_preparacion} | Ingredientes agregados: {len(ingredientes_creados)}"
                 )
                 return JsonResponse({
                     'success': True,
@@ -450,17 +465,17 @@ def api_preparacion_ingredientes(request, id_preparacion):
             })
 
         except IntegrityError:
-            return JsonResponse({'success': False, 'error': 'Este ingrediente ya está en la preparación'})
+            return JsonResponse({'success': False, 'error': 'Este ingrediente ya estÃ¡ en la preparaciÃ³n'})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})
 
-    return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    return JsonResponse({'success': False, 'error': 'MÃ©todo no permitido'}, status=405)
 
 
 @login_required
 @csrf_exempt
 def api_preparacion_ingrediente_delete(request, id_preparacion, id_ingrediente):
-    """API para eliminar un ingrediente de una preparación"""
+    """API para eliminar un ingrediente de una preparaciÃ³n"""
     if request.method == 'DELETE':
         try:
             ingrediente = get_object_or_404(
@@ -468,13 +483,16 @@ def api_preparacion_ingrediente_delete(request, id_preparacion, id_ingrediente):
                 id_preparacion_id=id_preparacion,
                 id_ingrediente_siesa_id=id_ingrediente
             )
+            menu = ingrediente.id_preparacion.id_menu
             ingrediente.delete()
+            _limpiar_analisis_si_menu_sin_ingredientes(menu)
             RegistroActividad.registrar(
                 request, 'nutricion', 'eliminar_ingrediente',
-                f"Preparación ID: {id_preparacion} | Ingrediente: {id_ingrediente}"
+                f"PreparaciÃ³n ID: {id_preparacion} | Ingrediente: {id_ingrediente}"
             )
             return JsonResponse({'success': True})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error al eliminar: {str(e)}'})
 
-    return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    return JsonResponse({'success': False, 'error': 'MÃ©todo no permitido'}, status=405)
+
