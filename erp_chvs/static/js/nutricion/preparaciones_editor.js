@@ -496,6 +496,127 @@
         });
     }
 
+    function actualizarNombrePreparacionEnUI(idPreparacion, nuevoNombre) {
+        document.querySelectorAll(`.prep-header-nombre[data-id-preparacion="${idPreparacion}"]`).forEach(el => {
+            el.textContent = nuevoNombre;
+        });
+
+        document.querySelectorAll(`.prep-nombre-celda[data-id-preparacion="${idPreparacion}"]`).forEach(el => {
+            el.textContent = nuevoNombre;
+        });
+
+        document.querySelectorAll(`.btn-eliminar-preparacion-editor[data-id-preparacion="${idPreparacion}"]`).forEach(btn => {
+            btn.dataset.nombrePreparacion = nuevoNombre;
+        });
+
+        document.querySelectorAll(`.btn-editar-preparacion-inline[data-id-preparacion="${idPreparacion}"]`).forEach(btn => {
+            btn.dataset.nombrePreparacion = nuevoNombre;
+        });
+
+        preparacionesCatalogo.forEach(prep => {
+            if (String(prep.id_preparacion) === String(idPreparacion)) {
+                prep.preparacion = nuevoNombre;
+            }
+        });
+
+        nivelesData.forEach(nivel => {
+            (nivel.filas || []).forEach(fila => {
+                if (String(fila.id_preparacion) === String(idPreparacion)) {
+                    fila.preparacion = nuevoNombre;
+                }
+            });
+        });
+    }
+
+    function cancelarEdicionInlinePreparacion(headerRow) {
+        if (!headerRow) return;
+        const nombreEl = headerRow.querySelector('.prep-header-nombre');
+        const btnEditar = headerRow.querySelector('.btn-editar-preparacion-inline');
+        const editor = headerRow.querySelector('.prep-inline-editor');
+
+        if (editor) editor.remove();
+        if (nombreEl) nombreEl.classList.remove('d-none');
+        if (btnEditar) btnEditar.classList.remove('d-none');
+    }
+
+    function abrirEdicionInlinePreparacion(btnEditar) {
+        const headerRow = btnEditar.closest('.prep-header-row');
+        if (!headerRow) return;
+
+        const nombreEl = headerRow.querySelector('.prep-header-nombre');
+        if (!nombreEl) return;
+
+        if (headerRow.querySelector('.prep-inline-editor')) return;
+
+        const nombreActual = (btnEditar.dataset.nombrePreparacion || nombreEl.textContent || '').trim();
+        const editor = document.createElement('div');
+        editor.className = 'prep-inline-editor d-flex align-items-center gap-2';
+        editor.innerHTML = `
+            <input type="text" class="form-control form-control-sm input-preparacion-inline" value="${escaparHtml(nombreActual)}" />
+            <button type="button" class="btn btn-success btn-sm btn-guardar-preparacion-inline">
+                <i class="bi bi-check-lg"></i>
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm btn-cancelar-preparacion-inline">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        `;
+
+        nombreEl.classList.add('d-none');
+        btnEditar.classList.add('d-none');
+        nombreEl.insertAdjacentElement('afterend', editor);
+
+        const input = editor.querySelector('.input-preparacion-inline');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }
+
+    async function guardarNombrePreparacionInline(btnGuardar) {
+        const headerRow = btnGuardar.closest('.prep-header-row');
+        if (!headerRow) return;
+
+        const idPreparacion = headerRow.dataset.idPreparacion;
+        const input = headerRow.querySelector('.input-preparacion-inline');
+        if (!idPreparacion || !input) return;
+
+        const nuevoNombre = input.value.trim();
+        if (!nuevoNombre) {
+            showNotification('El nombre de la preparación no puede estar vacío.', 'warning');
+            input.focus();
+            return;
+        }
+
+        btnGuardar.disabled = true;
+        try {
+            const response = await fetch(`/nutricion/api/preparaciones/${idPreparacion}/`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    preparacion: nuevoNombre,
+                    id_menu: parseInt(menuId, 10)
+                })
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'No fue posible actualizar la preparación');
+            }
+
+            actualizarNombrePreparacionEnUI(idPreparacion, nuevoNombre);
+            cancelarEdicionInlinePreparacion(headerRow);
+            showNotification('Nombre de preparación actualizado.', 'success');
+        } catch (error) {
+            console.error('Error al actualizar preparación:', error);
+            showNotification(error.message || 'Error al actualizar preparación', 'error');
+        } finally {
+            btnGuardar.disabled = false;
+        }
+    }
+
     async function eliminarIngredienteDePreparacion(idPreparacion, idIngrediente) {
         const mensajeConfirmacion = '¿Eliminar este ingrediente de la preparación en todos los niveles?';
         const confirmado = typeof Swal !== 'undefined'
@@ -1014,6 +1135,24 @@
     }
 
     document.addEventListener('click', (e) => {
+        const btnEditarPrep = e.target.closest('.btn-editar-preparacion-inline');
+        if (btnEditarPrep) {
+            abrirEdicionInlinePreparacion(btnEditarPrep);
+            return;
+        }
+
+        const btnGuardarPrep = e.target.closest('.btn-guardar-preparacion-inline');
+        if (btnGuardarPrep) {
+            guardarNombrePreparacionInline(btnGuardarPrep);
+            return;
+        }
+
+        const btnCancelarPrep = e.target.closest('.btn-cancelar-preparacion-inline');
+        if (btnCancelarPrep) {
+            cancelarEdicionInlinePreparacion(btnCancelarPrep.closest('.prep-header-row'));
+            return;
+        }
+
         const btnEliminarIngrediente = e.target.closest('.btn-eliminar-ingrediente-editor');
         if (btnEliminarIngrediente) {
             const idPreparacion = btnEliminarIngrediente.dataset.idPreparacion;
@@ -1029,6 +1168,22 @@
             const nombrePrep = btnEliminarPrep.dataset.nombrePreparacion || 'esta preparación';
             if (!idPreparacion) return;
             eliminarPreparacion(idPreparacion, nombrePrep);
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (!e.target.classList.contains('input-preparacion-inline')) return;
+
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const btnGuardar = e.target.closest('.prep-inline-editor')?.querySelector('.btn-guardar-preparacion-inline');
+            if (btnGuardar) guardarNombrePreparacionInline(btnGuardar);
+            return;
+        }
+
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelarEdicionInlinePreparacion(e.target.closest('.prep-header-row'));
         }
     });
 

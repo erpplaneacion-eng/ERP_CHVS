@@ -87,10 +87,24 @@
                     <tbody class="tbody-ingredientes" data-nivel-id="{{ nivel_data.nivel.id }}">
                         {% for fila in nivel_data.filas %}
                         {% if fila.first_in_group %}
-                        <tr class="prep-header-row">
+                        <tr class="prep-header-row" data-id-preparacion="{{ fila.id_preparacion }}">
                             <td colspan="7">
                                 <div class="d-flex align-items-center justify-content-between">
-                                    <strong class="prep-header-nombre">{{ fila.preparacion }}</strong>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <strong
+                                            class="prep-header-nombre"
+                                            data-id-preparacion="{{ fila.id_preparacion }}"
+                                        >{{ fila.preparacion }}</strong>
+                                        <button
+                                            type="button"
+                                            class="btn btn-outline-secondary btn-sm btn-editar-preparacion-inline"
+                                            data-id-preparacion="{{ fila.id_preparacion }}"
+                                            data-nombre-preparacion="{{ fila.preparacion }}"
+                                            title="Editar nombre de la preparación"
+                                        >
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </div>
                                     <button
                                         type="button"
                                         class="btn btn-outline-danger btn-sm btn-eliminar-preparacion-editor"
@@ -109,7 +123,10 @@
                             data-id-ingrediente="{{ fila.id_ingrediente }}"
                         >
                             <td class="col-preparacion">
-                                <strong>{{ fila.preparacion }}</strong>
+                                <strong
+                                    class="prep-nombre-celda"
+                                    data-id-preparacion="{{ fila.id_preparacion }}"
+                                >{{ fila.preparacion }}</strong>
                             </td>
                             <td class="col-grupo-comp">
                                 <div class="grupo-comp-selects">
