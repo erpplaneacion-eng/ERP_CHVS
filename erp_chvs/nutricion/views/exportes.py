@@ -6,7 +6,7 @@ from principal.models import RegistroActividad
 from ..master_excel_generator import MasterNutritionalExcelGenerator
 from ..excel_generator import generate_advanced_nutritional_excel, generate_excel_from_service
 from ..guia_preparacion_excel_generator import GuiaPreparacionExcelGenerator
-from ..services import AnalisisNutricionalService
+from ..services import AnalisisNutricionalService, CicloMenusPdfService
 
 
 @login_required
@@ -127,3 +127,25 @@ def download_guias_preparacion_excel(request, programa_id, modalidad_id):
         return response
     except Exception as e:
         return HttpResponse(f"Error generando guias de preparacion: {str(e)}", status=500)
+
+
+@login_required
+def download_ciclo_menus_pdf(request, programa_id, modalidad_id):
+    """
+    Descarga PDF consolidado del ciclo de 20 menús por programa/modalidad.
+    """
+    try:
+        service = CicloMenusPdfService()
+        pdf_stream = service.generate(programa_id=programa_id, modalidad_id=modalidad_id)
+
+        response = HttpResponse(pdf_stream, content_type='application/pdf')
+        response['Content-Disposition'] = (
+            f'attachment; filename="ciclo_menus_programa_{programa_id}_modalidad_{modalidad_id}.pdf"'
+        )
+        RegistroActividad.registrar(
+            request, 'nutricion', 'exportar_pdf',
+            f"Programa: {programa_id} | Modalidad: {modalidad_id} | Tipo: ciclo menús PDF"
+        )
+        return response
+    except Exception as e:
+        return HttpResponse(f"Error generando PDF ciclo de menus: {str(e)}", status=500)

@@ -140,6 +140,7 @@ class ModalidadesManager {
 
         const downloadUrl = `/nutricion/exportar-modalidad-excel/${this.programaActual.id}/${modalidadId}/`;
         const guiasDownloadUrl = `/nutricion/exportar-guias-preparacion/${this.programaActual.id}/${modalidadId}/`;
+        const cicloPdfUrl = `/nutricion/exportar-ciclo-menus-pdf/${this.programaActual.id}/${modalidadId}/`;
 
         header.innerHTML = `
             <div>
@@ -152,6 +153,9 @@ class ModalidadesManager {
                 </a>
                 <a href="${guiasDownloadUrl}" class="btn btn-success btn-sm btn-download-guias" style="${menusCompletos ? "" : "display:none;"}" onclick="event.stopPropagation();" title="Descargar Guias de Preparacion para ${modalidad.modalidad}">
                     <i class="fas fa-file-excel"></i> Descargar Guias
+                </a>
+                <a href="${cicloPdfUrl}" class="btn btn-danger btn-sm btn-download-ciclo-pdf" style="${menusCompletos ? "" : "display:none;"}" onclick="event.stopPropagation();" title="Descargar ciclo de menus en PDF para ${modalidad.modalidad}">
+                    <i class="fas fa-file-pdf"></i> Descargar Ciclo PDF
                 </a>
                 ${!menusCompletos ? `
                 <button class="btn-generar-auto" data-modalidad-id="${modalidadId}" data-modalidad-nombre="${modalidad.modalidad}">
@@ -675,6 +679,10 @@ class ModalidadesManager {
                 if (btnGuias) {
                     btnGuias.style.display = menusNuevos.length >= 20 ? '' : 'none';
                 }
+                const btnCicloPdf = document.querySelector(`#actions-${modalidadId} .btn-download-ciclo-pdf`);
+                if (btnCicloPdf) {
+                    btnCicloPdf.style.display = menusNuevos.length >= 20 ? '' : 'none';
+                }
                 
                 // 4. Renderizar con animaciÃ³n escalonada
                 grid.innerHTML = this.generarTarjetasMenus(menusNuevos, true);
@@ -1051,10 +1059,12 @@ class ModalidadesManager {
                     const btnCopiar = actionsDiv.querySelector('.btn-copiar-modalidad');
                     const btnAnalisis = actionsDiv.querySelector('.btn-download-analisis');
                     const btnGuias = actionsDiv.querySelector('.btn-download-guias');
+                    const btnCicloPdf = actionsDiv.querySelector('.btn-download-ciclo-pdf');
                     if (btnGenerar) btnGenerar.style.display = completado ? 'none' : '';
                     if (btnCopiar) btnCopiar.style.display = completado ? 'none' : '';
                     if (btnAnalisis) btnAnalisis.style.display = completado ? '' : 'none';
                     if (btnGuias) btnGuias.style.display = completado ? '' : 'none';
+                    if (btnCicloPdf) btnCicloPdf.style.display = completado ? '' : 'none';
                 }
 
                 // Renderizar tarjetas con animaciÃ³n

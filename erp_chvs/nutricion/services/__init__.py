@@ -11,6 +11,7 @@ from .menu_service import MenuService
 from .preparacion_service import PreparacionService
 from .ingrediente_service import IngredienteService
 from .programa_service import ProgramaService
+from .ciclo_menus_pdf_service import CicloMenusPdfService
 
 __all__ = [
     'CalculoService',
@@ -19,4 +20,5 @@ __all__ = [
     'PreparacionService',
     'IngredienteService',
     'ProgramaService',
+    'CicloMenusPdfService',
 ]
