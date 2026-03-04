@@ -204,15 +204,17 @@ class AnalisisNutricionalService:
                     ).first()
 
                 if alimento:
-                    # Componente: override del ingrediente, fallback al de la preparación (NO desde ICBF)
+                    # Componente: extraído directamente de la relación ingrediente-preparación
                     componente_ing = ing_prep.id_componente or preparacion.id_componente
-                    # Grupo: override explícito tiene prioridad; si no, derivar del componente
+                    
+                    # Grupo: extraído directamente de la relación ingrediente-preparación (prioridad alta)
                     if ing_prep.id_grupo_alimentos:
                         grupo_alimento = ing_prep.id_grupo_alimentos.grupo_alimentos
                     elif componente_ing and componente_ing.id_grupo_alimentos:
                         grupo_alimento = componente_ing.id_grupo_alimentos.grupo_alimentos
                     else:
-                        grupo_alimento = None
+                        grupo_alimento = 'SIN GRUPO'
+
                     if grupo_alimento and grupo_alimento not in grupos_ingredientes:
                         grupos_ingredientes.append(grupo_alimento)
 
