@@ -5,64 +5,91 @@ from html import escape
 from typing import Dict, List, Optional, Tuple
 
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
-from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image, KeepInFrame, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from planeacion.models import Programa
 from principal.models import ModalidadesDeConsumo
 
 from ..models import FirmaNutricionalContrato, TablaMenus, TablaPreparaciones
-from ..utils.orden_componentes import ORDEN_COMPONENTES_POR_MODALIDAD
+
+
+COMPONENTES_PDF_POR_MODALIDAD = {
+    "20501": [
+        ("com1", "BEBIDA CON LECHE"),
+        ("com2", "ALIMENTO PROTEICO"),
+        ("com3", "CEREAL ACOMPANANTE"),
+        ("com4", "FRUTA"),
+    ],
+    "20507": [
+        ("com1", "BEBIDA CON LECHE"),
+        ("com2", "ALIMENTO PROTEICO"),
+        ("com3", "CEREAL ACOMPANANTE"),
+        ("com4", "FRUTA"),
+    ],
+    "20503": [
+        ("com14", "BEBIDA"),
+        ("com2", "ALIMENTO PROTEICO"),
+        ("com3", "CEREAL ACOMPANANTE"),
+        ("com8", "TUBERCULOS, RAICES, PLATANOS Y DERIVADOS DE CEREAL"),
+        ("com9", "COM9"),
+    ],
+    "20502": [
+        ("com11", "LECHE Y PRODUCTOS LACTEOS"),
+        ("com7", "CEREALES"),
+        ("com4", "FRUTA"),
+    ],
+}
 
 
 class CicloMenusPdfService:
-    """Genera PDF consolidado del ciclo de 20 menus por programa y modalidad."""
+    """Genera PDF de ciclo de menus (1-20) en una hoja vertical carta."""
 
     def __init__(self):
-        self.styles = getSampleStyleSheet()
+        styles = getSampleStyleSheet()
         self.style_title = ParagraphStyle(
             "ciclo_title",
-            parent=self.styles["Normal"],
+            parent=styles["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=11,
+            fontSize=8.2,
             alignment=1,
             textColor=colors.white,
-            leading=13,
+            leading=9.0,
         )
         self.style_subtitle = ParagraphStyle(
             "ciclo_subtitle",
-            parent=self.styles["Normal"],
+            parent=styles["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=10,
+            fontSize=7.6,
             alignment=1,
             textColor=colors.white,
-            leading=12,
+            leading=8.5,
         )
         self.style_header = ParagraphStyle(
             "ciclo_header",
-            parent=self.styles["Normal"],
+            parent=styles["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=8,
+            fontSize=6.3,
             alignment=1,
-            leading=10,
+            leading=7.1,
         )
-        self.style_cell = ParagraphStyle(
-            "ciclo_cell",
-            parent=self.styles["Normal"],
+        self.style_cell_center = ParagraphStyle(
+            "ciclo_cell_center",
+            parent=styles["Normal"],
             fontName="Helvetica",
-            fontSize=8,
+            fontSize=6.0,
             alignment=1,
-            leading=9,
+            leading=6.8,
         )
-        self.style_left = ParagraphStyle(
-            "ciclo_left",
-            parent=self.styles["Normal"],
+        self.style_cell_left = ParagraphStyle(
+            "ciclo_cell_left",
+            parent=styles["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=8,
+            fontSize=6.0,
             alignment=0,
-            leading=10,
+            leading=6.8,
         )
 
     @staticmethod
@@ -76,187 +103,231 @@ class CicloMenusPdfService:
     def _p(text: str, style: ParagraphStyle) -> Paragraph:
         return Paragraph(escape(text or ""), style)
 
+    def _componentes_por_modalidad(self, modalidad_id: str, seen_components: Dict[str, str]) -> List[Tuple[str, str]]:
+        modalidad_key = str(modalidad_id or "")
+        configured = COMPONENTES_PDF_POR_MODALIDAD.get(modalidad_key, [])
+        if configured:
+            resolved = []
+            for comp_id, comp_label in configured:
+                resolved.append((comp_id, seen_components.get(comp_id, comp_label)))
+            return resolved
+        # Fallback defensivo para modalidades no especificadas.
+        return sorted([(cid, cname) for cid, cname in seen_components.items()], key=lambda x: x[1])
+
     def _build_top_block(self, programa: Programa, modalidad: ModalidadesDeConsumo) -> List:
-        elements: List = []
+        items: List = []
 
         logo_cell = ""
         if programa.imagen:
             try:
                 logo = Image(programa.imagen.path)
-                logo._restrictSize(45 * mm, 20 * mm)
+                logo._restrictSize(28 * mm, 12 * mm)
                 logo_cell = logo
             except Exception:
-                logo_cell = self._p(programa.programa or "", self.style_left)
+                logo_cell = self._p(programa.programa or "", self.style_cell_left)
 
-        top = Table(
-            [[logo_cell, self._p(f"PROGRAMA: {programa.programa}", self.style_left)]],
-            colWidths=[70 * mm, 180 * mm],
+        head = Table(
+            [[logo_cell, self._p("PLANEACION CICLO DE MENUS", self.style_title)]],
+            colWidths=[36 * mm, 146 * mm],
             hAlign="LEFT",
         )
-        top.setStyle(
+        head.setStyle(
             TableStyle(
                 [
-                    ("BOX", (0, 0), (-1, -1), 1, colors.black),
+                    ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
+                    ("BACKGROUND", (1, 0), (1, 0), colors.black),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("ALIGN", (1, 0), (1, 0), "LEFT"),
-                    ("BACKGROUND", (0, 0), (-1, -1), colors.whitesmoke),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 6),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                    ("TOPPADDING", (0, 0), (-1, -1), 4),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-                ]
-            )
-        )
-        elements.append(top)
-
-        title = Table(
-            [[self._p("PLANEACION CICLO DE MENUS", self.style_title)]],
-            colWidths=[250 * mm],
-            hAlign="LEFT",
-        )
-        title.setStyle(
-            TableStyle(
-                [
-                    ("BOX", (0, 0), (-1, -1), 1, colors.black),
-                    ("BACKGROUND", (0, 0), (-1, -1), colors.black),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ]
-            )
-        )
-        elements.append(title)
-
-        subtitle = Table(
-            [[self._p(f"ANEXO - {modalidad.modalidad}", self.style_subtitle)]],
-            colWidths=[250 * mm],
-            hAlign="LEFT",
-        )
-        subtitle.setStyle(
-            TableStyle(
-                [
-                    ("BOX", (0, 0), (-1, -1), 1, colors.black),
-                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#7f7f7f")),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ]
-            )
-        )
-        elements.append(subtitle)
-
-        meta_rows = [
-            [self._p("OPERADOR", self.style_left), self._p(programa.programa or "N/A", self.style_cell)],
-            [self._p("DEPARTAMENTO", self.style_left), self._p("VALLE DEL CAUCA", self.style_cell)],
-            [self._p("MUNICIPIO", self.style_left), self._p(programa.municipio.nombre_municipio if programa.municipio else "N/A", self.style_cell)],
-            [self._p("CONTRATO", self.style_left), self._p(programa.contrato or "N/A", self.style_cell)],
-        ]
-        meta = Table(meta_rows, colWidths=[55 * mm, 195 * mm], hAlign="LEFT")
-        meta.setStyle(
-            TableStyle(
-                [
-                    ("BOX", (0, 0), (-1, -1), 1, colors.black),
-                    ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                    ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#d9d9d9")),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 3),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                ]
-            )
-        )
-        elements.append(meta)
-        elements.append(Spacer(1, 3 * mm))
-        return elements
-
-    def _build_week_table(
-        self,
-        week_num: int,
-        menus_by_number: Dict[int, TablaMenus],
-        prep_map: Dict[int, Dict[str, List[str]]],
-        ordered_components: List[Tuple[str, str]],
-    ) -> Table:
-        week_label = Table(
-            [[self._p(f"SEMANA No. {week_num}", self.style_header)]],
-            colWidths=[250 * mm],
-            hAlign="LEFT",
-        )
-        week_label.setStyle(
-            TableStyle(
-                [
-                    ("BOX", (0, 0), (-1, -1), 1, colors.black),
-                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#bfbfbf")),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ]
-            )
-        )
-
-        start = (week_num - 1) * 5 + 1
-        menu_numbers = list(range(start, start + 5))
-        data: List[List[Paragraph]] = [[self._p("COMPONENTES", self.style_header)]]
-        data[0].extend([self._p(f"MENU No. {n}", self.style_header) for n in menu_numbers])
-
-        for comp_id, comp_name in ordered_components:
-            values_by_menu: List[List[str]] = []
-            max_rows = 1
-            for n in menu_numbers:
-                menu_obj = menus_by_number.get(n)
-                if not menu_obj:
-                    cell_values = ["PENDIENTE"]
-                else:
-                    comp_preps = prep_map.get(n, {}).get(comp_id, [])
-                    cell_values = comp_preps if comp_preps else ["N/A"]
-                values_by_menu.append(cell_values)
-                max_rows = max(max_rows, len(cell_values))
-
-            for i in range(max_rows):
-                row = [self._p(comp_name if i == 0 else "", self.style_left)]
-                for values in values_by_menu:
-                    row.append(self._p(values[i] if i < len(values) else "", self.style_cell))
-                data.append(row)
-
-        table = Table(
-            data,
-            colWidths=[50 * mm, 40 * mm, 40 * mm, 40 * mm, 40 * mm, 40 * mm],
-            hAlign="LEFT",
-            repeatRows=1,
-        )
-        table.setStyle(
-            TableStyle(
-                [
-                    ("BOX", (0, 0), (-1, -1), 1, colors.black),
-                    ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#d9d9d9")),
-                    ("BACKGROUND", (0, 1), (0, -1), colors.HexColor("#d9d9d9")),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 2),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 2),
                     ("TOPPADDING", (0, 0), (-1, -1), 2),
                     ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
                 ]
             )
         )
+        items.append(head)
 
-        wrapper = Table([[week_label], [table]], colWidths=[250 * mm], hAlign="LEFT")
-        wrapper.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]))
-        return wrapper
+        sub = Table(
+            [[self._p(f"ANEXO - {modalidad.modalidad}", self.style_subtitle)]],
+            colWidths=[182 * mm],
+            hAlign="LEFT",
+        )
+        sub.setStyle(
+            TableStyle(
+                [
+                    ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#6f6f6f")),
+                    ("TOPPADDING", (0, 0), (-1, -1), 1),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+                ]
+            )
+        )
+        items.append(sub)
 
-    def _build_signature_table(self, programa: Programa) -> Table:
+        meta_data = [
+            [self._p("OPERADOR", self.style_cell_left), self._p(programa.programa or "N/A", self.style_cell_center)],
+            [self._p("DEPARTAMENTO", self.style_cell_left), self._p("VALLE DEL CAUCA", self.style_cell_center)],
+            [self._p("MUNICIPIO", self.style_cell_left), self._p(programa.municipio.nombre_municipio if programa.municipio else "N/A", self.style_cell_center)],
+            [self._p("CONTRATO", self.style_cell_left), self._p(programa.contrato or "N/A", self.style_cell_center)],
+        ]
+        meta = Table(meta_data, colWidths=[40 * mm, 142 * mm], hAlign="LEFT")
+        meta.setStyle(
+            TableStyle(
+                [
+                    ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
+                    ("GRID", (0, 0), (-1, -1), 0.8, colors.black),
+                    ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#d9d9d9")),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 1),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+                ]
+            )
+        )
+        items.append(meta)
+        items.append(Spacer(1, 1.2 * mm))
+        return items
+
+    def _build_week_rows(
+        self,
+        week_num: int,
+        menus_by_number: Dict[int, TablaMenus],
+        menu_component_preps: Dict[int, Dict[str, List[str]]],
+        ordered_components: List[Tuple[str, str]],
+    ) -> Tuple[List[List[Paragraph]], List[Tuple[int, int, int, int]]]:
+        start_menu = (week_num - 1) * 5 + 1
+        menu_nums = list(range(start_menu, start_menu + 5))
+
+        rows: List[List[Paragraph]] = []
+        spans: List[Tuple[int, int, int, int]] = []
+
+        rows.append([self._p(f"SEMANA No. {week_num}", self.style_header)] + ["", "", "", "", ""])
+        spans.append((0, 0, 5, 0))
+
+        rows.append(
+            [
+                self._p("COMPONENTE", self.style_header),
+                self._p(f"MENU No. {menu_nums[0]}", self.style_header),
+                self._p(f"MENU No. {menu_nums[1]}", self.style_header),
+                self._p(f"MENU No. {menu_nums[2]}", self.style_header),
+                self._p(f"MENU No. {menu_nums[3]}", self.style_header),
+                self._p(f"MENU No. {menu_nums[4]}", self.style_header),
+            ]
+        )
+
+        for comp_id, comp_name in ordered_components:
+            per_menu_preps: List[List[str]] = []
+            max_rows_for_component = 0
+            has_any_prep_in_week = False
+
+            for mn in menu_nums:
+                if mn not in menus_by_number:
+                    preps = []
+                else:
+                    preps = list(menu_component_preps.get(mn, {}).get(comp_id, []))
+                if preps:
+                    has_any_prep_in_week = True
+                max_rows_for_component = max(max_rows_for_component, len(preps))
+                per_menu_preps.append(preps)
+
+            # Solo mostrar componentes con preparaciones en la semana.
+            if not has_any_prep_in_week:
+                continue
+
+            max_rows_for_component = max(1, max_rows_for_component)
+            comp_row_start = len(rows)
+
+            for prep_idx in range(max_rows_for_component):
+                row = [self._p(comp_name if prep_idx == 0 else "", self.style_cell_left)]
+                for mn_index, mn in enumerate(menu_nums):
+                    if mn not in menus_by_number:
+                        cell_html = "PENDIENTE"
+                    else:
+                        preps = per_menu_preps[mn_index]
+                        cell_html = preps[prep_idx] if prep_idx < len(preps) else "N/A"
+                    row.append(self._p(cell_html, self.style_cell_center))
+                rows.append(row)
+
+            if max_rows_for_component > 1:
+                spans.append((0, comp_row_start, 0, len(rows) - 1))
+
+        return rows, spans
+
+    def _build_cycle_table(
+        self,
+        menus_by_number: Dict[int, TablaMenus],
+        menu_component_preps: Dict[int, Dict[str, List[str]]],
+        ordered_components: List[Tuple[str, str]],
+    ) -> Table:
+        data: List[List[Paragraph]] = []
+        spans: List[Tuple[int, int, int, int]] = []
+        week_ranges: List[Tuple[int, int]] = []
+
+        for week in range(1, 5):
+            week_start = len(data)
+            week_rows, week_spans = self._build_week_rows(
+                week_num=week,
+                menus_by_number=menus_by_number,
+                menu_component_preps=menu_component_preps,
+                ordered_components=ordered_components,
+            )
+            row_offset = len(data)
+            data.extend(week_rows)
+            week_end = len(data) - 1
+            week_ranges.append((week_start, week_end))
+            for x1, y1, x2, y2 in week_spans:
+                spans.append((x1, y1 + row_offset, x2, y2 + row_offset))
+
+        col_widths = [32 * mm, 30 * mm, 30 * mm, 30 * mm, 30 * mm, 30 * mm]
+        table = Table(data, colWidths=col_widths, hAlign="LEFT")
+
+        style_cmds = [
+            ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING", (0, 0), (-1, -1), 1),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+        ]
+
+        for week_start, week_end in week_ranges:
+            style_cmds.extend(
+                [
+                    ("BACKGROUND", (0, week_start), (5, week_start), colors.HexColor("#bfbfbf")),
+                    ("BACKGROUND", (0, week_start + 1), (5, week_start + 1), colors.HexColor("#d9d9d9")),
+                ]
+            )
+            if week_end >= week_start + 2:
+                style_cmds.append(
+                    ("BACKGROUND", (0, week_start + 2), (0, week_end), colors.HexColor("#efefef"))
+                )
+
+        for x1, y1, x2, y2 in spans:
+            style_cmds.append(("SPAN", (x1, y1), (x2, y2)))
+
+        table.setStyle(TableStyle(style_cmds))
+        return table
+
+    def _build_signatures(self, programa: Programa) -> Table:
         firma = FirmaNutricionalContrato.objects.filter(programa=programa).first()
         elabora_nombre = (firma.elabora_nombre if firma else "") or "N/A"
         elabora_matricula = (firma.elabora_matricula if firma else "") or "N/A"
         aprueba_nombre = (firma.aprueba_nombre if firma else "") or "N/A"
         aprueba_matricula = (firma.aprueba_matricula if firma else "") or "N/A"
 
-        rows = [
-            [self._p("NOMBRE NUTRICIONISTA - DIETISTA DEL OPERADOR", self.style_left), self._p(elabora_nombre, self.style_cell)],
-            [self._p("MATRICULA PROFESIONAL", self.style_left), self._p(elabora_matricula, self.style_cell)],
-            [self._p("NOMBRE NUTRICIONISTA - DIETISTA QUE PLANEA EL CICLO", self.style_left), self._p(aprueba_nombre, self.style_cell)],
-            [self._p("MATRICULA PROFESIONAL", self.style_left), self._p(aprueba_matricula, self.style_cell)],
+        data = [
+            [self._p("NOMBRE NUTRICIONISTA - DIETISTA DEL OPERADOR", self.style_cell_left), self._p(elabora_nombre, self.style_cell_center)],
+            [self._p("MATRICULA PROFESIONAL", self.style_cell_left), self._p(elabora_matricula, self.style_cell_center)],
+            [self._p("NOMBRE NUTRICIONISTA - DIETISTA QUE PLANEA EL CICLO", self.style_cell_left), self._p(aprueba_nombre, self.style_cell_center)],
+            [self._p("MATRICULA PROFESIONAL", self.style_cell_left), self._p(aprueba_matricula, self.style_cell_center)],
         ]
-        table = Table(rows, colWidths=[130 * mm, 120 * mm], hAlign="LEFT")
+        table = Table(data, colWidths=[90 * mm, 92 * mm], hAlign="LEFT")
         table.setStyle(
             TableStyle(
                 [
-                    ("BOX", (0, 0), (-1, -1), 1, colors.black),
-                    ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                    ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                     ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f3f1e5")),
+                    ("TOPPADDING", (0, 0), (-1, -1), 1),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 3),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
                 ]
             )
         )
@@ -268,57 +339,58 @@ class CicloMenusPdfService:
 
         menus = list(
             TablaMenus.objects.filter(id_contrato_id=programa_id, id_modalidad_id=modalidad_id)
-            .select_related("id_modalidad", "id_contrato")
+            .select_related("id_contrato", "id_modalidad")
         )
-        menus_by_number: Dict[int, TablaMenus] = {}
-        for m in menus:
-            n = self._menu_number(m.menu)
-            if n and 1 <= n <= 20:
-                menus_by_number[n] = m
 
-        prep_rows = (
+        menus_by_number: Dict[int, TablaMenus] = {}
+        for menu in menus:
+            num = self._menu_number(menu.menu)
+            if num and 1 <= num <= 20:
+                menus_by_number[num] = menu
+
+        prep_rows = list(
             TablaPreparaciones.objects.filter(id_menu__in=list(menus_by_number.values()))
             .select_related("id_componente", "id_menu")
             .order_by("preparacion")
         )
 
-        prep_map: Dict[int, Dict[str, List[str]]] = defaultdict(lambda: defaultdict(list))
+        menu_component_preps: Dict[int, Dict[str, List[str]]] = defaultdict(lambda: defaultdict(list))
         seen_components: Dict[str, str] = {}
         for prep in prep_rows:
-            menu_n = self._menu_number(prep.id_menu.menu)
-            if not menu_n:
+            num = self._menu_number(prep.id_menu.menu)
+            if not num:
                 continue
             comp_id = str(prep.id_componente_id or "sin_componente")
             comp_name = (prep.id_componente.componente if prep.id_componente else "SIN COMPONENTE").upper()
-            prep_map[menu_n][comp_id].append((prep.preparacion or "").upper())
+            prep_name = (prep.preparacion or "").upper()
+            menu_component_preps[num][comp_id].append(prep_name)
             seen_components[comp_id] = comp_name
 
-        ordered_ids = ORDEN_COMPONENTES_POR_MODALIDAD.get(str(modalidad_id), [])
-        ordered_components: List[Tuple[str, str]] = []
-        for comp_id in ordered_ids:
-            ordered_components.append((comp_id, seen_components.get(comp_id, comp_id.upper())))
-        for comp_id in sorted(k for k in seen_components.keys() if k not in ordered_ids):
-            ordered_components.append((comp_id, seen_components[comp_id]))
+        for menu_data in menu_component_preps.values():
+            for comp_id, prep_list in list(menu_data.items()):
+                menu_data[comp_id] = sorted(set(prep_list))
 
+        ordered_components = self._componentes_por_modalidad(modalidad_id, seen_components)
         if not ordered_components:
             ordered_components = [("sin_componente", "SIN COMPONENTE")]
 
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             buffer,
-            pagesize=landscape(A4),
-            leftMargin=10 * mm,
-            rightMargin=10 * mm,
-            topMargin=8 * mm,
-            bottomMargin=8 * mm,
+            pagesize=letter,
+            leftMargin=7 * mm,
+            rightMargin=7 * mm,
+            topMargin=6 * mm,
+            bottomMargin=6 * mm,
         )
 
-        elements: List = []
-        elements.extend(self._build_top_block(programa, modalidad))
-        for week in range(1, 5):
-            elements.append(self._build_week_table(week, menus_by_number, prep_map, ordered_components))
-            elements.append(Spacer(1, 2 * mm))
-        elements.append(self._build_signature_table(programa))
-        doc.build(elements)
+        content: List = []
+        content.extend(self._build_top_block(programa, modalidad))
+        content.append(self._build_cycle_table(menus_by_number, menu_component_preps, ordered_components))
+        content.append(Spacer(1, 1.1 * mm))
+        content.append(self._build_signatures(programa))
+
+        fit = KeepInFrame(doc.width, doc.height, content, mode="shrink")
+        doc.build([fit])
         buffer.seek(0)
         return buffer
