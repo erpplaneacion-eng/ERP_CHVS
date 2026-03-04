@@ -1,4 +1,4 @@
-from django.urls import path
+﻿from django.urls import path
 from . import views
 
 app_name = 'nutricion'
@@ -13,7 +13,7 @@ urlpatterns = [
     path('alimentos/editar/<str:codigo>/', views.editar_alimento, name='editar_alimento'),
     path('alimentos/eliminar/<str:codigo>/', views.eliminar_alimento, name='eliminar_alimento'),
 
-    # Menús
+    # MenÃºs
     path('menus/', views.lista_menus, name='lista_menus'),
     path('menus/<int:id_menu>/preparaciones-editor/', views.vista_preparaciones_editor, name='preparaciones_editor'),
     path('api/menus/', views.api_menus, name='api_menus'),
@@ -27,7 +27,6 @@ urlpatterns = [
     path('api/crear-menu-especial/', views.api_crear_menu_especial, name='api_crear_menu_especial'),
     path('api/programas-con-modalidad/', views.api_programas_con_modalidad, name='api_programas_con_modalidad'),
     path('api/copiar-modalidad/', views.api_copiar_modalidad, name='api_copiar_modalidad'),
-    path('exportar-excel/<int:menu_id>/', views.download_menu_excel, name='exportar_menu_excel'),
 
     # Preparaciones (APIs - las vistas de lista se eliminaron, funcionalidad en lista_menus)
     path('api/preparaciones/', views.api_preparaciones, name='api_preparaciones'),
@@ -37,23 +36,23 @@ urlpatterns = [
     path('api/menus/<int:id_menu>/origenes-copia-preparaciones/', views.api_menus_misma_modalidad_para_copia, name='api_menus_misma_modalidad_para_copia'),
     path('api/menus/<int:id_menu_origen>/preparaciones-para-copia/', views.api_preparaciones_por_menu_para_copia, name='api_preparaciones_por_menu_para_copia'),
 
-    # Ingredientes (APIs - la vista de lista se eliminó, funcionalidad en lista_menus)
+    # Ingredientes (APIs - la vista de lista se eliminÃ³, funcionalidad en lista_menus)
     path('api/ingredientes/', views.api_ingredientes, name='api_ingredientes'),
     path('api/ingredientes/<str:id_ingrediente>/', views.api_ingrediente_detail, name='api_ingrediente_detail'),
 
     # Componentes de Alimentos
     path('api/componentes-alimentos/', views.api_componentes_alimentos, name='api_componentes_alimentos'),
 
-    # Preparación - Ingredientes
+    # PreparaciÃ³n - Ingredientes
     path('api/preparaciones/<int:id_preparacion>/ingredientes/', views.api_preparacion_ingredientes, name='api_preparacion_ingredientes'),
     path('api/preparaciones/<int:id_preparacion>/ingredientes/<str:id_ingrediente>/', views.api_preparacion_ingrediente_delete, name='api_preparacion_ingrediente_delete'),
 
-    # Análisis Nutricional
+    # AnÃ¡lisis Nutricional
     path('api/menus/<int:id_menu>/analisis-nutricional/', views.api_analisis_nutricional_menu, name='api_analisis_nutricional_menu'),
     path('api/guardar-analisis-nutricional/', views.guardar_analisis_nutricional, name='guardar_analisis_nutricional'),
 path('api/menus/<int:id_menu>/guardar-ingredientes-por-nivel/', views.api_guardar_ingredientes_por_nivel, name='api_guardar_ingredientes_por_nivel'),
 
-    # Exportación Excel
+    # ExportaciÃ³n Excel
     path('exportar-excel/<int:menu_id>/', views.download_menu_excel, name='exportar_menu_excel'),
     path('exportar-excel/<int:menu_id>/nivel/<str:nivel_escolar_id>/', views.download_menu_excel_with_nivel, name='exportar_menu_excel_con_nivel'),
     path('exportar-excel-servicio/<int:menu_id>/', views.download_menu_excel_service, name='exportar_menu_excel_servicio'),
@@ -64,7 +63,7 @@ path('api/menus/<int:id_menu>/guardar-ingredientes-por-nivel/', views.api_guarda
         name='exportar_guias_preparacion_excel'
     ),
 
-    # Validación Semanal
+    # ValidaciÃ³n Semanal
     path('api/validar-semana/', views.api_validar_semana, name='api_validar_semana'),
     path('api/requerimientos-modalidad/', views.api_requerimientos_modalidad, name='api_requerimientos_modalidad'),
 ]
