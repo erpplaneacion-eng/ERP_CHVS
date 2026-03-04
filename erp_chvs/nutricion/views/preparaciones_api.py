@@ -154,9 +154,10 @@ def api_copiar_preparacion(request):
                 status=400
             )
 
-        source_ingredientes = TablaPreparacionIngredientes.objects.filter(
+        source_ingredientes_todos = TablaPreparacionIngredientes.objects.filter(
             id_preparacion=source_preparacion
         )
+        source_ingredientes = source_ingredientes_todos
         if ingredient_ids:
             ingredient_ids_norm = {str(i).strip() for i in ingredient_ids if str(i).strip()}
             source_ingredientes = source_ingredientes.filter(
@@ -190,9 +191,16 @@ def api_copiar_preparacion(request):
         if nuevos_ingredientes:
             TablaPreparacionIngredientes.objects.bulk_create(nuevos_ingredientes)
 
+        total_origen = source_ingredientes_todos.count()
+        total_copiados = len(nuevos_ingredientes)
+        total_excluidos = max(total_origen - total_copiados, 0)
         RegistroActividad.registrar(
             request, 'nutricion', 'copiar_preparacion',
-            f"Origen ID: {source_preparacion_id} → Menú destino ID: {target_menu_id} | Nueva: {new_preparacion.preparacion}"
+            (
+                f"Origen ID: {source_preparacion_id} -> Menú destino ID: {target_menu_id} | "
+                f"Nueva: {new_preparacion.preparacion} | "
+                f"Ingredientes origen: {total_origen}, copiados: {total_copiados}, excluidos: {total_excluidos}"
+            )
         )
         return JsonResponse({
             'success': True,

@@ -611,3 +611,156 @@ class ExcelRulesTests(TestCase):
             ExcelReportDrawer._resolver_modalidad_atencion("modpaso2"),
             "Ración para Preparar en Sitio"
         )
+
+
+class CopiaPreparacionApiTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(username="copy_prep_user", password="testpass123")
+
+        cls.modalidad_a = ModalidadesDeConsumo.objects.create(
+            id_modalidades="mod_copy_a",
+            modalidad="CAJM AM Copy A",
+            cod_modalidad="CAJM_A",
+        )
+        cls.modalidad_b = ModalidadesDeConsumo.objects.create(
+            id_modalidades="mod_copy_b",
+            modalidad="CAJM AM Copy B",
+            cod_modalidad="CAJM_B",
+        )
+        cls.municipio = PrincipalMunicipio.objects.create(
+            codigo_municipio=22222,
+            nombre_municipio="Municipio Copy",
+            codigo_departamento="22",
+        )
+        cls.programa_a = Programa.objects.create(
+            programa="Programa Copy A",
+            contrato="CT-COPY-A",
+            municipio=cls.municipio,
+            fecha_inicial=date(2025, 1, 1),
+            fecha_final=date(2025, 12, 31),
+            estado="activo",
+        )
+        cls.programa_b = Programa.objects.create(
+            programa="Programa Copy B",
+            contrato="CT-COPY-B",
+            municipio=cls.municipio,
+            fecha_inicial=date(2025, 1, 1),
+            fecha_final=date(2025, 12, 31),
+            estado="activo",
+        )
+
+        cls.menu_origen = TablaMenus.objects.create(
+            menu="Menu Origen Copy",
+            id_modalidad=cls.modalidad_a,
+            id_contrato=cls.programa_a,
+        )
+        cls.menu_destino_misma_modalidad = TablaMenus.objects.create(
+            menu="Menu Destino Copy A",
+            id_modalidad=cls.modalidad_a,
+            id_contrato=cls.programa_a,
+        )
+        cls.menu_destino_otra_modalidad = TablaMenus.objects.create(
+            menu="Menu Destino Copy B",
+            id_modalidad=cls.modalidad_b,
+            id_contrato=cls.programa_b,
+        )
+
+        cls.grupo = GruposAlimentos.objects.create(
+            id_grupo_alimentos="grp_copy",
+            grupo_alimentos="Frutas",
+        )
+        cls.componente = ComponentesAlimentos.objects.create(
+            id_componente="comp_copy",
+            componente="Fruta fresca",
+            id_grupo_alimentos=cls.grupo,
+        )
+
+        cls.alimento_a = TablaAlimentos2018Icbf.objects.create(
+            codigo="CP01",
+            nombre_del_alimento="Manzana",
+            humedad_g=Decimal("85.00"),
+            energia_kcal=52,
+            energia_kj=218,
+            proteina_g=Decimal("0.30"),
+            lipidos_g=Decimal("0.20"),
+            carbohidratos_totales_g=Decimal("14.00"),
+            calcio_mg=6,
+            hierro_mg=Decimal("0.10"),
+            sodio_mg=1,
+            parte_comestible_field=95,
+            id_componente=cls.componente,
+        )
+        cls.alimento_b = TablaAlimentos2018Icbf.objects.create(
+            codigo="CP02",
+            nombre_del_alimento="Banano",
+            humedad_g=Decimal("74.00"),
+            energia_kcal=89,
+            energia_kj=372,
+            proteina_g=Decimal("1.10"),
+            lipidos_g=Decimal("0.30"),
+            carbohidratos_totales_g=Decimal("23.00"),
+            calcio_mg=5,
+            hierro_mg=Decimal("0.30"),
+            sodio_mg=1,
+            parte_comestible_field=70,
+            id_componente=cls.componente,
+        )
+
+        cls.preparacion_origen = TablaPreparaciones.objects.create(
+            preparacion="Fruta mixta copy",
+            id_menu=cls.menu_origen,
+            id_componente=cls.componente,
+        )
+        TablaPreparacionIngredientes.objects.create(
+            id_preparacion=cls.preparacion_origen,
+            id_ingrediente_siesa=cls.alimento_a,
+            id_componente=cls.componente,
+            id_grupo_alimentos=cls.grupo,
+            gramaje=Decimal("80.00"),
+        )
+        TablaPreparacionIngredientes.objects.create(
+            id_preparacion=cls.preparacion_origen,
+            id_ingrediente_siesa=cls.alimento_b,
+            id_componente=cls.componente,
+            id_grupo_alimentos=cls.grupo,
+            gramaje=Decimal("60.00"),
+        )
+
+    def setUp(self):
+        self.client = Client()
+        self.client.force_login(self.user)
+
+    def test_api_copiar_preparacion_permite_copia_parcial_por_ingredientes(self):
+        url = reverse("nutricion:api_copiar_preparacion")
+        payload = {
+            "source_preparacion_id": self.preparacion_origen.id_preparacion,
+            "target_menu_id": self.menu_destino_misma_modalidad.id_menu,
+            "ingredient_ids": ["CP01"],
+        }
+
+        response = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+
+        nueva_id = body["nueva_preparacion"]["id_preparacion"]
+        nueva_prep = TablaPreparaciones.objects.get(id_preparacion=nueva_id)
+        ingredientes = list(
+            TablaPreparacionIngredientes.objects.filter(id_preparacion=nueva_prep)
+            .values_list("id_ingrediente_siesa_id", flat=True)
+        )
+        self.assertEqual(ingredientes, ["CP01"])
+
+    def test_api_copiar_preparacion_rechaza_modalidad_distinta(self):
+        url = reverse("nutricion:api_copiar_preparacion")
+        payload = {
+            "source_preparacion_id": self.preparacion_origen.id_preparacion,
+            "target_menu_id": self.menu_destino_otra_modalidad.id_menu,
+        }
+
+        response = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        body = response.json()
+        self.assertFalse(body["success"])
+        self.assertIn("misma modalidad", body["error"])

@@ -2,7 +2,7 @@
     'use strict';
 
     // ========================================
-    // INICIALIZACIÃ“N Y DATOS
+    // INICIALIZACIÓN Y DATOS
     // ========================================
 
     const root = document.getElementById('prepEditorRoot');
@@ -17,16 +17,17 @@
     const componentesCatalogo = JSON.parse(document.getElementById('componentes-catalogo')?.textContent || '[]');
     const gruposCatalogo = JSON.parse(document.getElementById('grupos-catalogo')?.textContent || '[]');
     const componentesPorGrupo = JSON.parse(document.getElementById('componentes-por-grupo')?.textContent || '{}');
+    let copiaPreparacionEnCurso = false;
 
-    // DiagnÃ³stico: verificar que los catÃ¡logos se cargaron correctamente
-    console.log('[PrepEditor] CatÃ¡logos cargados:', {
+    // Diagnóstico: verificar que los catálogos se cargaron correctamente
+    console.log('[PrepEditor] Catálogos cargados:', {
         grupos: gruposCatalogo.length,
         componentesPorGrupo: Object.keys(componentesPorGrupo).length,
         ingredientes: ingredientesCatalogo.length,
         preparaciones: preparacionesCatalogo.length
     });
 
-    // Crear mapa de ingredientes para cÃ¡lculos nutricionales
+    // Crear mapa de ingredientes para cálculos nutricionales
     const ingredientesMap = new Map();
     ingredientesCatalogo.forEach(ing => {
         ingredientesMap.set(String(ing.codigo), ing);
@@ -99,7 +100,7 @@
     }
 
     // ========================================
-    // VALIDACIÃ“N DE RANGOS
+    // VALIDACIÓN DE RANGOS
     // ========================================
 
     function validarRango(peso, minimo, maximo) {
@@ -183,7 +184,7 @@
     }
 
     // ========================================
-    // CÃLCULO DE TOTALES DINÃMICO
+    // CÁLCULO DE TOTALES DINÁMICO
     // ========================================
 
     function recalcularNivel(nivelId) {
@@ -236,7 +237,7 @@
             const peso = fila.peso_actualizado !== undefined ? fila.peso_actualizado : parseFloat(fila.peso_neto);
             const pesoOriginal = parseFloat(fila.peso_neto) || 100;
             
-            // Factor de proporciÃ³n: si cambio el peso, los nutrientes cambian proporcionalmente
+            // Factor de proporción: si cambio el peso, los nutrientes cambian proporcionalmente
             const factor = pesoOriginal > 0 ? (peso / pesoOriginal) : 0;
 
             totales.calorias += (fila.calorias || 0) * factor;
@@ -256,7 +257,7 @@
         const panel = document.querySelector(`#panel-${nivelId}`);
         if (!panel) return;
 
-        // Obtener referencias de adecuaciÃ³n para este nivel (semaforizaciÃ³n por proximidad)
+        // Obtener referencias de adecuación para este nivel (semaforización por proximidad)
         const nivelDataRef = nivelesData.find(n => String(n.nivel.id) === String(nivelId));
         const referencias = nivelDataRef?.referencias || {};
 
@@ -280,7 +281,7 @@
                 porcentajeActualSpan.textContent = porcentaje.toFixed(1);
             }
 
-            // SemaforizaciÃ³n por proximidad al valor de referencia ICBF
+            // Semaforización por proximidad al valor de referencia ICBF
             let estado;
             const ref = referencias[nutriente];
             if (ref !== undefined && ref !== null) {
@@ -444,11 +445,11 @@
 
                 if (data.errores && data.errores.length > 0) {
                     showNotification(
-                        `âš ï¸ Guardado parcial: ${data.registros_actualizados} ingrediente(s) guardado(s). Errores: ${data.errores.join(', ')}`,
+                        `⚠️ Guardado parcial: ${data.registros_actualizados} ingrediente(s) guardado(s). Errores: ${data.errores.join(', ')}`,
                         'warning'
                     );
                 } else {
-                    showNotification(`âœ… Cambios guardados exitosamente (${data.registros_actualizados} ingrediente(s)).`, 'success');
+                    showNotification(`✅ Cambios guardados exitosamente (${data.registros_actualizados} ingrediente(s)).`, 'success');
                 }
 
                 setTimeout(() => {
@@ -477,7 +478,7 @@
     }
 
     function quitarFilasDeIngredienteEnTodosLosNiveles(idPreparacion, idIngrediente) {
-        // Quitar del modelo en memoria para que guardados y cÃ¡lculos futuros no lo incluyan.
+        // Quitar del modelo en memoria para que guardados y cálculos futuros no lo incluyan.
         nivelesData.forEach((nivelData) => {
             nivelData.filas = (nivelData.filas || []).filter((fila) => !(
                 String(fila.id_preparacion) === String(idPreparacion) &&
@@ -587,7 +588,7 @@
 
         const nuevoNombre = input.value.trim();
         if (!nuevoNombre) {
-            showNotification('El nombre de la preparacion no puede estar vacÃ­o.', 'warning');
+            showNotification('El nombre de la preparacion no puede estar vacío.', 'warning');
             input.focus();
             return;
         }
@@ -623,13 +624,13 @@
     }
 
     async function eliminarIngredienteDePreparacion(idPreparacion, idIngrediente) {
-        const mensajeConfirmacion = 'Â¿Eliminar este ingrediente de la preparacion en todos los niveles?';
+        const mensajeConfirmacion = '¿Eliminar este ingrediente de la preparacion en todos los niveles?';
         const confirmado = typeof Swal !== 'undefined'
             ? (await Swal.fire({
                 text: mensajeConfirmacion,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonText: 'SÃ­, eliminar',
+                confirmButtonText: 'Sí, eliminar',
                 cancelButtonText: 'Cancelar'
             })).isConfirmed
             : confirm(mensajeConfirmacion);
@@ -676,14 +677,14 @@
         const confirmado = typeof Swal !== 'undefined'
             ? (await Swal.fire({
                 title: 'Eliminar preparacion',
-                text: `Â¿Eliminar "${nombrePrep}" con todos sus ingredientes? Esta acciÃ³n no se puede deshacer.`,
+                text: `¿Eliminar "${nombrePrep}" con todos sus ingredientes? Esta acción no se puede deshacer.`,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonText: 'SÃ­, eliminar',
+                confirmButtonText: 'Sí, eliminar',
                 cancelButtonText: 'Cancelar',
                 confirmButtonColor: '#dc3545'
             })).isConfirmed
-            : confirm(`Â¿Eliminar la preparacion "${nombrePrep}"?`);
+            : confirm(`¿Eliminar la preparacion "${nombrePrep}"?`);
 
         if (!confirmado) return;
 
@@ -701,7 +702,7 @@
                 throw new Error(data.error || 'No fue posible eliminar la preparacion');
             }
 
-            showNotification(`PreparaciÃ³n "${nombrePrep}" eliminada correctamente.`, 'success');
+            showNotification(`Preparación "${nombrePrep}" eliminada correctamente.`, 'success');
             setTimeout(() => window.location.reload(), 1200);
         } catch (error) {
             console.error('Error al eliminar preparacion:', error);
@@ -723,6 +724,11 @@
     }
 
     async function copiarPreparacionDesdeOtroMenu() {
+        if (copiaPreparacionEnCurso) {
+            showNotification('Ya hay una copia en proceso. Espera un momento.', 'info');
+            return;
+        }
+
         if (typeof Swal === 'undefined') {
             showNotification('Se requiere SweetAlert2', 'info');
             return;
@@ -828,7 +834,7 @@
                         </div>
                     </div>
                 `,
-                                didOpen: async () => {
+                didOpen: async () => {
                     const selectMenu = document.getElementById('copiarMenuOrigen');
                     const selectPrep = document.getElementById('copiarPreparacionOrigen');
                     const filtroMenu = document.getElementById('copiarFiltroMenu');
@@ -1028,7 +1034,10 @@
                 }
             }).then(async (result) => {
                 if (!result.isConfirmed || !result.value) return;
+                if (copiaPreparacionEnCurso) return;
 
+                copiaPreparacionEnCurso = true;
+                if (btnCopiarPreparacion) btnCopiarPreparacion.disabled = true;
                 const overlay = mostrarOverlayGuardando('Copiando preparacion...');
                 try {
                     const response = await fetch('/nutricion/api/preparaciones/copiar/', {
@@ -1056,6 +1065,9 @@
                     console.error('Error al copiar preparacion:', error);
                     ocultarOverlayGuardando();
                     showNotification(error.message || 'Error al copiar preparacion', 'error');
+                } finally {
+                    copiaPreparacionEnCurso = false;
+                    if (btnCopiarPreparacion) btnCopiarPreparacion.disabled = false;
                 }
             });
         } catch (error) {
@@ -1083,7 +1095,7 @@
         )).join('');
 
         const result = await Swal.fire({
-            title: '<div class="swal-title-inner"><i class="bi bi-plus-circle-fill swal-title-icon"></i><span class="swal-title-text">Agregar PreparaciÃ³n</span></div>',
+            title: '<div class="swal-title-inner"><i class="bi bi-plus-circle-fill swal-title-icon"></i><span class="swal-title-text">Agregar Preparación</span></div>',
             width: 700,
             showCancelButton: true,
             confirmButtonText: '<i class="bi bi-check-circle-fill"></i> Agregar',
@@ -1099,7 +1111,7 @@
                     <div class="modal-field-group">
                         <label class="modal-label">
                             <i class="bi bi-egg-fried modal-label-icon-purple"></i>
-                            PreparaciÃ³n
+                            Preparación
                             <span class="required-star">*</span>
                         </label>
                         <select id="agregarModoPrep" class="modal-select">
@@ -1115,7 +1127,7 @@
                         </select>
                         <small class="modal-help-text">
                             <i class="bi bi-info-circle"></i>
-                            Seleccione la preparacion a la que agregarÃ¡ el ingrediente
+                            Seleccione la preparacion a la que agregará el ingrediente
                         </small>
                     </div>
 
@@ -1134,7 +1146,7 @@
                             <span class="required-star">*</span>
                         </label>
                         <select id="agregarGrupoId" class="modal-select">
-                            <option value="">â€” seleccione grupo â€”</option>
+                            <option value="">— seleccione grupo —</option>
                             ${opcionesGrupos}
                         </select>
                         <label class="modal-label modal-label-top-spacing">
@@ -1143,7 +1155,7 @@
                             <span class="required-star">*</span>
                         </label>
                         <select id="agregarComponenteId" class="modal-select">
-                            <option value="">â€” seleccione componente â€”</option>
+                            <option value="">— seleccione componente —</option>
                         </select>
                         <small class="modal-help-text">
                             <i class="bi bi-info-circle"></i>
@@ -1160,11 +1172,11 @@
                         <div class="input-search-wrapper">
                             <i class="bi bi-search input-search-icon"></i>
                             <input id="filtroIngrediente" class="modal-input modal-input-search"
-                                   placeholder="Filtrar por nombre o cÃ³digo..."
+                                   placeholder="Filtrar por nombre o código..."
                                    autocomplete="off" />
                         </div>
                         <select id="agregarIngredienteId" class="modal-select modal-select-multirow" size="5">
-                            <option value="">â€” seleccione â€”</option>
+                            <option value="">— seleccione —</option>
                             ${opcionesIngredientes}
                         </select>
                         <small class="modal-help-text" id="contadorIngredientes">
@@ -1179,8 +1191,8 @@
                             <div class="modal-info-text">
                                 <div class="modal-info-title">Nota importante</div>
                                 <div class="modal-info-desc">
-                                    El ingrediente se agregarÃ¡ a <strong>todos los niveles escolares</strong>.
-                                    PodrÃ¡s ajustar los pesos individuales despuÃ©s.
+                                    El ingrediente se agregará a <strong>todos los niveles escolares</strong>.
+                                    Podrás ajustar los pesos individuales después.
                                 </div>
                             </div>
                         </div>
@@ -1197,7 +1209,7 @@
 
                 // Cascade: al cambiar grupo, filtrar componentes
                 const actualizarComponentesModal = (grupoId, compActual) => {
-                    selectComponente.innerHTML = '<option value="">â€” seleccione componente â€”</option>';
+                    selectComponente.innerHTML = '<option value="">— seleccione componente —</option>';
                     if (!grupoId) return;
                     const comps = obtenerComponentesPorGrupo(grupoId);
                     comps.forEach(c => {
@@ -1248,7 +1260,7 @@
                     const valorActual = selectIng.value;
 
                     // Reconstruir opciones del select
-                    selectIng.innerHTML = '<option value="">â€” seleccione â€”</option>';
+                    selectIng.innerHTML = '<option value="">— seleccione —</option>';
                     filtrados.forEach(ing => {
                         const opt = document.createElement('option');
                         opt.value = ing.codigo;
@@ -1256,7 +1268,7 @@
                         selectIng.appendChild(opt);
                     });
 
-                    // Restaurar selecciÃ³n si sigue siendo vÃ¡lida
+                    // Restaurar selección si sigue siendo válida
                     if (valorActual && filtrados.some(ing => String(ing.codigo) === String(valorActual))) {
                         selectIng.value = valorActual;
                     }
@@ -1268,13 +1280,13 @@
                             : `<i class="bi bi-list-ul"></i> ${ingredientesCatalogo.length} ingredientes disponibles`;
                     }
 
-                    // Si hay exactamente un resultado, seleccionarlo automÃ¡ticamente
+                    // Si hay exactamente un resultado, seleccionarlo automáticamente
                     if (filtrados.length === 1) {
                         selectIng.value = filtrados[0].codigo;
                     }
                 });
 
-                // Focus automÃ¡tico en el filtro al abrir el modal
+                // Focus automático en el filtro al abrir el modal
                 setTimeout(() => filtroIng.focus(), 100);
             },
             preConfirm: () => {
@@ -1312,7 +1324,7 @@
                     id_grupo: idGrupo || null,
                     id_componente: idComp || null,
                     id_ingrediente: idIng,
-                    gramaje: null  // Siempre null, se usarÃ¡n valores predeterminados por nivel
+                    gramaje: null  // Siempre null, se usarán valores predeterminados por nivel
                 };
             }
         });
@@ -1333,7 +1345,7 @@
                 // Construir mensaje de error detallado
                 let errorMsg = data.error || 'Error al agregar ingrediente';
 
-                // Si hay errores especÃ­ficos, agregarlos
+                // Si hay errores específicos, agregarlos
                 if (data.errores && data.errores.length > 0) {
                     errorMsg += ':\n' + data.errores.join('\n');
                 }
@@ -1342,7 +1354,7 @@
             }
 
             ocultarOverlayGuardando();
-            showNotification('âœ… Ingrediente agregado exitosamente', 'success');
+            showNotification('✅ Ingrediente agregado exitosamente', 'success');
             setTimeout(() => window.location.reload(), 1000);
         } catch (error) {
             console.error('Error al agregar ingrediente:', error);
@@ -1352,12 +1364,12 @@
     }
 
     // ========================================
-    // DROPDOWNS CASCADE GRUPO â†’ COMPONENTE
+    // DROPDOWNS CASCADE GRUPO → COMPONENTE
     // ========================================
 
     function poblarSelectGrupo(selectGrupo) {
         const grupoActual = selectGrupo.dataset.grupoActual || '';
-        selectGrupo.innerHTML = '<option value="">â€” Grupo â€”</option>';
+        selectGrupo.innerHTML = '<option value="">— Grupo —</option>';
         gruposCatalogo.forEach(g => {
             const opt = document.createElement('option');
             opt.value = g.id;
@@ -1368,7 +1380,7 @@
     }
 
     function poblarSelectComponente(selectComp, grupoId, componenteActual) {
-        selectComp.innerHTML = '<option value="">â€” Componente â€”</option>';
+        selectComp.innerHTML = '<option value="">— Componente —</option>';
         if (!grupoId) return;
         const comps = obtenerComponentesPorGrupo(grupoId);
         comps.forEach(c => {
@@ -1457,7 +1469,7 @@
     });
 
     // ========================================
-    // INICIALIZACIÃ“N
+    // INICIALIZACIÓN
     // ========================================
 
     function inicializar() {
@@ -1478,7 +1490,7 @@
             });
         }
 
-        console.log('âœ… Editor inicializado. Niveles:', nivelesData.length);
+        console.log('✅ Editor inicializado. Niveles:', nivelesData.length);
     }
 
     document.addEventListener('click', (e) => {
@@ -1541,6 +1553,7 @@
     }
 
 })();
+
 
 
 
