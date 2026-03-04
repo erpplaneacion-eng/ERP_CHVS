@@ -57,3 +57,8 @@ from .semanal import (
 from .firmas import (
     firmas_contrato,
 )
+from .minuta_patron_rangos import (
+    lista_minuta_patron_rangos,
+    editar_minuta_patron_rango,
+    eliminar_minuta_patron_rango,
+)

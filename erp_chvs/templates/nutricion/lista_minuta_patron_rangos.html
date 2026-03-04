@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load l10n %}
+
+{% block title %}Minuta Patrón Rangos{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/nutricion/inline_styles.css' %}">
+{% endblock %}
+
+{% block content %}
+<h1>Rangos de Minuta Patrón</h1>
+<p>Gestión de la tabla <strong>nutricion_minuta_patron_rangos</strong>.</p>
+
+<div class="search-container">
+    <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="Buscar por modalidad, grado, componente o grupo (Enter para buscar)"
+            autocomplete="off"
+            value="{{ search_query|default:'' }}"
+        >
+        <button id="clearSearch" class="btn-clear-search {% if search_query %}show{% endif %}" title="Limpiar búsqueda">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div class="search-results-info">
+        <span id="searchResultsCount">
+            {% if search_query %}
+                Resultados para "<span class="highlight">{{ search_query }}</span>"
+            {% else %}
+                Mostrando todos los rangos
+            {% endif %}
+        </span>
+    </div>
+</div>
+
+<div class="actions-bar">
+    <button id="add-rango-btn" class="btn btn-success" data-create-url="{% url 'nutricion:lista_minuta_patron_rangos' %}">
+        <i class="fas fa-plus"></i> Añadir Registro
+    </button>
+</div>
+
+<div class="table-container">
+    <table class="alimentos-table">
+        <thead>
+            <tr>
+                <th>Modalidad</th>
+                <th>Grado Escolar</th>
+                <th>Componente</th>
+                <th>Grupo Alimentos</th>
+                <th>Peso Mínimo (g)</th>
+                <th>Peso Máximo (g)</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rango in rangos_page %}
+            {% localize off %}
+            <tr>
+                <td>{{ rango.id_modalidad.modalidad }}</td>
+                <td>{{ rango.id_grado_escolar_uapa.nivel_escolar_uapa }}</td>
+                <td>{{ rango.id_componente.componente }}</td>
+                <td>{{ rango.id_grupo_alimentos.grupo_alimentos }}</td>
+                <td>{{ rango.peso_neto_minimo|default:'-' }}</td>
+                <td>{{ rango.peso_neto_maximo|default:'-' }}</td>
+                <td>
+                    <button
+                        class="btn btn-sm btn-warning edit-rango-btn"
+                        title="Editar"
+                        data-id="{{ rango.pk }}"
+                        data-id-modalidad="{{ rango.id_modalidad_id }}"
+                        data-id-grado="{{ rango.id_grado_escolar_uapa_id }}"
+                        data-id-componente="{{ rango.id_componente_id }}"
+                        data-id-grupo="{{ rango.id_grupo_alimentos_id }}"
+                        data-peso-min="{{ rango.peso_neto_minimo|default:'' }}"
+                        data-peso-max="{{ rango.peso_neto_maximo|default:'' }}"
+                    >
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button
+                        class="btn btn-sm btn-danger delete-rango-btn"
+                        title="Eliminar"
+                        data-id="{{ rango.pk }}"
+                        data-nombre="{{ rango.id_modalidad.modalidad }} - {{ rango.id_grado_escolar_uapa.nivel_escolar_uapa }} - {{ rango.id_componente.componente }}"
+                    >
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+            {% endlocalize %}
+            {% empty %}
+            <tr>
+                <td colspan="7">
+                    {% if search_query %}
+                        No se encontraron registros para "<strong>{{ search_query }}</strong>".
+                    {% else %}
+                        No hay registros para mostrar.
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if rangos_page.has_other_pages %}
+<div class="pagination-container">
+    <nav aria-label="Paginación de rangos minuta patrón">
+        <ul class="pagination">
+            {% if rangos_page.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search_query %}&q={{ search_query }}{% endif %}">Primera</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ rangos_page.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">Anterior</a>
+                </li>
+            {% endif %}
+
+            <li class="page-item active">
+                <span class="page-link">
+                    Página {{ rangos_page.number }} de {{ rangos_page.paginator.num_pages }}
+                </span>
+            </li>
+
+            {% if rangos_page.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ rangos_page.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">Siguiente</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ rangos_page.paginator.num_pages }}{% if search_query %}&q={{ search_query }}{% endif %}">Última</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+<div id="minuta-rango-modal" class="modal-overlay hidden-initially">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modal-title">Añadir Registro</h2>
+            <span class="modal-close-btn">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="minuta-rango-form" method="POST" action="">
+                {% csrf_token %}
+                <div id="formValidationSummary" style="display:none; margin-bottom:12px; padding:10px 12px; border:1px solid #f5c2c7; background:#fff5f5; color:#842029; border-radius:8px; font-size:0.9rem;"></div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="id_id_modalidad">Modalidad *</label>
+                        {{ form.id_modalidad }}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_id_grado_escolar_uapa">Grado Escolar *</label>
+                        {{ form.id_grado_escolar_uapa }}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_id_componente">Componente *</label>
+                        {{ form.id_componente }}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_id_grupo_alimentos">Grupo Alimentos *</label>
+                        {{ form.id_grupo_alimentos }}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_peso_neto_minimo">Peso Neto Mínimo (g)</label>
+                        {{ form.peso_neto_minimo }}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_peso_neto_maximo">Peso Neto Máximo (g)</label>
+                        {{ form.peso_neto_maximo }}
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary modal-cancel-btn">Cancelar</button>
+                    <button type="submit" id="modal-submit-btn" class="btn btn-success">Guardar Registro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/nutricion/minuta_patron_rangos.js' %}"></script>
+{% endblock %}

@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import TablaAlimentos2018Icbf, FirmaNutricionalContrato
+from .models import TablaAlimentos2018Icbf, FirmaNutricionalContrato, MinutaPatronMeta
 import re
 from decimal import Decimal, InvalidOperation
 
@@ -419,6 +419,63 @@ class AlimentoForm(forms.ModelForm):
         if suma_componentes > 105:  # Margen de tolerancia del 5%
             raise ValidationError("La suma de los componentes principales (proteína + lípidos + carbohidratos + humedad + cenizas) no puede exceder 105g por 100g de alimento.")
         
+        return cleaned_data
+
+
+class MinutaPatronMetaForm(forms.ModelForm):
+    class Meta:
+        model = MinutaPatronMeta
+        fields = [
+            'id_modalidad',
+            'id_grado_escolar_uapa',
+            'id_componente',
+            'id_grupo_alimentos',
+            'peso_neto_minimo',
+            'peso_neto_maximo',
+        ]
+        widgets = {
+            'id_modalidad': forms.Select(attrs={'class': 'form-control', 'required': True}),
+            'id_grado_escolar_uapa': forms.Select(attrs={'class': 'form-control', 'required': True}),
+            'id_componente': forms.Select(attrs={'class': 'form-control', 'required': True}),
+            'id_grupo_alimentos': forms.Select(attrs={'class': 'form-control', 'required': True}),
+            'peso_neto_minimo': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'peso_neto_maximo': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+        }
+        labels = {
+            'id_modalidad': 'Modalidad',
+            'id_grado_escolar_uapa': 'Grado escolar',
+            'id_componente': 'Componente',
+            'id_grupo_alimentos': 'Grupo de alimentos',
+            'peso_neto_minimo': 'Peso neto mínimo (g)',
+            'peso_neto_maximo': 'Peso neto máximo (g)',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['id_modalidad'].queryset = self.fields['id_modalidad'].queryset.order_by('modalidad')
+        self.fields['id_grado_escolar_uapa'].queryset = self.fields['id_grado_escolar_uapa'].queryset.order_by(
+            'nivel_escolar_uapa'
+        )
+        self.fields['id_componente'].queryset = self.fields['id_componente'].queryset.order_by('componente')
+        self.fields['id_grupo_alimentos'].queryset = self.fields['id_grupo_alimentos'].queryset.order_by(
+            'grupo_alimentos'
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        peso_min = cleaned_data.get('peso_neto_minimo')
+        peso_max = cleaned_data.get('peso_neto_maximo')
+
+        if peso_min is not None and peso_min < 0:
+            self.add_error('peso_neto_minimo', 'El peso neto mínimo no puede ser negativo.')
+
+        if peso_max is not None and peso_max < 0:
+            self.add_error('peso_neto_maximo', 'El peso neto máximo no puede ser negativo.')
+
+        if peso_min is not None and peso_max is not None and peso_min > peso_max:
+            self.add_error('peso_neto_minimo', 'El mínimo no puede ser mayor que el máximo.')
+            self.add_error('peso_neto_maximo', 'El máximo debe ser mayor o igual al mínimo.')
+
         return cleaned_data
 
 

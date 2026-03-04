@@ -12,6 +12,17 @@ urlpatterns = [
     path('alimentos/', views.lista_alimentos, name='lista_alimentos'),
     path('alimentos/editar/<str:codigo>/', views.editar_alimento, name='editar_alimento'),
     path('alimentos/eliminar/<str:codigo>/', views.eliminar_alimento, name='eliminar_alimento'),
+    path('minuta-patron-rangos/', views.lista_minuta_patron_rangos, name='lista_minuta_patron_rangos'),
+    path(
+        'minuta-patron-rangos/editar/<int:pk>/',
+        views.editar_minuta_patron_rango,
+        name='editar_minuta_patron_rango'
+    ),
+    path(
+        'minuta-patron-rangos/eliminar/<int:pk>/',
+        views.eliminar_minuta_patron_rango,
+        name='eliminar_minuta_patron_rango'
+    ),
 
     # MenÃºs
     path('menus/', views.lista_menus, name='lista_menus'),
