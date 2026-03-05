@@ -44,7 +44,7 @@ class TestMapaDefinido(SimpleTestCase):
         )
 
     def test_modalidad_20501_orden_correcto(self):
-        esperado = ['com1', 'com2', 'com3', 'com4', 'com5', 'com6', 'com15']
+        esperado = ['com1', 'com2', 'com3', 'com12', 'com4', 'com5', 'com6']
         self.assertEqual(ORDEN_COMPONENTES_POR_MODALIDAD['20501'], esperado)
 
     def test_modalidad_20507_igual_a_20501(self):
@@ -58,13 +58,11 @@ class TestMapaDefinido(SimpleTestCase):
         self.assertEqual(ORDEN_COMPONENTES_POR_MODALIDAD['20502'], esperado)
 
     def test_modalidad_020511_igual_a_20502(self):
-        self.assertEqual(
-            ORDEN_COMPONENTES_POR_MODALIDAD['020511'],
-            ORDEN_COMPONENTES_POR_MODALIDAD['20502'],
-        )
+        esperado = ['com18', 'com11', 'com3', 'com12', 'com13']
+        self.assertEqual(ORDEN_COMPONENTES_POR_MODALIDAD['020511'], esperado)
 
     def test_modalidad_20503_orden_correcto(self):
-        esperado = ['com2', 'com7', 'com8', 'com14', 'com9', 'com11', 'com5', 'com6', 'com15']
+        esperado = ['com2', 'com7', 'com3', 'com8', 'com9', 'com11', 'com14', 'com5', 'com6']
         self.assertEqual(ORDEN_COMPONENTES_POR_MODALIDAD['20503'], esperado)
 
     def test_modalidad_20510_igual_a_20503(self):
@@ -79,7 +77,7 @@ class TestMapaDefinido(SimpleTestCase):
 # ──────────────────────────────────────────────────────────────────────────────
 
 class TestSortDicts20501(SimpleTestCase):
-    """Modalidad 20501: com1→com2→com3→com4→com5→com6→com15"""
+    """Modalidad 20501"""
 
     def setUp(self):
         self.preps = [
@@ -105,7 +103,7 @@ class TestSortDicts20501(SimpleTestCase):
 
 
 class TestSortDicts20502(SimpleTestCase):
-    """Modalidad 20502 / 020511: com11→com3→com12→com13"""
+    """Modalidad 20502"""
 
     def setUp(self):
         self.preps = [
@@ -124,12 +122,8 @@ class TestSortDicts20502(SimpleTestCase):
             ['Leche con cacao', 'Cereal granola', 'Ensalada de frutas', 'Postre de gelatina'],
         )
 
-    def test_orden_020511_igual_a_20502(self):
-        self.assertEqual(self._nombres('020511'), self._nombres('20502'))
-
-
 class TestSortDicts20503(SimpleTestCase):
-    """Modalidad 20503 / 20510: com2→com7→com8→com14→com9→com11→com5→com6→com15"""
+    """Modalidad 20503 / 20510"""
 
     def setUp(self):
         self.preps = [
@@ -140,7 +134,7 @@ class TestSortDicts20503(SimpleTestCase):
             _prep_dict('Leche entera',    'com11'),
             _prep_dict('Aceite vegetal',  'com6'),
             _prep_dict('Papa cocida',     'com8'),
-            _prep_dict('Agua',            'com15'),
+            _prep_dict('Agua',            'com15'), # Debe ser omitido
             _prep_dict('Ensalada roja',   'com9'),
         ]
 
@@ -150,8 +144,8 @@ class TestSortDicts20503(SimpleTestCase):
     def test_orden_20503(self):
         self.assertEqual(
             self._nombres('20503'),
-            ['Frijoles', 'Arroz blanco', 'Papa cocida',
-             'Jugo de naranja', 'Ensalada roja', 'Leche entera', 'Agua panela', 'Aceite vegetal', 'Agua'],
+            ['Frijoles', 'Arroz blanco', 'Papa cocida', 'Ensalada roja', 'Leche entera',
+             'Jugo de naranja', 'Agua panela', 'Aceite vegetal'],
         )
 
     def test_orden_20510_igual_a_20503(self):
@@ -184,11 +178,12 @@ class TestCasosEspeciales(SimpleTestCase):
         nombres = [p['nombre'] for p in sort_preparaciones_dicts(preps, '20501')]
         self.assertEqual(nombres, ['Banano', 'Mango', 'Zumo de lulo'])
 
-    def test_modalidad_sin_mapa_orden_alfabetico(self):
-        """Modalidad no definida → fallback alfabético completo."""
+    def test_modalidad_sin_mapa_orden_alfabetico_y_omite_agua(self):
+        """Modalidad no definida → fallback alfabético completo, omitiendo com15 siempre."""
         preps = [
             _prep_dict('Zumo',   'com5'),
             _prep_dict('Arroz',  'com2'),
+            _prep_dict('Agua',   'com15'), # Se omite
             _prep_dict('Leche',  'com11'),
         ]
         nombres = [p['nombre'] for p in sort_preparaciones_dicts(preps, 'GENERICO')]
@@ -226,6 +221,7 @@ class TestSortObjetos(SimpleTestCase):
             MockPrep('Arroz con leche', 'com1'),
             MockPrep('Agua panela',     'com5'),
             MockPrep('Carne molida',    'com2'),
+            MockPrep('Vaso de Agua',    'com15'), # Se omite
         ]
         resultado = sort_preparaciones_objetos(preps, '20501')
         nombres = [p.preparacion for p in resultado]
