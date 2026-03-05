@@ -54,7 +54,7 @@ class TestMapaDefinido(SimpleTestCase):
         )
 
     def test_modalidad_20502_orden_correcto(self):
-        esperado = ['com11', 'com3', 'com12', 'com13']
+        esperado = ['com11', 'com3', 'com12', 'com13', 'com18']
         self.assertEqual(ORDEN_COMPONENTES_POR_MODALIDAD['20502'], esperado)
 
     def test_modalidad_020511_igual_a_20502(self):
@@ -64,7 +64,7 @@ class TestMapaDefinido(SimpleTestCase):
         )
 
     def test_modalidad_20503_orden_correcto(self):
-        esperado = ['com2', 'com7', 'com8', 'com14', 'com11', 'com5', 'com6', 'com15']
+        esperado = ['com2', 'com7', 'com8', 'com14', 'com9', 'com11', 'com5', 'com6', 'com15']
         self.assertEqual(ORDEN_COMPONENTES_POR_MODALIDAD['20503'], esperado)
 
     def test_modalidad_20510_igual_a_20503(self):
@@ -129,7 +129,7 @@ class TestSortDicts20502(SimpleTestCase):
 
 
 class TestSortDicts20503(SimpleTestCase):
-    """Modalidad 20503 / 20510: com2→com7→com8→com14→com11→com5→com6→com15"""
+    """Modalidad 20503 / 20510: com2→com7→com8→com14→com9→com11→com5→com6→com15"""
 
     def setUp(self):
         self.preps = [
@@ -141,6 +141,7 @@ class TestSortDicts20503(SimpleTestCase):
             _prep_dict('Aceite vegetal',  'com6'),
             _prep_dict('Papa cocida',     'com8'),
             _prep_dict('Agua',            'com15'),
+            _prep_dict('Ensalada roja',   'com9'),
         ]
 
     def _nombres(self, modalidad):
@@ -150,7 +151,7 @@ class TestSortDicts20503(SimpleTestCase):
         self.assertEqual(
             self._nombres('20503'),
             ['Frijoles', 'Arroz blanco', 'Papa cocida',
-             'Jugo de naranja', 'Leche entera', 'Agua panela', 'Aceite vegetal', 'Agua'],
+             'Jugo de naranja', 'Ensalada roja', 'Leche entera', 'Agua panela', 'Aceite vegetal', 'Agua'],
         )
 
     def test_orden_20510_igual_a_20503(self):
@@ -163,15 +164,15 @@ class TestSortDicts20503(SimpleTestCase):
 
 class TestCasosEspeciales(SimpleTestCase):
 
-    def test_componente_fuera_del_mapa_va_al_final(self):
-        """com9 (Ensalada) no está en el mapa de 20501 → va al final."""
+    def test_componente_fuera_del_mapa_se_omite(self):
+        """com9 (Ensalada) no está en el mapa de 20501 → se omite."""
         preps = [
             _prep_dict('Ensalada verde',  'com9'),
             _prep_dict('Arroz con leche', 'com1'),
             _prep_dict('Mango',           'com4'),
         ]
         nombres = [p['nombre'] for p in sort_preparaciones_dicts(preps, '20501')]
-        self.assertEqual(nombres, ['Arroz con leche', 'Mango', 'Ensalada verde'])
+        self.assertEqual(nombres, ['Arroz con leche', 'Mango'])
 
     def test_mismo_componente_orden_alfabetico(self):
         """Dos preparaciones con el mismo componente → orden alfabético entre ellas."""
@@ -203,15 +204,14 @@ class TestCasosEspeciales(SimpleTestCase):
         resultado = sort_preparaciones_dicts([], '20501')
         self.assertEqual(resultado, [])
 
-    def test_componente_id_none_no_falla(self):
-        """Preparación sin componente asignado (None) → va al final."""
+    def test_componente_id_none_se_omite(self):
+        """Preparación sin componente asignado (None) → se omite si la modalidad tiene mapa."""
         preps = [
             _prep_dict('Sin componente', None),
             _prep_dict('Arroz con leche', 'com1'),
         ]
         nombres = [p['nombre'] for p in sort_preparaciones_dicts(preps, '20501')]
-        self.assertEqual(nombres[0], 'Arroz con leche')
-        self.assertEqual(nombres[1], 'Sin componente')
+        self.assertEqual(nombres, ['Arroz con leche'])
 
 
 # ──────────────────────────────────────────────────────────────────────────────
