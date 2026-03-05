@@ -11,8 +11,8 @@ Las modalidades no listadas usan orden alfabético (fallback).
 # Preparaciones con componentes fuera de la lista se omiten.
 ORDEN_COMPONENTES_POR_MODALIDAD = {
     # COMPLEMENTO AM/PM PREPARADO  y  COMPLEMENTO PM PREPARADO
-    '20501': ['com1', 'com2', 'com3', 'com12', 'com4', 'com5', 'com6'],
-    '20507': ['com1', 'com2', 'com3', 'com12', 'com4', 'com5', 'com6'],
+    '20501': ['com1', 'com2', 'com3', 'com12', 'com4','com9','com5', 'com6'],
+    '20507': ['com1', 'com2', 'com3', 'com12', 'com4','com9','com5', 'com6'],
 
     # COMPLEMENTO AM/PM INDUSTRIALIZADO  y  REFUERZO COMPLEMENTO AM/PM INDUSTRIALIZADO
     '20502':  ['com11', 'com3', 'com12', 'com13', 'com18'],
