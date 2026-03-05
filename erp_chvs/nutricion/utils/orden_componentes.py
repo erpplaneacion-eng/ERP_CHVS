@@ -16,7 +16,7 @@ ORDEN_COMPONENTES_POR_MODALIDAD = {
 
     # COMPLEMENTO AM/PM INDUSTRIALIZADO  y  REFUERZO COMPLEMENTO AM/PM INDUSTRIALIZADO
     '20502':  ['com11', 'com3', 'com12', 'com13', 'com18'],
-    '020511': ['com11', 'com3', 'com12', 'com13', 'com18'],
+    '020511': ['com18', 'com11', 'com3', 'com12', 'com13'],
 
     # COMPLEMENTO AM/PM JORNADA UNICA  y  REFUERZO COMPLEMENTO AM/PM PREPARADO
     '20503': ['com2', 'com7','com3', 'com8', 'com9', 'com11', 'com14', 'com5', 'com6', 'com15'],
