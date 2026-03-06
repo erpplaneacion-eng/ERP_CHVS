@@ -587,6 +587,7 @@ def api_guardar_preparaciones_editor(request, id_menu):
                 id_ingrediente = str(fila.get('id_ingrediente', '')).strip()
                 preparacion_nombre = str(fila.get('preparacion_nombre', '')).strip()
                 id_componente = str(fila.get('id_componente', '')).strip()
+                id_componente_ingrediente = str(fila.get('id_componente_ingrediente') or '').strip()
                 id_grupo = str(fila.get('id_grupo', '')).strip()
                 gramaje_raw = fila.get('gramaje')
 
@@ -599,6 +600,15 @@ def api_guardar_preparaciones_editor(request, id_menu):
                         componente_obj = ComponentesAlimentos.objects.get(id_componente=id_componente)
                     except ComponentesAlimentos.DoesNotExist:
                         errores.append(f"Fila {idx + 1}: componente {id_componente} no encontrado")
+                        continue
+
+                # Componente propio del ingrediente (independiente del de la preparación)
+                componente_ingrediente_obj = None
+                if id_componente_ingrediente:
+                    try:
+                        componente_ingrediente_obj = ComponentesAlimentos.objects.get(id_componente=id_componente_ingrediente)
+                    except ComponentesAlimentos.DoesNotExist:
+                        errores.append(f"Fila {idx + 1}: componente ingrediente {id_componente_ingrediente} no encontrado")
                         continue
 
                 grupo_obj = None
@@ -648,7 +658,7 @@ def api_guardar_preparaciones_editor(request, id_menu):
                     menu,
                     preparacion,
                     ingrediente,
-                    componente=componente_obj,
+                    componente=componente_ingrediente_obj or componente_obj,
                     grupo_override=grupo_obj
                 )
                 minimo = Decimal(str(rango['minimo'])) if rango['minimo'] is not None else None
@@ -665,14 +675,13 @@ def api_guardar_preparaciones_editor(request, id_menu):
                     id_preparacion=preparacion,
                     id_ingrediente_siesa=ingrediente
                 )
-                if componente_obj:
-                    rel.id_componente = componente_obj
+                # Componente del ingrediente: independiente del componente de la preparación.
+                # None significa "sin override" → el sistema hace fallback al componente de la preparación.
+                rel.id_componente = componente_ingrediente_obj
                 if grupo_obj:
                     rel.id_grupo_alimentos = grupo_obj
                 rel.gramaje = gramaje
-                campos_update = ['gramaje']
-                if componente_obj:
-                    campos_update.append('id_componente')
+                campos_update = ['gramaje', 'id_componente']
                 if grupo_obj:
                     campos_update.append('id_grupo_alimentos')
                 rel.save(update_fields=campos_update)
