@@ -24,14 +24,14 @@ COMPONENTES_PDF_YUMBO = {
         (["com2"], "ALIMENTO PROTEICO"),
         (["com3", "com7"], "CEREAL ACOMPAÑANTE"),
         (["com12"], "FRUTA"),
-        (["com15"], "AGUA"),
+        (["com15"], "AGUA APTA PARA CONSUMO"),
     ],
     "20507": [
         (["com11", "com1"], "BEBIDA CON LECHE"),
         (["com2"], "ALIMENTO PROTEICO"),
         (["com3", "com7"], "CEREAL ACOMPAÑANTE"),
         (["com12"], "FRUTA"),
-        (["com15"], "AGUA"),
+        (["com15"], "AGUA APTA PARA CONSUMO"),
     ],
     "20503": [
         (["com2"], "ALIMENTO PROTEICO"),
@@ -40,7 +40,7 @@ COMPONENTES_PDF_YUMBO = {
         (["com9"], "ENSALADA O VERDURA CALIENTE"),
         (["com14"], "BEBIDA"),
         (["com11"], "LECHE Y PRODUCTOS LACTEOS"),
-        (["com15"], "AGUA"),
+        (["com15"], "AGUA APTA PARA CONSUMO"),
     ],
     "20502": [
         (["com11"], "LECHE Y PRODUCTOS LACTEOS"),
@@ -90,7 +90,7 @@ COMPONENTES_PDF_CALI = {
         (["com3", "com7"], "CEREAL ACOMPAÑANTE"),
         (["com8"], "TUBERCULOS, RAICES, PLATANOS Y DERIVADOS DE CEREAL"),
         (["com9"], "FRUTA"),
-        (["com15"], "AGUA"),
+        (["com15"], "AGUA APTA PARA CONSUMO"),
     ],
 }
 
@@ -420,6 +420,7 @@ class CicloMenusPdfService:
         prep_rows = list(
             TablaPreparaciones.objects.filter(id_menu__in=list(menus_by_number.values()))
             .select_related("id_componente", "id_menu")
+            .prefetch_related("ingredientes")
             .order_by("preparacion")
         )
 
@@ -431,6 +432,7 @@ class CicloMenusPdfService:
         config_modalidad = mapa_componentes.get(str(modalidad_id), [])
 
         menu_component_preps: Dict[int, Dict[str, List[str]]] = defaultdict(lambda: defaultdict(list))
+        menu_g3_componentes: Dict[int, List[str]] = defaultdict(list)
         
         for prep in prep_rows:
             num = self._menu_number(prep.id_menu.menu)
@@ -448,6 +450,43 @@ class CicloMenusPdfService:
                     comp_id = "com2_proteina"
 
             menu_component_preps[num][comp_id].append(prep_name)
+
+            # Rastrear si la preparación tiene algún ingrediente del grupo 3 (g3) - Lácteos
+            tiene_g3 = any(ing.id_grupo_alimentos_id == "g3" for ing in prep.ingredientes.all())
+            if tiene_g3:
+                menu_g3_componentes[num].append(comp_id)
+
+        # Lógica especial Yumbo/Buga 20503 (Lácteos escondidos en otra preparación)
+        if not es_cali and str(modalidad_id) == "20503":
+            comp_id_to_label = {}
+            for comp_ids, comp_label in config_modalidad:
+                for cid in comp_ids:
+                    comp_id_to_label[cid] = comp_label
+                    
+            for num in menus_by_number.keys():
+                com11_preps = menu_component_preps[num].get("com11", [])
+                if not com11_preps:
+                    # No hay preparación de lácteo per se, buscar si hay ingrediente G3 en otro componente
+                    g3_comps = [c for c in menu_g3_componentes[num] if c != "com11"]
+                    if g3_comps:
+                        comp_donde_esta = g3_comps[0]
+                        label = comp_id_to_label.get(comp_donde_esta, "LA PREPARACIÓN")
+                        
+                        label_upper = label.upper()
+                        if "BEBIDA" in label_upper:
+                            prefijo = "LA BEBIDA"
+                        elif "CEREAL" in label_upper:
+                            prefijo = "LOS CEREALES"
+                        elif "TUBERCULO" in label_upper:
+                            prefijo = "LOS TUBERCULOS"
+                        elif "ENSALADA" in label_upper or "VERDURA" in label_upper:
+                            prefijo = "LA ENSALADA"
+                        elif "PROTEICO" in label_upper:
+                            prefijo = "EL ALIMENTO PROTEICO"
+                        else:
+                            prefijo = f"{label_upper}"
+                            
+                        menu_component_preps[num]["com11"].append(f"INCLUIDO EN {prefijo}")
 
         # Ordenar alfabéticamente dentro de cada componente-menú
         for menu_data in menu_component_preps.values():
