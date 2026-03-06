@@ -1134,9 +1134,12 @@
             `<option value="${g.id}">${escaparHtml(g.nombre)}</option>`
         )).join('');
 
+        // Estado local: ingredientes añadidos a la lista
+        let ingSeleccionados = [];
+
         const result = await Swal.fire({
             title: '<div class="swal-title-inner"><i class="bi bi-plus-circle-fill swal-title-icon"></i><span class="swal-title-text">Agregar Preparación</span></div>',
-            width: 700,
+            width: 750,
             showCancelButton: true,
             confirmButtonText: '<i class="bi bi-check-circle-fill"></i> Agregar',
             cancelButtonText: '<i class="bi bi-x-circle"></i> Cancelar',
@@ -1148,6 +1151,8 @@
             },
             html: `
                 <div class="swal-body-padding">
+
+                    <!-- ── Modo ── -->
                     <div class="modal-field-group">
                         <label class="modal-label">
                             <i class="bi bi-egg-fried modal-label-icon-purple"></i>
@@ -1155,58 +1160,51 @@
                             <span class="required-star">*</span>
                         </label>
                         <select id="agregarModoPrep" class="modal-select">
-                            <option value="existente">Usar preparacion existente</option>
-                            <option value="nueva">Crear nueva preparacion</option>
+                            <option value="existente">Usar preparación existente</option>
+                            <option value="nueva">Crear nueva preparación</option>
                         </select>
                     </div>
 
+                    <!-- ── Prep existente ── -->
                     <div id="bloquePrepExistente" class="modal-field-group">
                         <select id="agregarPreparacionExistente" class="modal-select">
-                            <option value="">Seleccione una preparacion...</option>
+                            <option value="">Seleccione una preparación...</option>
                             ${opcionesPreparaciones}
                         </select>
                         <small class="modal-help-text">
                             <i class="bi bi-info-circle"></i>
-                            Seleccione la preparacion a la que agregará el ingrediente
+                            Seleccione la preparación a la que desea agregar ingredientes
                         </small>
                     </div>
 
+                    <!-- ── Prep nueva ── -->
                     <div id="bloquePrepNueva" class="modal-field-group" style="display:none;">
-                        <input id="agregarPreparacionNueva" class="modal-input" placeholder="Nombre de la nueva preparacion" />
-                        <small class="modal-help-text">
-                            <i class="bi bi-info-circle"></i>
-                            Ingrese el nombre de la nueva preparacion
-                        </small>
+                        <input id="agregarPreparacionNueva" class="modal-input"
+                               placeholder="Nombre de la nueva preparación" />
+                        <!-- Componente Principal (solo para prep nueva) -->
+                        <div class="modal-comp-principal-box" style="margin-top:10px;">
+                            <div class="modal-comp-principal-label">
+                                <i class="bi bi-tag-fill"></i> Componente Principal de la Preparación
+                            </div>
+                            <select id="agregarGrupoCompPrincipal" class="modal-select" style="margin-bottom:6px;">
+                                <option value="">— seleccione grupo —</option>
+                                ${opcionesGrupos}
+                            </select>
+                            <select id="agregarComponentePrincipal" class="modal-select">
+                                <option value="">— seleccione componente —</option>
+                            </select>
+                            <small class="modal-help-text" style="margin-top:4px;">
+                                <i class="bi bi-info-circle"></i>
+                                Define el componente nutricional que representa esta preparación en el menú
+                            </small>
+                        </div>
                     </div>
 
-                    <div id="bloqueComponente" class="modal-field-group">
-                        <label class="modal-label">
-                            <i class="bi bi-grid-3x3-gap-fill modal-label-icon-yellow"></i>
-                            Grupo de Alimento
-                            <span class="required-star">*</span>
-                        </label>
-                        <select id="agregarGrupoId" class="modal-select">
-                            <option value="">— seleccione grupo —</option>
-                            ${opcionesGrupos}
-                        </select>
-                        <label class="modal-label modal-label-top-spacing">
-                            <i class="bi bi-tag-fill modal-label-icon-yellow"></i>
-                            Componente
-                            <span class="required-star">*</span>
-                        </label>
-                        <select id="agregarComponenteId" class="modal-select">
-                            <option value="">— seleccione componente —</option>
-                        </select>
-                        <small class="modal-help-text">
-                            <i class="bi bi-info-circle"></i>
-                            Seleccione primero el grupo para filtrar los componentes disponibles
-                        </small>
-                    </div>
-
+                    <!-- ── Ingredientes ── -->
                     <div class="modal-field-group">
                         <label class="modal-label">
                             <i class="bi bi-basket3 modal-label-icon-green"></i>
-                            Ingrediente ICBF
+                            Ingredientes ICBF
                             <span class="required-star">*</span>
                         </label>
                         <div class="input-search-wrapper">
@@ -1223,6 +1221,11 @@
                             <i class="bi bi-list-ul"></i>
                             ${ingredientesCatalogo.length} ingredientes disponibles
                         </small>
+                        <button type="button" id="btnAnadirALista" class="btn-agregar-a-lista">
+                            <i class="bi bi-plus-circle"></i> Añadir a la lista
+                        </button>
+                        <!-- Lista de ingredientes seleccionados -->
+                        <div id="listaIngredientesSeleccionados" class="modal-ing-lista vacia"></div>
                     </div>
 
                     <div class="modal-info-box">
@@ -1231,8 +1234,9 @@
                             <div class="modal-info-text">
                                 <div class="modal-info-title">Nota importante</div>
                                 <div class="modal-info-desc">
-                                    El ingrediente se agregará a <strong>todos los niveles escolares</strong>.
-                                    Podrás ajustar los pesos individuales después.
+                                    Los ingredientes se agregarán a <strong>todos los niveles escolares</strong>.
+                                    Puedes ajustar el grupo y componente de cada ingrediente desde la tabla,
+                                    columna <strong>Grupo / Componente</strong>.
                                 </div>
                             </div>
                         </div>
@@ -1240,56 +1244,40 @@
                 </div>
             `,
             didOpen: () => {
-                const modo = document.getElementById('agregarModoPrep');
-                const bExistente = document.getElementById('bloquePrepExistente');
-                const bNueva = document.getElementById('bloquePrepNueva');
-                const bComponente = document.getElementById('bloqueComponente');
-                const selectGrupo = document.getElementById('agregarGrupoId');
-                const selectComponente = document.getElementById('agregarComponenteId');
+                const modo           = document.getElementById('agregarModoPrep');
+                const bExistente     = document.getElementById('bloquePrepExistente');
+                const bNueva         = document.getElementById('bloquePrepNueva');
+                const selectGrupoPrinc = document.getElementById('agregarGrupoCompPrincipal');
+                const selectCompPrinc  = document.getElementById('agregarComponentePrincipal');
 
-                // Cascade: al cambiar grupo, filtrar componentes
-                const actualizarComponentesModal = (grupoId, compActual) => {
-                    selectComponente.innerHTML = '<option value="">— seleccione componente —</option>';
-                    if (!grupoId) return;
-                    const comps = obtenerComponentesPorGrupo(grupoId);
+                // Cascade grupo → componente para prep nueva
+                selectGrupoPrinc.addEventListener('change', () => {
+                    selectCompPrinc.innerHTML = '<option value="">— seleccione componente —</option>';
+                    const comps = obtenerComponentesPorGrupo(selectGrupoPrinc.value);
                     comps.forEach(c => {
                         const opt = document.createElement('option');
                         opt.value = c.id;
                         opt.textContent = c.nombre;
-                        if (c.id === compActual) opt.selected = true;
-                        selectComponente.appendChild(opt);
+                        selectCompPrinc.appendChild(opt);
                     });
-                };
-
-                selectGrupo.addEventListener('change', () => {
-                    actualizarComponentesModal(selectGrupo.value, '');
                 });
 
+                // Alternar bloques según modo
                 const actualizarVistaModo = () => {
                     const esNueva = modo.value === 'nueva';
                     bExistente.style.display = esNueva ? 'none' : 'block';
-                    bNueva.style.display = esNueva ? 'block' : 'none';
-                    bComponente.style.display = 'block';
+                    bNueva.style.display     = esNueva ? 'block' : 'none';
                 };
-
-                modo.addEventListener('change', () => {
-                    actualizarVistaModo();
-                });
-                document.getElementById('agregarPreparacionExistente').addEventListener('change', () => {
-                    if (modo.value === 'existente') {
-                        actualizarVistaModo();
-                    }
-                });
+                modo.addEventListener('change', actualizarVistaModo);
                 actualizarVistaModo();
 
                 // Filtro de ingredientes en tiempo real
                 const filtroIng = document.getElementById('filtroIngrediente');
                 const selectIng = document.getElementById('agregarIngredienteId');
-                const contador = document.getElementById('contadorIngredientes');
+                const contador  = document.getElementById('contadorIngredientes');
 
                 filtroIng.addEventListener('input', () => {
                     const termino = filtroIng.value.toLowerCase().trim();
-
                     const filtrados = termino
                         ? ingredientesCatalogo.filter(ing =>
                             ing.nombre_del_alimento.toLowerCase().includes(termino) ||
@@ -1298,8 +1286,6 @@
                         : ingredientesCatalogo;
 
                     const valorActual = selectIng.value;
-
-                    // Reconstruir opciones del select
                     selectIng.innerHTML = '<option value="">— seleccione —</option>';
                     filtrados.forEach(ing => {
                         const opt = document.createElement('option');
@@ -1307,99 +1293,140 @@
                         opt.textContent = `${ing.codigo} - ${ing.nombre_del_alimento}`;
                         selectIng.appendChild(opt);
                     });
-
-                    // Restaurar selección si sigue siendo válida
                     if (valorActual && filtrados.some(ing => String(ing.codigo) === String(valorActual))) {
                         selectIng.value = valorActual;
                     }
-
-                    // Actualizar contador
                     if (contador) {
                         contador.innerHTML = termino
                             ? `<i class="bi bi-funnel-fill"></i> ${filtrados.length} de ${ingredientesCatalogo.length} ingredientes`
                             : `<i class="bi bi-list-ul"></i> ${ingredientesCatalogo.length} ingredientes disponibles`;
                     }
+                    if (filtrados.length === 1) selectIng.value = filtrados[0].codigo;
+                });
 
-                    // Si hay exactamente un resultado, seleccionarlo automáticamente
-                    if (filtrados.length === 1) {
-                        selectIng.value = filtrados[0].codigo;
+                // Renderizar la lista de tags seleccionados
+                const renderLista = () => {
+                    const contenedor = document.getElementById('listaIngredientesSeleccionados');
+                    if (!contenedor) return;
+                    contenedor.innerHTML = '';
+                    if (ingSeleccionados.length === 0) {
+                        contenedor.classList.add('vacia');
+                        return;
+                    }
+                    contenedor.classList.remove('vacia');
+                    const frag = document.createDocumentFragment();
+                    ingSeleccionados.forEach((ing, idx) => {
+                        const tag = document.createElement('span');
+                        tag.className = 'ing-tag';
+                        tag.innerHTML = `<span title="${escaparHtml(ing.nombre)}">${escaparHtml(ing.codigo)} — ${escaparHtml(ing.nombre)}</span>
+                            <button type="button" class="ing-tag-remove" data-idx="${idx}" title="Quitar">&times;</button>`;
+                        frag.appendChild(tag);
+                    });
+                    contenedor.appendChild(frag);
+
+                    // Listeners para quitar tags
+                    contenedor.querySelectorAll('.ing-tag-remove').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            ingSeleccionados.splice(parseInt(btn.dataset.idx), 1);
+                            renderLista();
+                        });
+                    });
+                };
+
+                // Botón "Añadir a la lista"
+                document.getElementById('btnAnadirALista').addEventListener('click', () => {
+                    const codigo = selectIng.value;
+                    if (!codigo) {
+                        showNotification('Selecciona un ingrediente primero', 'info');
+                        return;
+                    }
+                    if (ingSeleccionados.some(i => String(i.codigo) === String(codigo))) {
+                        showNotification('Ese ingrediente ya está en la lista', 'info');
+                        return;
+                    }
+                    const ing = ingredientesCatalogo.find(i => String(i.codigo) === String(codigo));
+                    if (ing) {
+                        ingSeleccionados.push({ codigo: ing.codigo, nombre: ing.nombre_del_alimento });
+                        renderLista();
+                        // Limpiar selección y filtro para facilitar agregar el siguiente
+                        selectIng.value = '';
+                        filtroIng.value = '';
+                        filtroIng.dispatchEvent(new Event('input'));
+                        filtroIng.focus();
                     }
                 });
 
-                // Focus automático en el filtro al abrir el modal
+                // También agregar con Enter en el filtro
+                filtroIng.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        document.getElementById('btnAnadirALista').click();
+                    }
+                });
+
                 setTimeout(() => filtroIng.focus(), 100);
             },
             preConfirm: () => {
-                const modo = document.getElementById('agregarModoPrep').value;
-                const idPrep = document.getElementById('agregarPreparacionExistente').value;
+                const modo    = document.getElementById('agregarModoPrep').value;
+                const idPrep  = document.getElementById('agregarPreparacionExistente').value;
                 const nomPrep = document.getElementById('agregarPreparacionNueva').value.trim();
-                const idGrupo = document.getElementById('agregarGrupoId').value;
-                const idComp = document.getElementById('agregarComponenteId').value;
-                const idIng = document.getElementById('agregarIngredienteId').value;
-
-                // Validaciones
-                if (!idIng) {
-                    return Swal.showValidationMessage('Debes seleccionar un ingrediente');
-                }
+                const idComp  = document.getElementById('agregarComponentePrincipal').value;
 
                 if (modo === 'existente' && !idPrep) {
-                    return Swal.showValidationMessage('Debes seleccionar una preparacion existente');
+                    return Swal.showValidationMessage('Debes seleccionar una preparación existente');
                 }
-
                 if (modo === 'nueva' && !nomPrep) {
-                    return Swal.showValidationMessage('Debes escribir el nombre de la nueva preparacion');
+                    return Swal.showValidationMessage('Debes escribir el nombre de la nueva preparación');
+                }
+                if (modo === 'nueva' && !idComp) {
+                    return Swal.showValidationMessage('Debes seleccionar el Componente Principal de la preparación');
+                }
+                if (ingSeleccionados.length === 0) {
+                    return Swal.showValidationMessage('Debes añadir al menos un ingrediente a la lista');
                 }
 
-                if (!idGrupo) {
-                    return Swal.showValidationMessage('Debes seleccionar un grupo de alimento');
-                }
-
-                if (!idComp) {
-                    return Swal.showValidationMessage('Debes seleccionar un componente');
-                }
-
-                return {
-                    id_preparacion: modo === 'existente' ? parseInt(idPrep) : null,
-                    preparacion_nombre: modo === 'nueva' ? nomPrep : '',
-                    id_grupo: idGrupo || null,
-                    id_componente: idComp || null,
-                    id_ingrediente: idIng,
-                    gramaje: null  // Siempre null, se usarán valores predeterminados por nivel
-                };
+                return { modo, id_preparacion: idPrep ? parseInt(idPrep) : null, preparacion_nombre: nomPrep, id_componente: idComp || null };
             }
         });
 
         if (!result.isConfirmed) return;
 
-        const overlay = mostrarOverlayGuardando('Agregando ingrediente...');
+        // Construir array de filas: una por cada ingrediente seleccionado
+        const { modo, id_preparacion, preparacion_nombre, id_componente } = result.value;
+        const filas = ingSeleccionados.map(ing => ({
+            id_preparacion:    modo === 'existente' ? id_preparacion : null,
+            preparacion_nombre: modo === 'nueva' ? preparacion_nombre : '',
+            id_componente:     modo === 'nueva' ? id_componente : null,
+            id_ingrediente:    ing.codigo,
+            gramaje:           null
+        }));
+
+        const overlay = mostrarOverlayGuardando('Guardando ingredientes...');
         try {
             const response = await fetch(`/nutricion/api/menus/${menuId}/guardar-preparaciones-editor/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-                body: JSON.stringify({ filas: [result.value] })
+                body: JSON.stringify({ filas })
             });
 
             const data = await response.json();
 
             if (!response.ok || !data.success) {
-                // Construir mensaje de error detallado
-                let errorMsg = data.error || 'Error al agregar ingrediente';
-
-                // Si hay errores específicos, agregarlos
+                let errorMsg = data.error || 'Error al guardar';
                 if (data.errores && data.errores.length > 0) {
                     errorMsg += ':\n' + data.errores.join('\n');
                 }
-
                 throw new Error(errorMsg);
             }
 
             ocultarOverlayGuardando();
-            showNotification('✅ Ingrediente agregado exitosamente', 'success');
+            const plural = filas.length > 1 ? `${filas.length} ingredientes agregados` : '1 ingrediente agregado';
+            showNotification(`✅ ${plural} exitosamente`, 'success');
             setTimeout(() => window.location.reload(), 1000);
         } catch (error) {
-            console.error('Error al agregar ingrediente:', error);
+            console.error('Error al guardar ingredientes:', error);
             ocultarOverlayGuardando();
-            showNotification(error.message || 'Error desconocido al agregar ingrediente', 'error');
+            showNotification(error.message || 'Error desconocido al guardar', 'error');
         }
     }
 
