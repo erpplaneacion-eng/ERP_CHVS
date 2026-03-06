@@ -84,12 +84,12 @@ COMPONENTES_PDF_CALI = {
         (["com13"], "FRUTOS SECOS"),
     ],
     "20503": [
-        (["com14"], "VERDURAS Y HORTALIZAS"),
+        (["com14"], "BEBIDA"),
         (["com2_proteina"], "ALIMENTO PROTEICO"),  # Split especial de com2
         (["com2_leguminosa"], "LEGUMINOSA"),       # Split especial de com2
         (["com3", "com7"], "CEREAL ACOMPAÑANTE"),
         (["com8"], "TUBERCULOS, RAICES, PLATANOS Y DERIVADOS DE CEREAL"),
-        (["com9"], "FRUTA"),
+        (["com9"], "VERDURA FRIA O CALIENTE"),
         (["com15"], "AGUA"),
     ],
 }
