@@ -383,24 +383,62 @@
                 }
             });
 
-            // Recoger cambios de grupo/componente desde el primer nivel (son iguales para todos)
-            const filasGrupoComp = [];
-            const primerPanel = document.querySelector('.tab-pane.show.active .tbody-ingredientes')
-                             || document.querySelector('.tbody-ingredientes');
-            if (primerPanel) {
-                primerPanel.querySelectorAll('tr').forEach(row => {
+            // Recopilar selecciones de grupo/componente
+            const filasGrupoCompMap = new Map();
+            
+            // 1. Recopilar ingredientes y sus componentes/grupos individuales
+            document.querySelectorAll('.tbody-ingredientes tr[data-id-ingrediente]').forEach(row => {
+                const idPrep = row.dataset.idPreparacion;
+                const idIng = row.dataset.idIngrediente;
+                const key = `${idPrep}_${idIng}`;
+                if (!filasGrupoCompMap.has(key)) {
                     const selectGrupo = row.querySelector('.select-grupo');
                     const selectComp = row.querySelector('.select-componente');
-                    if (!selectGrupo) return;
-                    filasGrupoComp.push({
-                        id_preparacion: parseInt(row.dataset.idPreparacion),
-                        id_ingrediente: row.dataset.idIngrediente,
-                        id_grupo: selectGrupo.value || null,
-                        id_componente: selectComp?.value || null,
+                    
+                    // Buscar si la preparación tiene un select principal
+                    const prepHeaderRow = document.querySelector(`.prep-header-row[data-id-preparacion="${idPrep}"]`);
+                    const selectCompPrincipal = prepHeaderRow ? prepHeaderRow.querySelector('.select-componente-principal') : null;
+                    const compPrincipalId = selectCompPrincipal ? selectCompPrincipal.value : null;
+
+                    filasGrupoCompMap.set(key, {
+                        id_preparacion: parseInt(idPrep),
+                        id_ingrediente: idIng,
+                        id_grupo: selectGrupo ? selectGrupo.value || null : null,
+                        id_componente_ingrediente: selectComp ? selectComp.value || null : null,
+                        id_componente: compPrincipalId, // El endpoint backend espera que 'id_componente' sea el de la preparacion principal
                         gramaje: null
                     });
-                });
-            }
+                }
+            });
+            
+            // 2. Manejar el caso especial donde una preparación puede estar vacía pero su componente principal fue cambiado
+            document.querySelectorAll('.prep-header-row').forEach(row => {
+                const idPrep = row.dataset.idPreparacion;
+                const selectCompPrincipal = row.querySelector('.select-componente-principal');
+                if (idPrep && selectCompPrincipal) {
+                    // Si no hay ingredientes para esta preparación, enviamos una fila "dummy" solo para actualizar el componente de la preparación
+                    let tieneIngredientes = false;
+                    for (const key of filasGrupoCompMap.keys()) {
+                        if (key.startsWith(`${idPrep}_`)) {
+                            tieneIngredientes = true;
+                            // Asegurarnos que todas las filas de esta preparación lleven el componente principal actualizado
+                            const fila = filasGrupoCompMap.get(key);
+                            fila.id_componente = selectCompPrincipal.value || null;
+                        }
+                    }
+                    
+                    if (!tieneIngredientes) {
+                         filasGrupoCompMap.set(`${idPrep}_dummy`, {
+                            id_preparacion: parseInt(idPrep),
+                            id_componente: selectCompPrincipal.value || null,
+                            gramaje: null,
+                            id_ingrediente: null // Para que el backend sepa que es solo una actualización de preparación
+                        });
+                    }
+                }
+            });
+
+            const filasGrupoComp = Array.from(filasGrupoCompMap.values());
 
             const overlay = mostrarOverlayGuardando('Guardando cambios...');
 
@@ -408,7 +446,8 @@
                 btnGuardarCambios.disabled = true;
                 btnGuardarCambios.innerHTML = '<i class="bi bi-hourglass-split"></i> Guardando...';
 
-                if (cambiosPorNivel.length === 0) {
+                // Si cambiaron un componente principal, permitimos guardar aunque no haya ingredientes
+                if (cambiosPorNivel.length === 0 && filasGrupoComp.length === 0) {
                     ocultarOverlayGuardando();
                     showNotification('No hay ingredientes configurados para guardar en este menu.', 'info');
                     return;
@@ -1409,6 +1448,26 @@
                 poblarSelectComponente(selectComp, grupoId, compActual);
             }
         });
+
+        // Inicializar select-componente-principal (si existe)
+        const principalSelects = document.querySelectorAll('.select-componente-principal');
+        const componentesFlat = componentesCatalogo.map(c => ({
+            id: c?.id_componente ?? '',
+            nombre: c?.componente ?? ''
+        })).filter(c => c.id && c.nombre);
+
+        principalSelects.forEach(selectComp => {
+            const compActual = selectComp.dataset.componenteActual || '';
+            // vaciar primero
+            selectComp.innerHTML = '<option value="">— Sin Componente (No sale en PDF) —</option>';
+            componentesFlat.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.nombre;
+                if (String(c.id) === String(compActual)) opt.selected = true;
+                selectComp.appendChild(opt);
+            });
+        });
     }
 
     // Sincronizar selects del mismo ingrediente en todos los niveles
@@ -1464,6 +1523,19 @@
                     if (sc.value !== compId) {
                         poblarSelectComponente(sc, grupoId, compId);
                     }
+                }
+            });
+        }
+        if (e.target.classList.contains('select-componente-principal')) {
+            const selectCompPrincipal = e.target;
+            const compId = selectCompPrincipal.value;
+            const idPreparacion = selectCompPrincipal.dataset.idPreparacion;
+            
+            // Sincronizar en otros niveles
+            document.querySelectorAll('.select-componente-principal').forEach(sc => {
+                if (String(sc.dataset.idPreparacion) === String(idPreparacion) && sc !== selectCompPrincipal) {
+                    sc.value = compId;
+                    sc.dataset.componenteActual = compId;
                 }
             });
         }

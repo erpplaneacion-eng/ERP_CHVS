@@ -93,20 +93,33 @@
                         <tr class="prep-header-row" data-id-preparacion="{{ fila.id_preparacion }}">
                             <td colspan="7">
                                 <div class="d-flex align-items-center justify-content-between">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <strong
-                                            class="prep-header-nombre"
-                                            data-id-preparacion="{{ fila.id_preparacion }}"
-                                        >{{ fila.preparacion }}</strong>
-                                        <button
-                                            type="button"
-                                            class="btn btn-outline-secondary btn-sm btn-editar-preparacion-inline"
-                                            data-id-preparacion="{{ fila.id_preparacion }}"
-                                            data-nombre-preparacion="{{ fila.preparacion }}"
-                                            title="Editar nombre de la preparación"
-                                        >
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong
+                                                class="prep-header-nombre"
+                                                data-id-preparacion="{{ fila.id_preparacion }}"
+                                            >{{ fila.preparacion }}</strong>
+                                            <button
+                                                type="button"
+                                                class="btn btn-outline-secondary btn-sm btn-editar-preparacion-inline"
+                                                data-id-preparacion="{{ fila.id_preparacion }}"
+                                                data-nombre-preparacion="{{ fila.preparacion }}"
+                                                title="Editar nombre de la preparación"
+                                            >
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2" style="background-color: #f3f4f6; padding: 4px 8px; border-radius: 4px; border: 1px solid #d1d5db;">
+                                            <label style="font-size: 11px; margin: 0; color: #4b5563; font-weight: 600;">Componente Principal:</label>
+                                            <select 
+                                                class="form-select form-select-sm select-componente-principal" 
+                                                data-id-preparacion="{{ fila.id_preparacion }}"
+                                                data-componente-actual="{{ fila.id_componente_preparacion|default:'' }}"
+                                                style="width: 250px; font-size: 12px; padding: 2px 24px 2px 8px; min-height: 26px;"
+                                            >
+                                                <option value="">— Sin Componente (No sale en PDF) —</option>
+                                            </select>
+                                        </div>
                                     </div>
                                     <button
                                         type="button"

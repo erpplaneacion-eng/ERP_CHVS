@@ -1,4 +1,4 @@
-﻿from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation
 import json
 
 from django.contrib.auth.decorators import login_required
@@ -323,6 +323,7 @@ def _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados
         filas_nivel.append({
             'id_preparacion': prep_id,
             'preparacion': rel.id_preparacion.preparacion,
+            'id_componente_preparacion': rel.id_preparacion.id_componente_id,
             'first_in_group': prep_id != prev_prep_id,
             'componente': componente_nombre,
             'id_componente_actual': id_componente_actual,
