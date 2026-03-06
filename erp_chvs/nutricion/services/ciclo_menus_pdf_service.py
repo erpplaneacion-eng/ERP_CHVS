@@ -1,45 +1,96 @@
 import io
 import re
+import unicodedata
 from collections import defaultdict
 from html import escape
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Set
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Image, KeepInFrame, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from rapidfuzz import fuzz
 
 from planeacion.models import Programa
 from principal.models import ModalidadesDeConsumo
 
 from ..models import FirmaNutricionalContrato, TablaMenus, TablaPreparaciones
 
-
-COMPONENTES_PDF_POR_MODALIDAD = {
+# Mapeos para municipios genéricos (Yumbo, Buga, etc.)
+COMPONENTES_PDF_YUMBO = {
     "20501": [
-        ("com1", "BEBIDA CON LECHE"),
-        ("com2", "ALIMENTO PROTEICO"),
-        ("com3", "CEREAL ACOMPANANTE"),
-        ("com4", "FRUTA"),
+        (["com11", "com1"], "BEBIDA CON LECHE"),
+        (["com2"], "ALIMENTO PROTEICO"),
+        (["com3", "com7"], "CEREAL ACOMPAÑANTE"),
+        (["com12"], "FRUTA"),
+        (["com15"], "AGUA"),
     ],
     "20507": [
-        ("com1", "BEBIDA CON LECHE"),
-        ("com2", "ALIMENTO PROTEICO"),
-        ("com3", "CEREAL ACOMPANANTE"),
-        ("com4", "FRUTA"),
+        (["com11", "com1"], "BEBIDA CON LECHE"),
+        (["com2"], "ALIMENTO PROTEICO"),
+        (["com3", "com7"], "CEREAL ACOMPAÑANTE"),
+        (["com12"], "FRUTA"),
+        (["com15"], "AGUA"),
     ],
     "20503": [
-        ("com14", "BEBIDA"),
-        ("com2", "ALIMENTO PROTEICO"),
-        ("com3", "CEREAL ACOMPANANTE"),
-        ("com8", "TUBERCULOS, RAICES, PLATANOS Y DERIVADOS DE CEREAL"),
-        ("com9", "COM9"),
+        (["com2"], "ALIMENTO PROTEICO"),
+        (["com3", "com7"], "CEREALES"),
+        (["com8"], "TUBERCULOS, RAICES, PLATANOS Y DERIVADOS DE CEREAL"),
+        (["com9"], "ENSALADA O VERDURA CALIENTE"),
+        (["com14"], "BEBIDA"),
+        (["com11"], "LECHE Y PRODUCTOS LACTEOS"),
+        (["com15"], "AGUA"),
     ],
     "20502": [
-        ("com11", "LECHE Y PRODUCTOS LACTEOS"),
-        ("com7", "CEREALES"),
-        ("com4", "FRUTA"),
+        (["com11"], "LECHE Y PRODUCTOS LACTEOS"),
+        (["com3", "com7"], "CEREA ACOMPAÑANTE"),
+        (["com13"], "DULCE O POSTRE"),
+        (["com12"], "FRUTA"),
+    ],
+    "020511": [
+        (["com18"], "LACTEOS O JUGOS"),
+        (["com2"], "ALIMENTO PROTEICO"),
+        (["com3", "com7"], "CEREAL ACOMPAÑANTE"),
+        (["com13", "com12"], "FRUTA O POSTRE"),
+    ],
+    "20510": [
+        (["com2"], "ALIMENTO PROTEICO"),
+        (["com3", "com7"], "CEREALES"),
+        (["com8"], "TUBERCULOS, RAICES, PLATANOS Y DERIVADOS DE CEREAL"),
+        (["com9"], "ENSALADA O VERDURAS CALIENTES"),
+        (["com14"], "BEBIDA"),
+    ],
+}
+
+# Mapeos para Cali
+COMPONENTES_PDF_CALI = {
+    "20501": [
+        (["com11", "com1"], "BEBIDA(LACTEOS)"),
+        (["com2"], "ALIMENTO PROTEICO"),
+        (["com3", "com7"], "CEREAL ACOMPAÑANTE"),
+        (["com9", "com12"], "FRUTA"),
+    ],
+    "20507": [
+        (["com11", "com1"], "BEBIDA(LACTEOS)"),
+        (["com2"], "ALIMENTO PROTEICO"),
+        (["com3", "com7"], "CEREAL ACOMPAÑANTE"),
+        (["com9", "com12"], "FRUTA"),
+    ],
+    "20502": [
+        (["com11", "com1"], "LACTEOS"),
+        (["com3", "com7"], "DERIVADO DE CEREAL"),
+        (["com12"], "FRUTA"),
+        (["com13"], "FRUTOS SECOS"),
+    ],
+    "20503": [
+        (["com14"], "VERDURAS Y HORTALIZAS"),
+        (["com2_proteina"], "ALIMENTO PROTEICO"),  # Split especial de com2
+        (["com2_leguminosa"], "LEGUMINOSA"),       # Split especial de com2
+        (["com3", "com7"], "CEREAL ACOMPAÑANTE"),
+        (["com8"], "TUBERCULOS, RAICES, PLATANOS Y DERIVADOS DE CEREAL"),
+        (["com9"], "FRUTA"),
+        (["com15"], "AGUA"),
     ],
 }
 
@@ -103,16 +154,30 @@ class CicloMenusPdfService:
     def _p(text: str, style: ParagraphStyle) -> Paragraph:
         return Paragraph(escape(text or ""), style)
 
-    def _componentes_por_modalidad(self, modalidad_id: str, seen_components: Dict[str, str]) -> List[Tuple[str, str]]:
-        modalidad_key = str(modalidad_id or "")
-        configured = COMPONENTES_PDF_POR_MODALIDAD.get(modalidad_key, [])
-        if configured:
-            resolved = []
-            for comp_id, comp_label in configured:
-                resolved.append((comp_id, seen_components.get(comp_id, comp_label)))
-            return resolved
-        # Fallback defensivo para modalidades no especificadas.
-        return sorted([(cid, cname) for cid, cname in seen_components.items()], key=lambda x: x[1])
+    def _es_leguminosa(self, prep_name: str) -> bool:
+        """Determina si una preparación es una leguminosa basándose en palabras clave usando fuzzy matching."""
+        if not prep_name:
+            return False
+        
+        # Normalizar: minúsculas, sin acentos
+        nfkd_form = unicodedata.normalize('NFKD', prep_name.lower())
+        norm_name = u"".join([c for c in nfkd_form if not unicodedata.combining(c)])
+        
+        keywords = ['arveja', 'lenteja', 'frijol', 'blanquillo']
+        
+        # Primero intentar coincidencia exacta para mayor rapidez
+        for kw in keywords:
+            if kw in norm_name:
+                return True
+                
+        # Si no hay coincidencia exacta, intentar Fuzzy Matching (tolerancia a errores)
+        for kw in keywords:
+            score = fuzz.partial_ratio(kw, norm_name)
+            if score >= 80:  # 80% de similitud es un buen umbral para palabras parecidas
+                return True
+                
+        return False
+
 
     def _build_top_block(self, programa: Programa, modalidad: ModalidadesDeConsumo) -> List:
         items: List = []
@@ -191,7 +256,7 @@ class CicloMenusPdfService:
         week_num: int,
         menus_by_number: Dict[int, TablaMenus],
         menu_component_preps: Dict[int, Dict[str, List[str]]],
-        ordered_components: List[Tuple[str, str]],
+        ordered_components: List[Tuple[str, str, List[str]]],
     ) -> Tuple[List[List[Paragraph]], List[Tuple[int, int, int, int]]]:
         start_menu = (week_num - 1) * 5 + 1
         menu_nums = list(range(start_menu, start_menu + 5))
@@ -213,7 +278,7 @@ class CicloMenusPdfService:
             ]
         )
 
-        for comp_id, comp_name in ordered_components:
+        for comp_group_id, comp_name, comp_ids_to_merge in ordered_components:
             per_menu_preps: List[List[str]] = []
             max_rows_for_component = 0
             has_any_prep_in_week = False
@@ -222,16 +287,20 @@ class CicloMenusPdfService:
                 if mn not in menus_by_number:
                     preps = []
                 else:
-                    preps = list(menu_component_preps.get(mn, {}).get(comp_id, []))
+                    # Agrupar las preparaciones de los componentes mapeados a esta fila
+                    preps = []
+                    for c_id in comp_ids_to_merge:
+                        preps.extend(menu_component_preps.get(mn, {}).get(c_id, []))
+                    # Remover duplicados manteniendo el orden
+                    preps = list(dict.fromkeys(preps))
+                    
                 if preps:
                     has_any_prep_in_week = True
                 max_rows_for_component = max(max_rows_for_component, len(preps))
                 per_menu_preps.append(preps)
 
-            # Solo mostrar componentes con preparaciones en la semana.
-            if not has_any_prep_in_week:
-                continue
-
+            # Siempre mostrar la fila si está en el mapeo, aunque no haya preps
+            # (para mantener estructura uniforme)
             max_rows_for_component = max(1, max_rows_for_component)
             comp_row_start = len(rows)
 
@@ -255,7 +324,7 @@ class CicloMenusPdfService:
         self,
         menus_by_number: Dict[int, TablaMenus],
         menu_component_preps: Dict[int, Dict[str, List[str]]],
-        ordered_components: List[Tuple[str, str]],
+        ordered_components: List[Tuple[str, str, List[str]]],
     ) -> Table:
         data: List[List[Paragraph]] = []
         spans: List[Tuple[int, int, int, int]] = []
@@ -354,25 +423,52 @@ class CicloMenusPdfService:
             .order_by("preparacion")
         )
 
+        # Preparar mapeo según municipio (Cali vs Resto)
+        municipio_nombre = (programa.municipio.nombre_municipio if programa.municipio else "").upper()
+        es_cali = "CALI" in municipio_nombre
+        
+        mapa_componentes = COMPONENTES_PDF_CALI if es_cali else COMPONENTES_PDF_YUMBO
+        config_modalidad = mapa_componentes.get(str(modalidad_id), [])
+
         menu_component_preps: Dict[int, Dict[str, List[str]]] = defaultdict(lambda: defaultdict(list))
-        seen_components: Dict[str, str] = {}
+        
         for prep in prep_rows:
             num = self._menu_number(prep.id_menu.menu)
             if not num:
                 continue
+                
             comp_id = str(prep.id_componente_id or "sin_componente")
-            comp_name = (prep.id_componente.componente if prep.id_componente else "SIN COMPONENTE").upper()
             prep_name = (prep.preparacion or "").upper()
+            
+            # Lógica especial para Cali 20503: Separar Leguminosas de Proteínas
+            if es_cali and str(modalidad_id) == "20503" and comp_id == "com2":
+                if self._es_leguminosa(prep_name):
+                    comp_id = "com2_leguminosa"
+                else:
+                    comp_id = "com2_proteina"
+
             menu_component_preps[num][comp_id].append(prep_name)
-            seen_components[comp_id] = comp_name
 
+        # Ordenar alfabéticamente dentro de cada componente-menú
         for menu_data in menu_component_preps.values():
-            for comp_id, prep_list in list(menu_data.items()):
-                menu_data[comp_id] = sorted(set(prep_list))
+            for c_id, prep_list in list(menu_data.items()):
+                menu_data[c_id] = sorted(set(prep_list))
 
-        ordered_components = self._componentes_por_modalidad(modalidad_id, seen_components)
-        if not ordered_components:
-            ordered_components = [("sin_componente", "SIN COMPONENTE")]
+        # Construir la estructura ordenada para la tabla: (group_id, title, [comp_ids])
+        ordered_components: List[Tuple[str, str, List[str]]] = []
+        if config_modalidad:
+            for idx, (comp_ids, comp_label) in enumerate(config_modalidad):
+                group_id = f"group_{idx}"
+                ordered_components.append((group_id, comp_label, comp_ids))
+        else:
+            # Fallback si no hay configuración para la modalidad
+            seen_components = set()
+            for menu_data in menu_component_preps.values():
+                seen_components.update(menu_data.keys())
+            
+            # Ordenar los componentes detectados e incluirlos individualmente
+            for cid in sorted(seen_components):
+                ordered_components.append((cid, cid.upper(), [cid]))
 
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
