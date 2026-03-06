@@ -586,7 +586,7 @@ def api_guardar_preparaciones_editor(request, id_menu):
                 id_preparacion = fila.get('id_preparacion')
                 id_ingrediente = str(fila.get('id_ingrediente', '')).strip()
                 preparacion_nombre = str(fila.get('preparacion_nombre', '')).strip()
-                id_componente = str(fila.get('id_componente', '')).strip()
+                id_componente = str(fila.get('id_componente') or '').strip()
                 id_componente_ingrediente = str(fila.get('id_componente_ingrediente') or '').strip()
                 id_grupo = str(fila.get('id_grupo', '')).strip()
                 gramaje_raw = fila.get('gramaje')
