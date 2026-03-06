@@ -273,19 +273,22 @@ class ExcelReportDrawer:
             total_ingredients_added += num_ingredients
 
             ws.cell(row=start_row_for_prep, column=self.layout.COL_PREPARACION).value = preparacion.get('nombre', '')
-            componentes_ingredientes = [
-                str(ing.get('componente', '')).strip()
-                for ing in ingredients_in_prep
-                if str(ing.get('componente', '')).strip()
-            ]
-            componente_mostrado = preparacion.get('componente', 'SIN COMPONENTE')
-            if componentes_ingredientes:
-                componente_mostrado = componentes_ingredientes[0]
-            ws.cell(row=start_row_for_prep, column=self.layout.COL_COMPONENTE).value = componente_mostrado
-            ws.cell(row=start_row_for_prep, column=self.layout.COL_COMPONENTE).alignment = left_align
             ws.cell(row=start_row_for_prep, column=self.layout.COL_PREPARACION).alignment = left_align
 
+            # Para agrupar componentes consecutivos
+            componente_groups = [] # List of tuples (componente_str, start_row, end_row)
+
             for ingrediente in ingredients_in_prep:
+                comp_ing = str(ingrediente.get('componente', '')).strip()
+                if not comp_ing:
+                    comp_ing = str(preparacion.get('componente', 'SIN COMPONENTE')).strip()
+                
+                # Check if we should group with previous
+                if componente_groups and componente_groups[-1][0] == comp_ing:
+                    componente_groups[-1][2] = current_row # Update end_row
+                else:
+                    componente_groups.append([comp_ing, current_row, current_row])
+
                 ws.cell(row=current_row, column=self.layout.COL_GRUPO).value = ingrediente.get(
                     'grupo_alimentos',
                     preparacion.get('grupo_alimentos', 'SIN GRUPO')
@@ -324,9 +327,17 @@ class ExcelReportDrawer:
 
                 current_row += 1
 
+            # Render Componentes and merge if necessary
+            for comp_str, start_r, end_r in componente_groups:
+                cell = ws.cell(row=start_r, column=self.layout.COL_COMPONENTE)
+                cell.value = comp_str
+                cell.alignment = left_align
+                if end_r > start_r:
+                    ws.merge_cells(start_row=start_r, start_column=self.layout.COL_COMPONENTE, end_row=end_r, end_column=self.layout.COL_COMPONENTE)
+
             if num_ingredients > 1:
                 end_row_for_prep = current_row - 1
-                cols_to_merge = [self.layout.COL_COMPONENTE, self.layout.COL_PREPARACION]
+                cols_to_merge = [self.layout.COL_PREPARACION]
                 for col_idx in cols_to_merge:
                     # Primero aplicar el alineamiento ANTES de combinar
                     cell_to_align = ws.cell(row=start_row_for_prep, column=col_idx)
