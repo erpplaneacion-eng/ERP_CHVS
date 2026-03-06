@@ -29,6 +29,7 @@ from .preparaciones_api import (
     api_preparaciones_por_modalidad,
     api_menus_misma_modalidad_para_copia,
     api_preparaciones_por_menu_para_copia,
+    api_buscar_preparaciones_modalidad,
     lista_ingredientes,
     api_ingredientes,
     api_ingrediente_detail,

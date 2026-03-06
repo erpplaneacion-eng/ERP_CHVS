@@ -153,84 +153,134 @@ def api_copiar_preparacion(request):
 
     try:
         data = json.loads(request.body)
-        source_preparacion_id = data.get('source_preparacion_id')
         target_menu_id = data.get('target_menu_id')
-        ingredient_ids = data.get('ingredient_ids') or []
-
-        if not source_preparacion_id or not target_menu_id:
-            return JsonResponse({'error': 'Faltan parÃ¡metros requeridos.'}, status=400)
-
-        source_preparacion = get_object_or_404(TablaPreparaciones, pk=source_preparacion_id)
         target_menu = get_object_or_404(TablaMenus, pk=target_menu_id)
 
-        if source_preparacion.id_menu.id_modalidad_id != target_menu.id_modalidad_id:
-            return JsonResponse(
-                {'success': False, 'error': 'Solo se puede copiar desde menÃºs de la misma modalidad.'},
-                status=400
+        # Soporta formato nuevo: {target_menu_id, copias: [{source_preparacion_id, ingredient_ids}]}
+        # y formato legado:       {target_menu_id, source_preparacion_id, ingredient_ids}
+        copias_raw = data.get('copias')
+        if copias_raw is None:
+            copias_raw = [{
+                'source_preparacion_id': data.get('source_preparacion_id'),
+                'ingredient_ids': data.get('ingredient_ids') or [],
+            }]
+
+        if not target_menu_id or not copias_raw:
+            return JsonResponse({'error': 'Faltan parámetros requeridos.'}, status=400)
+
+        nuevas_preparaciones = []
+        for copia in copias_raw:
+            source_preparacion_id = copia.get('source_preparacion_id')
+            ingredient_ids = copia.get('ingredient_ids') or []
+
+            if not source_preparacion_id:
+                continue
+
+            source_preparacion = get_object_or_404(TablaPreparaciones, pk=source_preparacion_id)
+
+            if source_preparacion.id_menu.id_modalidad_id != target_menu.id_modalidad_id:
+                return JsonResponse(
+                    {'success': False, 'error': 'Solo se puede copiar desde menús de la misma modalidad.'},
+                    status=400
+                )
+
+            source_ingredientes = TablaPreparacionIngredientes.objects.filter(
+                id_preparacion=source_preparacion
             )
+            if ingredient_ids:
+                ids_norm = {str(i).strip() for i in ingredient_ids if str(i).strip()}
+                source_ingredientes = source_ingredientes.filter(
+                    id_ingrediente_siesa_id__in=ids_norm
+                )
 
-        source_ingredientes_todos = TablaPreparacionIngredientes.objects.filter(
-            id_preparacion=source_preparacion
-        )
-        source_ingredientes = source_ingredientes_todos
-        if ingredient_ids:
-            ingredient_ids_norm = {str(i).strip() for i in ingredient_ids if str(i).strip()}
-            source_ingredientes = source_ingredientes.filter(
-                id_ingrediente_siesa_id__in=ingredient_ids_norm
+            if not source_ingredientes.exists():
+                continue
+
+            new_prep = TablaPreparaciones.objects.create(
+                preparacion=source_preparacion.preparacion,
+                id_menu=target_menu,
+                id_componente=source_preparacion.id_componente,
             )
-
-        if not source_ingredientes.exists():
-            return JsonResponse(
-                {'success': False, 'error': 'La preparaciÃ³n origen no tiene ingredientes para copiar.'},
-                status=400
-            )
-
-        new_preparacion = TablaPreparaciones.objects.create(
-            preparacion=source_preparacion.preparacion,
-            id_menu=target_menu,
-            id_componente=source_preparacion.id_componente
-        )
-
-        nuevos_ingredientes = []
-        for ing in source_ingredientes:
-            nuevos_ingredientes.append(
+            nuevos_ingredientes = [
                 TablaPreparacionIngredientes(
-                    id_preparacion=new_preparacion,
+                    id_preparacion=new_prep,
                     id_ingrediente_siesa=ing.id_ingrediente_siesa,
-                    id_componente=ing.id_componente or new_preparacion.id_componente,
+                    id_componente=ing.id_componente or new_prep.id_componente,
                     id_grupo_alimentos=ing.id_grupo_alimentos,
                     gramaje=ing.gramaje,
                 )
+                for ing in source_ingredientes
+            ]
+            if nuevos_ingredientes:
+                TablaPreparacionIngredientes.objects.bulk_create(nuevos_ingredientes)
+            nuevas_preparaciones.append(new_prep.preparacion)
+
+            RegistroActividad.registrar(
+                request, 'nutricion', 'copiar_preparacion',
+                f"Origen ID: {source_preparacion_id} -> Menú destino ID: {target_menu_id} | "
+                f"Nueva: {new_prep.preparacion} | Ingredientes copiados: {len(nuevos_ingredientes)}"
             )
 
-        if nuevos_ingredientes:
-            TablaPreparacionIngredientes.objects.bulk_create(nuevos_ingredientes)
-
-        total_origen = source_ingredientes_todos.count()
-        total_copiados = len(nuevos_ingredientes)
-        total_excluidos = max(total_origen - total_copiados, 0)
-        RegistroActividad.registrar(
-            request, 'nutricion', 'copiar_preparacion',
-            (
-                f"Origen ID: {source_preparacion_id} -> MenÃº destino ID: {target_menu_id} | "
-                f"Nueva: {new_preparacion.preparacion} | "
-                f"Ingredientes origen: {total_origen}, copiados: {total_copiados}, excluidos: {total_excluidos}"
+        if not nuevas_preparaciones:
+            return JsonResponse(
+                {'success': False, 'error': 'No se copió ninguna preparación. Verifica que tengan ingredientes.'},
+                status=400
             )
+
+        total = len(nuevas_preparaciones)
+        msg = (
+            f'Preparación "{nuevas_preparaciones[0]}" copiada exitosamente.'
+            if total == 1
+            else f'{total} preparaciones copiadas exitosamente.'
         )
-        return JsonResponse({
-            'success': True,
-            'message': f'PreparaciÃ³n "{new_preparacion.preparacion}" copiada exitosamente.',
-            'nueva_preparacion': {
-                'id_preparacion': new_preparacion.id_preparacion,
-                'preparacion': new_preparacion.preparacion,
-                'menu': new_preparacion.id_menu.menu
-            }
-        })
+        return JsonResponse({'success': True, 'message': msg})
 
     except (TablaPreparaciones.DoesNotExist, TablaMenus.DoesNotExist):
-        return JsonResponse({'error': 'La preparaciÃ³n o el menÃº de destino no existen.'}, status=404)
+        return JsonResponse({'error': 'La preparación o el menú de destino no existen.'}, status=404)
     except Exception as e:
-        return JsonResponse({'error': f'OcurriÃ³ un error inesperado: {str(e)}'}, status=500)
+        return JsonResponse({'error': f'Ocurrió un error inesperado: {str(e)}'}, status=500)
+
+
+@login_required
+def api_buscar_preparaciones_modalidad(request, id_menu):
+    """Busca preparaciones en todos los menús de la misma modalidad (excepto el actual)."""
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+
+    menu_actual = get_object_or_404(
+        TablaMenus.objects.select_related('id_modalidad', 'id_contrato'),
+        id_menu=id_menu
+    )
+    q = request.GET.get('q', '').strip()
+
+    qs = (
+        TablaPreparaciones.objects
+        .filter(id_menu__id_modalidad=menu_actual.id_modalidad)
+        .exclude(id_menu=menu_actual)
+        .select_related('id_menu__id_contrato')
+        .prefetch_related('ingredientes__id_ingrediente_siesa')
+        .order_by('preparacion', 'id_preparacion')
+    )
+    if q:
+        qs = qs.filter(preparacion__icontains=q)
+
+    data = []
+    for prep in qs:
+        ingredientes = [
+            {'codigo': str(rel.id_ingrediente_siesa.codigo), 'nombre': rel.id_ingrediente_siesa.nombre_del_alimento}
+            for rel in prep.ingredientes.all()
+        ]
+        if not ingredientes:
+            continue
+        data.append({
+            'id_preparacion': prep.id_preparacion,
+            'preparacion': prep.preparacion,
+            'menu': prep.id_menu.menu,
+            'programa': str(prep.id_menu.id_contrato),
+            'ingredientes': ingredientes,
+        })
+
+    return JsonResponse({'success': True, 'preparaciones': data})
 
 
 @login_required

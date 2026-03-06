@@ -768,352 +768,199 @@
             showNotification('Ya hay una copia en proceso. Espera un momento.', 'info');
             return;
         }
-
         if (typeof Swal === 'undefined') {
             showNotification('Se requiere SweetAlert2', 'info');
             return;
         }
 
-        const cargarJson = async (url) => {
-            const response = await fetch(url, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-            const data = await response.json();
-            if (!response.ok || data.success === false) {
-                throw new Error(data.error || 'No fue posible cargar datos');
-            }
-            return data;
-        };
+        let debounceTimer = null;
 
-        const setPreviewPlaceholder = (contenedor, mensaje) => {
-            if (!contenedor) return;
-            contenedor.innerHTML = `<small class="text-muted">${escaparHtml(mensaje)}</small>`;
-        };
-
-        try {
-            const origenesData = await cargarJson(`/nutricion/api/menus/${menuId}/origenes-copia-preparaciones/`);
-            const menusOrigen = origenesData.menus || [];
-            if (menusOrigen.length === 0) {
-                showNotification('No hay menus disponibles para copiar en esta modalidad.', 'info');
-                return;
-            }
-
-            const opcionesMenus = menusOrigen.map(m => (
-                `<option value="${m.id_menu}">
-                    Menu ${escaparHtml(m.menu)} - ${escaparHtml(m.programa)}${m.es_actual ? ' (actual)' : ''}
-                </option>`
-            )).join('');
-
-            await Swal.fire({
-                title: '<div class="swal-title-inner"><i class="bi bi-files swal-title-icon"></i><span class="swal-title-text">Copiar preparacion</span></div>',
-                width: 760,
-                showCancelButton: true,
-                confirmButtonText: '<i class="bi bi-check-circle-fill"></i> Copiar',
-                cancelButtonText: '<i class="bi bi-x-circle"></i> Cancelar',
-                customClass: {
-                    popup: 'swal-popup-modern',
-                    title: 'swal-title-modern',
-                    confirmButton: 'swal-confirm-modern',
-                    cancelButton: 'swal-cancel-modern'
-                },
-                html: `
-                    <div class="swal-body-padding">
-                        <div class="modal-field-group">
-                            <label class="modal-label">
-                                <i class="bi bi-collection modal-label-icon-purple"></i>
-                                Menu origen
-                                <span class="required-star">*</span>
-                            </label>
-                            <div class="input-search-wrapper">
-                                <i class="bi bi-search input-search-icon"></i>
-                                <input id="copiarFiltroMenu" class="modal-input modal-input-search"
-                                       placeholder="Buscar menu por nombre o contrato..."
-                                       autocomplete="off" />
-                            </div>
-                            <select id="copiarMenuOrigen" class="modal-select">
-                                ${opcionesMenus}
-                            </select>
+        await Swal.fire({
+            title: '<div class="swal-title-inner"><i class="bi bi-files swal-title-icon"></i><span class="swal-title-text">Copiar preparación</span></div>',
+            width: 760,
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-check-circle-fill"></i> Copiar seleccionadas',
+            cancelButtonText: '<i class="bi bi-x-circle"></i> Cancelar',
+            customClass: {
+                popup: 'swal-popup-modern',
+                title: 'swal-title-modern',
+                confirmButton: 'swal-confirm-modern',
+                cancelButton: 'swal-cancel-modern'
+            },
+            html: `
+                <div class="swal-body-padding">
+                    <div class="modal-field-group">
+                        <label class="modal-label">
+                            <i class="bi bi-search modal-label-icon-purple"></i>
+                            Buscar preparación
+                            <span class="required-star">*</span>
+                        </label>
+                        <div class="input-search-wrapper">
+                            <i class="bi bi-search input-search-icon"></i>
+                            <input id="copiarBuscadorPrep" class="modal-input modal-input-search"
+                                   placeholder="Escribe el nombre de la preparación..."
+                                   autocomplete="off" />
                         </div>
-                        <div class="modal-field-group">
-                            <label class="modal-label">
-                                <i class="bi bi-journal-text modal-label-icon-yellow"></i>
-                                Preparacion a copiar
-                                <span class="required-star">*</span>
-                            </label>
-                            <div class="input-search-wrapper">
-                                <i class="bi bi-search input-search-icon"></i>
-                                <input id="copiarFiltroPreparacion" class="modal-input modal-input-search"
-                                       placeholder="Buscar preparacion por nombre..."
-                                       autocomplete="off" />
-                            </div>
-                            <select id="copiarPreparacionOrigen" class="modal-select">
-                                <option value="">Cargando preparaciones...</option>
-                            </select>
-                            <small id="copiarPrepHint" class="modal-help-text">
-                                <i class="bi bi-info-circle"></i>
-                                Seleccione una preparacion con ingredientes.
-                            </small>
-                        </div>
-                        <div class="modal-field-group">
-                            <label class="modal-label">
-                                <i class="bi bi-eye-fill modal-label-icon-green"></i>
-                                Vista previa de ingredientes
-                            </label>
-                            <div id="copiarPreviewIngredientes" class="border rounded p-2" style="max-height: 220px; overflow:auto; text-align:left;"></div>
-                        </div>
-                        <div class="modal-info-box">
-                            <div class="modal-info-box-content">
-                                <i class="bi bi-lightbulb-fill modal-info-icon"></i>
-                                <div class="modal-info-text">
-                                    <div class="modal-info-title">Regla de copia</div>
-                                    <div class="modal-info-desc">
-                                        Se copia la estructura base (ingredientes, grupo/componente y gramaje base). Los pesos por nivel se ajustan manualmente en este menu.
-                                    </div>
+                        <small class="modal-help-text">
+                            <i class="bi bi-info-circle"></i>
+                            Busca en todos los menús de la misma modalidad. Escribe al menos 2 caracteres.
+                        </small>
+                    </div>
+                    <div id="copiarResultados" class="copiar-resultados-container modal-field-group">
+                        <small class="text-muted">Escribe para buscar preparaciones...</small>
+                    </div>
+                    <div class="modal-info-box">
+                        <div class="modal-info-box-content">
+                            <i class="bi bi-lightbulb-fill modal-info-icon"></i>
+                            <div class="modal-info-text">
+                                <div class="modal-info-title">Regla de copia</div>
+                                <div class="modal-info-desc">
+                                    Se copia la estructura base (ingredientes, grupo/componente y gramaje).
+                                    Los <strong>pesos por nivel</strong> se ajustan manualmente en este menú.
+                                    Puedes seleccionar <strong>varias preparaciones</strong> a la vez.
                                 </div>
                             </div>
                         </div>
                     </div>
-                `,
-                didOpen: async () => {
-                    const selectMenu = document.getElementById('copiarMenuOrigen');
-                    const selectPrep = document.getElementById('copiarPreparacionOrigen');
-                    const filtroMenu = document.getElementById('copiarFiltroMenu');
-                    const filtroPrep = document.getElementById('copiarFiltroPreparacion');
-                    const hint = document.getElementById('copiarPrepHint');
-                    const preview = document.getElementById('copiarPreviewIngredientes');
-                    let preparacionesMenuActual = [];
+                </div>
+            `,
+            didOpen: () => {
+                const buscador  = document.getElementById('copiarBuscadorPrep');
+                const contenedor = document.getElementById('copiarResultados');
 
-                    const normalizar = (v) => String(v || '').toLowerCase().trim();
-                    const etiquetaMenu = (m) => `Menu ${m.menu} - ${m.programa}${m.es_actual ? ' (actual)' : ''}`;
+                const renderResultados = (preparaciones) => {
+                    if (preparaciones.length === 0) {
+                        contenedor.innerHTML = '<small class="text-muted">No se encontraron preparaciones con ese nombre.</small>';
+                        return;
+                    }
 
-                    const renderMenus = () => {
-                        const termino = normalizar(filtroMenu?.value);
-                        const valorPrevio = selectMenu.value;
-                        const filtrados = termino
-                            ? menusOrigen.filter(m => normalizar(etiquetaMenu(m)).includes(termino))
-                            : menusOrigen;
-
-                        if (filtrados.length === 0) {
-                            selectMenu.innerHTML = '<option value="">Sin resultados</option>';
-                            return '';
-                        }
-
-                        selectMenu.innerHTML = '';
-                        filtrados.forEach(m => {
-                            const opt = document.createElement('option');
-                            opt.value = String(m.id_menu);
-                            opt.textContent = etiquetaMenu(m);
-                            selectMenu.appendChild(opt);
-                        });
-
-                        const conservar = filtrados.some(m => String(m.id_menu) === String(valorPrevio));
-                        selectMenu.value = conservar ? valorPrevio : String(filtrados[0].id_menu);
-                        return selectMenu.value;
-                    };
-
-                    const renderPreparaciones = () => {
-                        const termino = normalizar(filtroPrep?.value);
-                        const filtradas = termino
-                            ? preparacionesMenuActual.filter(p => normalizar(p.preparacion).includes(termino))
-                            : preparacionesMenuActual;
-
-                        if (filtradas.length === 0) {
-                            const msg = preparacionesMenuActual.length === 0
-                                ? 'No hay preparaciones en este menu'
-                                : 'No hay preparaciones que coincidan con el filtro';
-                            selectPrep.innerHTML = `<option value="">${msg}</option>`;
-                            return;
-                        }
-
-                        selectPrep.innerHTML = '<option value="">Seleccione una preparacion...</option>';
-                        filtradas.forEach(p => {
-                            const opt = document.createElement('option');
-                            opt.value = String(p.id_preparacion);
-                            opt.dataset.totalIngredientes = String(p.total_ingredientes || 0);
-                            opt.textContent = `${p.preparacion} (${p.total_ingredientes || 0} ingrediente(s))`;
-                            selectPrep.appendChild(opt);
-                        });
-                    };
-
-                    const cargarPreparacionesMenu = async (idMenuOrigen) => {
-                        selectPrep.innerHTML = '<option value="">Cargando...</option>';
-                        setPreviewPlaceholder(preview, 'Seleccione una preparacion para ver sus ingredientes.');
-                        const data = await cargarJson(`/nutricion/api/menus/${idMenuOrigen}/preparaciones-para-copia/`);
-                        preparacionesMenuActual = data.preparaciones || [];
-                        if (preparacionesMenuActual.length === 0) {
-                            selectPrep.innerHTML = '<option value="">No hay preparaciones en este menu</option>';
-                            if (hint) hint.innerHTML = '<i class="bi bi-exclamation-circle"></i> Este menu no tiene preparaciones.';
-                            return;
-                        }
-                        renderPreparaciones();
-                        if (hint) hint.innerHTML = '<i class="bi bi-info-circle"></i> Seleccione una preparacion con ingredientes.';
-                    };
-
-                    const cargarPreviewPreparacion = async (idPreparacion) => {
-                        setPreviewPlaceholder(preview, 'Cargando ingredientes...');
-                        const data = await cargarJson(`/nutricion/api/preparaciones/${idPreparacion}/ingredientes/`);
-                        const ingredientes = data.ingredientes || [];
-                        if (ingredientes.length === 0) {
-                            setPreviewPlaceholder(preview, 'Esta preparacion no tiene ingredientes.');
-                            return;
-                        }
-                        preview.innerHTML = `
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <small class="text-muted">Marca los ingredientes que deseas copiar.</small>
-                                <div class="d-flex gap-2">
-                                    <button type="button" id="btnSelTodosIngredientesCopia" class="btn btn-outline-secondary btn-sm">Seleccionar todos</button>
-                                    <button type="button" id="btnQuitarTodosIngredientesCopia" class="btn btn-outline-secondary btn-sm">Quitar todos</button>
-                                </div>
-                            </div>
-                            <div id="listaIngredientesPreview">
-                                ${ingredientes.map(ing => (
-                                    `<label class="d-flex align-items-center gap-2" style="padding:4px 0; border-bottom:1px solid #f3f4f6; cursor:pointer;">
-                                        <input type="checkbox"
-                                               class="chk-ingrediente-copia"
-                                               value="${escaparHtml(String(ing.codigo || ''))}"
-                                               checked />
-                                        <span><strong>${escaparHtml(String(ing.codigo || ''))}</strong> - ${escaparHtml(ing.nombre_del_alimento || '')}</span>
-                                    </label>`
-                                )).join('')}
+                    const frag = document.createDocumentFragment();
+                    preparaciones.forEach(prep => {
+                        const card = document.createElement('div');
+                        card.className = 'copiar-prep-card';
+                        card.innerHTML = `
+                            <label class="copiar-prep-titulo">
+                                <input type="checkbox" class="chk-prep-completa"
+                                       data-id="${prep.id_preparacion}" checked />
+                                <strong>${escaparHtml(prep.preparacion)}</strong>
+                                <small class="text-muted"> — Menú ${escaparHtml(prep.menu)} | ${escaparHtml(prep.programa)}</small>
+                            </label>
+                            <div class="copiar-ing-lista">
+                                ${prep.ingredientes.map(ing => `
+                                    <label class="copiar-ing-item">
+                                        <input type="checkbox" class="chk-ingrediente-copia"
+                                               data-prep="${prep.id_preparacion}"
+                                               value="${escaparHtml(String(ing.codigo))}" checked />
+                                        <span>${escaparHtml(String(ing.codigo))} — ${escaparHtml(ing.nombre)}</span>
+                                    </label>
+                                `).join('')}
                             </div>
                         `;
-
-                        const btnSelTodos = document.getElementById('btnSelTodosIngredientesCopia');
-                        const btnQuitarTodos = document.getElementById('btnQuitarTodosIngredientesCopia');
-                        if (btnSelTodos) {
-                            btnSelTodos.addEventListener('click', () => {
-                                preview.querySelectorAll('.chk-ingrediente-copia').forEach(chk => {
-                                    chk.checked = true;
-                                });
-                            });
-                        }
-                        if (btnQuitarTodos) {
-                            btnQuitarTodos.addEventListener('click', () => {
-                                preview.querySelectorAll('.chk-ingrediente-copia').forEach(chk => {
-                                    chk.checked = false;
-                                });
-                            });
-                        }
-                    };
-
-                    selectMenu.addEventListener('change', async () => {
-                        try {
-                            await cargarPreparacionesMenu(selectMenu.value);
-                        } catch (error) {
-                            showNotification(error.message || 'Error cargando preparaciones', 'error');
-                            selectPrep.innerHTML = '<option value="">Error al cargar</option>';
-                        }
+                        frag.appendChild(card);
                     });
 
-                    selectPrep.addEventListener('change', async () => {
-                        const idPrep = selectPrep.value;
-                        if (!idPrep) {
-                            setPreviewPlaceholder(preview, 'Seleccione una preparacion para ver sus ingredientes.');
-                            return;
-                        }
-                        try {
-                            await cargarPreviewPreparacion(idPrep);
-                        } catch (error) {
-                            showNotification(error.message || 'Error cargando vista previa', 'error');
-                            setPreviewPlaceholder(preview, 'No fue posible cargar la vista previa.');
-                        }
-                    });
+                    contenedor.innerHTML = '';
+                    contenedor.appendChild(frag);
 
-                    if (filtroMenu) {
-                        filtroMenu.addEventListener('input', () => {
-                            const idMenu = renderMenus();
-                            if (!idMenu) {
-                                selectPrep.innerHTML = '<option value="">Seleccione un menu origen</option>';
-                                setPreviewPlaceholder(preview, 'Seleccione una preparacion para ver sus ingredientes.');
-                                return;
-                            }
-                            cargarPreparacionesMenu(idMenu).catch((error) => {
-                                showNotification(error.message || 'Error cargando preparaciones', 'error');
-                                selectPrep.innerHTML = '<option value="">Error al cargar</option>';
-                            });
+                    // Checkbox preparación completa → marca/desmarca sus ingredientes
+                    contenedor.querySelectorAll('.chk-prep-completa').forEach(chk => {
+                        chk.addEventListener('change', () => {
+                            contenedor.querySelectorAll(`.chk-ingrediente-copia[data-prep="${chk.dataset.id}"]`)
+                                .forEach(c => { c.checked = chk.checked; });
                         });
-                    }
-
-                    if (filtroPrep) {
-                        filtroPrep.addEventListener('input', () => {
-                            renderPreparaciones();
-                            setPreviewPlaceholder(preview, 'Seleccione una preparacion para ver sus ingredientes.');
-                        });
-                    }
-
-                    const menuInicial = renderMenus();
-                    if (menuInicial) {
-                        await cargarPreparacionesMenu(menuInicial);
-                    }
-                },
-                preConfirm: () => {
-                    const selectPrep = document.getElementById('copiarPreparacionOrigen');
-                    const idPreparacion = selectPrep?.value || '';
-                    if (!idPreparacion) {
-                        return Swal.showValidationMessage('Debes seleccionar una preparacion.');
-                    }
-                    const totalIngredientes = parseInt(
-                        selectPrep.options[selectPrep.selectedIndex]?.dataset.totalIngredientes || '0',
-                        10
-                    );
-                    if (!totalIngredientes) {
-                        return Swal.showValidationMessage('La preparacion seleccionada no tiene ingredientes para copiar.');
-                    }
-                    const ingredientIds = Array.from(
-                        document.querySelectorAll('#copiarPreviewIngredientes .chk-ingrediente-copia:checked')
-                    ).map(chk => chk.value);
-
-                    if (ingredientIds.length === 0) {
-                        return Swal.showValidationMessage('Debes seleccionar al menos un ingrediente para copiar.');
-                    }
-
-                    return {
-                        source_preparacion_id: parseInt(idPreparacion, 10),
-                        ingredient_ids: ingredientIds
-                    };
-                }
-            }).then(async (result) => {
-                if (!result.isConfirmed || !result.value) return;
-                if (copiaPreparacionEnCurso) return;
-
-                copiaPreparacionEnCurso = true;
-                if (btnCopiarPreparacion) btnCopiarPreparacion.disabled = true;
-                const overlay = mostrarOverlayGuardando('Copiando preparacion...');
-                try {
-                    const response = await fetch('/nutricion/api/preparaciones/copiar/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCookie('csrftoken')
-                        },
-                        body: JSON.stringify({
-                            source_preparacion_id: result.value.source_preparacion_id,
-                            target_menu_id: parseInt(menuId, 10),
-                            ingredient_ids: result.value.ingredient_ids || []
-                        })
                     });
 
-                    const data = await response.json();
-                    if (!response.ok || !data.success) {
-                        throw new Error(data.error || 'No fue posible copiar la preparacion');
-                    }
+                    // Si se desmarca un ingrediente individual, desmarcar el checkbox de la preparación
+                    contenedor.querySelectorAll('.chk-ingrediente-copia').forEach(chk => {
+                        chk.addEventListener('change', () => {
+                            const todos = contenedor.querySelectorAll(`.chk-ingrediente-copia[data-prep="${chk.dataset.prep}"]`);
+                            const alguno = Array.from(todos).some(c => c.checked);
+                            const prepChk = contenedor.querySelector(`.chk-prep-completa[data-id="${chk.dataset.prep}"]`);
+                            if (prepChk) prepChk.checked = alguno;
+                        });
+                    });
+                };
 
-                    ocultarOverlayGuardando();
-                    showNotification(data.message || 'Preparacion copiada exitosamente.', 'success');
-                    setTimeout(() => window.location.reload(), 1000);
-                } catch (error) {
-                    console.error('Error al copiar preparacion:', error);
-                    ocultarOverlayGuardando();
-                    showNotification(error.message || 'Error al copiar preparacion', 'error');
-                } finally {
-                    copiaPreparacionEnCurso = false;
-                    if (btnCopiarPreparacion) btnCopiarPreparacion.disabled = false;
+                const buscar = async (termino) => {
+                    if (termino.length < 2) {
+                        contenedor.innerHTML = '<small class="text-muted">Escribe al menos 2 caracteres para buscar.</small>';
+                        return;
+                    }
+                    contenedor.innerHTML = '<small class="text-muted"><i class="bi bi-hourglass-split"></i> Buscando...</small>';
+                    try {
+                        const resp = await fetch(
+                            `/nutricion/api/menus/${menuId}/buscar-preparaciones-modalidad/?q=${encodeURIComponent(termino)}`,
+                            { headers: { 'X-Requested-With': 'XMLHttpRequest' } }
+                        );
+                        const data = await resp.json();
+                        renderResultados(data.preparaciones || []);
+                    } catch {
+                        contenedor.innerHTML = '<small class="text-danger">Error al buscar. Intenta de nuevo.</small>';
+                    }
+                };
+
+                buscador.addEventListener('input', () => {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => buscar(buscador.value.trim()), 300);
+                });
+
+                setTimeout(() => buscador.focus(), 100);
+            },
+            preConfirm: () => {
+                const contenedor = document.getElementById('copiarResultados');
+                const copias = [];
+
+                // Agrupar ingredientes marcados por preparación
+                const prepIds = new Set(
+                    Array.from(contenedor.querySelectorAll('.chk-ingrediente-copia'))
+                        .map(c => c.dataset.prep)
+                );
+                prepIds.forEach(idPrep => {
+                    const ids = Array.from(
+                        contenedor.querySelectorAll(`.chk-ingrediente-copia[data-prep="${idPrep}"]:checked`)
+                    ).map(c => c.value);
+                    if (ids.length > 0) {
+                        copias.push({ source_preparacion_id: parseInt(idPrep), ingredient_ids: ids });
+                    }
+                });
+
+                if (copias.length === 0) {
+                    return Swal.showValidationMessage('Debes seleccionar al menos un ingrediente para copiar.');
                 }
-            });
-        } catch (error) {
-            console.error('Error al iniciar copia de preparacion:', error);
-            showNotification(error.message || 'No fue posible cargar los menus origen.', 'error');
-        }
+                return copias;
+            }
+        }).then(async (result) => {
+            if (!result.isConfirmed || !result.value) return;
+            if (copiaPreparacionEnCurso) return;
+
+            copiaPreparacionEnCurso = true;
+            if (btnCopiarPreparacion) btnCopiarPreparacion.disabled = true;
+            const overlay = mostrarOverlayGuardando('Copiando preparaciones...');
+            try {
+                const response = await fetch('/nutricion/api/preparaciones/copiar/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                    body: JSON.stringify({
+                        target_menu_id: parseInt(menuId, 10),
+                        copias: result.value
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'No fue posible copiar las preparaciones');
+                }
+                ocultarOverlayGuardando();
+                showNotification(data.message || 'Preparaciones copiadas exitosamente.', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } catch (error) {
+                console.error('Error al copiar preparaciones:', error);
+                ocultarOverlayGuardando();
+                showNotification(error.message || 'Error al copiar preparaciones', 'error');
+            } finally {
+                copiaPreparacionEnCurso = false;
+                if (btnCopiarPreparacion) btnCopiarPreparacion.disabled = false;
+            }
+        });
     }
 
     async function agregarIngredienteATodosLosNiveles() {

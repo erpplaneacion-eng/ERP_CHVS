@@ -45,6 +45,7 @@ urlpatterns = [
     path('api/preparaciones/copiar/', views.api_copiar_preparacion, name='api_copiar_preparacion'),
     path('api/preparaciones-por-modalidad/<str:modalidad_id>/', views.api_preparaciones_por_modalidad, name='api_preparaciones_por_modalidad'),
     path('api/menus/<int:id_menu>/origenes-copia-preparaciones/', views.api_menus_misma_modalidad_para_copia, name='api_menus_misma_modalidad_para_copia'),
+    path('api/menus/<int:id_menu>/buscar-preparaciones-modalidad/', views.api_buscar_preparaciones_modalidad, name='api_buscar_preparaciones_modalidad'),
     path('api/menus/<int:id_menu_origen>/preparaciones-para-copia/', views.api_preparaciones_por_menu_para_copia, name='api_preparaciones_por_menu_para_copia'),
 
     # Ingredientes (APIs - la vista de lista se eliminÃ³, funcionalidad en lista_menus)
