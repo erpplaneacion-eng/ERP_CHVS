@@ -24,14 +24,14 @@ COMPONENTES_PDF_YUMBO = {
         (["com2"], "ALIMENTO PROTEICO"),
         (["com3", "com7"], "CEREAL ACOMPAÑANTE"),
         (["com12"], "FRUTA"),
-        (["com15"], "AGUA APTA PARA CONSUMO"),
+        (["com15"], "AGUA"),
     ],
     "20507": [
         (["com11", "com1"], "BEBIDA CON LECHE"),
         (["com2"], "ALIMENTO PROTEICO"),
         (["com3", "com7"], "CEREAL ACOMPAÑANTE"),
         (["com12"], "FRUTA"),
-        (["com15"], "AGUA APTA PARA CONSUMO"),
+        (["com15"], "AGUA"),
     ],
     "20503": [
         (["com2"], "ALIMENTO PROTEICO"),
@@ -40,7 +40,7 @@ COMPONENTES_PDF_YUMBO = {
         (["com9"], "ENSALADA O VERDURA CALIENTE"),
         (["com14"], "BEBIDA"),
         (["com11"], "LECHE Y PRODUCTOS LACTEOS"),
-        (["com15"], "AGUA APTA PARA CONSUMO"),
+        (["com15"], "AGUA"),
     ],
     "20502": [
         (["com11"], "LECHE Y PRODUCTOS LACTEOS"),
@@ -90,7 +90,7 @@ COMPONENTES_PDF_CALI = {
         (["com3", "com7"], "CEREAL ACOMPAÑANTE"),
         (["com8"], "TUBERCULOS, RAICES, PLATANOS Y DERIVADOS DE CEREAL"),
         (["com9"], "FRUTA"),
-        (["com15"], "AGUA APTA PARA CONSUMO"),
+        (["com15"], "AGUA"),
     ],
 }
 
@@ -448,6 +448,10 @@ class CicloMenusPdfService:
                     comp_id = "com2_leguminosa"
                 else:
                     comp_id = "com2_proteina"
+
+            # Transformar 'AGUA' a 'AGUA APTA PARA CONSUMO' en el contenido de la celda
+            if prep_name == "AGUA" and comp_id == "com15":
+                prep_name = "AGUA APTA PARA CONSUMO"
 
             menu_component_preps[num][comp_id].append(prep_name)
 
