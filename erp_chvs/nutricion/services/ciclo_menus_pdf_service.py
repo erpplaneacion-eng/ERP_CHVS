@@ -719,15 +719,23 @@ class CicloMenusPdfService:
             for cid in comp_ids:
                 comp_id_to_label[cid] = comp_label
 
-        # Lógica especial Yumbo/Buga 20503 (Lácteos escondidos en otra preparación)
-        if not es_cali and str(modalidad_id) == "20503":
+        # Lógica especial COM11 (Lácteos escondidos en otra preparación)
+        # Aplica para Cali y Yumbo/Buga en cualquier modalidad que tenga COM11 en su config
+        config_tiene_com11 = any("com11" in comp_ids for comp_ids, _ in config_modalidad)
+        if config_tiene_com11:
             for num in menus_by_number.keys():
                 com11_preps = menu_component_preps[num].get("com11", [])
                 if not com11_preps:
                     # No hay preparación de lácteo per se, buscar si hay ingrediente G3 en otro componente
-                    g3_comps = [c for c in menu_g3_componentes[num] if c != "com11"]
-                    if g3_comps:
-                        comp_donde_esta = g3_comps[0]
+                    # Prioridad: proteico (COM2) > tubérculos (COM8) > cereales (COM3) > resto
+                    _orden_prioridad_g3 = ["com2", "com2_proteina", "com2_leguminosa", "com8", "com3"]
+                    g3_comps_todos = [c for c in menu_g3_componentes[num] if c != "com11"]
+                    g3_comps_ordenados = sorted(
+                        g3_comps_todos,
+                        key=lambda c: _orden_prioridad_g3.index(c) if c in _orden_prioridad_g3 else 999
+                    )
+                    if g3_comps_ordenados:
+                        comp_donde_esta = g3_comps_ordenados[0]
                         label = comp_id_to_label.get(comp_donde_esta, "LA PREPARACIÓN")
 
                         label_upper = label.upper()
