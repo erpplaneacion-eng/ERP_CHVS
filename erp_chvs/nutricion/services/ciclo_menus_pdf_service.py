@@ -100,7 +100,7 @@ COMPONENTES_PDF_CALI = {
         (["com11", "com1"], "BEBIDA(LACTEOS)"),
         (["com2"], "ALIMENTO PROTEICO"),
         (["com3", "com7"], "CEREAL ACOMPAÑANTE"),
-        (["com9", "com12"], "FRUTA"),
+        (["com9", "com12"], "FRUTAS/ENSALADA DE FRUTAS"),
     ],
     "20502": [
         (["com11", "com1"], "LACTEOS"),
@@ -374,13 +374,7 @@ class CicloMenusPdfService:
             items.append(logo_row)
             items.append(Spacer(1, 2 * mm))
 
-            # Determinar "Modalidad de Atención" y "Tipo de Complemento"
-            mod_texto = modalidad.modalidad.upper()
-            if "INDUSTRIALIZADA" in mod_texto:
-                mod_atencion = "RACIÓN INDUSTRIALIZADA"
-            else:
-                mod_atencion = "PREPARADA EN SITIO"
-
+            # Determinar "Tipo de Complemento" y "Modalidad de Atención"
             mod_id = str(modalidad.id_modalidades)
             if mod_id == "20503":
                 tipo_complemento = "ALMUERZO"
@@ -393,7 +387,12 @@ class CicloMenusPdfService:
             elif mod_id == "20502":
                 tipo_complemento = "COMPLEMENTO GJM/JT"
             else:
-                tipo_complemento = mod_texto
+                tipo_complemento = modalidad.modalidad.upper()
+
+            if mod_id in ("20502", "020511"):
+                mod_atencion = "RACIÓN INDUSTRIALIZADA"
+            else:
+                mod_atencion = "RACIÓN PREPARADA EN SITIO"
 
             # Metadatos (8 filas divididas en dos bloques)
             # Columna izquierda: Etiqueta (ancho ~60mm), Columna derecha: Valor (ancho ~122mm)
@@ -706,6 +705,7 @@ class CicloMenusPdfService:
         menu_component_preps: Dict[int, Dict[str, List[str]]] = defaultdict(lambda: defaultdict(list))
         menu_g3_componentes: Dict[int, List[str]] = defaultdict(list)
         menu_g1_componentes: Dict[int, List[str]] = defaultdict(list)
+        menu_g2_componentes: Dict[int, List[str]] = defaultdict(list)
 
         for prep in prep_rows:
             num = self._menu_number(prep.id_menu.menu)
@@ -740,6 +740,11 @@ class CicloMenusPdfService:
             if tiene_g1:
                 menu_g1_componentes[num].append(comp_id)
 
+            # Rastrear si la preparación tiene algún ingrediente del grupo 2 (g2) - Frutas
+            tiene_g2 = any(ing.id_grupo_alimentos_id == "g2" for ing in ingredientes_lista)
+            if tiene_g2:
+                menu_g2_componentes[num].append(comp_id)
+
         # Construir mapeo comp_id → label para las lógicas de "INCLUIDO EN..."
         comp_id_to_label = {}
         for comp_ids, comp_label in config_modalidad:
@@ -749,9 +754,17 @@ class CicloMenusPdfService:
         # Lógica especial COM11 (Lácteos escondidos en otra preparación)
         # Aplica para Cali y Yumbo/Buga en cualquier modalidad que tenga COM11 en su config
         config_tiene_com11 = any("com11" in comp_ids for comp_ids, _ in config_modalidad)
+        # Hermanos de com11: otros comp_ids que comparten su misma fila en la tabla
+        com11_siblings = next(
+            ([c for c in comp_ids if c != "com11"] for comp_ids, _ in config_modalidad if "com11" in comp_ids),
+            []
+        )
         if config_tiene_com11:
             for num in menus_by_number.keys():
                 com11_preps = menu_component_preps[num].get("com11", [])
+                # Si algún hermano en la misma fila ya tiene preparaciones, la fila ya está cubierta
+                if any(menu_component_preps[num].get(sib) for sib in com11_siblings):
+                    continue
                 if not com11_preps:
                     # No hay preparación de lácteo per se, buscar si hay ingrediente G3 en otro componente
                     # Prioridad: proteico (COM2) > tubérculos (COM8) > cereales (COM3) > resto
@@ -801,6 +814,46 @@ class CicloMenusPdfService:
                     elif g1_en_cereal:
                         prefijo = "LOS CEREALES"
                         menu_component_preps[num]["com8"].append(f"INCLUIDO EN {prefijo}")
+
+        # Lógica especial G2/FRUTAS (Frutas escondidas en otro componente)
+        # Aplica cuando la config tiene una fila de frutas (com12 y/o com9)
+        _fruit_comp_ids = {"com12", "com9"}
+        fruit_group = next(
+            (comp_ids for comp_ids, _ in config_modalidad
+             if any(c in _fruit_comp_ids for c in comp_ids)),
+            None
+        )
+        if fruit_group:
+            _orden_prioridad_g2 = ["com2", "com2_proteina", "com2_leguminosa", "com1", "com11", "com3", "com7", "com8"]
+            for num in menus_by_number.keys():
+                # Si la fila de frutas ya tiene preparación propia, no hacer nada
+                if any(menu_component_preps[num].get(c) for c in fruit_group):
+                    continue
+                # Buscar G2 en componentes que NO sean de fruta
+                g2_comps_otros = [c for c in menu_g2_componentes[num] if c not in _fruit_comp_ids]
+                g2_comps_ordenados = sorted(
+                    g2_comps_otros,
+                    key=lambda c: _orden_prioridad_g2.index(c) if c in _orden_prioridad_g2 else 999
+                )
+                if g2_comps_ordenados:
+                    comp_donde_esta = g2_comps_ordenados[0]
+                    label = comp_id_to_label.get(comp_donde_esta, "LA PREPARACIÓN")
+                    label_upper = label.upper()
+                    if "TUBERCULO" in label_upper:
+                        prefijo = "LOS TUBERCULOS"
+                    elif "BEBIDA" in label_upper or "LACTEO" in label_upper:
+                        prefijo = "LA BEBIDA"
+                    elif "PROTEICO" in label_upper:
+                        prefijo = "EL ALIMENTO PROTEICO"
+                    elif "LEGUMINOSA" in label_upper:
+                        prefijo = "LA LEGUMINOSA"
+                    elif "ENSALADA" in label_upper or "VERDURA" in label_upper:
+                        prefijo = "LA ENSALADA"
+                    elif "CEREAL" in label_upper:
+                        prefijo = "LOS CEREALES"
+                    else:
+                        prefijo = label_upper
+                    menu_component_preps[num][fruit_group[0]].append(f"INCLUIDO EN {prefijo}")
 
         # Ordenar alfabéticamente dentro de cada componente-menú
         for menu_data in menu_component_preps.values():
