@@ -9,10 +9,14 @@ Estructura funcional equivalente al formato solicitado:
 """
 
 import io
+import os
 import re
+import tempfile
 import unicodedata
+import urllib.request
 from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
+from urllib.parse import urlparse
 
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image
@@ -117,14 +121,8 @@ class GuiaPreparacionExcelGenerator:
         ws["A1"].border = self.border
 
         # Logo programa (si existe)
-        try:
-            if menu.id_contrato and menu.id_contrato.imagen:
-                img = Image(menu.id_contrato.imagen.path)
-                img.height = min(60, img.height)
-                img.width = min(180, img.width)
-                ws.add_image(img, "O1")
-        except Exception:
-            pass
+        if menu.id_contrato and menu.id_contrato.imagen:
+            self._insert_image_field(ws, menu.id_contrato.imagen, "O1", max_w=180, max_h=60)
 
         ws.merge_cells("A3:R3")
         ws["A3"] = "GUIA DE PREPARACION DE ALIMENTOS Y ESTANDARIZACION DE RECETAS"
@@ -473,14 +471,8 @@ class GuiaPreparacionExcelGenerator:
         elabora_img = None
         aprueba_img = None
         if firma_cfg:
-            try:
-                elabora_img = firma_cfg.elabora_firma_imagen.path if firma_cfg.elabora_firma_imagen else None
-            except Exception:
-                elabora_img = None
-            try:
-                aprueba_img = firma_cfg.aprueba_firma_imagen.path if firma_cfg.aprueba_firma_imagen else None
-            except Exception:
-                aprueba_img = None
+            elabora_img = self._get_image_source(firma_cfg.elabora_firma_imagen)
+            aprueba_img = self._get_image_source(firma_cfg.aprueba_firma_imagen)
 
         rows = [start_row, start_row + 1]
         for r in rows:
@@ -552,16 +544,50 @@ class GuiaPreparacionExcelGenerator:
             ws.cell(row=start_row + 1, column=15).alignment = self.left
 
     @staticmethod
-    def _insert_signature_image(ws, image_path: str, anchor_cell: str) -> None:
-        if not image_path:
-            return
+    def _get_image_source(field) -> str | None:
+        """Retorna path (dev/local) o URL (prod/Cloudinary) de un FieldFile. None si no hay imagen."""
+        if not field:
+            return None
         try:
-            img = Image(image_path)
-            img.width = min(img.width, 240)
-            img.height = min(img.height, 70)
+            return field.path
+        except (FileNotFoundError, ValueError, NotImplementedError):
+            pass
+        try:
+            return field.url
+        except (ValueError, NotImplementedError):
+            return None
+
+    def _insert_image_field(self, ws, field, anchor_cell: str, max_w: int = 200, max_h: int = 60) -> None:
+        """Inserta imagen desde un FieldFile Django en una celda, soportando local y Cloudinary."""
+        source = self._get_image_source(field)
+        self._insert_signature_image(ws, source, anchor_cell, max_w=max_w, max_h=max_h)
+
+    @staticmethod
+    def _insert_signature_image(ws, image_source: str | None, anchor_cell: str, max_w: int = 240, max_h: int = 70) -> None:
+        """Inserta imagen en Excel desde path local o URL remota (Cloudinary)."""
+        if not image_source:
+            return
+        temp_file = None
+        try:
+            source = str(image_source).strip()
+            parsed = urlparse(source)
+            if parsed.scheme in ('http', 'https'):
+                fd, temp_file = tempfile.mkstemp(suffix=os.path.splitext(parsed.path or "img.png")[1] or ".png")
+                os.close(fd)
+                urllib.request.urlretrieve(source, temp_file)
+                source = temp_file
+            img = Image(source)
+            img.width = min(img.width, max_w)
+            img.height = min(img.height, max_h)
             ws.add_image(img, anchor_cell)
         except Exception:
             return
+        finally:
+            if temp_file and os.path.exists(temp_file):
+                try:
+                    os.remove(temp_file)
+                except OSError:
+                    pass
 
     def _apply_all_borders(self, ws) -> None:
         max_row = ws.max_row

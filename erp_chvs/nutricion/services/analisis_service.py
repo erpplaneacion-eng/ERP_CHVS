@@ -123,11 +123,16 @@ class AnalisisNutricionalService:
         firma_data = None
         if firma_cfg:
             def _path_or_none(file_field):
+                """Retorna path local (dev) o URL remota (prod/Cloudinary). None si no aplica."""
                 if not file_field:
                     return None
                 try:
                     return file_field.path
                 except (FileNotFoundError, ValueError, NotImplementedError):
+                    pass
+                try:
+                    return file_field.url
+                except (ValueError, NotImplementedError):
                     return None
 
             firma_data = {

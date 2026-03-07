@@ -513,18 +513,32 @@ class ExcelReportDrawer:
 
     def _insert_signature_image(self, ws: Worksheet, image_path: str, anchor_cell: str) -> None:
         """
-        Inserta imagen de firma en Excel si el archivo existe.
+        Inserta imagen de firma en Excel soportando path local (dev) y URL remota (prod/Cloudinary).
         """
         if not image_path:
             return
+        temp_file = None
         try:
-            img = Image(image_path)
+            source = str(image_path).strip()
+            parsed = urlparse(source)
+            if parsed.scheme in ('http', 'https'):
+                fd, temp_file = tempfile.mkstemp(suffix=os.path.splitext(parsed.path or "firma.png")[1] or ".png")
+                os.close(fd)
+                urllib.request.urlretrieve(source, temp_file)
+                source = temp_file
+            img = Image(source)
             img.width = min(img.width, 180)
             img.height = min(img.height, 60)
             ws.add_image(img, anchor_cell)
         except Exception:
             # Fallback silencioso para no romper la exportación por errores de archivo.
             return
+        finally:
+            if temp_file and os.path.exists(temp_file):
+                try:
+                    os.remove(temp_file)
+                except OSError:
+                    pass
 
     def _apply_formatting(self, ws: Worksheet) -> None:
         """Aplica formato a todo el worksheet."""

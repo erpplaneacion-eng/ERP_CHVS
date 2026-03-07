@@ -1,6 +1,7 @@
 import io
 import re
 import unicodedata
+import urllib.request
 from collections import defaultdict
 from html import escape
 from typing import Dict, List, Optional, Tuple, Set
@@ -16,6 +17,30 @@ from planeacion.models import Programa
 from principal.models import ModalidadesDeConsumo
 
 from ..models import FirmaNutricionalContrato, TablaMenus, TablaPreparaciones
+
+
+def _get_rl_image(field):
+    """
+    Retorna fuente de imagen compatible con ReportLab Image desde un Django FieldFile.
+    - Dev (almacenamiento local): retorna path string.
+    - Prod (Cloudinary): descarga la URL y retorna BytesIO.
+    Retorna None si el campo está vacío o todo falla.
+    """
+    if not field:
+        return None
+    try:
+        return field.path
+    except (FileNotFoundError, ValueError, NotImplementedError):
+        pass
+    try:
+        url = field.url
+        with urllib.request.urlopen(url) as resp:
+            data = io.BytesIO(resp.read())
+        data.seek(0)
+        return data
+    except Exception:
+        return None
+
 
 # Mapeos para municipios genéricos (Yumbo, Buga, etc.)
 COMPONENTES_PDF_YUMBO = {
@@ -223,11 +248,15 @@ class CicloMenusPdfService:
 
         logo_cell = ""
         if programa.imagen:
-            try:
-                logo = Image(programa.imagen.path)
-                logo._restrictSize(28 * mm, 12 * mm)
-                logo_cell = logo
-            except Exception:
+            src = _get_rl_image(programa.imagen)
+            if src is not None:
+                try:
+                    logo = Image(src)
+                    logo._restrictSize(28 * mm, 12 * mm)
+                    logo_cell = logo
+                except Exception:
+                    logo_cell = self._p(programa.programa or "", self.style_cell_left)
+            else:
                 logo_cell = self._p(programa.programa or "", self.style_cell_left)
 
         if is_cali:
@@ -578,27 +607,25 @@ class CicloMenusPdfService:
         aprueba_nombre = (firma.aprueba_nombre if firma else "") or "N/A"
         aprueba_matricula = (firma.aprueba_matricula if firma else "") or "N/A"
 
-        import os
-
         elabora_img = ""
         if firma and firma.elabora_firma_imagen:
-            try:
-                img_path = firma.elabora_firma_imagen.path
-                if os.path.exists(img_path):
-                    elabora_img = Image(img_path)
+            src = _get_rl_image(firma.elabora_firma_imagen)
+            if src is not None:
+                try:
+                    elabora_img = Image(src)
                     elabora_img._restrictSize(60 * mm, 14 * mm)
-            except Exception:
-                elabora_img = ""
+                except Exception:
+                    elabora_img = ""
 
         aprueba_img = ""
         if firma and firma.aprueba_firma_imagen:
-            try:
-                img_path = firma.aprueba_firma_imagen.path
-                if os.path.exists(img_path):
-                    aprueba_img = Image(img_path)
+            src = _get_rl_image(firma.aprueba_firma_imagen)
+            if src is not None:
+                try:
+                    aprueba_img = Image(src)
                     aprueba_img._restrictSize(60 * mm, 14 * mm)
-            except Exception:
-                aprueba_img = ""
+                except Exception:
+                    aprueba_img = ""
 
         data = [
             # Fila 1: Nombre Elabora (combina col 0-1 y col 2-3)
@@ -739,16 +766,16 @@ class CicloMenusPdfService:
                         label = comp_id_to_label.get(comp_donde_esta, "LA PREPARACIÓN")
 
                         label_upper = label.upper()
-                        if "BEBIDA" in label_upper:
-                            prefijo = "LA BEBIDA"
-                        elif "CEREAL" in label_upper:
-                            prefijo = "LOS CEREALES"
-                        elif "TUBERCULO" in label_upper:
+                        if "TUBERCULO" in label_upper:
                             prefijo = "LOS TUBERCULOS"
-                        elif "ENSALADA" in label_upper or "VERDURA" in label_upper:
-                            prefijo = "LA ENSALADA"
+                        elif "BEBIDA" in label_upper:
+                            prefijo = "LA BEBIDA"
                         elif "PROTEICO" in label_upper:
                             prefijo = "EL ALIMENTO PROTEICO"
+                        elif "ENSALADA" in label_upper or "VERDURA" in label_upper:
+                            prefijo = "LA ENSALADA"
+                        elif "CEREAL" in label_upper:
+                            prefijo = "LOS CEREALES"
                         else:
                             prefijo = f"{label_upper}"
 
