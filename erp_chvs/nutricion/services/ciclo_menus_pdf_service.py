@@ -678,15 +678,16 @@ class CicloMenusPdfService:
 
         menu_component_preps: Dict[int, Dict[str, List[str]]] = defaultdict(lambda: defaultdict(list))
         menu_g3_componentes: Dict[int, List[str]] = defaultdict(list)
-        
+        menu_g1_componentes: Dict[int, List[str]] = defaultdict(list)
+
         for prep in prep_rows:
             num = self._menu_number(prep.id_menu.menu)
             if not num:
                 continue
-                
+
             comp_id = str(prep.id_componente_id or "sin_componente")
             prep_name = (prep.preparacion or "").upper()
-            
+
             # Lógica especial para Cali 20503: Separar Leguminosas de Proteínas
             if es_cali and str(modalidad_id) == "20503" and comp_id == "com2":
                 if self._es_leguminosa(prep_name):
@@ -700,18 +701,26 @@ class CicloMenusPdfService:
 
             menu_component_preps[num][comp_id].append(prep_name)
 
+            ingredientes_lista = list(prep.ingredientes.all())
+
             # Rastrear si la preparación tiene algún ingrediente del grupo 3 (g3) - Lácteos
-            tiene_g3 = any(ing.id_grupo_alimentos_id == "g3" for ing in prep.ingredientes.all())
+            tiene_g3 = any(ing.id_grupo_alimentos_id == "g3" for ing in ingredientes_lista)
             if tiene_g3:
                 menu_g3_componentes[num].append(comp_id)
 
+            # Rastrear si la preparación tiene algún ingrediente del grupo 1 (g1) - Tubérculos/Raíces/Plátanos
+            tiene_g1 = any(ing.id_grupo_alimentos_id == "g1" for ing in ingredientes_lista)
+            if tiene_g1:
+                menu_g1_componentes[num].append(comp_id)
+
+        # Construir mapeo comp_id → label para las lógicas de "INCLUIDO EN..."
+        comp_id_to_label = {}
+        for comp_ids, comp_label in config_modalidad:
+            for cid in comp_ids:
+                comp_id_to_label[cid] = comp_label
+
         # Lógica especial Yumbo/Buga 20503 (Lácteos escondidos en otra preparación)
         if not es_cali and str(modalidad_id) == "20503":
-            comp_id_to_label = {}
-            for comp_ids, comp_label in config_modalidad:
-                for cid in comp_ids:
-                    comp_id_to_label[cid] = comp_label
-                    
             for num in menus_by_number.keys():
                 com11_preps = menu_component_preps[num].get("com11", [])
                 if not com11_preps:
@@ -720,7 +729,7 @@ class CicloMenusPdfService:
                     if g3_comps:
                         comp_donde_esta = g3_comps[0]
                         label = comp_id_to_label.get(comp_donde_esta, "LA PREPARACIÓN")
-                        
+
                         label_upper = label.upper()
                         if "BEBIDA" in label_upper:
                             prefijo = "LA BEBIDA"
@@ -734,8 +743,29 @@ class CicloMenusPdfService:
                             prefijo = "EL ALIMENTO PROTEICO"
                         else:
                             prefijo = f"{label_upper}"
-                            
+
                         menu_component_preps[num]["com11"].append(f"INCLUIDO EN {prefijo}")
+
+        # Lógica especial COM8 (Tubérculos/Raíces/Plátanos escondidos en COM2 o COM3)
+        # Aplica para Cali y Yumbo/Buga en cualquier modalidad que tenga COM8 en su config
+        config_tiene_com8 = any("com8" in comp_ids for comp_ids, _ in config_modalidad)
+        if config_tiene_com8:
+            # COM2 puede aparecer dividido en Cali 20503
+            componentes_proteico = {"com2", "com2_proteina", "com2_leguminosa"}
+            componentes_cereal = {"com3"}
+            for num in menus_by_number.keys():
+                com8_preps = menu_component_preps[num].get("com8", [])
+                if not com8_preps:
+                    # No hay preparación propia de tubérculos; buscar G1 dentro de COM2 o COM3
+                    # Prioridad: proteico (COM2) > cereal (COM3)
+                    g1_en_proteico = [c for c in menu_g1_componentes[num] if c in componentes_proteico]
+                    g1_en_cereal = [c for c in menu_g1_componentes[num] if c in componentes_cereal]
+                    if g1_en_proteico:
+                        prefijo = "EL ALIMENTO PROTEICO"
+                        menu_component_preps[num]["com8"].append(f"INCLUIDO EN {prefijo}")
+                    elif g1_en_cereal:
+                        prefijo = "LOS CEREALES"
+                        menu_component_preps[num]["com8"].append(f"INCLUIDO EN {prefijo}")
 
         # Ordenar alfabéticamente dentro de cada componente-menú
         for menu_data in menu_component_preps.values():
