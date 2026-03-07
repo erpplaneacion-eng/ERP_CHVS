@@ -19,6 +19,13 @@ from .menus_api import (
     api_menus,
     api_menu_detail,
 )
+from .copiar_menu_api import (
+    api_copiar_menu_programas,
+    api_copiar_menu_lista,
+    api_copiar_menu_detalle,
+    api_copiar_menu_ejecutar,
+    api_buscar_alimentos_copiar_menu,
+)
 from .preparaciones_api import (
     lista_preparaciones,
     api_preparaciones,

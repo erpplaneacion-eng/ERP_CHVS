@@ -34,6 +34,12 @@ urlpatterns = [
     path('api/programas-por-municipio/', views.api_programas_por_municipio, name='api_programas_por_municipio'),
     path('api/modalidades-por-programa/', views.api_modalidades_por_programa, name='api_modalidades_por_programa'),
     path('api/generar-menus-automaticos/', views.api_generar_menus_automaticos, name='api_generar_menus_automaticos'),
+    # Copiar menu por tarjeta
+    path('api/copiar-menu/programas/', views.api_copiar_menu_programas, name='api_copiar_menu_programas'),
+    path('api/copiar-menu/menus/', views.api_copiar_menu_lista, name='api_copiar_menu_lista'),
+    path('api/copiar-menu/detalle/', views.api_copiar_menu_detalle, name='api_copiar_menu_detalle'),
+    path('api/copiar-menu/ejecutar/', views.api_copiar_menu_ejecutar, name='api_copiar_menu_ejecutar'),
+    path('api/copiar-menu/buscar-alimento/', views.api_buscar_alimentos_copiar_menu, name='api_buscar_alimentos_copiar_menu'),
     path('api/generar-menu-ia/', views.api_generar_menu_ia, name='api_generar_menu_ia'),
     path('api/crear-menu-especial/', views.api_crear_menu_especial, name='api_crear_menu_especial'),
 

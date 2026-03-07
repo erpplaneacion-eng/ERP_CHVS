@@ -6,6 +6,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/nutricion/lista_menus.css' %}">
 <link rel="stylesheet" href="{% static 'css/nutricion/inline_styles.css' %}">
+<link rel="stylesheet" href="{% static 'css/nutricion/copiar_menu.css' %}">
 <!-- Select2 CSS -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 {% endblock %}
@@ -312,6 +313,80 @@
     </div>
 </div>
 
+<!-- Modal: Copiar Menu por tarjeta -->
+<div id="modalCopiarMenu">
+    <div class="cm-modal-content">
+
+        <!-- Header -->
+        <div class="cm-header">
+            <h2><i class="fas fa-clone"></i> Copiar preparaciones de otro menú</h2>
+            <p class="cm-destino-tag">Destino: <strong id="cmMenuDestinoNombre"></strong></p>
+        </div>
+
+        <!-- Stepper -->
+        <div class="cm-stepper">
+            <div class="cm-step">
+                <div class="cm-step-dot activo" id="cmDot1">1</div>
+                <span class="cm-step-label">Programa</span>
+            </div>
+            <div class="cm-step-line"></div>
+            <div class="cm-step">
+                <div class="cm-step-dot" id="cmDot2">2</div>
+                <span class="cm-step-label">Menú</span>
+            </div>
+            <div class="cm-step-line"></div>
+            <div class="cm-step">
+                <div class="cm-step-dot" id="cmDot3">3</div>
+                <span class="cm-step-label">Ingredientes</span>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div class="cm-body">
+
+            <!-- Paso 1: Programas -->
+            <div id="cmPaso1">
+                <p class="cm-paso-titulo">Selecciona el programa origen</p>
+                <div class="cm-cards-list" id="cmListaProgramas"></div>
+            </div>
+
+            <!-- Paso 2: Menus -->
+            <div id="cmPaso2" style="display:none">
+                <p class="cm-paso-titulo">Selecciona el menú a copiar</p>
+                <div class="cm-menus-grid" id="cmListaMenus"></div>
+            </div>
+
+            <!-- Paso 3: Detalle + ajuste -->
+            <div id="cmPaso3" style="display:none">
+                <p class="cm-paso-titulo">Revisa y ajusta las preparaciones</p>
+                <div id="cmDetallePreps"></div>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="cm-footer">
+            <button class="cm-btn cm-btn-cancel" onclick="cmCerrar()">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <div class="cm-footer-right">
+                <button class="cm-btn cm-btn-secondary" id="cmBtnAtras"
+                        style="display:none" onclick="cmAtras()">
+                    <i class="fas fa-arrow-left"></i> Atrás
+                </button>
+                <button class="cm-btn cm-btn-primary" id="cmBtnSiguiente"
+                        onclick="cmSiguiente()">
+                    Siguiente <i class="fas fa-arrow-right"></i>
+                </button>
+                <button class="cm-btn cm-btn-success" id="cmBtnConfirmar"
+                        style="display:none" onclick="cmConfirmar()">
+                    <i class="fas fa-clone"></i> Copiar
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
 
 {% endblock %}
 
@@ -343,6 +418,9 @@
     const PROGRAMA_ACTUAL = {{ programa_seleccionado|default:"null" }};
     const MUNICIPIO_ACTUAL = {{ municipio_seleccionado|default:"null" }};
 </script>
+
+<!-- Copiar menu por tarjeta -->
+<script src="{% static 'js/nutricion/modules/CopiarMenuManager.js' %}"></script>
 
 <!-- Controlador principal refactorizado -->
 <script src="{% static 'js/nutricion/menus_avanzado_refactorizado.js' %}"></script>

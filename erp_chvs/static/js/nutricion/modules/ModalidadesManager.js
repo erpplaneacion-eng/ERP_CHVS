@@ -310,6 +310,11 @@ class ModalidadesManager {
                     <a href="${downloadUrl}" class="btn-download-excel" onclick="event.stopPropagation();" title="Descargar Excel">
                         <i class="fas fa-file-excel"></i>
                     </a>
+                    <button class="btn-copiar-menu"
+                            onclick="event.stopPropagation(); abrirCopiarMenu(${menu.id_menu}, '${menu.menu}', ${this.programaActual?.id || 'null'})"
+                            title="Copiar preparaciones de otro menú">
+                        <i class="fas fa-clone"></i>
+                    </button>
                     <div class="menu-numero">${menu.menu}</div>
                     <div class="menu-actions">
                         <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); abrirPaginaPreparaciones(${menu.id_menu})">
