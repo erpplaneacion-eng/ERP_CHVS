@@ -104,43 +104,43 @@ class CicloMenusPdfService:
             "ciclo_title",
             parent=styles["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=8.2,
+            fontSize=6.5,
             alignment=1,
             textColor=colors.white,
-            leading=9.0,
+            leading=7.5,
         )
         self.style_subtitle = ParagraphStyle(
             "ciclo_subtitle",
             parent=styles["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=7.6,
+            fontSize=6.0,
             alignment=1,
             textColor=colors.white,
-            leading=8.5,
+            leading=7.0,
         )
         self.style_header = ParagraphStyle(
             "ciclo_header",
             parent=styles["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=6.3,
+            fontSize=5.0,
             alignment=1,
-            leading=7.1,
+            leading=5.8,
         )
         self.style_cell_center = ParagraphStyle(
             "ciclo_cell_center",
             parent=styles["Normal"],
             fontName="Helvetica",
-            fontSize=6.0,
+            fontSize=4.8,
             alignment=1,
-            leading=6.8,
+            leading=5.5,
         )
         self.style_cell_left = ParagraphStyle(
             "ciclo_cell_left",
             parent=styles["Normal"],
             fontName="Helvetica-Bold",
-            fontSize=6.0,
+            fontSize=4.8,
             alignment=0,
-            leading=6.8,
+            leading=5.5,
         )
 
     @staticmethod
@@ -293,7 +293,7 @@ class CicloMenusPdfService:
                 "yumbo_title",
                 parent=getSampleStyleSheet()["Normal"],
                 fontName="Helvetica-Bold",
-                fontSize=5.0,
+                fontSize=5.5,
                 alignment=1, # Centrado
                 textColor=colors.black,
             )
