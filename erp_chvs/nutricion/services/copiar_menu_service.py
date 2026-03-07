@@ -50,10 +50,12 @@ class CopiarMenuService:
     @staticmethod
     def get_menus_de_programa(programa_id):
         """
-        Retorna los menus de un programa con conteo de preparaciones e ingredientes.
+        Retorna los menus de un programa con modalidad, conteo de preparaciones
+        e ingredientes, y lista de nombres de preparaciones para el tooltip hover.
         """
         menus = (
             TablaMenus.objects.filter(id_contrato_id=programa_id)
+            .select_related('id_modalidad')
             .prefetch_related('preparaciones__ingredientes')
             .order_by('semana', 'menu')
         )
@@ -66,8 +68,10 @@ class CopiarMenuService:
                 'id_menu': menu.id_menu,
                 'menu': menu.menu,
                 'semana': menu.semana,
+                'modalidad': menu.id_modalidad.modalidad if menu.id_modalidad else '',
                 'num_preparaciones': len(preparaciones),
                 'num_ingredientes': total_ingredientes,
+                'nombres_preparaciones': [p.preparacion for p in preparaciones],
             })
         return resultado
 

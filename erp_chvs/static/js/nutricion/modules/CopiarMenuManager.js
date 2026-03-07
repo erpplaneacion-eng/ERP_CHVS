@@ -40,6 +40,7 @@ class CopiarMenuManager {
         this._programaOrigenId = null;
         this._menuOrigenId = null;
         this._detalle = null;
+        this._todosLosMenus = [];
 
         this._irPaso(1);
         this._actualizarTituloDestino();
@@ -180,30 +181,87 @@ class CopiarMenuManager {
                 return;
             }
 
-            const frag = document.createDocumentFragment();
-            data.menus.forEach(menu => {
-                const card = document.createElement('div');
-                card.className = 'cm-card cm-card-menu';
-                card.dataset.id = menu.id_menu;
-                card.innerHTML = `
-                    ${menu.semana ? `<span class="cm-badge cm-badge-semana">S${menu.semana}</span>` : ''}
-                    <div class="cm-card-body">
-                        <div class="cm-card-title">Menu ${menu.menu}</div>
-                        <div class="cm-card-meta">
-                            <span>${menu.num_preparaciones} preparaciones</span>
-                            <span>${menu.num_ingredientes} ingredientes</span>
-                        </div>
-                    </div>
-                `;
-                card.addEventListener('click', () => this._seleccionarMenu(menu.id_menu, card));
-                frag.appendChild(card);
-            });
-
+            this._todosLosMenus = data.menus;
             container.innerHTML = '';
-            container.appendChild(frag);
+            this._renderFiltroModalidad(container, data.menus);
+            this._renderTarjetasMenus(container, data.menus);
+
+            // Limpiar selección previa al cambiar de programa
+            this._menuOrigenId = null;
         } catch (e) {
             container.innerHTML = '<div class="cm-empty cm-error">Error al cargar los menus.</div>';
         }
+    }
+
+    _renderFiltroModalidad(container, menus) {
+        const slot = document.getElementById('cmFiltroModalidadSlot');
+        if (!slot) return;
+
+        const modalidades = [...new Set(menus.map(m => m.modalidad).filter(Boolean))].sort();
+        if (modalidades.length <= 1) { slot.innerHTML = ''; return; }
+
+        slot.innerHTML = `
+            <select class="cm-filtro-select" id="cmFiltroModalidad">
+                <option value="">Todas las modalidades (${menus.length})</option>
+                ${modalidades.map(m => {
+                    const count = menus.filter(mn => mn.modalidad === m).length;
+                    return `<option value="${m}">${m} (${count})</option>`;
+                }).join('')}
+            </select>
+        `;
+
+        slot.querySelector('#cmFiltroModalidad').addEventListener('change', e => {
+            this._filtrarMenus(e.target.value);
+        });
+    }
+
+    _filtrarMenus(modalidadFiltro) {
+        const filtrados = modalidadFiltro
+            ? this._todosLosMenus.filter(m => m.modalidad === modalidadFiltro)
+            : this._todosLosMenus;
+
+        const container = document.getElementById('cmListaMenus');
+        // Quitar grid anterior y redibujar conservando el filtro
+        const grid = container.querySelector('.cm-menus-grid');
+        if (grid) grid.remove();
+        this._renderTarjetasMenus(container, filtrados);
+    }
+
+    _renderTarjetasMenus(container, menus) {
+        const grid = document.createElement('div');
+        grid.className = 'cm-menus-grid';
+
+        if (menus.length === 0) {
+            grid.innerHTML = '<div class="cm-empty" style="grid-column:1/-1">No hay menus para esta modalidad.</div>';
+            container.appendChild(grid);
+            return;
+        }
+
+        const frag = document.createDocumentFragment();
+        menus.forEach(menu => {
+            const card = document.createElement('div');
+            card.className = 'cm-card cm-card-menu';
+            card.dataset.id = menu.id_menu;
+            card.innerHTML = `
+                ${menu.semana ? `<span class="cm-badge cm-badge-semana">S${menu.semana}</span>` : ''}
+                <div class="cm-card-body">
+                    <div class="cm-card-title">Menu ${menu.menu}</div>
+                    ${menu.modalidad ? `<div class="cm-card-modalidad">${menu.modalidad}</div>` : ''}
+                    <div class="cm-card-meta">
+                        <span>${menu.num_preparaciones} preparaciones</span>
+                        <span>${menu.num_ingredientes} ingredientes</span>
+                    </div>
+                </div>
+            `;
+            card.addEventListener('click', () => this._seleccionarMenu(menu.id_menu, card));
+            if (menu.nombres_preparaciones && menu.nombres_preparaciones.length > 0) {
+                this._attachHoverTooltip(card, menu.nombres_preparaciones);
+            }
+            frag.appendChild(card);
+        });
+
+        grid.appendChild(frag);
+        container.appendChild(grid);
     }
 
     async _seleccionarMenu(menuId, cardEl) {
@@ -523,6 +581,51 @@ class CopiarMenuManager {
     // ================================================================
     // UTIL
     // ================================================================
+
+    /**
+     * Adjunta un tooltip flotante a una tarjeta de menu que muestra
+     * la lista de preparaciones al hacer hover.
+     * @param {HTMLElement} el - Tarjeta disparadora
+     * @param {string[]} preparaciones - Lista de nombres de preparaciones
+     */
+    _attachHoverTooltip(el, preparaciones) {
+        let tooltip = null;
+
+        el.addEventListener('mouseenter', () => {
+            tooltip = document.createElement('div');
+            tooltip.className = 'cm-tooltip-preps';
+            tooltip.innerHTML = `
+                <div class="cm-tooltip-title">Preparaciones</div>
+                <ul class="cm-tooltip-list">
+                    ${preparaciones.map(p => `<li>${p}</li>`).join('')}
+                </ul>
+            `;
+            document.body.appendChild(tooltip);
+
+            const rect = el.getBoundingClientRect();
+            const tw = tooltip.offsetWidth;
+            const th = tooltip.offsetHeight;
+
+            // Intentar mostrar a la derecha; si no cabe, a la izquierda
+            let left = rect.right + 10;
+            if (left + tw > window.innerWidth - 8) {
+                left = rect.left - tw - 10;
+            }
+            // Alinear verticalmente al centro de la tarjeta
+            let top = rect.top + rect.height / 2 - th / 2;
+            top = Math.max(8, Math.min(top, window.innerHeight - th - 8));
+
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+        });
+
+        el.addEventListener('mouseleave', () => {
+            if (tooltip) {
+                tooltip.remove();
+                tooltip = null;
+            }
+        });
+    }
 
     _bindClose() {
         document.addEventListener('DOMContentLoaded', () => {

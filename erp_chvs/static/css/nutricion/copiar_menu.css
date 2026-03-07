@@ -472,3 +472,103 @@
     color: #1e293b;
     margin: 0 0 14px;
 }
+
+/* ---- Header paso 2: título + filtro en la misma fila ---- */
+.cm-paso2-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.cm-paso2-header .cm-paso-titulo {
+    margin: 0;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+#cmFiltroModalidadSlot {
+    flex: 1;
+    min-width: 0;
+}
+
+.cm-filtro-select {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    font-size: 0.82rem;
+    color: #334155;
+    background: white;
+    cursor: pointer;
+    outline: none;
+}
+
+.cm-filtro-select:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+/* ---- Modalidad en tarjeta de menú ---- */
+.cm-card-modalidad {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #4f46e5;
+    background: #ede9fe;
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin: 4px 0 3px;
+}
+
+/* ---- Tooltip de preparaciones (hover) ---- */
+.cm-tooltip-preps {
+    position: fixed;
+    z-index: 9999;
+    background: #1e293b;
+    color: white;
+    border-radius: 10px;
+    padding: 12px 14px;
+    min-width: 200px;
+    max-width: 280px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    pointer-events: none;
+    animation: cmTooltipIn 0.15s ease;
+}
+
+@keyframes cmTooltipIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.cm-tooltip-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+    margin-bottom: 7px;
+}
+
+.cm-tooltip-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cm-tooltip-list li {
+    font-size: 0.82rem;
+    color: #e2e8f0;
+    padding-left: 10px;
+    position: relative;
+}
+
+.cm-tooltip-list li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: #10b981;
+}
