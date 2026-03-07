@@ -181,6 +181,7 @@ class CicloMenusPdfService:
 
     def _build_top_block(self, programa: Programa, modalidad: ModalidadesDeConsumo) -> List:
         items: List = []
+        is_cali = programa.municipio and "cali" in programa.municipio.nombre_municipio.lower()
 
         logo_cell = ""
         if programa.imagen:
@@ -191,63 +192,162 @@ class CicloMenusPdfService:
             except Exception:
                 logo_cell = self._p(programa.programa or "", self.style_cell_left)
 
-        head = Table(
-            [[logo_cell, self._p("PLANEACION CICLO DE MENUS", self.style_title)]],
-            colWidths=[36 * mm, 146 * mm],
-            hAlign="LEFT",
-        )
-        head.setStyle(
-            TableStyle(
-                [
-                    ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
-                    ("BACKGROUND", (1, 0), (1, 0), colors.black),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 2),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 2),
-                    ("TOPPADDING", (0, 0), (-1, -1), 2),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-                ]
-            )
-        )
-        items.append(head)
+        if is_cali:
+            # Fila 1: Logo
+            head = Table([[logo_cell]], colWidths=[182 * mm], hAlign="LEFT")
+            head.setStyle(TableStyle([
+                ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 2),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+                ("TOPPADDING", (0, 0), (-1, -1), 2),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+            ]))
+            items.append(head)
 
-        sub = Table(
-            [[self._p(f"ANEXO - {modalidad.modalidad}", self.style_subtitle)]],
-            colWidths=[182 * mm],
-            hAlign="LEFT",
-        )
-        sub.setStyle(
-            TableStyle(
-                [
-                    ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
-                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#6f6f6f")),
-                    ("TOPPADDING", (0, 0), (-1, -1), 1),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
-                ]
-            )
-        )
-        items.append(sub)
+            # Fila 2: Título
+            title = Table([[self._p("PLANEACION CICLO DE MENUS - Resolución 335 de 2021 - SED PAE CALI", self.style_title)]], colWidths=[182 * mm], hAlign="LEFT")
+            title.setStyle(TableStyle([
+                ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("TOPPADDING", (0, 0), (-1, -1), 2),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+            ]))
+            items.append(title)
 
-        meta_data = [
-            [self._p("OPERADOR", self.style_cell_left), self._p(programa.programa or "N/A", self.style_cell_center)],
-            [self._p("DEPARTAMENTO", self.style_cell_left), self._p("VALLE DEL CAUCA", self.style_cell_center)],
-            [self._p("MUNICIPIO", self.style_cell_left), self._p(programa.municipio.nombre_municipio if programa.municipio else "N/A", self.style_cell_center)],
-            [self._p("CONTRATO", self.style_cell_left), self._p(programa.contrato or "N/A", self.style_cell_center)],
-        ]
-        meta = Table(meta_data, colWidths=[40 * mm, 142 * mm], hAlign="LEFT")
-        meta.setStyle(
-            TableStyle(
-                [
-                    ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
-                    ("GRID", (0, 0), (-1, -1), 0.8, colors.black),
-                    ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#d9d9d9")),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 1),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
-                ]
+            # Fila 3: Anexo
+            mod_id = str(modalidad.id_modalidades)
+            if mod_id == "20503":
+                anexo_text = "8.3-JORNADA UNICA"
+            elif mod_id == "20502":
+                anexo_text = "8.4-COMPLEMENTO RACION INDUSTRIALIZADA"
+            elif mod_id == "20507":
+                anexo_text = "8.2-COMPLEMENTO PREPARADO EN SITIO JORNADA PM"
+            elif mod_id == "20501":
+                anexo_text = "8.1-COMPLEMENTO PREPARADO EN SITIO JORNADA AM"
+            else:
+                anexo_text = modalidad.modalidad
+
+            sub = Table([[self._p(f"ANEXO - {anexo_text}", self.style_subtitle)]], colWidths=[182 * mm], hAlign="LEFT")
+            sub.setStyle(TableStyle([
+                ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#6f6f6f")),
+                ("TOPPADDING", (0, 0), (-1, -1), 1),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+            ]))
+            items.append(sub)
+
+            # Filas 4 a 9: Metadatos y tabla de Grupos Étnicos
+            col_widths = [26 * mm, 46 * mm, 30 * mm, 30 * mm, 50 * mm]
+
+            meta_data = [
+                # Row 4 (índice 0): OPERADOR
+                [self._p("OPERADOR", self.style_cell_left), self._p(programa.programa or "N/A", self.style_cell_center), "", "", ""],
+                # Row 5 (índice 1): DEPARTAMENTO / MUNICIPIO
+                [self._p("DEPARTAMENTO", self.style_cell_left), self._p("VALLE DEL CAUCA", self.style_cell_center), self._p("MUNICIPIO", self.style_cell_left), self._p("CALI", self.style_cell_center), ""],
+                # Row 6 (índice 2): Grupo Étnico 1
+                [self._p("GRUPO ETNICO", self.style_cell_left), self._p("RAIZAL", self.style_cell_left), "", self._p("ROM", self.style_cell_left), ""],
+                # Row 7 (índice 3): Grupo Étnico 2
+                ["", self._p("SIN PERTENENCIA ETNICA", self.style_cell_left), "", self._p("INDIGENA", self.style_cell_left), ""],
+                # Row 8 (índice 4): Grupo Étnico 3
+                ["", self._p("COMUNIDAD/PUEBLO INDIGENA", self.style_cell_left), "", "", ""],
+                # Row 9 (índice 5): Establecimiento Educativo
+                [self._p("ESTABLECIMIENTO EDUCATIVO", self.style_cell_left), "", "", "", ""]
+            ]
+
+            meta = Table(meta_data, colWidths=col_widths, hAlign="LEFT")
+            meta.setStyle(TableStyle([
+                ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
+                ("GRID", (0, 0), (-1, -1), 0.8, colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("TOPPADDING", (0, 0), (-1, -1), 1),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+                
+                # Fila 4: OPERADOR
+                ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#d9d9d9")),
+                ("SPAN", (1, 0), (4, 0)),
+                
+                # Fila 5: DEPARTAMENTO / MUNICIPIO
+                ("BACKGROUND", (0, 1), (0, 1), colors.HexColor("#d9d9d9")),
+                ("BACKGROUND", (2, 1), (2, 1), colors.HexColor("#d9d9d9")),
+                ("SPAN", (3, 1), (4, 1)),
+                
+                # Filas 6, 7, 8: GRUPO ETNICO
+                ("BACKGROUND", (0, 2), (0, 4), colors.HexColor("#d9d9d9")),
+                ("SPAN", (0, 2), (0, 4)),
+                ("SPAN", (3, 4), (4, 4)), # Merge empty cells below INDIGENA
+                
+                # Fila 9: ESTABLECIMIENTO EDUCATIVO
+                ("BACKGROUND", (0, 5), (1, 5), colors.HexColor("#d9d9d9")),
+                ("SPAN", (0, 5), (1, 5)), # Merge label
+                ("SPAN", (2, 5), (4, 5)), # Merge input
+            ]))
+            items.append(meta)
+
+        else:
+            # Título pequeño centrado arriba
+            title_table = Table([[self._p("REPORTE CICLOS MENU", self.style_title)]], colWidths=[182 * mm], hAlign="CENTER")
+            # Cambiamos un poco el estilo del título para que no tenga fondo negro, según descripción
+            title_style = ParagraphStyle(
+                "yumbo_title",
+                parent=getSampleStyleSheet()["Normal"],
+                fontName="Helvetica-Bold",
+                fontSize=5.0,
+                alignment=1, # Centrado
+                textColor=colors.black,
             )
-        )
-        items.append(meta)
+            title_table = Table([[Paragraph("REPORTE CICLOS MENU", title_style)]], colWidths=[182 * mm], hAlign="CENTER")
+            items.append(title_table)
+            items.append(Spacer(1, 2 * mm))
+
+            # Fila del logo (alineado a la derecha)
+            logo_row = Table([["", logo_cell]], colWidths=[146 * mm, 36 * mm], hAlign="RIGHT")
+            # Sin bordes para el logo
+            items.append(logo_row)
+            items.append(Spacer(1, 2 * mm))
+
+            # Determinar "Modalidad de Atención" y "Tipo de Complemento"
+            mod_texto = modalidad.modalidad.upper()
+            if "INDUSTRIALIZADA" in mod_texto:
+                mod_atencion = "RACIÓN INDUSTRIALIZADA"
+            else:
+                mod_atencion = "PREPARADA EN SITIO"
+
+            # Metadatos (8 filas divididas en dos bloques)
+            # Columna izquierda: Etiqueta (ancho ~60mm), Columna derecha: Valor (ancho ~122mm)
+            municipio_val = programa.municipio.nombre_municipio.upper() if programa.municipio else "N/A"
+            
+            meta_data = [
+                [self._p("ENTIDAD TERRITORIAL", self.style_cell_left), self._p(municipio_val, self.style_cell_center)],
+                [self._p("MUNICIPIO", self.style_cell_left), self._p(municipio_val, self.style_cell_center)],
+                [self._p("SEDE EDUCATIVA", self.style_cell_left), ""],
+                [self._p("OPERADOR", self.style_cell_left), self._p(programa.programa or "N/A", self.style_cell_center)],
+                [self._p("MINUTA ENFOQUE ETNICO", self.style_cell_left), self._p("NO", self.style_cell_center)],
+                [self._p("GRUPO ETNICO", self.style_cell_left), self._p("SIN PERTENENCIA ETNICA", self.style_cell_center)],
+                [self._p("MODALIDAD DE ATENCION", self.style_cell_left), self._p(mod_atencion, self.style_cell_center)],
+                [self._p("TIPO DE COMPLEMENTO", self.style_cell_left), self._p(mod_texto, self.style_cell_center)],
+            ]
+
+            meta = Table(meta_data, colWidths=[60 * mm, 122 * mm], hAlign="LEFT")
+            meta.setStyle(
+                TableStyle(
+                    [
+                        # Bordes SOLO para la columna de la derecha (índice 1)
+                        ("BOX", (1, 0), (1, -1), 0.8, colors.black),
+                        ("INNERGRID", (1, 0), (1, -1), 0.5, colors.black),
+                        
+                        # Fondo solo para la columna de etiquetas (índice 0)
+                        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f3f1e5")),
+                        
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                        ("TOPPADDING", (0, 0), (-1, -1), 1),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+                    ]
+                )
+            )
+            items.append(meta)
+
         items.append(Spacer(1, 1.2 * mm))
         return items
 
@@ -381,22 +481,70 @@ class CicloMenusPdfService:
         aprueba_nombre = (firma.aprueba_nombre if firma else "") or "N/A"
         aprueba_matricula = (firma.aprueba_matricula if firma else "") or "N/A"
 
+        import os
+
+        elabora_img = ""
+        if firma and firma.elabora_firma_imagen:
+            try:
+                img_path = firma.elabora_firma_imagen.path
+                if os.path.exists(img_path):
+                    elabora_img = Image(img_path)
+                    elabora_img._restrictSize(60 * mm, 14 * mm)
+            except Exception:
+                elabora_img = ""
+
+        aprueba_img = ""
+        if firma and firma.aprueba_firma_imagen:
+            try:
+                img_path = firma.aprueba_firma_imagen.path
+                if os.path.exists(img_path):
+                    aprueba_img = Image(img_path)
+                    aprueba_img._restrictSize(60 * mm, 14 * mm)
+            except Exception:
+                aprueba_img = ""
+
         data = [
-            [self._p("NOMBRE NUTRICIONISTA - DIETISTA DEL OPERADOR", self.style_cell_left), self._p(elabora_nombre, self.style_cell_center)],
-            [self._p("MATRICULA PROFESIONAL", self.style_cell_left), self._p(elabora_matricula, self.style_cell_center)],
-            [self._p("NOMBRE NUTRICIONISTA - DIETISTA QUE PLANEA EL CICLO", self.style_cell_left), self._p(aprueba_nombre, self.style_cell_center)],
-            [self._p("MATRICULA PROFESIONAL", self.style_cell_left), self._p(aprueba_matricula, self.style_cell_center)],
+            # Fila 1: Nombre Elabora (combina col 0-1 y col 2-3)
+            [self._p("NOMBRE NUTRICIONISTA - DIETISTA DEL OPERADOR", self.style_cell_left), "", self._p(elabora_nombre, self.style_cell_center), ""],
+            # Fila 2: Firma y Matrícula Elabora
+            [self._p("FIRMA", self.style_cell_left), elabora_img, self._p("MATRICULA PROFESIONAL", self.style_cell_left), self._p(elabora_matricula, self.style_cell_center)],
+            # Fila 3: Nombre Aprueba (combina col 0-1 y col 2-3)
+            [self._p("NOMBRE NUTRICIONISTA - DIETISTA QUE PLANEA EL CICLO Y REVISA POR PARTE DE LA ETC.", self.style_cell_left), "", self._p(aprueba_nombre, self.style_cell_center), ""],
+            # Fila 4: Firma y Matrícula Aprueba
+            [self._p("FIRMA", self.style_cell_left), aprueba_img, self._p("MATRICULA PROFESIONAL", self.style_cell_left), self._p(aprueba_matricula, self.style_cell_center)],
         ]
-        table = Table(data, colWidths=[90 * mm, 92 * mm], hAlign="LEFT")
+        
+        # Redimensionamos las columnas a un total de 182mm (20 + 62 + 50 + 50)
+        table = Table(data, colWidths=[20 * mm, 62 * mm, 50 * mm, 50 * mm], hAlign="LEFT")
         table.setStyle(
             TableStyle(
                 [
                     ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
                     ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-                    ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f3f1e5")),
+                    
+                    # Fondos grises para las celdas de etiquetas
+                    ("BACKGROUND", (0, 0), (1, 0), colors.HexColor("#f3f1e5")), # Etiqueta Nombre Elabora
+                    ("BACKGROUND", (0, 1), (0, 1), colors.HexColor("#f3f1e5")), # Etiqueta Firma Elabora
+                    ("BACKGROUND", (2, 1), (2, 1), colors.HexColor("#f3f1e5")), # Etiqueta Matrícula Elabora
+                    ("BACKGROUND", (0, 2), (1, 2), colors.HexColor("#f3f1e5")), # Etiqueta Nombre Aprueba
+                    ("BACKGROUND", (0, 3), (0, 3), colors.HexColor("#f3f1e5")), # Etiqueta Firma Aprueba
+                    ("BACKGROUND", (2, 3), (2, 3), colors.HexColor("#f3f1e5")), # Etiqueta Matrícula Aprueba
+
                     ("TOPPADDING", (0, 0), (-1, -1), 1),
                     ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    
+                    # Combinaciones para Fila 1
+                    ("SPAN", (0, 0), (1, 0)), # Une celda Etiqueta Nombre Elabora
+                    ("SPAN", (2, 0), (3, 0)), # Une celda Valor Nombre Elabora
+                    
+                    # Combinaciones para Fila 3
+                    ("SPAN", (0, 2), (1, 2)), # Une celda Etiqueta Nombre Aprueba
+                    ("SPAN", (2, 2), (3, 2)), # Une celda Valor Nombre Aprueba
+                    
+                    # Centrado de imágenes
+                    ("ALIGN", (1, 1), (1, 1), "CENTER"),
+                    ("ALIGN", (1, 3), (1, 3), "CENTER"),
                 ]
             )
         )
