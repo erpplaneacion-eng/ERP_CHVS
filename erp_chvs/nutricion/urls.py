@@ -36,8 +36,6 @@ urlpatterns = [
     path('api/generar-menus-automaticos/', views.api_generar_menus_automaticos, name='api_generar_menus_automaticos'),
     path('api/generar-menu-ia/', views.api_generar_menu_ia, name='api_generar_menu_ia'),
     path('api/crear-menu-especial/', views.api_crear_menu_especial, name='api_crear_menu_especial'),
-    path('api/programas-con-modalidad/', views.api_programas_con_modalidad, name='api_programas_con_modalidad'),
-    path('api/copiar-modalidad/', views.api_copiar_modalidad, name='api_copiar_modalidad'),
 
     # Preparaciones (APIs - las vistas de lista se eliminaron, funcionalidad en lista_menus)
     path('api/preparaciones/', views.api_preparaciones, name='api_preparaciones'),

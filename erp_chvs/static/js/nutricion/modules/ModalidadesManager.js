@@ -160,9 +160,6 @@ class ModalidadesManager {
                 ${!menusCompletos ? `
                 <button class="btn-generar-auto" data-modalidad-id="${modalidadId}" data-modalidad-nombre="${modalidad.modalidad}">
                     <i class="fas fa-magic"></i> Generar 20 Menus
-                </button>
-                <button class="btn-copiar-modalidad" data-modalidad-id="${modalidadId}" data-modalidad-nombre="${modalidad.modalidad}">
-                    <i class="fas fa-copy"></i> Copiar desde otro programa
                 </button>` : ''}
                 <i class="fas fa-chevron-down"></i>
             </div>
@@ -181,15 +178,6 @@ class ModalidadesManager {
                     });
                 }
 
-                const btnCopiar = header.querySelector('.btn-copiar-modalidad');
-                if (btnCopiar) {
-                    btnCopiar.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        const modalidadId = btnCopiar.getAttribute('data-modalidad-id');
-                        const modalidadNombre = btnCopiar.getAttribute('data-modalidad-nombre');
-                        this.abrirModalCopiar(modalidadId, modalidadNombre);
-                    });
-                }
             }, 0);
         }
 
@@ -667,10 +655,6 @@ class ModalidadesManager {
                 if (btnGenerar) {
                     btnGenerar.style.display = menusNuevos.length >= 20 ? 'none' : '';
                 }
-                const btnCopiar = document.querySelector(`#actions-${modalidadId} .btn-copiar-modalidad`);
-                if (btnCopiar) {
-                    btnCopiar.style.display = menusNuevos.length >= 20 ? 'none' : '';
-                }
                 const btnAnalisis = document.querySelector(`#actions-${modalidadId} .btn-download-analisis`);
                 if (btnAnalisis) {
                     btnAnalisis.style.display = menusNuevos.length >= 20 ? '' : 'none';
@@ -899,199 +883,6 @@ class ModalidadesManager {
         return partes.join('<br>');
     }
 
-    // =================== COPIAR MODALIDAD ===================
-
-    /**
-     * Abre el modal para copiar una modalidad desde otro programa.
-     * Carga la lista de programas disponibles vÃ­a API y renderiza opciones.
-     * @param {string} modalidadId - ID de la modalidad a copiar
-     * @param {string} modalidadNombre - Nombre legible de la modalidad
-     */
-    async abrirModalCopiar(modalidadId, modalidadNombre) {
-        // Setear valor oculto y nombre visible
-        document.getElementById('copiarModalidadId').value = modalidadId;
-        document.getElementById('copiarNombreModalidad').textContent = modalidadNombre;
-
-        // Resetear estado del modal
-        document.getElementById('listaProgramasOrigen').style.display = 'none';
-        document.getElementById('sinProgramasOrigen').style.display = 'none';
-        document.getElementById('accionesCopiar').style.display = 'none';
-        document.getElementById('cargandoProgramas').style.display = 'block';
-
-        // Mostrar modal
-        document.getElementById('modalCopiarModalidad').style.display = 'flex';
-
-        try {
-            const programaActualId = this.programaActual?.id;
-            const resp = await fetch(
-                `/nutricion/api/programas-con-modalidad/?modalidad_id=${encodeURIComponent(modalidadId)}&programa_excluir=${programaActualId || ''}`
-            );
-            const data = await resp.json();
-
-            document.getElementById('cargandoProgramas').style.display = 'none';
-
-            if (data.programas && data.programas.length > 0) {
-                this.renderizarProgramasOrigen(data.programas);
-            } else {
-                document.getElementById('sinProgramasOrigen').style.display = 'block';
-            }
-        } catch (error) {
-            console.error('[ModalidadesManager] Error al cargar programas con modalidad:', error);
-            document.getElementById('cargandoProgramas').style.display = 'none';
-            document.getElementById('sinProgramasOrigen').style.display = 'block';
-        }
-    }
-
-    /**
-     * Renderiza las tarjetas de programas origen disponibles para seleccionar.
-     * @param {Array} programas - Lista de programas con Menus para la modalidad
-     */
-    renderizarProgramasOrigen(programas) {
-        const container = document.getElementById('programasOrigenContainer');
-        const fragment = document.createDocumentFragment();
-
-        programas.forEach(prog => {
-            const card = document.createElement('label');
-            card.className = 'programa-origen-card';
-            card.innerHTML = `
-                <input type="radio" name="programaOrigen" value="${prog.id}">
-                <div class="programa-origen-info">
-                    <div class="programa-origen-nombre">${prog.programa}</div>
-                    <div class="programa-origen-meta">
-                        Contrato: ${prog.contrato || 'N/A'} &nbsp;|&nbsp; Municipio: ${prog.municipio_nombre || 'N/A'}
-                    </div>
-                </div>
-                <span class="programa-origen-badge">${prog.cantidad_menus} Menus</span>
-            `;
-
-            // Seleccionar visualmente la tarjeta al hacer clic en el radio
-            const radio = card.querySelector('input[type="radio"]');
-            radio.addEventListener('change', () => {
-                document.querySelectorAll('.programa-origen-card').forEach(c => c.classList.remove('seleccionado'));
-                card.classList.add('seleccionado');
-                document.getElementById('accionesCopiar').style.display = 'block';
-            });
-
-            fragment.appendChild(card);
-        });
-
-        container.innerHTML = '';
-        container.appendChild(fragment);
-        document.getElementById('listaProgramasOrigen').style.display = 'block';
-    }
-
-    /**
-     * Ejecuta la copia de la modalidad tras confirmar con SweetAlert2.
-     * Llamado desde la funciÃ³n global ejecutarCopiaModalidad().
-     */
-    async _ejecutarCopiaModalidad() {
-        const modalidadId = document.getElementById('copiarModalidadId').value;
-        const radioSeleccionado = document.querySelector('input[name="programaOrigen"]:checked');
-        const programaDestinoId = this.programaActual?.id;
-
-        if (!radioSeleccionado) {
-            Swal.fire('Atencion', 'Selecciona un programa origen antes de continuar.', 'warning');
-            return;
-        }
-
-        const programaOrigenId = radioSeleccionado.value;
-
-        const confirmacion = await Swal.fire({
-            title: 'Copiar modalidad?',
-            text: 'Se copiaran todos los Menus con preparaciones, ingredientes y gramajes por nivel educativo. Esta accion no se puede deshacer.',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#6366f1',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: 'Si, copiar',
-            cancelButtonText: 'Cancelar'
-        });
-
-        if (!confirmacion.isConfirmed) return;
-
-        // Mostrar spinner mientras se copia
-        Swal.fire({
-            title: 'Copiando modalidad...',
-            html: `
-                <div class="generating-spinner" style="margin: 20px auto;"></div>
-                <p style="font-weight: 500; color: #334155;">Por favor, espere un momento.</p>
-            `,
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            showConfirmButton: false
-        });
-
-        try {
-            const resp = await fetch('/nutricion/api/copiar-modalidad/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    programa_origen_id: parseInt(programaOrigenId),
-                    programa_destino_id: parseInt(programaDestinoId),
-                    modalidad_id: modalidadId
-                })
-            });
-
-            const data = await resp.json();
-
-            if (data.success) {
-                // Cerrar modal de copia
-                document.getElementById('modalCopiarModalidad').style.display = 'none';
-
-                // Recargar Menus y actualizar UI
-                await this.cargarMenusExistentes(this.programaActual.id);
-                const menusNuevos = this.menusData[modalidadId] || [];
-
-                // Actualizar badge
-                const badge = document.getElementById(`badge-${modalidadId}`);
-                if (badge) {
-                    badge.textContent = `${menusNuevos.length} / 20 Menus`;
-                }
-
-                // Alternar acciones en header segun cantidad de menus
-                const actionsDiv = document.getElementById(`actions-${modalidadId}`);
-                if (actionsDiv) {
-                    const completado = menusNuevos.length >= 20;
-                    const btnGenerar = actionsDiv.querySelector('.btn-generar-auto');
-                    const btnCopiar = actionsDiv.querySelector('.btn-copiar-modalidad');
-                    const btnAnalisis = actionsDiv.querySelector('.btn-download-analisis');
-                    const btnGuias = actionsDiv.querySelector('.btn-download-guias');
-                    const btnCicloPdf = actionsDiv.querySelector('.btn-download-ciclo-pdf');
-                    if (btnGenerar) btnGenerar.style.display = completado ? 'none' : '';
-                    if (btnCopiar) btnCopiar.style.display = completado ? 'none' : '';
-                    if (btnAnalisis) btnAnalisis.style.display = completado ? '' : 'none';
-                    if (btnGuias) btnGuias.style.display = completado ? '' : 'none';
-                    if (btnCicloPdf) btnCicloPdf.style.display = completado ? '' : 'none';
-                }
-
-                // Renderizar tarjetas con animaciÃ³n
-                const grid = document.getElementById(`grid-${modalidadId}`);
-                if (grid) {
-                    grid.innerHTML = this.generarTarjetasMenus(menusNuevos, true);
-                    setTimeout(() => {
-                        this.cargarValidadoresSemana(modalidadId);
-                    }, 500);
-                }
-
-                Swal.fire({
-                    title: 'Copia exitosa',
-                    text: `Se copiaron ${data.menus_copiados} Menus correctamente.`,
-                    icon: 'success',
-                    timer: 2500,
-                    showConfirmButton: false
-                });
-            } else {
-                Swal.fire('Error', data.error || 'No se pudo copiar la modalidad.', 'error');
-            }
-        } catch (error) {
-            console.error('[ModalidadesManager] Error al copiar modalidad:', error);
-            Swal.fire('Error', 'Hubo un problema en la conexion con el servidor.', 'error');
-        }
-    }
-
     /**
      * Adjunta un tooltip custom (sin Bootstrap/Popper) a un elemento.
      * Crea una burbuja flotante en el body al hacer hover.
@@ -1141,25 +932,6 @@ class ModalidadesManager {
 // Exportar para uso global
 window.ModalidadesManager = ModalidadesManager;
 
-// =================== FUNCIONES GLOBALES: MODAL COPIAR MODALIDAD ===================
-
-/**
- * Cierra el modal de copia de modalidad.
- * Llamado desde onclick en el HTML del modal.
- */
-function cerrarModalCopiar() {
-    document.getElementById('modalCopiarModalidad').style.display = 'none';
-}
-
-/**
- * Delega la ejecuciÃ³n de la copia al ModalidadesManager activo.
- * Llamado desde onclick en el botÃ³n "Copiar Modalidad" del modal.
- */
-async function ejecutarCopiaModalidad() {
-    if (window._modalidadesMgr) {
-        await window._modalidadesMgr._ejecutarCopiaModalidad();
-    }
-}
 
 function togglePreparacionesCard(triggerEl) {
     const card = triggerEl && triggerEl.closest('.menu-card');
