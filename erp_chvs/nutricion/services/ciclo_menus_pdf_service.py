@@ -94,6 +94,44 @@ COMPONENTES_PDF_CALI = {
     ],
 }
 
+RANGOS_PESOS_YUMBO = {
+    "20503": {
+        "ALIMENTO PROTEICO": "15g-120g",
+        "CEREALES": "55g-140g",
+        "TUBERCULOS, RAICES, PLATANOS Y DERIVADOS DE CEREAL": "40g-130g",
+        "ENSALADA O VERDURA CALIENTE": "50g-90g",
+        "BEBIDA": "200cc-220cc",
+        "LECHE Y PRODUCTOS LACTEOS": "10g-45g",
+        "AGUA": "100cc",
+    },
+    "20510": {
+        "ALIMENTO PROTEICO": "35g",
+        "CEREALES": "55g-140g",
+        "TUBERCULOS, RAICES, PLATANOS Y DERIVADOS DE CEREAL": "40g-130g",
+        "ENSALADA O VERDURAS CALIENTES": "50g-60g",
+        "BEBIDA": "200cc-220cc",
+    },
+    "20501": {
+        "BEBIDA CON LECHE": "200cc-200cc",
+        "ALIMENTO PROTEICO": "15g-60g",
+        "CEREAL ACOMPAÑANTE": "7g-140g",
+        "FRUTA": "80g-135g",
+        "AGUA": "100cc",
+    },
+    "020511": {
+        "LACTEOS O JUGOS": "200cc",
+        "ALIMENTO PROTEICO": "15g-20g",
+        "CEREAL ACOMPAÑANTE": "14g-70g",
+        "FRUTA O POSTRE": "10g-100g",
+    },
+    "20502": {
+        "LECHE Y PRODUCTOS LACTEOS": "200cc",
+        "CEREA ACOMPAÑANTE": "40g-110g",
+        "FRUTA": "100g",
+        "DULCE O POSTRE": "10g-25g",
+    }
+}
+
 
 class CicloMenusPdfService:
     """Genera PDF de ciclo de menus (1-20) en una hoja vertical carta."""
@@ -314,6 +352,20 @@ class CicloMenusPdfService:
             else:
                 mod_atencion = "PREPARADA EN SITIO"
 
+            mod_id = str(modalidad.id_modalidades)
+            if mod_id == "20503":
+                tipo_complemento = "ALMUERZO"
+            elif mod_id == "20510":
+                tipo_complemento = "REFUERZO COMPLEMENTO"
+            elif mod_id == "20501":
+                tipo_complemento = "COMPLEMENTO JM/JT"
+            elif mod_id == "020511":
+                tipo_complemento = "REFUERZO DEL COMPLEMENTO"
+            elif mod_id == "20502":
+                tipo_complemento = "COMPLEMENTO GJM/JT"
+            else:
+                tipo_complemento = mod_texto
+
             # Metadatos (8 filas divididas en dos bloques)
             # Columna izquierda: Etiqueta (ancho ~60mm), Columna derecha: Valor (ancho ~122mm)
             municipio_val = programa.municipio.nombre_municipio.upper() if programa.municipio else "N/A"
@@ -326,7 +378,7 @@ class CicloMenusPdfService:
                 [self._p("MINUTA ENFOQUE ETNICO", self.style_cell_left), self._p("NO", self.style_cell_center)],
                 [self._p("GRUPO ETNICO", self.style_cell_left), self._p("SIN PERTENENCIA ETNICA", self.style_cell_center)],
                 [self._p("MODALIDAD DE ATENCION", self.style_cell_left), self._p(mod_atencion, self.style_cell_center)],
-                [self._p("TIPO DE COMPLEMENTO", self.style_cell_left), self._p(mod_texto, self.style_cell_center)],
+                [self._p("TIPO DE COMPLEMENTO", self.style_cell_left), self._p(tipo_complemento, self.style_cell_center)],
             ]
 
             meta = Table(meta_data, colWidths=[60 * mm, 122 * mm], hAlign="LEFT")
@@ -357,6 +409,8 @@ class CicloMenusPdfService:
         menus_by_number: Dict[int, TablaMenus],
         menu_component_preps: Dict[int, Dict[str, List[str]]],
         ordered_components: List[Tuple[str, str, List[str]]],
+        include_ranges: bool = False,
+        modalidad_id: str = "",
     ) -> Tuple[List[List[Paragraph]], List[Tuple[int, int, int, int]]]:
         start_menu = (week_num - 1) * 5 + 1
         menu_nums = list(range(start_menu, start_menu + 5))
@@ -364,19 +418,33 @@ class CicloMenusPdfService:
         rows: List[List[Paragraph]] = []
         spans: List[Tuple[int, int, int, int]] = []
 
-        rows.append([self._p(f"SEMANA No. {week_num}", self.style_header)] + ["", "", "", "", ""])
-        spans.append((0, 0, 5, 0))
-
-        rows.append(
-            [
-                self._p("COMPONENTE", self.style_header),
-                self._p(f"MENU No. {menu_nums[0]}", self.style_header),
-                self._p(f"MENU No. {menu_nums[1]}", self.style_header),
-                self._p(f"MENU No. {menu_nums[2]}", self.style_header),
-                self._p(f"MENU No. {menu_nums[3]}", self.style_header),
-                self._p(f"MENU No. {menu_nums[4]}", self.style_header),
-            ]
-        )
+        if include_ranges:
+            rows.append([self._p(f"SEMANA No. {week_num}", self.style_header)] + ["", "", "", "", "", ""])
+            spans.append((0, 0, 6, 0))
+            rows.append(
+                [
+                    self._p("COMPONENTE", self.style_header),
+                    self._p("RANGOS DE PESOS AL SEVIR RACION SERVIDA", self.style_header),
+                    self._p(f"MENU No. {menu_nums[0]}", self.style_header),
+                    self._p(f"MENU No. {menu_nums[1]}", self.style_header),
+                    self._p(f"MENU No. {menu_nums[2]}", self.style_header),
+                    self._p(f"MENU No. {menu_nums[3]}", self.style_header),
+                    self._p(f"MENU No. {menu_nums[4]}", self.style_header),
+                ]
+            )
+        else:
+            rows.append([self._p(f"SEMANA No. {week_num}", self.style_header)] + ["", "", "", "", ""])
+            spans.append((0, 0, 5, 0))
+            rows.append(
+                [
+                    self._p("COMPONENTE", self.style_header),
+                    self._p(f"MENU No. {menu_nums[0]}", self.style_header),
+                    self._p(f"MENU No. {menu_nums[1]}", self.style_header),
+                    self._p(f"MENU No. {menu_nums[2]}", self.style_header),
+                    self._p(f"MENU No. {menu_nums[3]}", self.style_header),
+                    self._p(f"MENU No. {menu_nums[4]}", self.style_header),
+                ]
+            )
 
         for comp_group_id, comp_name, comp_ids_to_merge in ordered_components:
             per_menu_preps: List[List[str]] = []
@@ -404,8 +472,15 @@ class CicloMenusPdfService:
             max_rows_for_component = max(1, max_rows_for_component)
             comp_row_start = len(rows)
 
+            rango_texto = ""
+            if include_ranges and str(modalidad_id) in RANGOS_PESOS_YUMBO:
+                rango_texto = RANGOS_PESOS_YUMBO[str(modalidad_id)].get(comp_name, "")
+
             for prep_idx in range(max_rows_for_component):
                 row = [self._p(comp_name if prep_idx == 0 else "", self.style_cell_left)]
+                if include_ranges:
+                    row.append(self._p(rango_texto if prep_idx == 0 else "", self.style_cell_center))
+                    
                 for mn_index, mn in enumerate(menu_nums):
                     if mn not in menus_by_number:
                         cell_html = "PENDIENTE"
@@ -416,7 +491,12 @@ class CicloMenusPdfService:
                 rows.append(row)
 
             if max_rows_for_component > 1:
-                spans.append((0, comp_row_start, 0, len(rows) - 1))
+                # El componente (y el rango si existe) hacen span vertical
+                if include_ranges:
+                    spans.append((0, comp_row_start, 0, len(rows) - 1))
+                    spans.append((1, comp_row_start, 1, len(rows) - 1))
+                else:
+                    spans.append((0, comp_row_start, 0, len(rows) - 1))
 
         return rows, spans
 
@@ -425,6 +505,8 @@ class CicloMenusPdfService:
         menus_by_number: Dict[int, TablaMenus],
         menu_component_preps: Dict[int, Dict[str, List[str]]],
         ordered_components: List[Tuple[str, str, List[str]]],
+        include_ranges: bool = False,
+        modalidad_id: str = "",
     ) -> Table:
         data: List[List[Paragraph]] = []
         spans: List[Tuple[int, int, int, int]] = []
@@ -437,6 +519,8 @@ class CicloMenusPdfService:
                 menus_by_number=menus_by_number,
                 menu_component_preps=menu_component_preps,
                 ordered_components=ordered_components,
+                include_ranges=include_ranges,
+                modalidad_id=modalidad_id,
             )
             row_offset = len(data)
             data.extend(week_rows)
@@ -445,7 +529,11 @@ class CicloMenusPdfService:
             for x1, y1, x2, y2 in week_spans:
                 spans.append((x1, y1 + row_offset, x2, y2 + row_offset))
 
-        col_widths = [32 * mm, 30 * mm, 30 * mm, 30 * mm, 30 * mm, 30 * mm]
+        if include_ranges:
+            col_widths = [26 * mm, 26 * mm, 26 * mm, 26 * mm, 26 * mm, 26 * mm, 26 * mm]
+        else:
+            col_widths = [32 * mm, 30 * mm, 30 * mm, 30 * mm, 30 * mm, 30 * mm]
+            
         table = Table(data, colWidths=col_widths, hAlign="LEFT")
 
         style_cmds = [
@@ -457,12 +545,21 @@ class CicloMenusPdfService:
         ]
 
         for week_start, week_end in week_ranges:
-            style_cmds.extend(
-                [
-                    ("BACKGROUND", (0, week_start), (5, week_start), colors.HexColor("#bfbfbf")),
-                    ("BACKGROUND", (0, week_start + 1), (5, week_start + 1), colors.HexColor("#d9d9d9")),
-                ]
-            )
+            if include_ranges:
+                style_cmds.extend(
+                    [
+                        ("BACKGROUND", (0, week_start), (6, week_start), colors.HexColor("#bfbfbf")),
+                        ("BACKGROUND", (0, week_start + 1), (6, week_start + 1), colors.HexColor("#d9d9d9")),
+                    ]
+                )
+            else:
+                style_cmds.extend(
+                    [
+                        ("BACKGROUND", (0, week_start), (5, week_start), colors.HexColor("#bfbfbf")),
+                        ("BACKGROUND", (0, week_start + 1), (5, week_start + 1), colors.HexColor("#d9d9d9")),
+                    ]
+                )
+                
             if week_end >= week_start + 2:
                 style_cmds.append(
                     ("BACKGROUND", (0, week_start + 2), (0, week_end), colors.HexColor("#efefef"))
@@ -673,7 +770,10 @@ class CicloMenusPdfService:
 
         content: List = []
         content.extend(self._build_top_block(programa, modalidad))
-        content.append(self._build_cycle_table(menus_by_number, menu_component_preps, ordered_components))
+        
+        include_ranges = not es_cali
+        content.append(self._build_cycle_table(menus_by_number, menu_component_preps, ordered_components, include_ranges=include_ranges, modalidad_id=str(modalidad_id)))
+        
         content.append(Spacer(1, 1.1 * mm))
         content.append(self._build_signatures(programa))
 

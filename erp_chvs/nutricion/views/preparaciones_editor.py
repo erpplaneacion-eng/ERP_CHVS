@@ -642,6 +642,14 @@ def api_guardar_preparaciones_editor(request, id_menu):
                         preparacion.save(update_fields=['id_componente'])
                 ingrediente = TablaAlimentos2018Icbf.objects.get(codigo=id_ingrediente)
 
+                # Actualizar componente de la preparación si viene uno explícito.
+                # Seguro: el modal de "agregar ingrediente a existente" envía id_componente=null,
+                # por lo que componente_obj es None y esta condición nunca se cumple desde ese flujo.
+                # Solo se ejecuta desde "Guardar cambios" en la tabla (select-componente-principal).
+                if componente_obj and preparacion.id_componente_id != componente_obj.id_componente:
+                    preparacion.id_componente = componente_obj
+                    preparacion.save(update_fields=['id_componente'])
+
                 gramaje = None
                 if gramaje_raw not in (None, '', 'null'):
                     gramaje = Decimal(str(gramaje_raw))
