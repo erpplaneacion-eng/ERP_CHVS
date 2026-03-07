@@ -9,9 +9,7 @@ Estructura funcional equivalente al formato solicitado:
 """
 
 import io
-import os
 import re
-import tempfile
 import unicodedata
 import urllib.request
 from decimal import Decimal
@@ -564,30 +562,24 @@ class GuiaPreparacionExcelGenerator:
 
     @staticmethod
     def _insert_signature_image(ws, image_source: str | None, anchor_cell: str, max_w: int = 240, max_h: int = 70) -> None:
-        """Inserta imagen en Excel desde path local o URL remota (Cloudinary)."""
+        """Inserta imagen en Excel desde path local o URL remota (Cloudinary).
+        Usa BytesIO para URLs: openpyxl 3.1+ lee todo en __init__ y no necesita el archivo al guardar."""
         if not image_source:
             return
-        temp_file = None
         try:
             source = str(image_source).strip()
             parsed = urlparse(source)
             if parsed.scheme in ('http', 'https'):
-                fd, temp_file = tempfile.mkstemp(suffix=os.path.splitext(parsed.path or "img.png")[1] or ".png")
-                os.close(fd)
-                urllib.request.urlretrieve(source, temp_file)
-                source = temp_file
-            img = Image(source)
+                with urllib.request.urlopen(source) as resp:
+                    img_source = io.BytesIO(resp.read())
+            else:
+                img_source = source
+            img = Image(img_source)
             img.width = min(img.width, max_w)
             img.height = min(img.height, max_h)
             ws.add_image(img, anchor_cell)
         except Exception:
             return
-        finally:
-            if temp_file and os.path.exists(temp_file):
-                try:
-                    os.remove(temp_file)
-                except OSError:
-                    pass
 
     def _apply_all_borders(self, ws) -> None:
         max_row = ws.max_row

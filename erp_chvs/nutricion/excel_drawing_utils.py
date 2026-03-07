@@ -7,7 +7,6 @@ las diferentes secciones de un reporte de análisis nutricional.
 
 import io
 import os
-import tempfile
 import urllib.request
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
@@ -137,20 +136,19 @@ class ExcelReportDrawer:
         if not logo_path:
             return
 
-        temp_file = None
         try:
             source = str(logo_path).strip()
             parsed = urlparse(source)
 
-            # Si es URL remota, descargar temporalmente para openpyxl.
+            # URL remota (Cloudinary en producción): descargar a BytesIO.
+            # openpyxl 3.1+ almacena self._buf en memoria desde __init__,
+            # por lo que no necesita que el archivo exista al guardar el workbook.
             if parsed.scheme in ('http', 'https'):
-                fd, temp_file = tempfile.mkstemp(suffix=os.path.splitext(parsed.path or "logo.png")[1] or ".png")
-                os.close(fd)
-                urllib.request.urlretrieve(source, temp_file)
-                source = temp_file
-
-            # Si es ruta web local (/media/...) intentar resolverla a MEDIA_ROOT.
+                with urllib.request.urlopen(source) as resp:
+                    img_source = io.BytesIO(resp.read())
+            # Ruta web local (/media/...): resolver a MEDIA_ROOT si es posible.
             elif source.startswith('/'):
+                img_source = source
                 try:
                     from django.conf import settings
                     media_root = getattr(settings, 'MEDIA_ROOT', '') or ''
@@ -159,23 +157,19 @@ class ExcelReportDrawer:
                         relative = source[len(media_url):].lstrip('/\\')
                         candidate = os.path.join(media_root, relative)
                         if os.path.exists(candidate):
-                            source = candidate
+                            img_source = candidate
                 except Exception:
                     pass
+            else:
+                img_source = source
 
-            img = Image(source)
+            img = Image(img_source)
             img.height = 60
             img.width = 200
             ws.add_image(img, start_cell)
             ws.row_dimensions[int(start_cell[1:])].height = 50
         except Exception as e:
             print(f"Warning: no se pudo insertar logo '{logo_path}': {e}")
-        finally:
-            if temp_file and os.path.exists(temp_file):
-                try:
-                    os.remove(temp_file)
-                except OSError:
-                    pass
 
     def _populate_title(self, ws: Worksheet, start_row: int) -> None:
         """Poblar título principal en una fila específica."""
@@ -514,31 +508,24 @@ class ExcelReportDrawer:
     def _insert_signature_image(self, ws: Worksheet, image_path: str, anchor_cell: str) -> None:
         """
         Inserta imagen de firma en Excel soportando path local (dev) y URL remota (prod/Cloudinary).
+        Usa BytesIO para URLs: openpyxl 3.1+ lee todo en __init__ y no necesita el archivo al guardar.
         """
         if not image_path:
             return
-        temp_file = None
         try:
             source = str(image_path).strip()
             parsed = urlparse(source)
             if parsed.scheme in ('http', 'https'):
-                fd, temp_file = tempfile.mkstemp(suffix=os.path.splitext(parsed.path or "firma.png")[1] or ".png")
-                os.close(fd)
-                urllib.request.urlretrieve(source, temp_file)
-                source = temp_file
-            img = Image(source)
+                with urllib.request.urlopen(source) as resp:
+                    img_source = io.BytesIO(resp.read())
+            else:
+                img_source = source
+            img = Image(img_source)
             img.width = min(img.width, 180)
             img.height = min(img.height, 60)
             ws.add_image(img, anchor_cell)
         except Exception:
-            # Fallback silencioso para no romper la exportación por errores de archivo.
             return
-        finally:
-            if temp_file and os.path.exists(temp_file):
-                try:
-                    os.remove(temp_file)
-                except OSError:
-                    pass
 
     def _apply_formatting(self, ws: Worksheet) -> None:
         """Aplica formato a todo el worksheet."""
