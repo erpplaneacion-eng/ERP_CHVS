@@ -163,8 +163,9 @@ async function guardarMatch() {
         const data = await resp.json();
 
         if (data.success) {
+            const codigoParaActualizar = codigoICBFActual;
             cerrarModalMatch();
-            actualizarFilaUI(codigoICBFActual, data.match);
+            actualizarFilaUI(codigoParaActualizar, data.match);
             mostrarToast('Match guardado correctamente', 'success');
         } else {
             Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo guardar.' });
