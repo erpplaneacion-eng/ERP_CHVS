@@ -22,14 +22,19 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
 from principal.models import TablaGradosEscolaresUapa
 
+from fuzzywuzzy import fuzz
+
 from .models import (
     FirmaNutricionalContrato,
+    ProcedimientoPreparacion,
     TablaAnalisisNutricionalMenu,
     TablaIngredientesPorNivel,
     TablaMenus,
     TablaPreparacionIngredientes,
     TablaPreparaciones,
 )
+
+UMBRAL_COINCIDENCIA = 70  # porcentaje mínimo para aceptar un match
 
 
 NIVELES_ORDEN = [
@@ -57,6 +62,33 @@ class GuiaPreparacionExcelGenerator:
         self.center = Alignment(horizontal="center", vertical="center", wrap_text=True)
         self.left = Alignment(horizontal="left", vertical="center", wrap_text=True)
 
+    def _cargar_catalogo(self) -> List[Tuple[str, str]]:
+        """Carga el catálogo activo de procedimientos: [(nombre_normalizado, procedimiento)]."""
+        return [
+            (self._normalizar(p.nombre), p.procedimiento)
+            for p in ProcedimientoPreparacion.objects.filter(activo=True)
+        ]
+
+    @staticmethod
+    def _normalizar(texto: str) -> str:
+        texto = unicodedata.normalize("NFKD", str(texto or ""))
+        texto = "".join(ch for ch in texto if not unicodedata.combining(ch))
+        return texto.lower().strip()
+
+    def _buscar_procedimiento(self, nombre_prep: str, catalogo: List[Tuple[str, str]]) -> str:
+        """Retorna el procedimiento con mayor coincidencia, o '' si no supera el umbral."""
+        if not catalogo:
+            return ""
+        nombre_norm = self._normalizar(nombre_prep)
+        mejor_score = 0
+        mejor_texto = ""
+        for nombre_cat, procedimiento in catalogo:
+            score = fuzz.token_sort_ratio(nombre_norm, nombre_cat)
+            if score > mejor_score:
+                mejor_score = score
+                mejor_texto = procedimiento
+        return mejor_texto if mejor_score >= UMBRAL_COINCIDENCIA else ""
+
     def generate(self, programa_id: int, modalidad_id: str) -> io.BytesIO:
         menus = list(
             TablaMenus.objects.filter(
@@ -78,21 +110,23 @@ class GuiaPreparacionExcelGenerator:
             stream.seek(0)
             return stream
 
+        catalogo = self._cargar_catalogo()
+
         for menu in menus:
             ws = wb.create_sheet(title=f"Menu {menu.menu}"[:31])
-            self._build_sheet(ws, menu)
+            self._build_sheet(ws, menu, catalogo)
 
         stream = io.BytesIO()
         wb.save(stream)
         stream.seek(0)
         return stream
 
-    def _build_sheet(self, ws, menu: TablaMenus) -> None:
+    def _build_sheet(self, ws, menu: TablaMenus, catalogo: List[Tuple[str, str]]) -> None:
         self._set_columns(ws)
         self._draw_top(ws, menu)
         row = 9
         row = self._draw_table_header(ws, row)
-        row_end = self._draw_table_body(ws, row, menu)
+        row_end = self._draw_table_body(ws, row, menu, catalogo)
         self._draw_signature_block(ws, row_end, menu)
         self._apply_all_borders(ws)
 
@@ -283,7 +317,7 @@ class GuiaPreparacionExcelGenerator:
 
         return row2 + 1
 
-    def _draw_table_body(self, ws, start_row: int, menu: TablaMenus) -> int:
+    def _draw_table_body(self, ws, start_row: int, menu: TablaMenus, catalogo: List[Tuple[str, str]]) -> int:
         niveles_por_columna = self._get_niveles_por_columna()
         from nutricion.utils.orden_componentes import sort_preparaciones_objetos
         preps_qs = list(
@@ -317,6 +351,9 @@ class GuiaPreparacionExcelGenerator:
             prep_rels = rels_by_prep.get(prep.id_preparacion, [])
             if not prep_rels:
                 continue
+
+            # Procedimiento: buscar en catálogo por fuzzy matching del nombre
+            procedimiento_texto = self._buscar_procedimiento(prep.preparacion, catalogo)
 
             # Peso servido por nivel = suma de netos de todos los ingredientes de la preparacion
             peso_servido_by_nivel = {}
@@ -376,9 +413,9 @@ class GuiaPreparacionExcelGenerator:
                 ws.cell(row=prep_start, column=servido_col).border = self.border
                 col += 3
 
-            # Procedimiento en blanco pero combinado por preparacion
+            # Procedimiento: texto del catálogo (o en blanco si no hubo match)
             ws.merge_cells(start_row=prep_start, start_column=18, end_row=prep_end, end_column=18)
-            ws.cell(row=prep_start, column=18, value="")
+            ws.cell(row=prep_start, column=18, value=procedimiento_texto)
             ws.cell(row=prep_start, column=18).alignment = self.left
             ws.cell(row=prep_start, column=18).border = self.border
 

@@ -11,6 +11,7 @@ from .models import (
     GrupoExcluyenteSetMiembro,
     RestriccionAlimentoSubgrupo,
     RestriccionAlimentoEspecifico,
+    ProcedimientoPreparacion,
 )
 
 
@@ -167,3 +168,17 @@ class TablaRequerimientosNutricionalesAdmin(admin.ModelAdmin):
             'fields': ('calcio_mg', 'hierro_mg', 'sodio_mg')
         }),
     )
+
+
+@admin.register(ProcedimientoPreparacion)
+class ProcedimientoPreparacionAdmin(admin.ModelAdmin):
+    """Catálogo de procedimientos de preparación para auto-completar guías Excel."""
+    list_display = ('nombre', 'activo', 'procedimiento_preview')
+    list_filter = ('activo',)
+    search_fields = ('nombre',)
+    list_editable = ('activo',)
+    list_per_page = 25
+
+    def procedimiento_preview(self, obj):
+        return obj.procedimiento[:80] + '…' if len(obj.procedimiento) > 80 else obj.procedimiento
+    procedimiento_preview.short_description = 'Procedimiento (vista previa)'

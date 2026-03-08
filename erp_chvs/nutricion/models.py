@@ -1336,3 +1336,34 @@ class RecomendacionDiariaGradoMod(models.Model):
 
     def __str__(self):
         return f"{self.nivel_escolar_uapa_id} - {self.id_modalidades_id}"
+
+
+class ProcedimientoPreparacion(models.Model):
+    """
+    Catálogo de procedimientos de preparación de alimentos.
+    Se usa para auto-completar la columna 'Procedimiento' en las guías de preparación Excel
+    mediante fuzzy matching contra el nombre de cada preparación del menú.
+    """
+    nombre = models.CharField(
+        max_length=255,
+        verbose_name="Nombre de la preparación",
+        help_text="Nombre canónico. El generador Excel buscará coincidencias difusas con este campo.",
+    )
+    procedimiento = models.TextField(
+        verbose_name="Procedimiento de preparación",
+        help_text="Paso a paso de elaboración.",
+    )
+    activo = models.BooleanField(
+        default=True,
+        verbose_name="Activo",
+        help_text="Desactivar para excluir del matching sin borrar el registro.",
+    )
+
+    class Meta:
+        db_table = "nutricion_procedimiento_preparacion"
+        verbose_name = "Procedimiento de Preparación"
+        verbose_name_plural = "Procedimientos de Preparación"
+        ordering = ["nombre"]
+
+    def __str__(self):
+        return self.nombre
