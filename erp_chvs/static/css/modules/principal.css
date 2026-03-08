@@ -31,7 +31,7 @@
 }
 
 #principal-dashboard-background {
-    background-image: url('/static/principal/images/fondo_principal.png');
+    background-image: url('/static/principal/images/fondo_principal.webp');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

@@ -6,7 +6,7 @@
 #logistica-dashboard-background {
     padding: 2rem;
     min-height: calc(100vh - 60px);
-    background-image: url('/static/logistica/images/background_logistica.png');
+    background-image: url('/static/logistica/images/background_logistica.webp');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
