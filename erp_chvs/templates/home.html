@@ -4,29 +4,392 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bienvenido al ERP CHVS</title>
-    <link rel="stylesheet" href="{% static 'css/erp_style.css' %}">
+    <title>CHVS ERP — Acceso al Sistema</title>
+    <link rel="icon" type="image/png" href="{% static 'principal/images/imagen_CHVS_MANITOS.png' %}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #f0f4f8;
+            font-family: 'Inter', sans-serif;
+            color: #1e293b;
+        }
+
+        /* ── Terreno 3D ── */
+        #canvas-container {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+        }
+
+        /* ── Capa UI ── */
+        .login-wrapper {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 5vw;
+            pointer-events: none;
+        }
+
+        /* ── Tarjeta Glassmorphism mejorada ── */
+        .glass-card {
+            pointer-events: auto;
+            width: 100%;
+            max-width: 500px;
+            background: rgba(255, 255, 255, 0.72);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 1px solid rgba(255, 255, 255, 0.95);
+            border-radius: 28px;
+            padding: 52px 48px 44px;
+            box-shadow:
+                0 8px 32px rgba(20, 184, 166, 0.12),
+                0 2px 8px rgba(0, 0, 0, 0.06),
+                inset 0 1px 0 rgba(255,255,255,0.8);
+        }
+
+        /* ── Glow decorativo esquina ── */
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: -30px;
+            right: -30px;
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(20,184,166,0.25) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .glass-card::after {
+            content: '';
+            position: absolute;
+            bottom: -20px;
+            left: -20px;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .glass-card { position: relative; overflow: visible; }
+
+        /* ── Inputs ── */
+        .field-group { margin-bottom: 18px; }
+        .field-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 6px;
+            letter-spacing: 0.02em;
+        }
+        .input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .input-wrap > i {
+            position: absolute;
+            left: 14px;
+            color: #9ca3af;
+            font-size: 14px;
+            pointer-events: none;
+            transition: color 0.2s;
+        }
+        .input-wrap input {
+            width: 100%;
+            padding: 12px 14px 12px 40px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            background: rgba(255, 255, 255, 0.80);
+            color: #1e293b;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+        }
+        .input-wrap input:focus {
+            border-color: #14b8a6;
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.18);
+            background: rgba(255, 255, 255, 0.95);
+        }
+        .input-wrap input:focus + i,
+        .input-wrap:focus-within > i { color: #14b8a6; }
+
+        /* ── Toggle contraseña ── */
+        .toggle-pass {
+            position: absolute;
+            right: 13px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #9ca3af;
+            font-size: 14px;
+            padding: 0;
+            transition: color 0.2s;
+        }
+        .toggle-pass:hover { color: #14b8a6; }
+
+        /* ── Errores Django ── */
+        .django-errors {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 18px;
+            font-size: 13px;
+            color: #dc2626;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .django-errors i { margin-top: 1px; flex-shrink: 0; }
+
+        /* ── Botón principal ── */
+        .btn-login {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, #14b8a6 0%, #10b981 100%);
+            border: none;
+            border-radius: 13px;
+            color: white;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            letter-spacing: 0.03em;
+            box-shadow: 0 4px 20px rgba(20, 184, 166, 0.35);
+            transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+            margin-top: 8px;
+        }
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(20, 184, 166, 0.45);
+            filter: brightness(1.05);
+        }
+        .btn-login:active { transform: translateY(0); }
+
+        /* ── Animación entrada ── */
+        @keyframes slideLeft {
+            from { opacity: 0; transform: translateX(40px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        .animate-slide-left {
+            animation: slideLeft 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        /* ── Divisor ── */
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0;
+            color: #cbd5e1;
+            font-size: 12px;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(148, 163, 184, 0.35);
+        }
+    </style>
 </head>
 <body>
 
-    <div class="bg-image">
-        <div class="login-card">
-            
-            <!-- MEJORA: Logo (opcional). Reemplaza 'path/to/your/logo.png' -->
-            <div class="logo-container">
-                <!-- Si tienes un logo, descomenta la siguiente línea y pon la ruta correcta -->
-                <!-- <img src="{% static 'images/logo_empresa.png' %}" alt="Logo Empresa"> -->
+    <!-- Terreno 3D -->
+    <div id="canvas-container"></div>
+
+    <!-- UI -->
+    <div class="login-wrapper">
+        <div style="width:100%;max-width:500px;opacity:0;" class="animate-slide-left">
+
+            <div class="glass-card">
+
+                <!-- Cabecera / Marca -->
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+                    <img src="{% static 'principal/images/imagen_CHVS_MANITOS.png' %}" alt="CHVS Logo"
+                         style="width:54px;height:54px;object-fit:contain;flex-shrink:0;border-radius:12px;box-shadow:0 4px 12px rgba(20,184,166,0.25);">
+                    <div>
+                        <h1 style="margin:0;font-size:24px;font-weight:800;color:#0f172a;letter-spacing:-0.5px;">
+                            CHVS<span style="color:#14b8a6;">.</span>
+                        </h1>
+                        <p style="margin:0;font-size:11px;font-weight:500;color:#94a3b8;letter-spacing:0.05em;text-transform:uppercase;">Sistema ERP</p>
+                    </div>
+                </div>
+
+                <div class="divider">Acceso al portal PAE</div>
+
+                <!-- Errores de autenticación -->
+                {% if form.errors %}
+                <div class="django-errors">
+                    <i class="fas fa-circle-exclamation"></i>
+                    <span>Usuario o contraseña incorrectos. Por favor intenta de nuevo.</span>
+                </div>
+                {% endif %}
+
+                <!-- Formulario -->
+                <form method="post" action="{% url 'login' %}">
+                    {% csrf_token %}
+                    {% if request.GET.next %}
+                        <input type="hidden" name="next" value="{{ request.GET.next }}">
+                    {% endif %}
+
+                    <div class="field-group">
+                        <label for="id_username">Usuario</label>
+                        <div class="input-wrap">
+                            <input
+                                type="text"
+                                id="id_username"
+                                name="username"
+                                placeholder="Ingresa tu usuario"
+                                autocomplete="username"
+                                required
+                                value="{{ form.username.value|default:'' }}"
+                            >
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </div>
+
+                    <div class="field-group" style="margin-bottom:10px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                            <label for="id_password" style="margin-bottom:0;">Contraseña</label>
+                        </div>
+                        <div class="input-wrap">
+                            <input
+                                type="password"
+                                id="id_password"
+                                name="password"
+                                placeholder="••••••••"
+                                autocomplete="current-password"
+                                required
+                            >
+                            <i class="fas fa-lock"></i>
+                            <button type="button" class="toggle-pass" id="togglePass" title="Mostrar/ocultar contraseña">
+                                <i class="fas fa-eye" id="toggleIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-login">
+                        <i class="fas fa-arrow-right-to-bracket" style="margin-right:8px;"></i>
+                        Ingresar al Sistema
+                    </button>
+                </form>
             </div>
 
-            <h2>Acceso al Sistema</h2>
-            <form method="post" action="{% url 'login' %}">
-                {% csrf_token %}
-                {{ form.as_p }}
-                <button type="submit">Ingresar</button>
-            </form>
+            <p style="text-align:center;font-size:11px;color:#94a3b8;margin-top:18px;font-weight:500;">
+                © 2026 CHVS Sistemas &mdash; Todos los derechos reservados.
+            </p>
         </div>
     </div>
 
+    <script>
+        // ── Toggle mostrar/ocultar contraseña ──
+        document.getElementById('togglePass').addEventListener('click', function () {
+            const inp = document.getElementById('id_password');
+            const ico = document.getElementById('toggleIcon');
+            if (inp.type === 'password') {
+                inp.type = 'text';
+                ico.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                inp.type = 'password';
+                ico.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        });
+
+        // ── Three.js — Terreno animado ──
+        let scene, camera, renderer, terrain;
+        const clock = new THREE.Clock();
+        let mouseX = 0, mouseY = 0;
+        const halfW = () => window.innerWidth / 2;
+        const halfH = () => window.innerHeight / 2;
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f4f8);
+            scene.fog = new THREE.Fog(0xf0f4f8, 12, 65);
+
+            camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 1, 120);
+            camera.position.set(0, 10, 30);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Cuadrícula principal — teal
+            const geo = new THREE.PlaneGeometry(180, 180, 70, 70);
+            geo.rotateX(-Math.PI / 2);
+            terrain = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+                color: 0x14b8a6,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.13
+            }));
+            terrain.position.y = -5;
+            scene.add(terrain);
+
+            // Segunda capa de cuadrícula más pequeña — esmeralda, más opaca
+            const geo2 = new THREE.PlaneGeometry(180, 180, 35, 35);
+            geo2.rotateX(-Math.PI / 2);
+            const terrain2 = new THREE.Mesh(geo2, new THREE.MeshBasicMaterial({
+                color: 0x10b981,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.06
+            }));
+            terrain2.position.y = -4.8;
+            scene.add(terrain2);
+
+            document.addEventListener('mousemove', e => {
+                mouseX = (e.clientX - halfW()) * 0.01;
+                mouseY = (e.clientY - halfH()) * 0.01;
+            });
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const t = clock.getElapsedTime();
+
+            camera.position.x += (mouseX * 5 - camera.position.x) * 0.04;
+            camera.position.y += ((10 - mouseY * 4) - camera.position.y) * 0.04;
+            camera.lookAt(0, -2, 0);
+
+            const pos = terrain.geometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const x = pos.getX(i);
+                const z = pos.getZ(i);
+                const wx = x * 0.045;
+                const wz = (z + t * 11) * 0.045;
+                const h = Math.sin(wx) * Math.cos(wz) * 2.8
+                        + Math.sin(wx * 0.5 + wz * 0.5) * 2.2;
+                pos.setY(i, h);
+            }
+            pos.needsUpdate = true;
+
+            renderer.render(scene, camera);
+        }
+
+        window.onload = init;
+    </script>
 </body>
 </html>
