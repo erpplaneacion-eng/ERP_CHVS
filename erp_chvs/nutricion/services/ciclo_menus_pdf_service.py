@@ -736,7 +736,13 @@ class CicloMenusPdfService:
                 menu_g3_componentes[num].append(comp_id)
 
             # Rastrear si la preparación tiene algún ingrediente del grupo 1 (g1) - Tubérculos/Raíces/Plátanos
-            tiene_g1 = any(ing.id_grupo_alimentos_id == "g1" for ing in ingredientes_lista)
+            # Excluir arroz (A010): el arroz es G1-cereal y estar en el cereal acompañante es lo esperado;
+            # no debe interpretarse como "tubérculo escondido" en ese componente.
+            _ARROZ_ID = "A010"
+            tiene_g1 = any(
+                ing.id_grupo_alimentos_id == "g1" and ing.id_ingrediente_siesa != _ARROZ_ID
+                for ing in ingredientes_lista
+            )
             if tiene_g1:
                 menu_g1_componentes[num].append(comp_id)
 
@@ -794,22 +800,28 @@ class CicloMenusPdfService:
 
                         menu_component_preps[num]["com11"].append(f"INCLUIDO EN {prefijo}")
 
-        # Lógica especial COM8 (Tubérculos/Raíces/Plátanos escondidos en COM2 o COM3)
-        # Aplica para Cali y Yumbo/Buga en cualquier modalidad que tenga COM8 en su config
+        # Lógica especial COM8 (Tubérculos/Raíces/Plátanos escondidos en COM2, COM9 o COM3)
+        # Aplica para Cali y Yumbo/Buga en cualquier modalidad que tenga COM8 en su config.
+        # El arroz (A010) ya fue excluido del rastreo G1 arriba, así que no aparecerá aquí.
         config_tiene_com8 = any("com8" in comp_ids for comp_ids, _ in config_modalidad)
         if config_tiene_com8:
             # COM2 puede aparecer dividido en Cali 20503
             componentes_proteico = {"com2", "com2_proteina", "com2_leguminosa"}
-            componentes_cereal = {"com3"}
+            componentes_ensalada = {"com9"}
+            componentes_cereal = {"com3", "com7"}
             for num in menus_by_number.keys():
                 com8_preps = menu_component_preps[num].get("com8", [])
                 if not com8_preps:
-                    # No hay preparación propia de tubérculos; buscar G1 dentro de COM2 o COM3
-                    # Prioridad: proteico (COM2) > cereal (COM3)
+                    # No hay preparación propia de tubérculos; buscar G1 en otros componentes
+                    # Prioridad: proteico (COM2) > ensalada/verdura (COM9) > cereal (COM3/COM7)
                     g1_en_proteico = [c for c in menu_g1_componentes[num] if c in componentes_proteico]
+                    g1_en_ensalada = [c for c in menu_g1_componentes[num] if c in componentes_ensalada]
                     g1_en_cereal = [c for c in menu_g1_componentes[num] if c in componentes_cereal]
                     if g1_en_proteico:
                         prefijo = "EL ALIMENTO PROTEICO"
+                        menu_component_preps[num]["com8"].append(f"INCLUIDO EN {prefijo}")
+                    elif g1_en_ensalada:
+                        prefijo = "LA ENSALADA"
                         menu_component_preps[num]["com8"].append(f"INCLUIDO EN {prefijo}")
                     elif g1_en_cereal:
                         prefijo = "LOS CEREALES"
