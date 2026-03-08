@@ -144,6 +144,7 @@ class TablaAlimentos2018Icbf(models.Model):
     grasa_poliinsaturada_g = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Grasa Poliinsaturada (g)")
     colesterol_mg = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Colesterol (mg)")
     parte_comestible_field = models.DecimalField(max_digits=5, decimal_places=2, db_column='parte_comestible_porcentaje', blank=True, null=True, verbose_name="Parte Comestible (%)")
+    factor_coccion = models.DecimalField(max_digits=5, decimal_places=2, default=1.00, verbose_name="Factor de Cocción", help_text="Relación peso cocido / peso neto crudo. Por defecto 1.00 (sin cambio). Ej: arroz=2.25, pollo=0.75, leguminosas=2.4")
     id_componente = models.ForeignKey(
         ComponentesAlimentos,
         on_delete=models.PROTECT,

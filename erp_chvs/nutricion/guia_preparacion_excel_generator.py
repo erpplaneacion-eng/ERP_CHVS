@@ -355,7 +355,7 @@ class GuiaPreparacionExcelGenerator:
             # Procedimiento: buscar en catálogo por fuzzy matching del nombre
             procedimiento_texto = self._buscar_procedimiento(prep.preparacion, catalogo)
 
-            # Peso servido por nivel = suma de netos de todos los ingredientes de la preparacion
+            # Peso servido por nivel = suma de (neto × factor_coccion) por ingrediente
             peso_servido_by_nivel = {}
             for _, nivel_id in niveles_por_columna:
                 if not nivel_id:
@@ -363,7 +363,8 @@ class GuiaPreparacionExcelGenerator:
                 total = Decimal("0")
                 for rel in prep_rels:
                     _, neto = self._get_bruto_neto(rel, prep.id_preparacion, nivel_id, idx, analisis_por_nivel)
-                    total += neto
+                    fc = Decimal(str(rel.id_ingrediente_siesa.factor_coccion or 1))
+                    total += neto * fc
                 peso_servido_by_nivel[nivel_id] = total
 
             prep_start = row
