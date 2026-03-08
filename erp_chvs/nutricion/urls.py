@@ -82,4 +82,13 @@ path('api/menus/<int:id_menu>/guardar-ingredientes-por-nivel/', views.api_guarda
     # ValidaciÃ³n Semanal
     path('api/validar-semana/', views.api_validar_semana, name='api_validar_semana'),
     path('api/requerimientos-modalidad/', views.api_requerimientos_modalidad, name='api_requerimientos_modalidad'),
+
+    # Match ICBF → Compras
+    # IMPORTANTE: rutas específicas ANTES que las variables (<str:...>)
+    path('match-icbf/', views.vista_match_icbf, name='match_icbf'),
+    path('api/match/productos/', views.api_productos_siesa, name='api_match_productos'),
+    path('api/match/guardar/', views.api_guardar_match, name='api_match_guardar'),
+    path('api/match/catalogo/', views.api_productos_siesa_crud, name='api_match_catalogo'),
+    path('api/match/catalogo/<str:codigo>/', views.api_producto_siesa_detail, name='api_match_catalogo_detail'),
+    path('api/match/<str:codigo_icbf>/', views.api_eliminar_match, name='api_match_eliminar'),
 ]

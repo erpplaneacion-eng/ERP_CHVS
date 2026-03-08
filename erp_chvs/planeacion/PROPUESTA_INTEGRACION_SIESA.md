@@ -16,15 +16,94 @@ Integrar técnica y funcionalmente el aplicativo interno de planeación (**PAE /
 
 ---
 
-## Alcance Funcional: Maestros (Consultas SIESA)
+## Arquitectura de integración (módulo Api/)
 
-Los maestros de SIESA se consultan para **alimentar y validar** la aplicación PAE antes de generar documentos. Ningún documento puede crearse sin que sus campos estén validados contra estos maestros.
+La integración se implementa en el módulo `Api/` (app Django ya creada para este fin). El principio central es **no depender de Siesa en tiempo real**: los catálogos de Siesa se descargan a tablas locales de PostgreSQL y se mantienen sincronizados mediante un cron job reactivo.
+
+```
+[Siesa ERP SAAS]
+      │
+      │  tokens + endpoints (pendiente de recibir de Siesa)
+      ▼
+  Api/ (módulo Django — app ya existente en ERP_CHVS)
+      │
+      ├─► Descarga inicial (una sola vez)
+      │     Endpoint Siesa → tabla local PostgreSQL
+      │     - Plan de Cuentas/Artículos  → Api/models.py (SiesaArticulo)
+      │     - Proyectos (sedes DANE)     → Api/models.py (SiesaProyecto)
+      │     - Bodegas                    → Api/models.py (SiesaBodega)
+      │     - Centros de Costo           → Api/models.py (SiesaCentroCosto)
+      │     - Centros de Operación       → Api/models.py (SiesaCO)
+      │     - Tipos de Documento         → Api/models.py (SiesaTipoDocumento)
+      │     - Terceros (proveedores)     → Api/models.py (SiesaTercero)
+      │
+      └─► Cron job de sincronización delta
+            - Se dispara cuando Siesa notifica un cambio (webhook) o en
+              intervalos definidos (ej: cada noche)
+            - Solo descarga registros nuevos o modificados
+            - No hace polling continuo a la API de Siesa
+```
+
+**Estado actual:** Bloqueado — esperando tokens y endpoints de Siesa.
 
 ---
 
-### 1. Plan de Cuentas / Ítems (Referencia de Artículos)
+## Flujo completo con ERP_CHVS
 
-> Catálogo maestro de artículos. Es el más crítico: cada línea de SC o RQI debe referenciar un ítem válido aquí.
+```
+[Nutrición] crea menús con ingredientes ICBF
+      │
+      ▼
+[Match ICBF → Compras] — nutricionista asocia cada alimento ICBF
+      │                  con su artículo equivalente en SiesaArticulo (local)
+      │                  → tabla: EquivalenciaICBFCompras
+      ▼
+[Planeación] programa menús por sede y fecha
+      │        → tabla: ProgramacionMenus (con FK a logistica.Ruta)
+      │
+      ▼
+[Api/] calcula orden de compra
+      │  raciones × gramaje ÷ contenido_gramos = unidades por artículo
+      │
+      ▼
+[Api/] genera documento SC o RQI en Siesa
+      │  encabezado: CO + Tipo de Documento
+      │  detalle: Artículo + Cantidad + Bodega + Centro de Costo + Proyecto/Sede
+      ▼
+[Siesa ERP] recibe y procesa el documento
+```
+
+---
+
+## Relación con módulo logistica (actualizado)
+
+Las rutas de entrega ya están implementadas en el módulo `logistica` con CRUD completo:
+
+| Modelo | Tabla | Descripción |
+|---|---|---|
+| `TipoRuta` | `logistica_tipos_rutas` | Clasificación de rutas |
+| `Ruta` | `logistica_rutas` | Ruta de entrega por programa |
+| `RutaSedes` | `logistica_ruta_sedes` | Sedes asignadas a cada ruta con orden de visita |
+
+`ProgramacionMenus` hace FK a `logistica.Ruta` directamente. No se crean nuevos modelos de rutas en `planeacion` ni en `Api/`.
+
+La generación de SC/RQI puede agruparse por ruta (para entregar los insumos en el orden correcto del recorrido), usando la relación:
+
+```
+ProgramacionMenus.id_ruta → logistica.Ruta → logistica.RutaSedes (ordenadas por orden_visita)
+```
+
+---
+
+## Alcance Funcional: Maestros (Consultas SIESA)
+
+Los maestros de Siesa se descargan a tablas locales del módulo `Api/`. Se consultan internamente para validar documentos antes de enviarlos.
+
+---
+
+### 1. Plan de Cuentas / Ítems (Referencia de Artículos) → `SiesaArticulo`
+
+> Catálogo maestro de artículos. Más crítico: cada línea de SC o RQI debe referenciar un ítem válido aquí.
 
 | Campo | Descripción |
 |---|---|
@@ -35,15 +114,11 @@ Los maestros de SIESA se consultan para **alimentar y validar** la aplicación P
 | `unidad_medida` | Unidad de medida del artículo |
 | `costo_promedio_unitario` | Valor financiero de referencia |
 
-**Validaciones:**
-- Verificación de existencia y estado antes de crear el documento
-- El `codigo_referencia` es la llave que vincula cada ingrediente ICBF con SIESA
-
-**Relación con PAE:** El campo `codigo_siesa` del match ICBF–Compras mapea directamente a `codigo_referencia`.
+**Relación con PAE:** `EquivalenciaICBFCompras.id_ingrediente_compras` apuntará a `SiesaArticulo` cuando la integración esté activa (en el simulacro actual apunta a `TablaIngredientesSiesa`).
 
 ---
 
-### 2. Centro de Operación (CO)
+### 2. Centro de Operación (CO) → `SiesaCO`
 
 > Identifica el origen administrativo del documento. Va en el **encabezado** de toda SC y RQI.
 
@@ -57,9 +132,9 @@ Los maestros de SIESA se consultan para **alimentar y validar** la aplicación P
 
 ---
 
-### 3. Bodegas (Grupo de Bodegas – Bodega de Salida)
+### 3. Bodegas → `SiesaBodega`
 
-> Define el origen físico de los materiales. Va a nivel de **línea de detalle** (por cada ítem).
+> Define el origen físico de los materiales. Va a nivel de **línea de detalle**.
 
 | Campo | Descripción |
 |---|---|
@@ -75,13 +150,11 @@ Los maestros de SIESA se consultan para **alimentar y validar** la aplicación P
 | `celular` | Teléfono de contacto |
 | `email` | Correo electrónico |
 
-**Uso:** Indica de dónde debe salir físicamente el inventario para cada movimiento.
-
 ---
 
-### 4. Proyectos (Equivalencia de Sedes)
+### 4. Proyectos (Equivalencia de Sedes) → `SiesaProyecto`
 
-> Mapea las sedes educativas del PAE con proyectos en SIESA. Es el **puente** entre `SedesEducativas` (Django) y SIESA.
+> Mapea las sedes educativas del PAE con proyectos en SIESA.
 
 | Campo | Descripción |
 |---|---|
@@ -92,13 +165,13 @@ Los maestros de SIESA se consultan para **alimentar y validar** la aplicación P
 | `direccion` | Dirección de la sede |
 | `contacto` | Persona responsable en la sede |
 
-**Relación con PAE:** `SedesEducativas.codigo_dane` → `Proyecto.dane` en SIESA.
+**Relación con PAE:** `SedesEducativas.codigo_dane` → `SiesaProyecto.dane`.
 
 ---
 
-### 5. Centros de Costo
+### 5. Centros de Costo → `SiesaCentroCosto`
 
-> Afectación presupuestal. Va en cada **línea de detalle** para trazabilidad contable.
+> Afectación presupuestal. Va en cada **línea de detalle**.
 
 | Campo | Descripción |
 |---|---|
@@ -107,7 +180,7 @@ Los maestros de SIESA se consultan para **alimentar y validar** la aplicación P
 
 ---
 
-### 6. Tipo de Documento
+### 6. Tipo de Documento → `SiesaTipoDocumento`
 
 > Clasifica la transacción que se envía a SIESA. Va en el **encabezado**.
 
@@ -122,7 +195,7 @@ Los maestros de SIESA se consultan para **alimentar y validar** la aplicación P
 
 ### 7. Concepto y Motivo
 
-> Clasifican el **porqué** de la transacción para trazabilidad contable y operativa.
+> Clasifican el **porqué** de la transacción.
 
 | Campo | Descripción |
 |---|---|
@@ -136,9 +209,7 @@ Los maestros de SIESA se consultan para **alimentar y validar** la aplicación P
 
 ---
 
-### 8. Terceros (Proveedores / Clientes)
-
-> Maestro de proveedores y clientes. El PDF no detalla campos específicos; usa el estándar de SIESA.
+### 8. Terceros (Proveedores / Clientes) → `SiesaTercero`
 
 | Campo | Descripción |
 |---|---|
@@ -154,17 +225,17 @@ Los maestros de SIESA se consultan para **alimentar y validar** la aplicación P
 
 ```
 ENCABEZADO
-├── Centro de Operación (CO)    → Maestro #2
-├── Tipo de Documento           → Maestro #6
+├── Centro de Operación (CO)    → SiesaCO
+├── Tipo de Documento           → SiesaTipoDocumento
 └── Estado
 
 LÍNEAS DE DETALLE (por cada ingrediente/artículo)
-├── Referencia / Ítem           → Maestro #1 (Plan de Cuentas)
+├── Referencia / Ítem           → SiesaArticulo (Plan de Cuentas)
 ├── Cantidad + Unidad de Medida
-├── Bodega de Salida            → Maestro #3
-├── Centro de Costo             → Maestro #5
-├── Proyecto / Sede (DANE)      → Maestro #4
-└── Concepto + Motivo           → Maestro #7
+├── Bodega de Salida            → SiesaBodega
+├── Centro de Costo             → SiesaCentroCosto
+├── Proyecto / Sede (DANE)      → SiesaProyecto
+└── Concepto + Motivo
 ```
 
 ---
@@ -178,7 +249,7 @@ LÍNEAS DE DETALLE (por cada ingrediente/artículo)
 
 **Campos del Encabezado:** CO, Tipo de Documento, Estado
 **Campos del Detalle:**
-- Referencia de ítem (validado contra Plan de Cuentas)
+- Referencia de ítem (validado contra SiesaArticulo)
 - Unidad de medida y cantidades
 - Grupo de bodegas
 - Datos de contacto (Teléfono, Email, Dirección)
@@ -196,15 +267,47 @@ Estructura similar a las SC con adiciones:
 
 ---
 
-## Conectores a Implementar
+## Conectores a Implementar en Api/
 
-1. **Conector SC** – Solicitudes de Compra
-2. **Conector RQI** – Requisiciones Aprobadas
+### Conector SC — Solicitudes de Compra
 
-Cada conector incluye:
-- Mapeo de campos PAE ↔ SIESA
-- Pruebas unitarias e integrales
-- Manejo de errores y respuestas del ERP
+```
+Api/views.py o Api/services.py
+    generar_sc(id_programa, fecha_inicio, fecha_fin)
+        → calcular_necesidades_compra() [planeacion/services.py]
+        → validar artículos contra SiesaArticulo (local)
+        → construir payload SC
+        → POST endpoint Siesa SC
+        → registrar resultado
+```
+
+### Conector RQI — Requisiciones Aprobadas
+
+```
+Api/views.py o Api/services.py
+    generar_rqi(id_programa, fecha_inicio, fecha_fin)
+        → similar a SC + validación de trazabilidad
+        → POST endpoint Siesa RQI
+```
+
+### Cron job de sincronización
+
+```python
+# Ejemplo de estructura (implementar cuando lleguen endpoints)
+# Archivo: Api/management/commands/sync_siesa.py
+
+class Command(BaseCommand):
+    help = 'Sincroniza catálogos locales con Siesa (delta)'
+
+    def handle(self, *args, **options):
+        # Solo descarga registros nuevos o modificados desde la última sync
+        ultima_sync = SiesaSyncLog.objects.last()
+        registros_nuevos = client.get_articulos(desde=ultima_sync.fecha)
+        SiesaArticulo.objects.bulk_create(
+            registros_nuevos, update_conflicts=True, ...
+        )
+        SiesaSyncLog.objects.create(tipo='articulos', resultado='ok')
+```
 
 ---
 
@@ -240,13 +343,16 @@ Cada conector incluye:
 - ✅ Eliminación de procesos manuales de digitación
 - ✅ Mayor trazabilidad y control presupuestario
 - ✅ Integridad de la información entre sistemas
+- ✅ Sin dependencia de Siesa en tiempo real (tablas locales sincronizadas)
 
 ---
 
 ## Pendientes / Preguntas Abiertas
 
+- [ ] Recibir tokens y endpoints de Siesa (bloqueante para Fase 3)
 - [ ] Definir tipos de dato exactos (alfanumérico vs entero) cruzando con diccionario de datos SIESA
 - [ ] Confirmar si Terceros tiene campos adicionales o usa estándar SIESA sin modificación
 - [ ] Validar mapeo de errores detallado en sección de Conectores (pág. 5-6 del PDF)
 - [ ] Confirmar equivalencia CO ↔ Sede (Cali / Yumbo)
-- [ ] Confirmar si `codigo_siesa` en el match ICBF corresponde directamente al campo `codigo_referencia` del Plan de Cuentas
+- [ ] Confirmar si `codigo_siesa` en el match ICBF corresponde directamente al campo `codigo_referencia` de SiesaArticulo
+- [ ] Definir mecanismo de notificación de cambios de Siesa (webhook vs polling nocturno)

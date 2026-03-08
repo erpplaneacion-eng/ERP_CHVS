@@ -17,7 +17,7 @@ TablaMenus → TablaPreparaciones → TablaPreparacionIngredientes (con gramajes
                                          [Nutricionista hace match]
                                                     │
                                          EquivalenciaICBFCompras (NUEVA)
-                                   (alimento ICBF + Programa → producto Siesa)
+                                   (alimento ICBF + Programa → producto Siesa local)
                                                     │
                                [Planeación programa menús por sede y fecha]
                                                     │
@@ -27,6 +27,22 @@ TablaMenus → TablaPreparaciones → TablaPreparacionIngredientes (con gramajes
                                      [Sistema calcula orden de compra]
                               raciones × gramaje ÷ factor_conversion = unidades
 ```
+
+---
+
+## Estrategia de catálogo Siesa (actualizado)
+
+### Catálogo local — no llamadas en tiempo real
+
+Los productos de Siesa **no se consultan en vivo** cada vez que el nutricionista hace un match. En cambio:
+
+1. El módulo `Api/` (app Django ya creada para ese fin) descarga el catálogo de Siesa a tablas locales cuando se reciben los tokens y endpoints.
+2. Un **cron job** mantiene esas tablas sincronizadas: solo se dispara cuando Siesa agrega o modifica un registro (delta, no polling completo).
+3. El match se hace siempre contra la **tabla local**, sin depender de la disponibilidad de la API de Siesa en el momento.
+
+### Simulacro con TablaIngredientesSiesa
+
+Mientras llegan los tokens/endpoints de Siesa, el match se desarrolla y prueba usando `TablaIngredientesSiesa` (ya existente en `nutricion/models.py`) como catálogo de ejemplo. Cuando la integración real esté activa, solo se cambia la tabla fuente del selector — la lógica del match permanece igual.
 
 ---
 
@@ -44,6 +60,11 @@ TablaMenus → TablaPreparaciones → TablaPreparacionIngredientes (con gramajes
 | planeacion | `instituciones_educativas` | `InstitucionesEducativas` | Catálogo de instituciones |
 | planeacion | `planificacion_raciones` | `PlanificacionRaciones` | Raciones por sede/nivel/año |
 | planeacion | `programa_modalidades` | `ProgramaModalidades` | Modalidades por programa |
+| logistica | `logistica_rutas` | `Ruta` | Rutas de entrega por programa ✅ |
+| logistica | `logistica_ruta_sedes` | `RutaSedes` | Asignación de sedes a rutas ✅ |
+| logistica | `logistica_tipos_rutas` | `TipoRuta` | Tipos de ruta ✅ |
+
+> **Nota importante:** Las rutas de entrega ya están implementadas en el módulo `logistica` con CRUD completo. **No hay que crearlas en `planeacion`**. `ProgramacionMenus` hará FK a `logistica.Ruta`.
 
 ### Tablas que ya existen pero les faltan campos
 
@@ -53,24 +74,27 @@ Actualmente tiene:
 - `id_ingrediente_siesa` — código del producto
 - `nombre_ingrediente` — nombre comercial
 
-**Campos que hay que agregar:**
+**Campos que hay que agregar (para el simulacro y la versión real):**
 
 ```python
 presentacion = models.CharField(
     max_length=100,
+    blank=True, null=True,
     verbose_name="Presentación comercial",
     help_text="Ej: Bolsa 1000ml, Caja 500g, Bulto 50kg"
 )
 unidad_medida = models.CharField(
     max_length=50,
+    blank=True, null=True,
     verbose_name="Unidad de medida",
     help_text="Ej: bolsa, caja, bulto, litro, unidad"
 )
 contenido_gramos = models.DecimalField(
     max_digits=10,
     decimal_places=2,
+    blank=True, null=True,
     verbose_name="Contenido en gramos",
-    help_text="Cuántos gramos contiene una unidad de esta presentación. Ej: 1000 para Bolsa 1L"
+    help_text="Cuántos gramos contiene una unidad. Ej: 1000 para Bolsa 1L"
 )
 ```
 
@@ -82,7 +106,7 @@ contenido_gramos = models.DecimalField(
 
 **Propósito:** El nutricionista realiza aquí el match entre el nombre del alimento según la tabla ICBF y el producto real que se compra en el mercado, diferenciado por programa/contrato.
 
-**Regla clave:** La clave única es `(id_alimento_icbf, id_programa)`. Esto permite que el mismo alimento ICBF tenga un producto de compras diferente según el programa, ya que los términos legales de los contratos pueden variar por municipio.
+**Regla clave:** La clave única es `(id_alimento_icbf, id_programa)`. Esto permite que el mismo alimento ICBF tenga un producto de compras diferente según el programa.
 
 > **Ejemplo:**
 > - ICBF "Leche cruda" + Programa CALI-2025 → Siesa "Leche descremada 500g"
@@ -94,22 +118,26 @@ class EquivalenciaICBFCompras(models.Model):
     Relaciona un ingrediente de la tabla ICBF con su equivalente
     en el catálogo de compras/inventario (Siesa), diferenciado por programa.
     El nutricionista realiza el match una vez por (alimento ICBF + programa).
+
+    Durante el simulacro, id_ingrediente_compras apunta a TablaIngredientesSiesa.
+    Cuando llegue la integración real con Siesa, se migrará a la tabla oficial
+    descargada por el módulo Api/.
     """
     id_alimento_icbf = models.ForeignKey(
         TablaAlimentos2018Icbf,
-        on_delete=models.CASCADE,   # Si se borra el alimento ICBF, se borra el match
+        on_delete=models.CASCADE,
         related_name='equivalencias_compras',
         verbose_name="Alimento ICBF"
     )
     id_programa = models.ForeignKey(
         'planeacion.Programa',
-        on_delete=models.CASCADE,   # Si se borra el programa, se borran sus matches
+        on_delete=models.CASCADE,
         related_name='equivalencias_icbf',
         verbose_name="Programa/Contrato"
     )
     id_ingrediente_compras = models.ForeignKey(
         TablaIngredientesSiesa,
-        on_delete=models.PROTECT,   # No permite borrar un producto Siesa si tiene matches activos
+        on_delete=models.PROTECT,
         related_name='equivalencias_icbf',
         verbose_name="Producto de Compras (Siesa)"
     )
@@ -122,7 +150,6 @@ class EquivalenciaICBFCompras(models.Model):
         db_table = 'nutricion_equivalencia_icbf_compras'
         verbose_name = "Equivalencia ICBF → Compras"
         verbose_name_plural = "Equivalencias ICBF → Compras"
-        # Un alimento ICBF solo tiene UN producto Siesa por programa
         unique_together = [['id_alimento_icbf', 'id_programa']]
 
     def __str__(self):
@@ -135,8 +162,8 @@ class EquivalenciaICBFCompras(models.Model):
 
 | Acción | Efecto |
 |---|---|
-| Borrar un ingrediente de una preparación del menú | ✅ **NO afecta el match.** El match permanece intacto para uso futuro. |
-| Borrar toda una preparación de un menú | ✅ **NO afecta el match.** Solo se borran los ingredientes de esa preparación (CASCADE interno). |
+| Borrar un ingrediente de una preparación del menú | ✅ **NO afecta el match.** El match permanece para uso futuro. |
+| Borrar toda una preparación de un menú | ✅ **NO afecta el match.** Solo se borran los ingredientes de esa preparación. |
 | Borrar un alimento del catálogo ICBF | ⚠️ Se borra el match (CASCADE). Rara vez ocurre. |
 | Borrar un producto del catálogo Siesa | ❌ **Bloqueado (PROTECT)** si tiene matches activos. Hay que reasignar primero. |
 | Borrar un Programa/Contrato | ⚠️ Se borran todos sus matches (CASCADE). |
@@ -145,7 +172,9 @@ class EquivalenciaICBFCompras(models.Model):
 
 ### 2. `ProgramacionMenus` — en `planeacion/models.py`
 
-**Propósito:** Registra qué menú se sirve en qué sede, en qué fecha y para cuántas raciones. Es el eslabón que conecta planeación con nutrición y permite calcular las necesidades de compra.
+**Propósito:** Registra qué menú se sirve en qué sede, en qué fecha y para cuántas raciones. Conecta planeación con nutrición y permite calcular las necesidades de compra.
+
+**Nota sobre rutas:** El campo `id_ruta` referencia `logistica.Ruta` (ya implementado), no un modelo nuevo.
 
 ```python
 class ProgramacionMenus(models.Model):
@@ -180,6 +209,16 @@ class ProgramacionMenus(models.Model):
         on_delete=models.PROTECT,
         verbose_name="Modalidad de Consumo"
     )
+    # FK a logistica.Ruta — módulo ya implementado con CRUD completo
+    id_ruta = models.ForeignKey(
+        'logistica.Ruta',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='programaciones',
+        verbose_name="Ruta de entrega",
+        help_text="Ruta por la que se entrega el menú a esta sede"
+    )
     raciones = models.IntegerField(
         verbose_name="Número de raciones",
         help_text="Cantidad de raciones a servir ese día en esa sede"
@@ -213,13 +252,9 @@ class ProgramacionMenus(models.Model):
         return f"{self.fecha} - {self.sede_educativa.nombre_sede_educativa} - Menú {self.id_menu.menu}"
 ```
 
-> **Nota:** El campo `id_ruta` se agregará a este modelo cuando las rutas estén implementadas (ver sección de Rutas más abajo).
-
 ---
 
 ## Lógica de cálculo de necesidades (services.py)
-
-Cuando planeación necesite calcular insumos para un rango de fechas:
 
 ```python
 def calcular_necesidades_compra(id_programa, fecha_inicio, fecha_fin):
@@ -239,13 +274,11 @@ def calcular_necesidades_compra(id_programa, fecha_inicio, fecha_fin):
     resumen = {}  # {id_ingrediente_siesa: total_unidades}
 
     for prog in programaciones:
-        # Obtener todos los ingredientes del menú programado
         ingredientes = TablaPreparacionIngredientes.objects.filter(
             id_preparacion__id_menu=prog.id_menu
         ).select_related('id_ingrediente_siesa')
 
         for ing in ingredientes:
-            # Buscar el match para este programa
             try:
                 equivalencia = EquivalenciaICBFCompras.objects.get(
                     id_alimento_icbf=ing.id_ingrediente_siesa,
@@ -253,8 +286,7 @@ def calcular_necesidades_compra(id_programa, fecha_inicio, fecha_fin):
                     activo=True
                 )
             except EquivalenciaICBFCompras.DoesNotExist:
-                # Ingrediente sin match configurado — registrar alerta
-                continue
+                continue  # Ingrediente sin match — registrar alerta
 
             producto = equivalencia.id_ingrediente_compras
             total_gramos = prog.raciones * ing.gramaje
@@ -273,93 +305,15 @@ def calcular_necesidades_compra(id_programa, fecha_inicio, fecha_fin):
 
 ---
 
-## Rutas de entrega (PENDIENTE — tablas nuevas)
+## Rutas de entrega (ya implementadas en `logistica`)
 
-Una ruta agrupa un conjunto de sedes educativas que son atendidas por el mismo vehículo/transportador en una misma jornada de entrega. Las rutas pertenecen a un programa/contrato.
-
-### 3. `Ruta` — en `planeacion/models.py`
-
-```python
-class Ruta(models.Model):
-    """
-    Define una ruta de entrega de alimentos para un programa.
-    Una ruta agrupa varias sedes que reciben el menú en el mismo recorrido.
-    """
-    nombre_ruta = models.CharField(max_length=100, verbose_name="Nombre de la Ruta")
-    id_programa = models.ForeignKey(
-        Programa,
-        on_delete=models.CASCADE,
-        related_name='rutas',
-        verbose_name="Programa/Contrato"
-    )
-    descripcion = models.TextField(blank=True, null=True, verbose_name="Descripción")
-    activa = models.BooleanField(default=True, verbose_name="Activa")
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'planeacion_rutas'
-        verbose_name = "Ruta de Entrega"
-        verbose_name_plural = "Rutas de Entrega"
-        ordering = ['id_programa', 'nombre_ruta']
-        unique_together = [['nombre_ruta', 'id_programa']]
-
-    def __str__(self):
-        return f"{self.nombre_ruta} — {self.id_programa.programa}"
-```
-
-### 4. `RutaSedes` — en `planeacion/models.py`
-
-Tabla puente que asigna sedes a rutas, con un orden de visita.
-
-```python
-class RutaSedes(models.Model):
-    """
-    Asigna sedes educativas a una ruta de entrega.
-    El campo 'orden' define el orden de visita dentro de la ruta.
-    """
-    id_ruta = models.ForeignKey(
-        Ruta,
-        on_delete=models.CASCADE,
-        related_name='sedes',
-        verbose_name="Ruta"
-    )
-    sede_educativa = models.ForeignKey(
-        SedesEducativas,
-        on_delete=models.PROTECT,
-        related_name='rutas_asignadas',
-        verbose_name="Sede Educativa"
-    )
-    orden = models.PositiveIntegerField(
-        default=1,
-        verbose_name="Orden de visita",
-        help_text="Posición de la sede dentro del recorrido de la ruta"
-    )
-
-    class Meta:
-        db_table = 'planeacion_ruta_sedes'
-        verbose_name = "Sede en Ruta"
-        verbose_name_plural = "Sedes en Rutas"
-        ordering = ['id_ruta', 'orden']
-        unique_together = [['id_ruta', 'sede_educativa']]
-
-    def __str__(self):
-        return f"{self.id_ruta.nombre_ruta} → {self.sede_educativa.nombre_sede_educativa} (#{self.orden})"
-```
-
-### Campo a agregar en `ProgramacionMenus` cuando las rutas existan
-
-```python
-# Agregar este campo al modelo ProgramacionMenus:
-id_ruta = models.ForeignKey(
-    Ruta,
-    on_delete=models.SET_NULL,
-    null=True,
-    blank=True,
-    related_name='programaciones',
-    verbose_name="Ruta de entrega",
-    help_text="Ruta por la que se entrega el menú a esta sede"
-)
-```
+> **Las rutas NO se crean aquí.** El módulo `logistica` ya implementa con CRUD completo:
+>
+> - `TipoRuta` (`logistica_tipos_rutas`)
+> - `Ruta` (`logistica_rutas`) — con FK a Programa, estado activo/inactivo
+> - `RutaSedes` (`logistica_ruta_sedes`) — sede + orden de visita
+>
+> `ProgramacionMenus` referencia `logistica.Ruta` directamente.
 
 ---
 
@@ -367,22 +321,22 @@ id_ruta = models.ForeignKey(
 
 ```
 Programa (planeacion)
-  ├─── FK ──► Ruta ◄──── RutaSedes ──── FK ──► SedesEducativas
-  │             │
+  ├─── FK ──► logistica.Ruta ◄── logistica.RutaSedes ── FK ──► SedesEducativas
+  │
   ├─── FK ──► ProgramacionMenus ──── FK ──► TablaMenus (nutricion)
-  │           ├─ FK (sede)  ├─ FK (ruta, opcional)       │
-  │           │             │                            └──► TablaPreparaciones
-  │           ▼             ▼                                        │
-  │     SedesEducativas   Ruta                                       └──► TablaPreparacionIngredientes
-  │                                                                              │ FK (alimento ICBF)
-  │                                                                              ▼
-  │                                                                   TablaAlimentos2018Icbf
-  │                                                                              │
-  └─── FK ──► EquivalenciaICBFCompras ◄──────── FK(unique_together) ────────────┘
+  │           ├─ FK (sede)                        │
+  │           ├─ FK (ruta → logistica.Ruta)        └──► TablaPreparaciones
+  │           │                                               │
+  │           ▼                                               └──► TablaPreparacionIngredientes
+  │     SedesEducativas                                                 │ FK (alimento ICBF)
+  │                                                                     ▼
+  │                                                        TablaAlimentos2018Icbf
+  │                                                                     │
+  └─── FK ──► EquivalenciaICBFCompras ◄──── unique_together ───────────┘
                       │ FK (PROTECT)
                       ▼
-             TablaIngredientesSiesa
-             (+ presentacion, unidad_medida, contenido_gramos)
+             TablaIngredientesSiesa  ← simulacro actual
+             (en el futuro: tabla local descargada por Api/ desde Siesa)
                       │
                       ▼
              RESULTADO: Orden de Compra (agrupada por ruta)
@@ -390,46 +344,75 @@ Programa (planeacion)
 
 ---
 
-## Plan de implementación (orden sugerido)
+## Integración con módulo Api/ y estrategia de sincronización Siesa
 
-### Fase 1 — Fundamentos del match ICBF → Compras
+El módulo `Api/` (app Django ya existente, creada para este fin) será el puente con SIESA ERP:
 
-| # | Acción | Archivo | Prioridad |
+```
+[Siesa ERP SAAS]
+      │
+      │  tokens + endpoints (pendiente de recibir)
+      ▼
+  Api/ (módulo Django)
+      │
+      ├─► Descarga inicial: catálogos completos → tablas locales
+      │     - Plan de Cuentas → tabla local de artículos Siesa
+      │     - Proyectos (sedes) → tabla local de sedes Siesa
+      │     - Bodegas, Centros de Costo, etc.
+      │
+      └─► Cron job de sincronización delta
+            - Se dispara solo cuando Siesa agrega/modifica un registro
+            - No hace polling continuo
+            - Actualiza la tabla local afectada
+```
+
+**Ventaja:** El match y los cálculos de compra funcionan siempre contra tablas locales de PostgreSQL, sin depender de la disponibilidad de la API de Siesa en tiempo real.
+
+**Migración del simulacro a producción:** Cuando `Api/` esté activo y las tablas locales de Siesa estén pobladas, `EquivalenciaICBFCompras.id_ingrediente_compras` migrará de `TablaIngredientesSiesa` a la tabla oficial descargada. La UI del match no cambia.
+
+---
+
+## Plan de implementación (orden actualizado)
+
+### Fase 1 — Simulacro del match (implementar ahora)
+
+| # | Acción | Archivo | Estado |
 |---|---|---|---|
-| 1 | Agregar `presentacion`, `unidad_medida`, `contenido_gramos` a `TablaIngredientesSiesa` | `nutricion/models.py` | Alta |
-| 2 | Crear modelo `EquivalenciaICBFCompras` | `nutricion/models.py` | Alta |
-| 3 | Generar y aplicar migraciones | Django migrations | Alta |
-| 4 | UI para que el nutricionista haga el match por programa | `nutricion/views/` | Alta |
-| 5 | Indicador semáforo en el menú (ingredientes con/sin match) | `nutricion/views/` | Media |
+| 1 | Agregar `presentacion`, `unidad_medida`, `contenido_gramos` a `TablaIngredientesSiesa` | `nutricion/models.py` | Pendiente |
+| 2 | Migración de los campos nuevos | Django migrations | Pendiente |
+| 3 | Crear modelo `EquivalenciaICBFCompras` | `nutricion/models.py` | Pendiente |
+| 4 | Migración del nuevo modelo | Django migrations | Pendiente |
+| 5 | CRUD básico de catálogo Siesa (carga manual de productos) | `nutricion/views/` o `planeacion/views/` | Pendiente |
+| 6 | Vista del match: lista ICBF ↔ selector Siesa + semáforo | `nutricion/views/` | Pendiente |
 
 ### Fase 2 — Programación de menús por sede y fecha
 
-| # | Acción | Archivo | Prioridad |
+| # | Acción | Archivo | Estado |
 |---|---|---|---|
-| 6 | Crear modelo `ProgramacionMenus` (sin rutas aún) | `planeacion/models.py` | Alta |
-| 7 | Generar y aplicar migraciones | Django migrations | Alta |
-| 8 | Vista de programación de menús por sede y fecha | `planeacion/views.py` | Alta |
-| 9 | Servicio de cálculo de necesidades de compra | `planeacion/services.py` | Alta |
-| 10 | Reporte de orden de compra (PDF/Excel) | `planeacion/` | Media |
+| 7 | Crear modelo `ProgramacionMenus` (con FK a `logistica.Ruta`) | `planeacion/models.py` | Pendiente |
+| 8 | Migración | Django migrations | Pendiente |
+| 9 | Vista de programación de menús por sede y fecha | `planeacion/views.py` | Pendiente |
+| 10 | Servicio de cálculo de necesidades de compra | `planeacion/services.py` | Pendiente |
+| 11 | Reporte de orden de compra (PDF/Excel) | `planeacion/` | Pendiente |
 
-### Fase 3 — Rutas de entrega
+### Fase 3 — Integración real con Siesa via Api/
 
-| # | Acción | Archivo | Prioridad |
+| # | Acción | Archivo | Estado |
 |---|---|---|---|
-| 11 | Crear modelo `Ruta` | `planeacion/models.py` | Alta |
-| 12 | Crear modelo `RutaSedes` | `planeacion/models.py` | Alta |
-| 13 | Agregar FK `id_ruta` a `ProgramacionMenus` | `planeacion/models.py` | Alta |
-| 14 | Generar y aplicar migraciones | Django migrations | Alta |
-| 15 | UI para gestionar rutas y asignar sedes | `planeacion/views.py` | Media |
-| 16 | Reporte de entrega agrupado por ruta | `planeacion/` | Media |
+| 12 | Recibir tokens y endpoints de Siesa | `Api/` | Bloqueado (esperando Siesa) |
+| 13 | Modelos de tablas locales Siesa (Plan de Cuentas, Proyectos, etc.) | `Api/models.py` | Pendiente |
+| 14 | Conector SC — descarga y sincronización | `Api/` | Pendiente |
+| 15 | Conector RQI — descarga y sincronización | `Api/` | Pendiente |
+| 16 | Cron job de sincronización delta | `Api/` | Pendiente |
+| 17 | Migrar `EquivalenciaICBFCompras` a tabla oficial Siesa | `nutricion/models.py` | Pendiente |
+| 18 | Generación automática de SC/RQI desde orden de compra | `Api/` + `planeacion/` | Pendiente |
 
 ---
 
 ## Notas importantes
 
-- **Un menú NO se asocia a un programa directamente.** Los menús en `TablaMenus` ya tienen `id_contrato` (FK a `Programa`), por lo que el programa ya está implícito en el menú. `ProgramacionMenus` hereda eso.
-- **Alertas de match faltante:** El sistema debe mostrar una alerta cuando se programa un menú que tiene ingredientes sin match configurado en `EquivalenciaICBFCompras` para ese programa.
-- **El match es permanente:** Borrar un ingrediente de un menú NO borra el match ICBF→Compras. El match se mantiene para cuando ese ingrediente vuelva a usarse en cualquier menú del mismo programa.
-- **Rutas son opcionales en ProgramacionMenus:** En la Fase 2 se puede programar sin rutas. En la Fase 3 se agrega el FK a ruta sin romper lo ya construido (`null=True, blank=True`).
-- **Orden de visita en rutas:** El campo `orden` en `RutaSedes` es importante para generar la planilla de entrega en el orden correcto del recorrido.
-- **Una sede puede estar en varias rutas:** Si en el futuro una sede recibe CAP AM por una ruta y Almuerzo por otra, `RutaSedes` lo permite naturalmente (la clave única es ruta+sede, no solo sede).
+- **Rutas ya implementadas:** `logistica.Ruta` y `logistica.RutaSedes` tienen CRUD completo. No duplicar en `planeacion`.
+- **El match es permanente:** Borrar un ingrediente de un menú NO borra el match ICBF→Compras.
+- **Simulacro primero:** La UI del match se construye con `TablaIngredientesSiesa`. La migración a Siesa real solo cambia la FK y la fuente del selector.
+- **Cron job, no polling:** La sincronización con Siesa es reactiva (delta), no un ciclo constante.
+- **Un menú NO se asocia a un programa directamente:** Ya tiene `id_contrato` (FK a `Programa`), el programa está implícito.

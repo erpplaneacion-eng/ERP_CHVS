@@ -436,26 +436,52 @@ class TablaPreparaciones(models.Model):
 
 class TablaIngredientesSiesa(models.Model):
     """
-    Modelo para gestionar ingredientes del inventario Siesa.
-    Representa los ingredientes disponibles en el sistema de inventario.
+    Catálogo de productos de compras/inventario.
+
+    SIMULACRO: Actualmente se usa como catálogo de ejemplo para el match
+    ICBF → Compras mientras llegan los tokens/endpoints de Siesa.
+    Cuando la integración Api/ esté activa, esta tabla será reemplazada
+    por la tabla oficial descargada desde Siesa (SiesaArticulo).
     """
     id_ingrediente_siesa = models.CharField(
         max_length=50,
         primary_key=True,
-        verbose_name="Código del Ingrediente"
+        verbose_name="Código del Producto"
     )
     nombre_ingrediente = models.CharField(
         max_length=255,
-        verbose_name="Nombre del Ingrediente"
+        verbose_name="Nombre del Producto"
+    )
+    presentacion = models.CharField(
+        max_length=100,
+        blank=True, null=True,
+        verbose_name="Presentación comercial",
+        help_text="Ej: Bolsa 1000ml, Caja 500g, Bulto 50kg"
+    )
+    unidad_medida = models.CharField(
+        max_length=50,
+        blank=True, null=True,
+        verbose_name="Unidad de medida",
+        help_text="Ej: bolsa, caja, bulto, litro, unidad"
+    )
+    contenido_gramos = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True, null=True,
+        verbose_name="Contenido en gramos",
+        help_text="Gramos por unidad. Ej: 1000 para Bolsa 1L"
     )
 
     def __str__(self):
-        return f"{self.id_ingrediente_siesa} - {self.nombre_ingrediente}"
+        partes = [self.nombre_ingrediente]
+        if self.presentacion:
+            partes.append(self.presentacion)
+        return " — ".join(partes)
 
     class Meta:
         db_table = 'tabla_ingredientes_siesa'
-        verbose_name = "Ingrediente de Inventario"
-        verbose_name_plural = "Ingredientes de Inventario"
+        verbose_name = "Producto de Compras (Siesa)"
+        verbose_name_plural = "Productos de Compras (Siesa)"
         ordering = ['nombre_ingrediente']
 
 
@@ -1368,3 +1394,54 @@ class ProcedimientoPreparacion(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+class EquivalenciaICBFCompras(models.Model):
+    """
+    Match entre un alimento ICBF y su producto equivalente de compras,
+    diferenciado por programa/contrato.
+
+    Regla: un alimento ICBF tiene un único producto Siesa por programa.
+    El nutricionista realiza el match una sola vez; permanece aunque se
+    borren ingredientes de los menús.
+
+    SIMULACRO: id_ingrediente_compras apunta a TablaIngredientesSiesa.
+    Cuando Api/ esté activo se migrará a la tabla oficial de Siesa.
+    """
+    id_alimento_icbf = models.ForeignKey(
+        'TablaAlimentos2018Icbf',
+        on_delete=models.CASCADE,
+        related_name='equivalencias_compras',
+        verbose_name="Alimento ICBF"
+    )
+    id_programa = models.ForeignKey(
+        'planeacion.Programa',
+        on_delete=models.CASCADE,
+        related_name='equivalencias_icbf',
+        verbose_name="Programa/Contrato"
+    )
+    id_ingrediente_compras = models.ForeignKey(
+        TablaIngredientesSiesa,
+        on_delete=models.PROTECT,
+        related_name='equivalencias_icbf',
+        verbose_name="Producto de Compras"
+    )
+    activo = models.BooleanField(default=True, verbose_name="Activo")
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    usuario = models.CharField(
+        max_length=100, blank=True, null=True,
+        verbose_name="Usuario que realizó el match"
+    )
+
+    class Meta:
+        db_table = 'nutricion_equivalencia_icbf_compras'
+        verbose_name = "Equivalencia ICBF → Compras"
+        verbose_name_plural = "Equivalencias ICBF → Compras"
+        unique_together = [['id_alimento_icbf', 'id_programa']]
+
+    def __str__(self):
+        return (
+            f"{self.id_alimento_icbf.nombre_del_alimento} → "
+            f"{self.id_ingrediente_compras.nombre_ingrediente} "
+            f"[{self.id_programa.programa}]"
+        )

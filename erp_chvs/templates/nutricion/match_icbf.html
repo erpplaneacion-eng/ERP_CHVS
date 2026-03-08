@@ -1,0 +1,327 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Match ICBF → Compras{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/nutricion/match_icbf.css' %}">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+
+    <!-- Encabezado -->
+    <div class="page-header">
+        <h1><i class="fas fa-link"></i> Match ICBF → Compras</h1>
+        <p class="page-subtitle">
+            Asocia cada ingrediente ICBF usado en los menús con su producto equivalente en el catálogo de compras.
+        </p>
+    </div>
+
+    <!-- Alerta simulacro -->
+    <div class="alert alert-simulacro">
+        <i class="fas fa-flask"></i>
+        <strong>Modo simulacro:</strong> El catálogo de compras usa <em>TablaIngredientesSiesa</em> como ejemplo.
+        Cuando se active la integración con Siesa, la fuente cambiará automáticamente sin modificar este flujo.
+        <a href="#" onclick="abrirCatalogo()" class="link-catalogo">
+            <i class="fas fa-database"></i> Administrar catálogo de ejemplo
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filtros-container">
+        <h3><i class="fas fa-filter"></i> Filtros</h3>
+        <form method="GET" class="filtros-row" id="formFiltros">
+            <div class="form-group">
+                <label for="filtroMunicipio">Municipio (ETC)</label>
+                <select id="filtroMunicipio" name="municipio" class="form-control">
+                    <option value="">Seleccione un municipio...</option>
+                    {% for mun in municipios %}
+                    <option value="{{ mun.id }}"
+                        {% if municipio_seleccionado == mun.id|stringformat:"s" %}selected{% endif %}>
+                        {{ mun.nombre_municipio }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="filtroPrograma">Programa</label>
+                <select id="filtroPrograma" name="programa" class="form-control"
+                    {% if not municipio_seleccionado %}disabled{% endif %}>
+                    <option value="">
+                        {% if municipio_seleccionado %}Seleccione un programa...{% else %}Primero seleccione un municipio...{% endif %}
+                    </option>
+                    {% if programas %}
+                    {% for prog in programas %}
+                    <option value="{{ prog.id }}"
+                        {% if programa_seleccionado == prog.id|stringformat:"s" %}selected{% endif %}>
+                        {{ prog.programa }}
+                    </option>
+                    {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" id="btnCargarIngredientes" class="btn btn-success"
+                    {% if not municipio_seleccionado %}disabled{% endif %}>
+                    <i class="fas fa-search"></i> Cargar Ingredientes
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle"></i> <strong>Error:</strong> {{ error }}
+    </div>
+    {% endif %}
+
+    {% if programa_obj %}
+    <!-- Resumen de progreso -->
+    <div class="match-resumen">
+        <div class="resumen-programa">
+            <i class="fas fa-file-contract"></i>
+            <strong>{{ programa_obj.programa }}</strong>
+        </div>
+        <div class="resumen-stats">
+            <div class="stat stat-total">
+                <span class="stat-num">{{ total }}</span>
+                <span class="stat-label">Total ingredientes</span>
+            </div>
+            <div class="stat stat-ok">
+                <i class="fas fa-check-circle"></i>
+                <span class="stat-num">{{ con_match }}</span>
+                <span class="stat-label">Con match</span>
+            </div>
+            <div class="stat stat-pendiente">
+                <i class="fas fa-exclamation-circle"></i>
+                <span class="stat-num">{{ sin_match }}</span>
+                <span class="stat-label">Sin match</span>
+            </div>
+        </div>
+        <!-- Barra de progreso -->
+        {% if total > 0 %}
+        <div class="progreso-barra-wrap">
+            <div class="progreso-barra">
+                <div class="progreso-fill" style="width: {% widthratio con_match total 100 %}%"></div>
+            </div>
+            <span class="progreso-pct">{% widthratio con_match total 100 %}%</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Tabla de match -->
+    {% if filas %}
+    <div class="match-tabla-container">
+        <table class="match-tabla" id="tablaMatch">
+            <thead>
+                <tr>
+                    <th class="col-estado"></th>
+                    <th>Ingrediente ICBF</th>
+                    <th>Componente</th>
+                    <th>Producto Compras (Siesa)</th>
+                    <th>Presentación</th>
+                    <th class="col-acciones">Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in filas %}
+                <tr class="fila-match {% if fila.tiene_match %}fila-ok{% else %}fila-pendiente{% endif %}"
+                    data-codigo-icbf="{{ fila.alimento.codigo }}"
+                    data-programa="{{ programa_seleccionado }}">
+
+                    <!-- Semáforo -->
+                    <td class="col-estado">
+                        {% if fila.tiene_match %}
+                        <span class="semaforo semaforo-verde" title="Match configurado">
+                            <i class="fas fa-circle"></i>
+                        </span>
+                        {% else %}
+                        <span class="semaforo semaforo-rojo" title="Sin match">
+                            <i class="fas fa-circle"></i>
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Ingrediente ICBF -->
+                    <td class="col-icbf">
+                        <span class="icbf-nombre">{{ fila.alimento.nombre_del_alimento }}</span>
+                        <span class="icbf-codigo">{{ fila.alimento.codigo }}</span>
+                    </td>
+
+                    <!-- Componente -->
+                    <td class="col-componente">
+                        {{ fila.alimento.id_componente.componente|default:"—" }}
+                    </td>
+
+                    <!-- Producto asignado -->
+                    <td class="col-siesa">
+                        {% if fila.match %}
+                        <span class="siesa-nombre" id="nombre-siesa-{{ fila.alimento.codigo }}">
+                            {{ fila.match.id_ingrediente_compras.nombre_ingrediente }}
+                        </span>
+                        <span class="siesa-codigo">
+                            {{ fila.match.id_ingrediente_compras.id_ingrediente_siesa }}
+                        </span>
+                        {% else %}
+                        <span class="siesa-vacio" id="nombre-siesa-{{ fila.alimento.codigo }}">
+                            <i class="fas fa-minus"></i> Sin asignar
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Presentación -->
+                    <td class="col-presentacion" id="pres-{{ fila.alimento.codigo }}">
+                        {% if fila.match and fila.match.id_ingrediente_compras.presentacion %}
+                        {{ fila.match.id_ingrediente_compras.presentacion }}
+                        {% if fila.match.id_ingrediente_compras.contenido_gramos %}
+                        — {{ fila.match.id_ingrediente_compras.contenido_gramos }}g
+                        {% endif %}
+                        {% else %}—{% endif %}
+                    </td>
+
+                    <!-- Acciones -->
+                    <td class="col-acciones">
+                        <button class="btn-match"
+                            onclick="abrirModalMatch('{{ fila.alimento.codigo }}', '{{ fila.alimento.nombre_del_alimento|escapejs }}', '{% if fila.match %}{{ fila.match.id_ingrediente_compras.id_ingrediente_siesa }}{% endif %}', '{% if fila.match %}{{ fila.match.id_ingrediente_compras.nombre_ingrediente|escapejs }}{% endif %}')">
+                            <i class="fas fa-{% if fila.tiene_match %}edit{% else %}link{% endif %}"></i>
+                            {% if fila.tiene_match %}Cambiar{% else %}Asignar{% endif %}
+                        </button>
+                        {% if fila.tiene_match %}
+                        <button class="btn-quitar"
+                            onclick="quitarMatch('{{ fila.alimento.codigo }}', '{{ fila.alimento.nombre_del_alimento|escapejs }}')">
+                            <i class="fas fa-unlink"></i>
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i>
+        Este programa no tiene menús con ingredientes configurados aún.
+    </div>
+    {% endif %}
+
+    {% elif municipio_seleccionado and not programa_obj %}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i> Seleccione un programa para cargar los ingredientes.
+    </div>
+    {% else %}
+    <div class="alert alert-info" id="mensajeInicial">
+        <i class="fas fa-info-circle"></i>
+        Seleccione un municipio y un programa para visualizar los ingredientes a matchear.
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- ===== Modal: Asignar/Cambiar producto Siesa ===== -->
+<div id="modalMatch" class="modal">
+    <div class="modal-content modal-match-content">
+        <span class="close" onclick="cerrarModalMatch()">&times;</span>
+        <h2><i class="fas fa-link"></i> Asignar Producto de Compras</h2>
+
+        <div class="match-modal-icbf">
+            <label>Ingrediente ICBF</label>
+            <p id="matchNombreICBF" class="match-icbf-label"></p>
+        </div>
+
+        <div class="form-group">
+            <label for="selectProductoSiesa">Producto de Compras (Siesa) <span class="required">*</span></label>
+            <select id="selectProductoSiesa" class="form-control" style="width:100%">
+                <option value="">Buscar producto...</option>
+            </select>
+            <small class="help-text">
+                <i class="fas fa-search"></i> Escriba para buscar en el catálogo
+            </small>
+        </div>
+
+        <!-- Detalle del producto seleccionado -->
+        <div id="detalleProd" class="detalle-prod" style="display:none">
+            <div class="detalle-item"><strong>Presentación:</strong> <span id="detPresentacion"></span></div>
+            <div class="detalle-item"><strong>Unidad:</strong> <span id="detUnidad"></span></div>
+            <div class="detalle-item"><strong>Contenido:</strong> <span id="detContenido"></span></div>
+        </div>
+
+        <div class="form-actions">
+            <button class="btn btn-primary" onclick="guardarMatch()" id="btnGuardarMatch">
+                <i class="fas fa-save"></i> Guardar Match
+            </button>
+            <button class="btn btn-secondary" onclick="cerrarModalMatch()">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== Modal: Catálogo de productos Siesa (simulacro) ===== -->
+<div id="modalCatalogo" class="modal">
+    <div class="modal-content modal-catalogo-content">
+        <span class="close" onclick="cerrarCatalogo()">&times;</span>
+        <h2><i class="fas fa-database"></i> Catálogo de Productos (Simulacro Siesa)</h2>
+
+        <div class="catalogo-toolbar">
+            <input type="text" id="buscarCatalogo" class="form-control" placeholder="Buscar por nombre...">
+            <button class="btn btn-primary" onclick="abrirFormProducto(null)">
+                <i class="fas fa-plus"></i> Nuevo Producto
+            </button>
+        </div>
+
+        <div id="catalogoLista" class="catalogo-lista">
+            <!-- se llena con JS -->
+        </div>
+
+        <!-- Formulario inline para crear/editar -->
+        <div id="formProductoContainer" class="form-producto-container" style="display:none">
+            <h3 id="formProductoTitulo">Nuevo Producto</h3>
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label>Código <span class="required">*</span></label>
+                    <input type="text" id="fpCodigo" class="form-control" placeholder="Ej: LECHE-001">
+                </div>
+                <div class="form-group">
+                    <label>Nombre <span class="required">*</span></label>
+                    <input type="text" id="fpNombre" class="form-control" placeholder="Ej: Leche entera Bolsa 1L">
+                </div>
+                <div class="form-group">
+                    <label>Presentación</label>
+                    <input type="text" id="fpPresentacion" class="form-control" placeholder="Ej: Bolsa 1000ml">
+                </div>
+                <div class="form-group">
+                    <label>Unidad de medida</label>
+                    <input type="text" id="fpUnidad" class="form-control" placeholder="Ej: bolsa">
+                </div>
+                <div class="form-group">
+                    <label>Contenido en gramos</label>
+                    <input type="number" id="fpGramos" class="form-control" placeholder="Ej: 1000" step="0.01" min="0">
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary" onclick="guardarProducto()">
+                    <i class="fas fa-save"></i> Guardar
+                </button>
+                <button class="btn btn-secondary" onclick="cancelarFormProducto()">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    const PROGRAMA_ID = {{ programa_seleccionado|default:"null" }};
+</script>
+<script src="{% static 'js/nutricion/match_icbf.js' %}"></script>
+{% endblock %}

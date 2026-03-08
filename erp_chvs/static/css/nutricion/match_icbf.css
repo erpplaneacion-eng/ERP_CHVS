@@ -1,0 +1,303 @@
+/* ===================================================
+   Match ICBF → Compras
+=================================================== */
+
+/* Alerta simulacro */
+.alert-simulacro {
+    background: #fff8e1;
+    border-left: 4px solid #f59e0b;
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.alert-simulacro i { color: #f59e0b; font-size: 1.1rem; }
+.link-catalogo {
+    margin-left: auto;
+    color: #1e3a8a;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.link-catalogo:hover { text-decoration: underline; }
+
+/* Resumen de progreso */
+.match-resumen {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+.resumen-programa {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e3a8a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 200px;
+}
+.resumen-stats {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.88rem;
+    color: #555;
+}
+.stat-num {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1e3a8a;
+}
+.stat-ok i { color: #16a34a; }
+.stat-ok .stat-num { color: #16a34a; }
+.stat-pendiente i { color: #dc2626; }
+.stat-pendiente .stat-num { color: #dc2626; }
+
+/* Barra de progreso */
+.progreso-barra-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 200px;
+}
+.progreso-barra {
+    flex: 1;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+}
+.progreso-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #16a34a, #22c55e);
+    border-radius: 999px;
+    transition: width 0.4s ease;
+}
+.progreso-pct {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #16a34a;
+    min-width: 36px;
+    text-align: right;
+}
+
+/* Tabla de match */
+.match-tabla-container {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    overflow: hidden;
+}
+.match-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+.match-tabla thead th {
+    background: #1e3a8a;
+    color: #fff;
+    padding: 12px 14px;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.match-tabla tbody tr {
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.15s;
+}
+.match-tabla tbody tr:hover { background: #f8faff; }
+.match-tabla tbody td { padding: 11px 14px; vertical-align: middle; }
+
+/* Semáforo */
+.col-estado { width: 36px; text-align: center; }
+.semaforo { font-size: 12px; }
+.semaforo-verde { color: #16a34a; }
+.semaforo-rojo  { color: #dc2626; }
+
+/* Filas */
+.fila-ok    { background: #f0fdf4; }
+.fila-pendiente { background: #fff; }
+
+/* Textos de celdas */
+.icbf-nombre { display: block; font-weight: 500; color: #111; }
+.icbf-codigo { display: block; font-size: 0.78rem; color: #888; margin-top: 2px; }
+.siesa-nombre { display: block; font-weight: 500; color: #166534; }
+.siesa-codigo { display: inline-block; font-size: 0.75rem; color: #888; margin-left: 4px; }
+.siesa-vacio  { color: #9ca3af; font-size: 0.85rem; }
+
+/* Acciones */
+.col-acciones { white-space: nowrap; }
+.btn-match {
+    background: #1e3a8a;
+    color: #fff;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+.btn-match:hover { background: #1e40af; }
+.btn-quitar {
+    background: none;
+    border: 1px solid #fca5a5;
+    color: #dc2626;
+    padding: 5px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    margin-left: 6px;
+    transition: background 0.2s;
+}
+.btn-quitar:hover { background: #fee2e2; }
+
+/* ===== Modales ===== */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+.modal-content {
+    background: #fff;
+    border-radius: 12px;
+    padding: 28px;
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+.modal-match-content   { width: 520px; max-width: 95vw; }
+.modal-catalogo-content { width: 700px; max-width: 96vw; }
+
+.close {
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    font-size: 1.4rem;
+    cursor: pointer;
+    color: #666;
+    line-height: 1;
+}
+.close:hover { color: #111; }
+
+/* Match modal — campo ICBF */
+.match-modal-icbf { margin-bottom: 16px; }
+.match-modal-icbf label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: .05em; }
+.match-icbf-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e3a8a;
+    margin: 4px 0 0;
+    padding: 10px 14px;
+    background: #f0f4ff;
+    border-radius: 7px;
+}
+
+/* Detalle del producto seleccionado */
+.detalle-prod {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 7px;
+    padding: 12px 14px;
+    margin: 12px 0;
+    font-size: 0.87rem;
+}
+.detalle-item { margin: 3px 0; color: #166534; }
+
+/* ===== Catálogo ===== */
+.catalogo-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.catalogo-toolbar .form-control { flex: 1; }
+
+.catalogo-lista { max-height: 340px; overflow-y: auto; }
+
+.catalogo-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.15s;
+}
+.catalogo-item:hover { background: #f8faff; }
+.cat-info { display: flex; flex-direction: column; gap: 2px; }
+.cat-nombre { font-weight: 600; font-size: 0.9rem; color: #111; }
+.cat-codigo { font-size: 0.75rem; color: #888; }
+.cat-pres   { font-size: 0.8rem; color: #555; }
+.cat-acciones { display: flex; gap: 6px; }
+.btn-cat-edit {
+    background: none;
+    border: 1px solid #93c5fd;
+    color: #1e3a8a;
+    padding: 4px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+.btn-cat-edit:hover { background: #eff6ff; }
+.btn-cat-del {
+    background: none;
+    border: 1px solid #fca5a5;
+    color: #dc2626;
+    padding: 4px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+.btn-cat-del:hover { background: #fee2e2; }
+.catalogo-vacio {
+    text-align: center;
+    color: #888;
+    padding: 30px;
+    font-size: 0.9rem;
+}
+
+/* Formulario de producto */
+.form-producto-container {
+    margin-top: 20px;
+    padding: 18px;
+    background: #f8faff;
+    border-radius: 8px;
+    border: 1px solid #bfdbfe;
+}
+.form-producto-container h3 {
+    margin: 0 0 14px;
+    font-size: 1rem;
+    color: #1e3a8a;
+}
+.form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+@media (max-width: 560px) { .form-grid-2 { grid-template-columns: 1fr; } }
+
+/* Subtítulo de página */
+.page-subtitle {
+    font-size: 0.92rem;
+    color: #666;
+    margin-top: 4px;
+}
