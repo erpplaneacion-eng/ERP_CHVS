@@ -19,7 +19,7 @@
             Programa: <strong>{{ menu.id_contrato.programa }}</strong>
         </small>
     </div>
-    <a href="{% url 'nutricion:lista_menus' %}" class="btn btn-secondary">
+    <a href="{% url 'nutricion:lista_menus' %}?municipio={{ menu.id_contrato.municipio_id }}&programa={{ menu.id_contrato.id }}" class="btn btn-secondary">
         <i class="bi bi-arrow-left"></i> Volver
     </a>
 </div>
