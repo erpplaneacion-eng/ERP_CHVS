@@ -195,7 +195,8 @@ class AlimentosManager {
             'calcio_mg': 2000,
             'hierro_mg': 50,
             'vitamina_c_mg': 1000,
-            'parte_comestible_field': 100
+            'parte_comestible_field': 100,
+            'factor_coccion': 10
         };
 
         maxValue = fieldLimits[fieldName];
@@ -325,7 +326,8 @@ class AlimentosManager {
             'grasaMonoinsaturada': 'id_grasa_monoinsaturada_g',
             'grasaPoliinsaturada': 'id_grasa_poliinsaturada_g',
             'colesterol': 'id_colesterol_mg',
-            'parteComestible': 'id_parte_comestible_field'
+            'parteComestible': 'id_parte_comestible_field',
+            'factorCoccion': 'id_factor_coccion'
         };
 
         console.log('🔍 DEBUG: Poblando formulario...');
@@ -767,6 +769,20 @@ class AlimentosManager {
                         <div class="detail-item">
                             <label>Colesterol:</label>
                             <span>${data.colesterol} mg</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h4>Cocción</h4>
+                    <div class="detail-row">
+                        <div class="detail-item">
+                            <label>Parte Comestible:</label>
+                            <span>${data.parteComestible} %</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Factor de Cocción:</label>
+                            <span>${data.factorCoccion}</span>
                         </div>
                     </div>
                 </div>

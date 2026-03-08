@@ -16,7 +16,7 @@ class AlimentoForm(forms.ModelForm):
             'potasio_mg', 'tiamina_mg', 'riboflavina_mg', 'niacina_mg',
             'folatos_mcg', 'vitamina_b12_mcg', 'vitamina_c_mg', 'vitamina_a_er',
             'grasa_saturada_g', 'grasa_monoinsaturada_g', 'grasa_poliinsaturada_g',
-            'colesterol_mg', 'parte_comestible_field'
+            'colesterol_mg', 'parte_comestible_field', 'factor_coccion'
         ]
         
         widgets = {
