@@ -45,65 +45,73 @@
         <!-- Barra Lateral Izquierda (Sidebar)                          -->
         <!-- ========================================================== -->
         <aside class="sidebar">
-            <h3>Módulos del ERP</h3>
+            <!-- Brand / Logo -->
+            <div class="sidebar-brand">
+                <img src="{% static 'calidad/images/logo.jpeg' %}" alt="CHVS" class="sidebar-logo">
+                <div class="sidebar-brand-text">
+                    <span class="sidebar-brand-name">CHVS</span>
+                    <span class="sidebar-brand-sub">Sistema PAE</span>
+                </div>
+            </div>
+            <div class="sidebar-divider"></div>
+
             <nav class="sidebar-nav">
                 <ul>
                     <li><a href="{% url 'dashboard:dashboard' %}"
-                            class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                            class="nav-dashboard {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                             <i class="fas fa-tachometer-alt"></i><span>Dashboard</span>
                         </a></li>
 
                     {% if user|has_group:"ADMINISTRACION" %}
                     <li><a href="{% url 'principal:principal_index' %}"
-                            class="{% if request.resolver_match.url_name == 'principal_index' %}active{% endif %}">
+                            class="nav-principal {% if request.resolver_match.url_name == 'principal_index' %}active{% endif %}">
                             <i class="fas fa-cog"></i><span>Configuración</span>
                         </a></li>
                     {% endif %}
 
                     {% if user|has_group:"ADMINISTRACION,NUTRICION" %}
                     <li><a href="{% url 'nutricion:nutricion_index' %}"
-                            class="{% if request.resolver_match.url_name == 'nutricion_index' %}active{% endif %}">
+                            class="nav-nutricion {% if request.resolver_match.url_name == 'nutricion_index' %}active{% endif %}">
                             <i class="fas fa-apple-alt"></i><span>Nutrición</span>
                         </a></li>
                     {% endif %}
 
                     {% if user|has_group:"ADMINISTRACION,PLANEACION" %}
                     <li><a href="{% url 'planeacion:planeacion_index' %}"
-                            class="{% if request.resolver_match.url_name == 'planeacion_index' %}active{% endif %}">
+                            class="nav-planeacion {% if request.resolver_match.url_name == 'planeacion_index' %}active{% endif %}">
                             <i class="fas fa-calendar-alt"></i><span>Planeación</span>
                         </a></li>
                     {% endif %}
 
                     {% if user|has_group:"ADMINISTRACION,FACTURACION" %}
                     <li><a href="{% url 'facturacion:facturacion_index' %}"
-                            class="{% if request.resolver_match.url_name == 'facturacion_index' %}active{% endif %}">
+                            class="nav-facturacion {% if request.resolver_match.url_name == 'facturacion_index' %}active{% endif %}">
                             <i class="fas fa-file-invoice-dollar"></i><span>Facturación</span>
                         </a></li>
                     {% endif %}
 
                     {% if user|has_group:"ADMINISTRACION,COSTOS" %}
                     <li><a href="{% url 'costos:costos_index' %}"
-                            class="{% if request.resolver_match.url_name == 'costos_index' %}active{% endif %}">
+                            class="nav-costos {% if request.resolver_match.url_name == 'costos_index' %}active{% endif %}">
                             <i class="fas fa-coins"></i><span>Costos</span>
                         </a></li>
                     {% endif %}
 
                     {% if user|has_group:"ADMINISTRACION,LOGISTICA" %}
                     <li><a href="{% url 'logistica:principal' %}"
-                            class="{% if request.resolver_match.app_name == 'logistica' %}active{% endif %}">
+                            class="nav-logistica {% if request.resolver_match.app_name == 'logistica' %}active{% endif %}">
                             <i class="fas fa-truck-loading"></i><span>Logística</span>
                         </a></li>
                     {% endif %}
 
                     {% if user|has_group:"ADMINISTRACION,CALIDAD" %}
                     <li><a href="{% url 'calidad:principal' %}"
-                            class="{% if request.resolver_match.app_name == 'calidad' %}active{% endif %}">
+                            class="nav-calidad {% if request.resolver_match.app_name == 'calidad' %}active{% endif %}">
                             <i class="fas fa-certificate"></i><span>Calidad</span>
                         </a></li>
                     {% endif %}
                 </ul>
             </nav>
-            <!-- La sección user-info se ha movido al header -->
         </aside>
 
         <!-- ========================================================== -->
@@ -122,7 +130,13 @@
                     <h2 class="header-title">CHVS ERP System</h2>
                 </div>
                 <div class="header-user">
-                    <span>Usuario: <strong>{{ user.username }}</strong></span>
+                    <div class="user-chip">
+                        <div class="user-avatar">{{ user.username|first|upper }}</div>
+                        <div class="user-chip-info">
+                            <small>Usuario</small>
+                            <strong>{{ user.username }}</strong>
+                        </div>
+                    </div>
                     <form class="logout-form" method="post" action="{% url 'logout' %}">
                         {% csrf_token %}
                         <button type="submit" class="logout-link">
