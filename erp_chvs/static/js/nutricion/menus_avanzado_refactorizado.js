@@ -401,108 +401,6 @@ class MenusAvanzadosController {
         }
     }
 
-    /**
-     * Abrir modal de generación con IA
-     * @param {string} modalidadId - ID de la modalidad
-     */
-    abrirModalMenuIA(modalidadId) {
-        document.getElementById('modalidadIdIA').value = modalidadId;
-        // nivelEducativoIA ya no existe - se genera para todos los niveles automáticamente
-        document.getElementById('loadingIA').style.display = 'none';
-        document.getElementById('formMenuIA').style.display = 'block';
-
-        this.modalesManager.abrirModal(this.modalesManager.modales.menuIA);
-    }
-
-    /**
-     * Generar menú con IA (Gemini)
-     * Genera automáticamente para TODOS los niveles educativos
-     */
-    async generarMenuIA() {
-        const modalidadId = document.getElementById('modalidadIdIA').value;
-
-        if (!modalidadId) {
-            alert('Error: modalidad no seleccionada. Por favor intente de nuevo.');
-            return;
-        }
-
-        const formIA = document.getElementById('formMenuIA');
-        const loadingIA = document.getElementById('loadingIA');
-        const btnSubmit = document.getElementById('btnSubmitIA');
-
-        formIA.style.display = 'none';
-        loadingIA.style.display = 'block';
-        btnSubmit.disabled = true;
-
-        try {
-            const response = await fetch('/nutricion/api/generar-menu-ia/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    programa_id: this.programaActual.id,
-                    modalidad_id: modalidadId
-                    // No se envía nivel_educativo - se genera para TODOS los niveles
-                })
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                this.modalesManager.cerrarModal(this.modalesManager.modales.menuIA);
-
-                Swal.fire({
-                    title: '¡Menú Generado Exitosamente!',
-                    html: `
-                        <p>La IA ha creado el menú: <strong>${data.menu.nombre}</strong></p>
-                        <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
-                            ✅ Preparaciones creadas<br>
-                            ✅ Ingredientes configurados<br>
-                            ✅ Análisis nutricional para los 5 niveles educativos
-                        </p>
-                        <p style="margin-top: 10px;">¿Deseas gestionar las preparaciones ahora?</p>
-                    `,
-                    icon: 'success',
-                    showCancelButton: true,
-                    confirmButtonText: 'Sí, ir a preparaciones',
-                    cancelButtonText: 'Después'
-                }).then((result) => {
-                    // Recargar modalidades para ver el nuevo menú
-                    this.cargarModalidadesPorPrograma(this.programaActual.id);
-
-                    if (result.isConfirmed) {
-                        setTimeout(() => {
-                            this.abrirGestionPreparaciones(data.menu.id, data.menu.nombre);
-                        }, 500);
-                    }
-                });
-            } else {
-                throw new Error(data.error || 'Error desconocido');
-            }
-        } catch (error) {
-            console.error('Error al generar menú con IA:', error);
-            Swal.fire({
-                title: 'Error al Generar Menú',
-                html: `
-                    <p>${error.message}</p>
-                    <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
-                        <strong>Posibles causas:</strong><br>
-                        • Clave API de Gemini no configurada<br>
-                        • Error de conexión con Gemini<br>
-                        • No hay Minuta Patrón para esta modalidad<br>
-                        • No hay alimentos ICBF en la base de datos
-                    </p>
-                `,
-                icon: 'error'
-            });
-            formIA.style.display = 'block';
-            loadingIA.style.display = 'none';
-            btnSubmit.disabled = false;
-        }
-    }
-
     // =================== MÉTODOS DE UTILIDAD ===================
 
     /**
@@ -537,18 +435,6 @@ window.abrirModalAnalisisNutricional = function(menuId) {
 };
 
 // ========== MENÚS ESPECIALES ==========
-window.abrirModalMenuIA = function(modalidadId) {
-    if (window.menusController) {
-        window.menusController.abrirModalMenuIA(modalidadId);
-    }
-};
-
-window.generarMenuIA = function() {
-    if (window.menusController) {
-        window.menusController.generarMenuIA();
-    }
-};
-
 window.abrirModalMenuEspecial = function(modalidadId) {
     if (window.menusController && window.menusController.menusEspecialesManager) {
         window.menusController.menusEspecialesManager.abrirModalMenuEspecial(modalidadId);

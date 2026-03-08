@@ -262,57 +262,6 @@
     </div>
 </div>
 
-<!-- Modal para generar menú con IA -->
-<div id="modalMenuIA" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="document.getElementById('modalMenuIA').style.display='none'">&times;</span>
-        <h2><i class="fas fa-robot"></i> Generar Menú con IA (Gemini)</h2>
-        <form id="formMenuIA" onsubmit="event.preventDefault(); generarMenuIA();">
-            <input type="hidden" id="modalidadIdIA">
-
-            <div class="alert alert-info">
-                <i class="fas fa-lightbulb"></i> <strong>Generación Multi-nivel Automática</strong>
-                <p class="mt-2 mb-0">
-                    La IA generará un menú diario completo con <strong>pesos específicos para todos los niveles educativos</strong>:
-                </p>
-                <ul class="mt-2 mb-0 pl-4">
-                    <li>Preescolar</li>
-                    <li>Primaria (1°, 2° y 3°)</li>
-                    <li>Primaria (4° y 5°)</li>
-                    <li>Secundaria</li>
-                    <li>Media y Ciclo Complementario</li>
-                </ul>
-                <p class="mt-2 mb-0 text-muted small">
-                    ⏱️ Este proceso puede tardar 15-30 segundos. El menú incluirá preparaciones, ingredientes y análisis nutricional completo.
-                </p>
-            </div>
-
-            <div class="alert alert-warning mt-3">
-                <i class="fas fa-exclamation-triangle"></i> <strong>Importante:</strong>
-                Asegúrese de tener configurada la clave API de Gemini en las variables de entorno (.env).
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary" id="btnSubmitIA">
-                    <i class="fas fa-magic"></i> Generar Menú para Todos los Niveles
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalMenuIA').style.display='none'">
-                    <i class="fas fa-times"></i> Cancelar
-                </button>
-            </div>
-        </form>
-
-        <div id="loadingIA" class="loading-ia-container">
-            <div class="spinner"></div>
-            <p><strong>Gemini está generando su menú...</strong></p>
-            <p class="small text-muted">
-                Creando preparaciones y calculando porciones para los 5 niveles educativos.<br>
-                Por favor espere, esto puede tardar hasta 30 segundos.
-            </p>
-        </div>
-    </div>
-</div>
-
 <!-- Modal: Copiar Menu por tarjeta -->
 <div id="modalCopiarMenu">
     <div class="cm-modal-content">

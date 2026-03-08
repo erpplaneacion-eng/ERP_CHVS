@@ -411,17 +411,6 @@ class ModalidadesManager {
             </div>
         `;
 
-        const tarjetaIA = `
-            <div class="menu-card menu-card-ia ${animate ? 'menu-card-anim' : ''}"
-                 ${animate ? `style="animation-delay: ${delayBase + menusEspeciales.length * 0.05 + 0.2}s"` : ''}
-                 onclick="abrirModalMenuIA('${modalidadId}')">
-                <div class="menu-numero-ia">
-                    <i class="fas fa-robot"></i>
-                </div>
-                <div class="menu-label-ia">Generar con IA</div>
-            </div>
-        `;
-
         return `
             <div class="menus-especiales-section">
                 <div class="menus-especiales-titulo">
@@ -431,7 +420,6 @@ class ModalidadesManager {
                 <div class="menus-especiales-grid">
                     ${tarjetasEspeciales}
                     ${tarjetaCrear}
-                    ${tarjetaIA}
                 </div>
             </div>
         `;

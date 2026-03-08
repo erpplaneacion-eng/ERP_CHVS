@@ -44,53 +44,6 @@ def _errores_form_por_campo(form) -> dict:
 
 
 @login_required
-@csrf_exempt
-def api_generar_menu_ia(request):
-    """
-    API para generar un menú usando Inteligencia Artificial (Gemini).
-    Genera automáticamente el menú con pesos específicos para TODOS los niveles educativos.
-    """
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
-
-    try:
-        data = json.loads(request.body)
-        programa_id = data.get('programa_id')
-        modalidad_id = data.get('modalidad_id')
-
-        if not all([programa_id, modalidad_id]):
-            return JsonResponse({'error': 'Faltan parámetros (programa_id, modalidad_id)'}, status=400)
-
-        menu = MenuService.generar_menu_con_ia(
-            id_programa=programa_id,
-            id_modalidad=modalidad_id,
-            niveles_educativos=None
-        )
-
-        if not menu:
-            return JsonResponse({'error': 'La IA no pudo generar una propuesta válida. Intente nuevamente.'}, status=500)
-
-        RegistroActividad.registrar(
-            request, 'nutricion', 'generar_menu_ia',
-            f"Programa: {programa_id} | Modalidad: {modalidad_id} | Menú: {menu.id_menu} ({menu.menu})"
-        )
-        return JsonResponse({
-            'success': True,
-            'menu': {
-                'id': menu.id_menu,
-                'nombre': menu.menu,
-                'modalidad': menu.id_modalidad.modalidad
-            },
-            'mensaje': 'Menú generado exitosamente con análisis nutricional para todos los niveles educativos'
-        })
-
-    except ValueError as e:
-        return JsonResponse({'error': str(e)}, status=400)
-    except Exception as e:
-        return JsonResponse({'error': f'Error inesperado: {str(e)}'}, status=500)
-
-
-@login_required
 def nutricion_index(request):
     """Vista principal del módulo de nutrición"""
     return render(request, 'nutricion/index.html')

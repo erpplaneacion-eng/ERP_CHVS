@@ -40,7 +40,6 @@ urlpatterns = [
     path('api/copiar-menu/detalle/', views.api_copiar_menu_detalle, name='api_copiar_menu_detalle'),
     path('api/copiar-menu/ejecutar/', views.api_copiar_menu_ejecutar, name='api_copiar_menu_ejecutar'),
     path('api/copiar-menu/buscar-alimento/', views.api_buscar_alimentos_copiar_menu, name='api_buscar_alimentos_copiar_menu'),
-    path('api/generar-menu-ia/', views.api_generar_menu_ia, name='api_generar_menu_ia'),
     path('api/crear-menu-especial/', views.api_crear_menu_especial, name='api_crear_menu_especial'),
 
     # Preparaciones (APIs - las vistas de lista se eliminaron, funcionalidad en lista_menus)

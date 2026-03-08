@@ -369,29 +369,6 @@ button.menu-preparaciones-resumen {
     letter-spacing: 0.05em;
 }
 
-/* IA Card */
-.menu-card-ia {
-    background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
-    border: none;
-    color: white;
-}
-
-.menu-card-ia:hover {
-    background: linear-gradient(135deg, #059669 0%, #2563eb 100%);
-    box-shadow: 0 12px 24px -10px rgba(59, 130, 246, 0.5);
-}
-
-.menu-numero-ia {
-    font-size: 32px;
-    margin-bottom: 8px;
-}
-
-.menu-label-ia {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
 /* Efecto de carga para generación - Ahora como tarjeta pequeña centrada */
 .generating-overlay {
     margin: 40px auto;

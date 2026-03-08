@@ -261,15 +261,4 @@
     text-align: center;
 }
 
-/* Contenedor de carga para IA */
-.loading-ia-container {
-    display: none;
-    text-align: center;
-    margin-top: 20px;
-    padding: 20px;
-    background: #f0fdf4;
-    border-radius: 12px;
-    border: 1px dashed #10b981;
-}
-
 

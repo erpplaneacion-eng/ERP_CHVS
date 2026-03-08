@@ -1,5 +1,4 @@
 from .core import (
-    api_generar_menu_ia,
     nutricion_index,
     lista_alimentos,
     editar_alimento,
