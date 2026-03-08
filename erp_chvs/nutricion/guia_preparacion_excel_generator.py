@@ -317,8 +317,16 @@ class GuiaPreparacionExcelGenerator:
 
         return row2 + 1
 
+    # Componentes que representan bebida/sobremesa (porción servida fija = 200 ml/g)
+    _COMPONENTES_BEBIDA = {'com1', 'com14'}
+    # Modalidades industrializadas: no aplica la porción fija de 200g
+    _MODALIDADES_INDUSTRIALIZADAS = {'020511', '20502'}
+
     def _draw_table_body(self, ws, start_row: int, menu: TablaMenus, catalogo: List[Tuple[str, str]]) -> int:
         niveles_por_columna = self._get_niveles_por_columna()
+        modalidad_id = str(menu.id_modalidad_id or '').strip()
+        es_industrializado = modalidad_id in self._MODALIDADES_INDUSTRIALIZADAS
+
         from nutricion.utils.orden_componentes import sort_preparaciones_objetos
         preps_qs = list(
             TablaPreparaciones.objects.filter(id_menu=menu).select_related('id_componente')
@@ -355,17 +363,24 @@ class GuiaPreparacionExcelGenerator:
             # Procedimiento: buscar en catálogo por fuzzy matching del nombre
             procedimiento_texto = self._buscar_procedimiento(prep.preparacion, catalogo)
 
-            # Peso servido por nivel = suma de (neto × factor_coccion) por ingrediente
+            # Bebidas (com1/com14) en modalidades no industrializadas → porción fija 200g
+            es_bebida = str(prep.id_componente_id or '') in self._COMPONENTES_BEBIDA
+            porcion_fija_bebida = es_bebida and not es_industrializado
+
+            # Peso servido por nivel = 200g (bebida) ó Σ(neto × FC) por ingrediente
             peso_servido_by_nivel = {}
             for _, nivel_id in niveles_por_columna:
                 if not nivel_id:
                     continue
-                total = Decimal("0")
-                for rel in prep_rels:
-                    _, neto = self._get_bruto_neto(rel, prep.id_preparacion, nivel_id, idx, analisis_por_nivel)
-                    fc = Decimal(str(rel.id_ingrediente_siesa.factor_coccion or 1))
-                    total += neto * fc
-                peso_servido_by_nivel[nivel_id] = total
+                if porcion_fija_bebida:
+                    peso_servido_by_nivel[nivel_id] = Decimal("200")
+                else:
+                    total = Decimal("0")
+                    for rel in prep_rels:
+                        _, neto = self._get_bruto_neto(rel, prep.id_preparacion, nivel_id, idx, analisis_por_nivel)
+                        fc = Decimal(str(rel.id_ingrediente_siesa.factor_coccion or 1))
+                        total += neto * fc
+                    peso_servido_by_nivel[nivel_id] = total
 
             prep_start = row
             for rel in prep_rels:
