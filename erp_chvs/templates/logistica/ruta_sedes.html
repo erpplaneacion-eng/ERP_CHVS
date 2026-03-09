@@ -106,8 +106,13 @@
                         Sedes a asignar:
                         <span id="rsSedesContador" class="rs-contador-badge">0 seleccionadas</span>
                     </label>
-                    <input type="text" id="rsBuscadorSede" class="rs-buscador"
-                           placeholder="Buscar por nombre de sede o institución...">
+                    <div class="rs-filtros-row">
+                        <select id="rsFiltroMunicipio" class="rs-filtro-municipio">
+                            <option value="">— Todos los municipios —</option>
+                        </select>
+                        <input type="text" id="rsBuscadorSede" class="rs-buscador"
+                               placeholder="Buscar por nombre de sede o institución...">
+                    </div>
                     <div id="rsSedesLista" class="rs-sedes-lista">
                         <p class="rs-sedes-empty">Cargando sedes...</p>
                     </div>

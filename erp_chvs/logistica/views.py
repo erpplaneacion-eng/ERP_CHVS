@@ -75,7 +75,8 @@ def api_programas_list(request):
 def api_sedes_list(request):
     """Lista de sedes educativas para selects."""
     sedes = SedesEducativas.objects.all().order_by('nombre_sede_educativa').values(
-        'cod_interprise', 'nombre_sede_educativa', 'codigo_ie__nombre_institucion'
+        'cod_interprise', 'nombre_sede_educativa', 'codigo_ie__nombre_institucion',
+        'codigo_ie__id_municipios', 'codigo_ie__id_municipios__nombre_municipio'
     )
     return JsonResponse({'sedes': list(sedes)})
 

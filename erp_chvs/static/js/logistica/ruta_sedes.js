@@ -10,6 +10,7 @@ class RutaSedesManager {
         this.deleteId = null;
         this.saving = false;
         this.allSedes = [];
+        this.municipioFiltro = '';
         this.init();
     }
 
@@ -35,6 +36,12 @@ class RutaSedesManager {
             ?.addEventListener('click', () => this.saveRutaSede());
         document.getElementById('rsBuscadorSede')
             ?.addEventListener('input', (e) => this.renderSedesCheckboxes(e.target.value.trim()));
+        document.getElementById('rsFiltroMunicipio')
+            ?.addEventListener('change', (e) => {
+                this.municipioFiltro = e.target.value;
+                const buscador = document.getElementById('rsBuscadorSede');
+                this.renderSedesCheckboxes(buscador ? buscador.value.trim() : '');
+            });
     }
 
     async loadSelects() {
@@ -77,6 +84,26 @@ class RutaSedesManager {
                 });
             }
 
+            // Poblar select de municipios con los valores únicos de las sedes
+            const filtroMun = document.getElementById('rsFiltroMunicipio');
+            if (filtroMun) {
+                const municipiosMap = new Map();
+                this.allSedes.forEach(s => {
+                    const id = s['codigo_ie__id_municipios'];
+                    const nombre = s['codigo_ie__id_municipios__nombre_municipio'];
+                    if (id && nombre && !municipiosMap.has(id)) {
+                        municipiosMap.set(id, nombre);
+                    }
+                });
+                const sorted = Array.from(municipiosMap.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+                sorted.forEach(([id, nombre]) => {
+                    const opt = document.createElement('option');
+                    opt.value = id;
+                    opt.textContent = nombre;
+                    filtroMun.appendChild(opt);
+                });
+            }
+
             // Renderizar checkboxes para el panel de creación
             this.renderSedesCheckboxes('');
 
@@ -90,12 +117,14 @@ class RutaSedesManager {
         if (!lista) return;
 
         const q = filter.toLowerCase();
-        const filtradas = q
-            ? this.allSedes.filter(s =>
+        const filtradas = this.allSedes.filter(s => {
+            const coincideTexto = !q ||
                 s.nombre_sede_educativa.toLowerCase().includes(q) ||
-                (s['codigo_ie__nombre_institucion'] || '').toLowerCase().includes(q)
-              )
-            : this.allSedes;
+                (s['codigo_ie__nombre_institucion'] || '').toLowerCase().includes(q);
+            const coincideMunicipio = !this.municipioFiltro ||
+                String(s['codigo_ie__id_municipios']) === String(this.municipioFiltro);
+            return coincideTexto && coincideMunicipio;
+        });
 
         lista.innerHTML = '';
 
@@ -207,10 +236,13 @@ class RutaSedesManager {
         document.getElementById('rsCreatePanel').classList.remove('rs-hidden');
         document.getElementById('rsEditPanel').classList.add('rs-hidden');
 
-        // Resetear buscador, checkboxes y contador
+        // Resetear buscador, filtro de municipio, checkboxes y contador
         document.getElementById('rs_ruta').value = '';
         const buscador = document.getElementById('rsBuscadorSede');
         if (buscador) buscador.value = '';
+        const filtroMun = document.getElementById('rsFiltroMunicipio');
+        if (filtroMun) filtroMun.value = '';
+        this.municipioFiltro = '';
         document.querySelectorAll('.rs-sede-chk').forEach(c => { c.checked = false; });
         this._actualizarContador();
 
