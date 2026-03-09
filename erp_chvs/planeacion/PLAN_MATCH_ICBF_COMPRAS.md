@@ -409,6 +409,59 @@ El módulo `Api/` (app Django ya existente, creada para este fin) será el puent
 
 ---
 
+## Decisión pendiente — Manejo de múltiples presentaciones por ingrediente
+
+> **Contexto:** Planeación señaló que un mismo ingrediente ICBF puede comprarse en varias presentaciones comerciales. Ejemplo: "Aceite de Palma" puede adquirirse en Botella 1000cc (920g) o Bidón 3000cc (2760g). El comprador elige el mix según precio y disponibilidad.
+>
+> **La decisión depende de cómo Siesa expone su catálogo** (cuando lleguen los tokens/endpoints). Dos opciones viables:
+
+### Opción A — Múltiples matches por ingrediente (más simple)
+
+Eliminar el `unique_together = [['id_alimento_icbf', 'id_programa']]` y reemplazarlo por `unique_together = [['id_alimento_icbf', 'id_programa', 'id_ingrediente_compras']]`. Se agrega un campo `es_principal` para marcar la presentación preferida.
+
+El nutricionista puede vincular el mismo ingrediente ICBF a varias presentaciones Siesa. El cálculo base usa la presentación marcada como principal; la orden de compra muestra todas las disponibles.
+
+**Cuándo elegirla:** Si Siesa maneja cada presentación como un artículo independiente con su propio código.
+
+### Opción B — Producto base + presentaciones como variantes (más correcta conceptualmente)
+
+Reestructurar el catálogo local en dos tablas:
+
+```
+ProductoSiesa  (familia de producto — "Aceite de Palma")
+    └─► PresentacionProductoSiesa  (variantes — "Botella 1000cc", "Bidón 3000cc")
+```
+
+El match del nutricionista apunta a `ProductoSiesa` (sin comprometerse con una presentación). El cálculo de compra trabaja en **gramos totales** y la orden de compra tiene una capa separada donde el comprador decide cuántas unidades de cada presentación usar para cubrir esos gramos.
+
+```python
+# Cambio en EquivalenciaICBFCompras:
+id_producto = FK(ProductoSiesa)   # ← producto base, NO una presentación específica
+
+# Nuevo modelo en planeacion:
+class OrdenCompraDetalle(models.Model):
+    orden_compra  = FK(OrdenCompra)
+    presentacion  = FK(PresentacionProductoSiesa)
+    cantidad      = IntegerField()   # unidades de ESA presentación
+    # gramos cubiertos = cantidad × presentacion.contenido_gramos
+```
+
+**Cuándo elegirla:** Si Siesa agrupa variantes bajo un mismo código de artículo padre, o si se confirma que el comprador siempre debe poder mezclar presentaciones en una misma orden.
+
+### Comparación rápida
+
+| Criterio | Opción A | Opción B |
+|---|---|---|
+| Cambio al modelo `EquivalenciaICBFCompras` | Mínimo | Moderado (FK cambia de target) |
+| Tablas nuevas requeridas | Ninguna | `ProductoSiesa` + `PresentacionProductoSiesa` |
+| ¿Quién decide el mix de presentaciones? | Nutricionista al hacer el match | Comprador en la orden de compra |
+| Separación de responsabilidades | Parcial | Clara |
+| Depende de estructura Siesa | No | Sí (si Siesa tiene jerarquía artículo-variante) |
+
+> **Acción:** Verificar la estructura del catálogo Siesa cuando lleguen los tokens. Si cada presentación tiene código propio → Opción A. Si hay jerarquía artículo-variante → Opción B. El simulacro actual con `TablaIngredientesSiesa` implementa Opción A por defecto.
+
+---
+
 ## Notas importantes
 
 - **Rutas ya implementadas:** `logistica.Ruta` y `logistica.RutaSedes` tienen CRUD completo. No duplicar en `planeacion`.
@@ -416,3 +469,4 @@ El módulo `Api/` (app Django ya existente, creada para este fin) será el puent
 - **Simulacro primero:** La UI del match se construye con `TablaIngredientesSiesa`. La migración a Siesa real solo cambia la FK y la fuente del selector.
 - **Cron job, no polling:** La sincronización con Siesa es reactiva (delta), no un ciclo constante.
 - **Un menú NO se asocia a un programa directamente:** Ya tiene `id_contrato` (FK a `Programa`), el programa está implícito.
+- **Presentaciones múltiples:** Ver sección "Decisión pendiente" arriba — elegir Opción A u Opción B según estructura del catálogo Siesa.
