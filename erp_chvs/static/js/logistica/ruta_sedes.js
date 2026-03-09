@@ -3,11 +3,13 @@
 class RutaSedesManager {
     constructor() {
         this.baseUrl = '/logistica/api/ruta-sedes/';
+        this.bulkUrl = '/logistica/api/ruta-sedes/bulk/';
         this.rutasUrl = '/logistica/api/rutas-activas/';
         this.sedesUrl = '/logistica/api/sedes/';
         this.editingId = null;
         this.deleteId = null;
         this.saving = false;
+        this.allSedes = [];
         this.init();
     }
 
@@ -24,6 +26,15 @@ class RutaSedesManager {
             if (event.target === modal) this.closeModal();
             if (event.target === confirmModal) this.closeConfirmModal();
         });
+
+        document.getElementById('rutaSedeCloseBtn')
+            ?.addEventListener('click', () => this.closeModal());
+        document.getElementById('rutaSedeCancelBtn')
+            ?.addEventListener('click', () => this.closeModal());
+        document.getElementById('rutaSedeSaveBtn')
+            ?.addEventListener('click', () => this.saveRutaSede());
+        document.getElementById('rsBuscadorSede')
+            ?.addEventListener('input', (e) => this.renderSedesCheckboxes(e.target.value.trim()));
     }
 
     async loadSelects() {
@@ -35,16 +46,18 @@ class RutaSedesManager {
             const rutasData = await rutasResp.json();
             const sedesData = await sedesResp.json();
 
-            // Poblar select de rutas en modal y filtro
-            const rutaSelect = document.getElementById('rs_ruta');
+            this.allSedes = sedesData.sedes || [];
+
+            // Poblar selects de rutas: crear + editar + filtro de página
+            const rutaCreate = document.getElementById('rs_ruta');
+            const rutaEdit   = document.getElementById('rs_ruta_edit');
             const filtroRuta = document.getElementById('filtroRuta');
 
-            [rutaSelect, filtroRuta].forEach(sel => {
+            [rutaCreate, rutaEdit, filtroRuta].forEach(sel => {
                 if (!sel) return;
                 const firstOption = sel.options[0];
                 sel.innerHTML = '';
                 if (firstOption) sel.appendChild(firstOption);
-
                 rutasData.rutas.forEach(r => {
                     const opt = document.createElement('option');
                     opt.value = r.id;
@@ -53,19 +66,81 @@ class RutaSedesManager {
                 });
             });
 
-            // Poblar select de sedes
-            const sedeSelect = document.getElementById('rs_sede');
-            if (sedeSelect) {
-                sedesData.sedes.forEach(s => {
+            // Poblar select de sede (modo editar: lista simple)
+            const sedeEdit = document.getElementById('rs_sede_edit');
+            if (sedeEdit) {
+                this.allSedes.forEach(s => {
                     const opt = document.createElement('option');
                     opt.value = s.cod_interprise;
                     opt.textContent = `${s.nombre_sede_educativa} — ${s['codigo_ie__nombre_institucion'] || ''}`;
-                    sedeSelect.appendChild(opt);
+                    sedeEdit.appendChild(opt);
                 });
             }
 
+            // Renderizar checkboxes para el panel de creación
+            this.renderSedesCheckboxes('');
+
         } catch (error) {
             console.error('Error al cargar selects:', error);
+        }
+    }
+
+    renderSedesCheckboxes(filter) {
+        const lista = document.getElementById('rsSedesLista');
+        if (!lista) return;
+
+        const q = filter.toLowerCase();
+        const filtradas = q
+            ? this.allSedes.filter(s =>
+                s.nombre_sede_educativa.toLowerCase().includes(q) ||
+                (s['codigo_ie__nombre_institucion'] || '').toLowerCase().includes(q)
+              )
+            : this.allSedes;
+
+        lista.innerHTML = '';
+
+        if (!filtradas.length) {
+            lista.innerHTML = '<p class="rs-sedes-empty">No hay sedes que coincidan.</p>';
+            return;
+        }
+
+        const frag = document.createDocumentFragment();
+        filtradas.forEach(s => {
+            const label = document.createElement('label');
+            label.className = 'rs-sede-item';
+
+            const chk = document.createElement('input');
+            chk.type = 'checkbox';
+            chk.value = s.cod_interprise;
+            chk.className = 'rs-sede-chk';
+            chk.addEventListener('change', () => this._actualizarContador());
+
+            const texto = document.createElement('span');
+            texto.textContent = `${s.nombre_sede_educativa} — ${s['codigo_ie__nombre_institucion'] || ''}`;
+
+            label.appendChild(chk);
+            label.appendChild(texto);
+            frag.appendChild(label);
+        });
+        lista.appendChild(frag);
+    }
+
+    _actualizarContador() {
+        const total = document.querySelectorAll('.rs-sede-chk:checked').length;
+        const el = document.getElementById('rsSedesContador');
+        if (!el) return;
+        if (total === 0) {
+            el.textContent = '0 seleccionadas';
+            el.classList.remove('rs-contador-activo');
+        } else {
+            el.textContent = total === 1 ? '1 seleccionada' : `${total} seleccionadas`;
+            el.classList.add('rs-contador-activo');
+        }
+        const saveBtn = document.getElementById('rutaSedeSaveBtn');
+        if (saveBtn && !this.editingId) {
+            saveBtn.textContent = total > 0
+                ? `Asignar ${total} sede${total > 1 ? 's' : ''}`
+                : 'Asignar sedes';
         }
     }
 
@@ -124,16 +199,22 @@ class RutaSedesManager {
 
     showCreateModal() {
         this.editingId = null;
-        const modal = document.getElementById('rutaSedeModal');
-        const title = document.getElementById('rutaSedeModalTitle');
-        const form = document.getElementById('rutaSedeForm');
-        const saveBtn = document.getElementById('rutaSedeSaveBtn');
 
-        if (title) title.textContent = 'Nueva Asignación';
-        if (form) form.reset();
-        document.getElementById('rs_orden').value = 1;
-        if (saveBtn) saveBtn.textContent = 'Guardar';
-        if (modal) modal.style.display = 'block';
+        document.getElementById('rutaSedeModalTitle').textContent = 'Nueva Asignación';
+        document.getElementById('rutaSedeSaveBtn').textContent = 'Asignar sedes';
+
+        // Mostrar panel crear, ocultar panel editar
+        document.getElementById('rsCreatePanel').classList.remove('rs-hidden');
+        document.getElementById('rsEditPanel').classList.add('rs-hidden');
+
+        // Resetear buscador, checkboxes y contador
+        document.getElementById('rs_ruta').value = '';
+        const buscador = document.getElementById('rsBuscadorSede');
+        if (buscador) buscador.value = '';
+        document.querySelectorAll('.rs-sede-chk').forEach(c => { c.checked = false; });
+        this._actualizarContador();
+
+        document.getElementById('rutaSedeModal').style.display = 'block';
     }
 
     async editRutaSede(id) {
@@ -142,16 +223,18 @@ class RutaSedesManager {
             const response = await fetch(`${this.baseUrl}${id}/`);
             const data = await response.json();
 
-            const modal = document.getElementById('rutaSedeModal');
-            const title = document.getElementById('rutaSedeModalTitle');
-            const saveBtn = document.getElementById('rutaSedeSaveBtn');
+            document.getElementById('rutaSedeModalTitle').textContent = 'Editar Asignación';
+            document.getElementById('rutaSedeSaveBtn').textContent = 'Actualizar';
 
-            if (title) title.textContent = 'Editar Asignación';
-            document.getElementById('rs_ruta').value = data.id_ruta;
-            document.getElementById('rs_sede').value = data.sede_educativa;
+            // Mostrar panel editar, ocultar panel crear
+            document.getElementById('rsCreatePanel').classList.add('rs-hidden');
+            document.getElementById('rsEditPanel').classList.remove('rs-hidden');
+
+            document.getElementById('rs_ruta_edit').value = data.id_ruta;
+            document.getElementById('rs_sede_edit').value = data.sede_educativa;
             document.getElementById('rs_orden').value = data.orden_visita;
-            if (saveBtn) saveBtn.textContent = 'Actualizar';
-            if (modal) modal.style.display = 'block';
+
+            document.getElementById('rutaSedeModal').style.display = 'block';
 
         } catch (error) {
             console.error('Error:', error);
@@ -167,43 +250,42 @@ class RutaSedesManager {
 
     async saveRutaSede() {
         if (this.saving) return;
-        this.saving = true;
+        if (this.editingId) {
+            await this._saveEdit();
+        } else {
+            await this._saveBulk();
+        }
+    }
 
+    async _saveBulk() {
+        this.saving = true;
         const saveBtn = document.getElementById('rutaSedeSaveBtn');
         if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Guardando...'; }
 
         const id_ruta = document.getElementById('rs_ruta').value;
-        const sede_educativa = document.getElementById('rs_sede').value;
-        const orden_visita = parseInt(document.getElementById('rs_orden').value, 10) || 1;
+        const sedes = Array.from(document.querySelectorAll('.rs-sede-chk:checked')).map(c => c.value);
 
-        if (!id_ruta || !sede_educativa) {
+        if (!id_ruta || sedes.length === 0) {
             this.saving = false;
-            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = this.editingId ? 'Actualizar' : 'Guardar'; }
-            this.showAlert('La ruta y la sede son obligatorias', 'warning');
+            this._restoreSaveBtn();
+            this.showAlert('Selecciona una ruta y al menos una sede', 'warning');
             return;
         }
 
-        const url = this.editingId ? `${this.baseUrl}${this.editingId}/` : this.baseUrl;
-        const method = this.editingId ? 'PUT' : 'POST';
-
         try {
-            const response = await fetch(url, {
-                method,
+            const response = await fetch(this.bulkUrl, {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCookie('csrftoken')
                 },
-                body: JSON.stringify({ id_ruta, sede_educativa, orden_visita })
+                body: JSON.stringify({ id_ruta, sedes })
             });
-
             const data = await response.json();
 
             if (data.success) {
                 this.closeModal();
-                this.showAlert(
-                    this.editingId ? 'Asignación actualizada exitosamente' : 'Sede asignada exitosamente',
-                    'success'
-                );
+                this.showAlert(data.message || 'Sedes asignadas exitosamente', 'success');
                 const filtroRuta = document.getElementById('filtroRuta');
                 this.loadTable(filtroRuta ? filtroRuta.value : '');
             } else {
@@ -211,14 +293,62 @@ class RutaSedesManager {
             }
         } catch (error) {
             console.error('Error:', error);
-            this.showAlert('Error al guardar la asignación', 'error');
+            this.showAlert('Error al guardar las asignaciones', 'error');
         } finally {
             this.saving = false;
-            if (saveBtn) {
-                saveBtn.disabled = false;
-                saveBtn.textContent = this.editingId ? 'Actualizar' : 'Guardar';
-            }
+            this._restoreSaveBtn();
         }
+    }
+
+    async _saveEdit() {
+        this.saving = true;
+        const saveBtn = document.getElementById('rutaSedeSaveBtn');
+        if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Guardando...'; }
+
+        const id_ruta = document.getElementById('rs_ruta_edit').value;
+        const sede_educativa = document.getElementById('rs_sede_edit').value;
+        const orden_visita = parseInt(document.getElementById('rs_orden').value, 10) || 1;
+
+        if (!id_ruta || !sede_educativa) {
+            this.saving = false;
+            this._restoreSaveBtn();
+            this.showAlert('La ruta y la sede son obligatorias', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.baseUrl}${this.editingId}/`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCookie('csrftoken')
+                },
+                body: JSON.stringify({ id_ruta, sede_educativa, orden_visita })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                this.closeModal();
+                this.showAlert('Asignación actualizada exitosamente', 'success');
+                const filtroRuta = document.getElementById('filtroRuta');
+                this.loadTable(filtroRuta ? filtroRuta.value : '');
+            } else {
+                this.showAlert(data.error || 'No se pudo guardar', 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            this.showAlert('Error al actualizar la asignación', 'error');
+        } finally {
+            this.saving = false;
+            this._restoreSaveBtn();
+        }
+    }
+
+    _restoreSaveBtn() {
+        const saveBtn = document.getElementById('rutaSedeSaveBtn');
+        if (!saveBtn) return;
+        saveBtn.disabled = false;
+        saveBtn.textContent = this.editingId ? 'Actualizar' : 'Asignar sedes';
     }
 
     async confirmDelete() {

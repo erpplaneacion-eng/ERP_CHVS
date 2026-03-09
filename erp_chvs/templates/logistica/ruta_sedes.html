@@ -86,13 +86,15 @@
 
 <!-- Modal Crear/Editar Asignación -->
 <div id="rutaSedeModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content rs-modal-wide">
         <div class="modal-header">
             <h3 id="rutaSedeModalTitle">Nueva Asignación</h3>
-            <span class="close" onclick="rutaSedesManager.closeModal()">&times;</span>
+            <span class="close" id="rutaSedeCloseBtn">&times;</span>
         </div>
         <div class="modal-body">
-            <form id="rutaSedeForm">
+
+            <!-- Panel: Nueva asignación (multi-sede) -->
+            <div id="rsCreatePanel">
                 <div class="form-group">
                     <label for="rs_ruta">Ruta:</label>
                     <select id="rs_ruta" name="id_ruta" required>
@@ -100,8 +102,32 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="rs_sede">Sede Educativa:</label>
-                    <select id="rs_sede" name="sede_educativa" required>
+                    <label>
+                        Sedes a asignar:
+                        <span id="rsSedesContador" class="rs-contador-badge">0 seleccionadas</span>
+                    </label>
+                    <input type="text" id="rsBuscadorSede" class="rs-buscador"
+                           placeholder="Buscar por nombre de sede o institución...">
+                    <div id="rsSedesLista" class="rs-sedes-lista">
+                        <p class="rs-sedes-empty">Cargando sedes...</p>
+                    </div>
+                    <small class="form-text">
+                        El orden de visita se asignará automáticamente continuando después de las sedes ya existentes en la ruta.
+                    </small>
+                </div>
+            </div>
+
+            <!-- Panel: Editar asignación (sede individual) -->
+            <div id="rsEditPanel" class="rs-hidden">
+                <div class="form-group">
+                    <label for="rs_ruta_edit">Ruta:</label>
+                    <select id="rs_ruta_edit" name="id_ruta" required>
+                        <option value="">-- Seleccione una ruta --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="rs_sede_edit">Sede Educativa:</label>
+                    <select id="rs_sede_edit" name="sede_educativa" required>
                         <option value="">-- Seleccione una sede --</option>
                     </select>
                 </div>
@@ -111,11 +137,12 @@
                            placeholder="Ej: 1, 2, 3...">
                     <small class="form-text">Indica el orden en que se visita esta sede dentro de la ruta.</small>
                 </div>
-            </form>
+            </div>
+
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="rutaSedesManager.closeModal()">Cancelar</button>
-            <button type="button" class="btn btn-primary" id="rutaSedeSaveBtn" onclick="rutaSedesManager.saveRutaSede()">Guardar</button>
+            <button type="button" class="btn btn-secondary" id="rutaSedeCancelBtn">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="rutaSedeSaveBtn">Guardar</button>
         </div>
     </div>
 </div>

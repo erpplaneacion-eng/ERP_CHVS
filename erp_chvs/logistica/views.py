@@ -4,6 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import IntegrityError
+from django.db.models import Max
 from django.db.models.deletion import ProtectedError
 import json
 
@@ -380,6 +381,79 @@ def api_ruta_sedes(request):
             return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})
 
     return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+@csrf_exempt
+def api_ruta_sedes_bulk(request):
+    """API para asignar múltiples sedes a una ruta en una sola operación."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        id_ruta = data.get('id_ruta')
+        sedes_cod = data.get('sedes', [])
+
+        if not id_ruta or not sedes_cod:
+            return JsonResponse({'success': False, 'error': 'Ruta y al menos una sede son obligatorias'})
+
+        ruta = Ruta.objects.get(pk=id_ruta)
+
+        max_orden = RutaSedes.objects.filter(id_ruta=ruta).aggregate(
+            Max('orden_visita')
+        )['orden_visita__max'] or 0
+
+        ya_asignadas = set(
+            RutaSedes.objects.filter(id_ruta=ruta).values_list('sede_educativa_id', flat=True)
+        )
+
+        creadas = []
+        omitidas = []
+        orden_actual = max_orden + 1
+
+        for cod in sedes_cod:
+            try:
+                sede = SedesEducativas.objects.get(cod_interprise=cod)
+                if sede.cod_interprise in ya_asignadas:
+                    omitidas.append(sede.nombre_sede_educativa)
+                    continue
+                RutaSedes.objects.create(
+                    id_ruta=ruta,
+                    sede_educativa=sede,
+                    orden_visita=orden_actual
+                )
+                creadas.append(sede.nombre_sede_educativa)
+                orden_actual += 1
+            except SedesEducativas.DoesNotExist:
+                omitidas.append(f'Sede {cod} no encontrada')
+
+        if not creadas:
+            return JsonResponse({
+                'success': False,
+                'error': 'No se asignó ninguna sede. Posiblemente ya están todas asignadas a esta ruta.'
+            })
+
+        RegistroActividad.registrar(
+            request, 'logistica', 'asignar_sede_ruta',
+            f"Ruta: {ruta.nombre_ruta} | Sedes asignadas: {len(creadas)} | Omitidas: {len(omitidas)}"
+        )
+
+        msg_parts = [f'{len(creadas)} sede(s) asignada(s) exitosamente.']
+        if omitidas:
+            msg_parts.append(f'{len(omitidas)} omitida(s) por ya estar asignadas.')
+
+        return JsonResponse({
+            'success': True,
+            'message': ' '.join(msg_parts),
+            'creadas': len(creadas),
+            'omitidas': len(omitidas),
+        })
+
+    except Ruta.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Ruta no encontrada'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})
 
 
 @login_required

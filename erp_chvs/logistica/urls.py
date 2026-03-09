@@ -20,6 +20,7 @@ urlpatterns = [
 
     # API: Ruta Sedes
     path('api/ruta-sedes/', views.api_ruta_sedes, name='api_ruta_sedes'),
+    path('api/ruta-sedes/bulk/', views.api_ruta_sedes_bulk, name='api_ruta_sedes_bulk'),
     path('api/ruta-sedes/<int:pk>/', views.api_ruta_sede_detail, name='api_ruta_sede_detail'),
 
     # API auxiliares (para poblar selects)
