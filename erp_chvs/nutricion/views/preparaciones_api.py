@@ -178,11 +178,17 @@ def api_copiar_preparacion(request):
 
             source_preparacion = get_object_or_404(TablaPreparaciones, pk=source_preparacion_id)
 
-            MODALIDADES_EQUIVALENTES = {20507, 20501}
-            src_mod = source_preparacion.id_menu.id_modalidad_id
-            tgt_mod = target_menu.id_modalidad_id
+            GRUPOS_EQUIVALENTES = [
+                {"20507", "20501"},
+                {"20510", "20503", "20501", "20507"},
+            ]
+            src_mod = str(source_preparacion.id_menu.id_modalidad_id)
+            tgt_mod = str(target_menu.id_modalidad_id)
             misma_modalidad = src_mod == tgt_mod
-            equivalentes = src_mod in MODALIDADES_EQUIVALENTES and tgt_mod in MODALIDADES_EQUIVALENTES
+            equivalentes = any(
+                src_mod in grupo and tgt_mod in grupo
+                for grupo in GRUPOS_EQUIVALENTES
+            )
             if not misma_modalidad and not equivalentes:
                 return JsonResponse(
                     {'success': False, 'error': 'Solo se puede copiar desde menús de la misma modalidad.'},
@@ -259,10 +265,16 @@ def api_buscar_preparaciones_modalidad(request, id_menu):
     )
     q = request.GET.get('q', '').strip()
 
-    MODALIDADES_EQUIVALENTES = {20507, 20501}
-    modalidad_actual_id = menu_actual.id_modalidad_id
-    if modalidad_actual_id in MODALIDADES_EQUIVALENTES:
-        modalidades_buscar = list(MODALIDADES_EQUIVALENTES)
+    GRUPOS_EQUIVALENTES = [
+        {"20507", "20501"},
+        {"20510", "20503", "20501", "20507"},
+    ]
+    modalidad_actual_id = str(menu_actual.id_modalidad_id)
+    grupo_encontrado = next(
+        (g for g in GRUPOS_EQUIVALENTES if modalidad_actual_id in g), None
+    )
+    if grupo_encontrado:
+        modalidades_buscar = list(grupo_encontrado)
     else:
         modalidades_buscar = [modalidad_actual_id]
 
