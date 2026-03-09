@@ -178,7 +178,12 @@ def api_copiar_preparacion(request):
 
             source_preparacion = get_object_or_404(TablaPreparaciones, pk=source_preparacion_id)
 
-            if source_preparacion.id_menu.id_modalidad_id != target_menu.id_modalidad_id:
+            MODALIDADES_EQUIVALENTES = {20507, 20501}
+            src_mod = source_preparacion.id_menu.id_modalidad_id
+            tgt_mod = target_menu.id_modalidad_id
+            misma_modalidad = src_mod == tgt_mod
+            equivalentes = src_mod in MODALIDADES_EQUIVALENTES and tgt_mod in MODALIDADES_EQUIVALENTES
+            if not misma_modalidad and not equivalentes:
                 return JsonResponse(
                     {'success': False, 'error': 'Solo se puede copiar desde menús de la misma modalidad.'},
                     status=400
@@ -243,7 +248,8 @@ def api_copiar_preparacion(request):
 
 @login_required
 def api_buscar_preparaciones_modalidad(request, id_menu):
-    """Busca preparaciones en todos los menús de la misma modalidad (excepto el actual)."""
+    """Busca preparaciones en todos los menús de la misma modalidad (excepto el actual).
+    Las modalidades 20507 y 20501 se consideran equivalentes entre sí para efectos de copia."""
     if request.method != 'GET':
         return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
 
@@ -253,9 +259,16 @@ def api_buscar_preparaciones_modalidad(request, id_menu):
     )
     q = request.GET.get('q', '').strip()
 
+    MODALIDADES_EQUIVALENTES = {20507, 20501}
+    modalidad_actual_id = menu_actual.id_modalidad_id
+    if modalidad_actual_id in MODALIDADES_EQUIVALENTES:
+        modalidades_buscar = list(MODALIDADES_EQUIVALENTES)
+    else:
+        modalidades_buscar = [modalidad_actual_id]
+
     qs = (
         TablaPreparaciones.objects
-        .filter(id_menu__id_modalidad=menu_actual.id_modalidad)
+        .filter(id_menu__id_modalidad__in=modalidades_buscar)
         .exclude(id_menu=menu_actual)
         .select_related('id_menu__id_contrato')
         .prefetch_related('ingredientes__id_ingrediente_siesa')
