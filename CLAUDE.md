@@ -110,6 +110,8 @@ views.py → services.py → persistence_service.py → models.py
 - `minuta_service.py` — Standard pattern menus from `nutricion/data/minuta_patron.json`
 - `analisis_service.py` — Nutritional analysis + semaforización per level + modality
 - `calculo_service.py` — Pure stateless calculation functions
+- `copiar_menu_service.py` — `CopiarMenuService.copiar_modalidad_completa()` (atomic deep copy of menus between programs)
+- `ciclo_menus_pdf_service.py` — PDF generation for ciclo menus reports (ReportLab, handles Cloudinary images via URL download in prod)
 - `exclusion_service.py` — Mutually exclusive food group sets: groups that share a weekly quota (e.g. G4+G6 must appear 2×/week combined, not individually). Used by `semanal.py` to adjust validator results.
 - `restriccion_subgrupo_service.py` — Sub-restrictions within a group: requires that N of a group's weekly appearances use a specific whitelist of foods (e.g. G4 must include ≥1 egg and ≥2 legumes per week). Used by `semanal.py`.
 - `preparacion_service.py`, `ingrediente_service.py`, `programa_service.py`
@@ -124,12 +126,14 @@ views.py → services.py → persistence_service.py → models.py
 **Nutricion views** (`nutricion/views/` package):
 - `core.py` — Main views, `api_generar_menu_ia`
 - `menus_api.py` — Menu CRUD API endpoints
+- `copiar_menu_api.py` — Copy modality between programs APIs (`api_copiar_menu_programas`, uses `CopiarMenuService`)
 - `preparaciones_api.py` — Preparations + ingredients API
 - `analisis_api.py` — Nutritional analysis, weight sync (`api_guardar_ingredientes_por_nivel`)
 - `exportes.py` — Excel/PDF downloads
 - `semanal.py` — Weekly menu validation (`api_validar_semana`, `api_requerimientos_modalidad`)
 - `preparaciones_editor.py` — Preparations editor view (standalone page with editable ingredient weights per level, dynamic peso bruto column, 4-state semaforización)
 - `firmas.py` — Nutritional contract signatures (`FirmaNutricionalContrato` model, per-program form at `/nutricion/firmas-contrato/`)
+- `minuta_patron_rangos.py` — CRUD for `MinutaPatronMeta` model (patron menu metadata and ranges, uses `MinutaPatronMetaForm`)
 
 ### Logistica Models
 
@@ -414,7 +418,7 @@ ModalidadesManager.js → abrirModalCopiar()
         Copies: TablaMenus → TablaPreparaciones → TablaPreparacionIngredientes
                 TablaAnalisisNutricionalMenu → TablaIngredientesPorNivel
 ```
-Key file: `nutricion/services/menu_service.py` — `copiar_modalidad_completa()`. Endpoints in `menus_api.py`.
+Key file: `nutricion/services/copiar_menu_service.py` — `CopiarMenuService.copiar_modalidad_completa()`. Endpoints in `copiar_menu_api.py`.
 
 ### Calidad: WhatsApp Bot — Certificados BPM
 
