@@ -9,7 +9,8 @@
       ]
     },
     "notion": {
-      "url": "https://mcp.notion.com/mcp"
+      "url": "https://mcp.notion.com/mcp",
+      "type": "sse"
     }
   }
 }
