@@ -22,6 +22,7 @@ def costos_index(request):
 def get_filtered_matriz_queryset(request):
     """
     Función de utilidad para obtener el queryset filtrado compartido por la vista y el exportador.
+    Retorna queryset vacío si no se aplicó ningún filtro.
     """
     municipio_id = request.GET.get('municipio')
     programa_id = request.GET.get('programa')
@@ -29,6 +30,10 @@ def get_filtered_matriz_queryset(request):
     semana = request.GET.get('semana')
     menu_nombre = request.GET.get('menu')
     preparacion_nombre = request.GET.get('preparacion')
+
+    hay_filtros = any([municipio_id, programa_id, modalidad_id, semana, menu_nombre, preparacion_nombre])
+    if not hay_filtros:
+        return TablaIngredientesPorNivel.objects.none()
 
     queryset = TablaIngredientesPorNivel.objects.select_related(
         'id_analisis__id_menu__id_modalidad',
@@ -108,12 +113,14 @@ def matriz_nutricional(request):
             'peso_neto': item.peso_neto,
         })
 
+    hay_filtros = any([municipio_id, programa_id, modalidad_id, semana, menu_nombre, preparacion_nombre])
     context = {
         'municipios': municipios,
         'programas': programas,
         'modalidades': modalidades,
         'semanas': [1, 2, 3, 4],
         'matriz_data': matriz_data,
+        'hay_filtros': hay_filtros,
         'selected_municipio': municipio_id,
         'selected_programa': programa_id,
         'selected_modalidad': modalidad_id,
