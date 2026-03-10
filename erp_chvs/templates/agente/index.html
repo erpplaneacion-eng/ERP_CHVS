@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Agente IA — Generador de Preparaciones{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1">Agente IA — Generador de Preparaciones</h3>
+            <p class="text-muted mb-0">Selecciona la modalidad y la IA generará un borrador de preparaciones. Luego podrás asignarlo al menú que desees.</p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <strong>Seleccionar modalidad</strong>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Modalidad de consumo</label>
+                        <select id="sel-modalidad" class="form-select">
+                            <option value="">Seleccione una modalidad...</option>
+                            {% for m in modalidades %}
+                                <option value="{{ m.id_modalidades }}">{{ m.modalidad }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">La IA usará los menús existentes de esta modalidad como referencia (RAG).</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Ocasión especial <span class="text-muted fw-normal">(opcional)</span></label>
+                        <input type="text" id="inp-ocasion" class="form-control"
+                               placeholder="Ej: Halloween, Clausura, Día del Niño, Navidad..."
+                               maxlength="100">
+                        <div class="form-text">Si lo completas, la IA nombrará las preparaciones de forma temática manteniendo los mismos ingredientes.</div>
+                    </div>
+
+                    <div id="info-modalidad" class="alert alert-info d-none mb-3" role="alert">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <span id="info-modalidad-texto"></span>
+                    </div>
+
+                    <div class="d-grid">
+                        <button id="btn-generar" class="btn btn-success btn-lg" disabled>
+                            <span id="btn-generar-texto">✨ Generar borrador con IA</span>
+                            <span id="btn-generar-spinner" class="d-none">
+                                <span class="spinner-border spinner-border-sm me-2"></span>Generando... puede tardar unos segundos
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="error-box" class="alert alert-danger mt-3 d-none" role="alert"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const selModalidad = document.getElementById('sel-modalidad');
+    const inpOcasion = document.getElementById('inp-ocasion');
+    const btnGenerar = document.getElementById('btn-generar');
+    const infoModalidad = document.getElementById('info-modalidad');
+    const infoModalidadTexto = document.getElementById('info-modalidad-texto');
+    const errorBox = document.getElementById('error-box');
+
+    selModalidad.addEventListener('change', function () {
+        if (this.value) {
+            btnGenerar.disabled = false;
+            infoModalidad.classList.remove('d-none');
+            infoModalidadTexto.textContent = `Se generará un borrador de preparaciones para la modalidad "${this.options[this.selectedIndex].text}". Después podrás asignarlo al menú destino.`;
+        } else {
+            btnGenerar.disabled = true;
+            infoModalidad.classList.add('d-none');
+        }
+    });
+
+    btnGenerar.addEventListener('click', function () {
+        const modalidadId = selModalidad.value;
+        if (!modalidadId) return;
+
+        errorBox.classList.add('d-none');
+        document.getElementById('btn-generar-texto').classList.add('d-none');
+        document.getElementById('btn-generar-spinner').classList.remove('d-none');
+        btnGenerar.disabled = true;
+
+        fetch('{% url "agente:api_generar" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            body: JSON.stringify({
+                modalidad_id: parseInt(modalidadId),
+                ocasion_especial: inpOcasion.value.trim(),
+            }),
+        })
+            .then(function(r) {
+                if (!r.ok) {
+                    return r.text().then(function(txt) {
+                        throw new Error('HTTP ' + r.status + ' — ' + txt.substring(0, 200));
+                    });
+                }
+                return r.json();
+            })
+            .then(data => {
+                if (data.ok) {
+                    window.location.href = `/agente/borrador/${data.generacion_id}/`;
+                } else {
+                    errorBox.textContent = 'Error: ' + (data.error || 'Error desconocido');
+                    errorBox.classList.remove('d-none');
+                    document.getElementById('btn-generar-texto').classList.remove('d-none');
+                    document.getElementById('btn-generar-spinner').classList.add('d-none');
+                    btnGenerar.disabled = false;
+                }
+            })
+            .catch(err => {
+                errorBox.textContent = err.message;
+                errorBox.classList.remove('d-none');
+                document.getElementById('btn-generar-texto').classList.remove('d-none');
+                document.getElementById('btn-generar-spinner').classList.add('d-none');
+                btnGenerar.disabled = false;
+            });
+    });
+})();
+</script>
+{% endblock %}

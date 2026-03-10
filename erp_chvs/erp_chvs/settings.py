@@ -131,6 +131,7 @@ INSTALLED_APPS = [
     'costos',
     'logistica',
     'calidad',
+    'agente',
 ]
 
 # Cloudinary para MEDIA files (imágenes subidas por usuarios)

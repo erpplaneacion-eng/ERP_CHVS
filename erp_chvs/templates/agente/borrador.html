@@ -1,0 +1,338 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Revisión de Borrador IA — {{ generacion.id_modalidad.modalidad }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h3 class="mb-1">Revisión de Borrador IA</h3>
+            <p class="text-muted mb-0">
+                <strong>Modalidad:</strong> {{ generacion.id_modalidad.modalidad }}
+                {% if generacion.ocasion_especial %}
+                — <span class="badge bg-warning text-dark fs-6">🎉 {{ generacion.ocasion_especial }}</span>
+                {% endif %}
+                {% if generacion.id_menu %}
+                — importado al <strong>Menú {{ generacion.id_menu.menu }}</strong>
+                ({{ generacion.id_menu.id_contrato.programa }})
+                {% endif %}
+            </p>
+        </div>
+        <a href="{% url 'agente:index' %}" class="btn btn-outline-secondary">← Volver</a>
+    </div>
+
+    {% if generacion.estado == 'aprobado' %}
+    <div class="alert alert-success">
+        <strong>Borrador aprobado e importado.</strong>
+        Las preparaciones fueron guardadas en el
+        <strong>Menú {{ generacion.id_menu.menu }}</strong>
+        ({{ generacion.id_menu.id_contrato.programa }}).
+    </div>
+    {% elif generacion.estado == 'descartado' %}
+    <div class="alert alert-secondary">
+        Este borrador fue descartado.
+    </div>
+    {% elif generacion.estado == 'error' %}
+    <div class="alert alert-danger">
+        <strong>Error al generar el borrador:</strong>
+        <ul class="mb-0 mt-1">
+            {% for e in generacion.errores_validacion %}<li>{{ e }}</li>{% endfor %}
+        </ul>
+    </div>
+    {% else %}
+
+    <div class="alert alert-warning d-flex align-items-center gap-2 mb-4">
+        <span style="font-size:1.3rem;">⚠️</span>
+        <div>
+            <strong>Borrador pendiente de revisión.</strong>
+            Revisa cada preparación. Los ingredientes marcados en rojo deben corregirse antes de aprobar.
+            <strong>La IA no garantiza precisión nutricional.</strong>
+        </div>
+    </div>
+
+    <div id="lista-preparaciones">
+        {% for prep in preparaciones %}
+        <div class="card mb-3 prep-card" id="prep-{{ prep.id }}"
+             data-estado="{{ prep.estado_validacion }}">
+            <div class="card-header d-flex justify-content-between align-items-center
+                {% if prep.estado_validacion == 'valida' %}bg-success text-white
+                {% elif prep.estado_validacion == 'con_duda' %}bg-warning
+                {% else %}bg-danger text-white{% endif %}">
+                <span>
+                    <strong>{{ prep.nombre_preparacion }}</strong>
+                    {% if prep.componente_sugerido %}
+                        <span class="badge bg-light text-dark ms-2">{{ prep.componente_sugerido.componente }}</span>
+                    {% endif %}
+                </span>
+                <span class="badge bg-white text-dark">
+                    {% if prep.estado_validacion == 'valida' %}✅ Válida
+                    {% elif prep.estado_validacion == 'con_duda' %}⚠️ Con duda
+                    {% else %}❌ Inválida{% endif %}
+                </span>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Código ICBF</th>
+                            <th>Ingrediente sugerido</th>
+                            <th>Resuelto como</th>
+                            <th>Estado</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ing in prep.ingredientes.all %}
+                        <tr id="ing-row-{{ ing.id }}"
+                            class="{% if ing.estado_validacion == 'no_encontrado' %}table-danger{% endif %}">
+                            <td><code>{{ ing.codigo_icbf_sugerido }}</code></td>
+                            <td>{{ ing.nombre_sugerido }}</td>
+                            <td id="ing-resuelto-{{ ing.id }}">
+                                {% if ing.alimento_icbf %}
+                                    {{ ing.alimento_icbf.nombre_del_alimento }}
+                                {% else %}
+                                    <em class="text-muted">—</em>
+                                {% endif %}
+                            </td>
+                            <td id="ing-estado-{{ ing.id }}">
+                                {% if ing.estado_validacion == 'valido' %}
+                                    <span class="badge bg-success">✓ Válido</span>
+                                {% else %}
+                                    <span class="badge bg-danger">✗ No encontrado</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if ing.estado_validacion == 'no_encontrado' %}
+                                <div class="input-group input-group-sm" style="min-width:220px">
+                                    <input type="text"
+                                           class="form-control ing-buscar"
+                                           placeholder="Buscar ingrediente..."
+                                           data-ing-id="{{ ing.id }}"
+                                           autocomplete="off">
+                                    <div class="dropdown-menu ing-dropdown" id="dd-{{ ing.id }}"></div>
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% if prep.observaciones %}
+                <div class="px-3 py-2 text-muted small border-top">{{ prep.observaciones }}</div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="alert alert-warning">El borrador no contiene preparaciones.</div>
+        {% endfor %}
+    </div>
+
+    <!-- Selector de menú destino -->
+    <div class="card mt-4 border-success">
+        <div class="card-header bg-success text-white">
+            <strong>¿A qué menú deseas importar estas preparaciones?</strong>
+        </div>
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label fw-semibold">Programa / Contrato</label>
+                    <select id="sel-programa-destino" class="form-select">
+                        <option value="">Seleccione un programa...</option>
+                        {% for p in programas %}
+                            <option value="{{ p.id }}">{{ p.programa }} ({{ p.contrato }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label fw-semibold">Menú destino</label>
+                    <select id="sel-menu-destino" class="form-select" disabled>
+                        <option value="">Primero seleccione un programa...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-text mt-2">
+                Solo se muestran menús de la modalidad <strong>{{ generacion.id_modalidad.modalidad }}</strong>.
+            </div>
+        </div>
+    </div>
+
+    <div id="alert-resultado" class="alert d-none mt-3"></div>
+
+    <div class="d-flex gap-3 mt-4 justify-content-end">
+        <button id="btn-descartar" class="btn btn-outline-danger">
+            🗑 Descartar borrador
+        </button>
+        <button id="btn-aprobar" class="btn btn-success btn-lg" disabled>
+            ✅ Aprobar e importar al menú seleccionado
+        </button>
+    </div>
+
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    const GENERACION_ID = {{ generacion.id }};
+    const MODALIDAD_ID = {{ generacion.id_modalidad.id_modalidades }};
+    const CSRF = '{{ csrf_token }}';
+
+    // Búsqueda de ingredientes con autocomplete
+    document.querySelectorAll('.ing-buscar').forEach(function (input) {
+        let timer;
+        const ingId = input.dataset.ingId;
+        const dd = document.getElementById('dd-' + ingId);
+
+        input.addEventListener('input', function () {
+            clearTimeout(timer);
+            const q = this.value.trim();
+            if (q.length < 2) { dd.classList.remove('show'); return; }
+
+            timer = setTimeout(function () {
+                fetch(`{% url 'agente:api_buscar_alimento' %}?q=${encodeURIComponent(q)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        dd.innerHTML = '';
+                        if (!data.resultados.length) {
+                            dd.innerHTML = '<span class="dropdown-item text-muted">Sin resultados</span>';
+                        }
+                        data.resultados.forEach(function (a) {
+                            const item = document.createElement('a');
+                            item.className = 'dropdown-item';
+                            item.href = '#';
+                            item.textContent = `${a.nombre_del_alimento} (${a.codigo})`;
+                            item.addEventListener('click', function (e) {
+                                e.preventDefault();
+                                aplicarCorreccion(ingId, a.codigo, input, dd);
+                            });
+                            dd.appendChild(item);
+                        });
+                        dd.classList.add('show');
+                        input.parentElement.style.position = 'relative';
+                        dd.style.cssText = 'position:absolute;z-index:1050;max-height:200px;overflow-y:auto;';
+                    });
+            }, 300);
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!input.contains(e.target)) dd.classList.remove('show');
+        });
+    });
+
+    function aplicarCorreccion(ingId, codigoNuevo, input, dd) {
+        dd.classList.remove('show');
+        input.disabled = true;
+
+        fetch('{% url "agente:api_corregir_ingrediente" %}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+            body: JSON.stringify({ingrediente_id: parseInt(ingId), codigo_icbf: codigoNuevo}),
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) {
+                    const row = document.getElementById('ing-row-' + ingId);
+                    row.classList.remove('table-danger');
+                    document.getElementById('ing-resuelto-' + ingId).textContent = data.nombre;
+                    document.getElementById('ing-estado-' + ingId).innerHTML =
+                        '<span class="badge bg-success">✓ Corregido</span>';
+                    input.closest('td').innerHTML = '<span class="text-muted small">Corregido</span>';
+                } else {
+                    alert('No se pudo aplicar: ' + data.error);
+                    input.disabled = false;
+                }
+            });
+    }
+
+    // Cascading selector programa → menú destino
+    const selPrograma = document.getElementById('sel-programa-destino');
+    const selMenu = document.getElementById('sel-menu-destino');
+    const btnAprobar = document.getElementById('btn-aprobar');
+
+    if (selPrograma) {
+        selPrograma.addEventListener('change', function () {
+            const programaId = this.value;
+            selMenu.innerHTML = '<option value="">Cargando...</option>';
+            selMenu.disabled = true;
+            btnAprobar.disabled = true;
+
+            if (!programaId) {
+                selMenu.innerHTML = '<option value="">Primero seleccione un programa...</option>';
+                return;
+            }
+
+            fetch(`{% url 'agente:api_menus' %}?programa_id=${programaId}&modalidad_id=${MODALIDAD_ID}`)
+                .then(r => r.json())
+                .then(data => {
+                    selMenu.innerHTML = '<option value="">Seleccione menú...</option>';
+                    if (!data.menus.length) {
+                        selMenu.innerHTML = '<option value="">Sin menús disponibles para esta modalidad</option>';
+                        return;
+                    }
+                    data.menus.forEach(m => {
+                        selMenu.innerHTML += `<option value="${m.id_menu}">Menú ${m.menu}</option>`;
+                    });
+                    selMenu.disabled = false;
+                });
+        });
+
+        selMenu.addEventListener('change', function () {
+            btnAprobar.disabled = !this.value;
+        });
+    }
+
+    // Aprobar
+    btnAprobar && btnAprobar.addEventListener('click', function () {
+        const menuId = selMenu ? selMenu.value : null;
+        if (!menuId) return;
+
+        const menuTexto = selMenu.options[selMenu.selectedIndex].text;
+        if (!confirm(`¿Confirmas que revisaste el borrador y deseas importar las preparaciones al "${menuTexto}"?`)) return;
+
+        this.disabled = true;
+        this.textContent = 'Importando...';
+
+        fetch(`/agente/api/aprobar/${GENERACION_ID}/`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+            body: JSON.stringify({menu_id: parseInt(menuId)}),
+        })
+            .then(r => r.json())
+            .then(data => {
+                const box = document.getElementById('alert-resultado');
+                if (data.ok) {
+                    box.className = 'alert alert-success mt-3';
+                    box.innerHTML = `<strong>✅ Importado correctamente.</strong> Se crearon <strong>${data.preparaciones_creadas}</strong> preparaciones en el menú.` +
+                        (data.advertencias && data.advertencias.length
+                            ? '<ul class="mt-2 mb-0">' + data.advertencias.map(a => `<li>${a}</li>`).join('') + '</ul>'
+                            : '');
+                    box.classList.remove('d-none');
+                    document.getElementById('btn-aprobar').classList.add('d-none');
+                    document.getElementById('btn-descartar').classList.add('d-none');
+                    document.querySelector('.card.border-success').classList.add('d-none');
+                } else {
+                    box.className = 'alert alert-danger mt-3';
+                    box.textContent = 'Error: ' + data.error;
+                    box.classList.remove('d-none');
+                    btnAprobar.disabled = false;
+                    btnAprobar.textContent = '✅ Aprobar e importar al menú seleccionado';
+                }
+            });
+    });
+
+    // Descartar
+    document.getElementById('btn-descartar').addEventListener('click', function () {
+        if (!confirm('¿Descartar este borrador? Esta acción no se puede deshacer.')) return;
+        fetch(`/agente/api/descartar/${GENERACION_ID}/`, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF},
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) window.location.href = '{% url "agente:index" %}';
+            });
+    });
+})();
+</script>
+{% endblock %}
