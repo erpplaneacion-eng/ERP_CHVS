@@ -420,6 +420,38 @@ ModalidadesManager.js → abrirModalCopiar()
 ```
 Key file: `nutricion/services/copiar_menu_service.py` — `CopiarMenuService.copiar_modalidad_completa()`. Endpoints in `copiar_menu_api.py`.
 
+### Nutricion: Match ICBF → Compras
+
+Vincula cada ingrediente ICBF (`TablaAlimentos2018Icbf`) con el producto de compras Siesa (`TablaIngredientesSiesa`) a nivel de **menú específico**. Un mismo ingrediente puede tener productos distintos en menús distintos.
+
+**Modelo**: `EquivalenciaICBFCompras` — `unique_together: (id_alimento_icbf, id_programa, id_menu)`
+
+```
+vista_match_icbf (GET /nutricion/match-icbf/?municipio=&programa=)
+    → match_icbf_service.obtener_dashboard_match(programa_id)
+        → _obtener_ingredientes_programa(): agrupa TablaPreparacionIngredientes por alimento → menús
+        → matches_dict: {(codigo_icbf, menu_id): EquivalenciaICBFCompras}
+        → retorna filas[{alimento, menus[{menu_id, menu_num, preparaciones, match}], completo, asignados}]
+
+Asignación individual:
+    POST /nutricion/api/match/guardar/  {programa_id, codigo_icbf, menu_id, codigo_siesa}
+    → update_or_create por (icbf, programa, menu)
+
+Asignación masiva ("Asignar a todos"):
+    POST /nutricion/api/match/guardar/bulk/  {programa_id, codigo_icbf, codigo_siesa, solo_sin_asignar}
+    → solo_sin_asignar=true: salta menús ya asignados
+    → solo_sin_asignar=false: sobreescribe todos
+
+Eliminar:
+    DELETE /nutricion/api/match/<match_id>/
+```
+
+**UX**: tarjetas por ingrediente (semáforo verde/amarillo/rojo según completo/parcial/sin asignar), tabla de menús dentro de cada tarjeta, botón "Asignar a todos" + botón individual por fila.
+
+**Catálogo simulacro**: CRUD de `TablaIngredientesSiesa` en `/nutricion/api/match/catalogo/` — reemplazar por integración real con SIESA cuando esté disponible.
+
+Key files: `nutricion/views/match_icbf.py`, `nutricion/services/match_icbf_service.py`, `static/js/nutricion/match_icbf.js`, `static/css/nutricion/match_icbf.css`. Plan de integración: `planeacion/PLAN_MATCH_ICBF_COMPRAS.md`.
+
 ### Calidad: WhatsApp Bot — Certificados BPM
 
 External service `apiw` (FastAPI, Railway project `developers-facebook`, repo `Dalopezos28/apiw`) receives WhatsApp messages and calls the ERP to generate certificates.
