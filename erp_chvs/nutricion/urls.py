@@ -88,7 +88,8 @@ path('api/menus/<int:id_menu>/guardar-ingredientes-por-nivel/', views.api_guarda
     path('match-icbf/', views.vista_match_icbf, name='match_icbf'),
     path('api/match/productos/', views.api_productos_siesa, name='api_match_productos'),
     path('api/match/guardar/', views.api_guardar_match, name='api_match_guardar'),
+    path('api/match/guardar/bulk/', views.api_guardar_match_bulk, name='api_match_guardar_bulk'),
     path('api/match/catalogo/', views.api_productos_siesa_crud, name='api_match_catalogo'),
     path('api/match/catalogo/<str:codigo>/', views.api_producto_siesa_detail, name='api_match_catalogo_detail'),
-    path('api/match/<str:codigo_icbf>/', views.api_eliminar_match, name='api_match_eliminar'),
+    path('api/match/<int:match_id>/', views.api_eliminar_match, name='api_match_eliminar'),
 ]

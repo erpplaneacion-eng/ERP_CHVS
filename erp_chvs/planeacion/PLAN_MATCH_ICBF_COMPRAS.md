@@ -374,16 +374,120 @@ El módulo `Api/` (app Django ya existente, creada para este fin) será el puent
 
 ## Plan de implementación (orden actualizado)
 
-### Fase 1 — Simulacro del match (implementar ahora)
+### Fase 1 — Simulacro del match (completada)
 
 | # | Acción | Archivo | Estado |
 |---|---|---|---|
-| 1 | Agregar `presentacion`, `unidad_medida`, `contenido_gramos` a `TablaIngredientesSiesa` | `nutricion/models.py` | Pendiente |
-| 2 | Migración de los campos nuevos | Django migrations | Pendiente |
-| 3 | Crear modelo `EquivalenciaICBFCompras` | `nutricion/models.py` | Pendiente |
-| 4 | Migración del nuevo modelo | Django migrations | Pendiente |
-| 5 | CRUD básico de catálogo Siesa (carga manual de productos) | `nutricion/views/` o `planeacion/views/` | Pendiente |
-| 6 | Vista del match: lista ICBF ↔ selector Siesa + semáforo | `nutricion/views/` | Pendiente |
+| 1 | Agregar `presentacion`, `unidad_medida`, `contenido_gramos` a `TablaIngredientesSiesa` | `nutricion/models.py` | ✅ Completado |
+| 2 | Migración de los campos nuevos | `nutricion/migrations/0038_*` | ✅ Completado |
+| 3 | Crear modelo `EquivalenciaICBFCompras` | `nutricion/models.py` | ✅ Completado |
+| 4 | Migración del nuevo modelo | `nutricion/migrations/0038_*` | ✅ Completado |
+| 5 | CRUD básico de catálogo Siesa (carga manual de productos) | `nutricion/views/match_icbf.py` | ✅ Completado |
+| 6 | Vista del match: lista ICBF ↔ selector Siesa + semáforo | `nutricion/views/match_icbf.py` | ✅ Completado (1:1) |
+
+### Fase 1.5 — Refactor: match 1 a N (implementar ahora)
+
+> **Origen:** La nutricionista confirmó que un mismo ingrediente ICBF puede comprarse en varias presentaciones comerciales dentro de un mismo programa. La vista actual (1 ingrediente → 1 producto) no lo soporta.
+
+**Decisión tomada: Opción A** — múltiples matches por ingrediente (ver sección "Decisión" más abajo). Ya no está pendiente.
+
+#### Cambios de modelo
+
+```python
+# nutricion/models.py — EquivalenciaICBFCompras
+
+# ANTES  (constraint 1:1 por programa)
+unique_together = [['id_alimento_icbf', 'id_programa']]
+
+# AHORA  (constraint 1:N — mismo ingrediente puede tener varios productos Siesa)
+unique_together = [['id_alimento_icbf', 'id_programa', 'id_ingrediente_compras']]
+
+# Campo nuevo para orden de compra base
+es_principal = models.BooleanField(
+    default=False,
+    verbose_name="Producto principal",
+    help_text="Marca el producto preferido cuando hay varios matches. "
+              "El cálculo de orden de compra lo usa por defecto."
+)
+```
+
+> **Regla de negocio:** Solo puede haber un `es_principal=True` por `(id_alimento_icbf, id_programa)`. El servicio de cálculo de compra usa el match principal; la orden muestra todos los disponibles.
+
+#### Cambios de vista y API
+
+| Elemento | Antes | Ahora |
+|---|---|---|
+| `_obtener_ingredientes_programa` | Lista de alimentos ICBF | Idem + anota en qué menús/preparaciones aparece cada uno |
+| `vista_match_icbf` context | `filas[]{alimento, match, tiene_match}` | `filas[]{alimento, usos[], matches[]}` |
+| Template | Tabla plana, 1 fila = 1 match | Tarjetas por ingrediente con sublistado de contexto y chips de matches |
+| `api_guardar_match` | `update_or_create` (reemplaza) | `get_or_create` por trío (icbf, programa, siesa) — agrega sin borrar los anteriores |
+| `api_eliminar_match` | Recibe `codigo_icbf` + `programa_id` | Recibe `match_id` (PK de `EquivalenciaICBFCompras`) |
+| Semáforo | Verde si tiene 1 match | Verde si tiene ≥1 match; contador muestra cuántos tiene |
+
+#### Rediseño de la vista — Tarjeta por ingrediente
+
+La vista pasa de tabla plana a **tarjetas expandibles**. Cada tarjeta representa un alimento ICBF y muestra:
+
+1. **Cabecera:** nombre del alimento, grupo nutricional, semáforo (verde/rojo) y badge con cantidad de matches (`2 productos`).
+2. **Contexto de uso:** lista de los menús y preparaciones donde aparece ese alimento, para que la nutricionista entienda *por qué* necesita múltiples productos.
+3. **Matches asignados:** chips/pills con el nombre del producto Siesa, presentación y botón ✗ para quitar. El producto marcado como principal lleva un ★.
+4. **Acción:** botón `+ Agregar producto` que abre el modal de búsqueda (Select2) y añade un nuevo match sin borrar los existentes.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ●  ACEITE DE PALMA  [G1 - Grasas]                       2 productos  ▼    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Usado en:                                                                  │
+│    • Menú 3 › Preparación: Arroz con pollo guisado                         │
+│    • Menú 7 › Preparación: Guiso de verduras                               │
+│    • Menú 12 › Preparación: Avena con leche                                │
+│                                                                             │
+│  Productos asignados:                                                       │
+│    ★ [ Aceite de palma — Botella 1L (1000 g)       ]  [✗ Quitar]          │
+│      [ Aceite de palma — Bidón 3L  (2760 g)        ]  [✗ Quitar]          │
+│                                                                             │
+│    [+ Agregar producto]                                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ●  LECHE CRUDA ENTERA  [G2 - Lácteos]                   1 producto   ▼   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Usado en:                                                                  │
+│    • Menú 2 › Preparación: Avena                                           │
+│    • Menú 5 › Preparación: Colada de maíz                                  │
+│                                                                             │
+│  Productos asignados:                                                       │
+│    ★ [ Leche entera — Bolsa 1000ml (1000 g)        ]  [✗ Quitar]          │
+│                                                                             │
+│    [+ Agregar producto]                                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ○  HUEVO DE GALLINA  [G3 - Proteínas]                   Sin match   ▼    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Usado en:                                                                  │
+│    • Menú 1 › Preparación: Huevo revuelto                                  │
+│                                                                             │
+│  Productos asignados:                                                       │
+│    (ninguno)                                                                │
+│                                                                             │
+│    [+ Agregar producto]                                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Pasos de implementación
+
+| # | Acción | Archivo | Estado |
+|---|---|---|---|
+| F1.5-1 | Agregar `es_principal` a `EquivalenciaICBFCompras` y cambiar `unique_together` | `nutricion/models.py` | Pendiente |
+| F1.5-2 | Migración | Django migrations | Pendiente |
+| F1.5-3 | Actualizar `_obtener_ingredientes_programa` para incluir contexto de usos (menús/preps) | `nutricion/views/match_icbf.py` | Pendiente |
+| F1.5-4 | Actualizar context en `vista_match_icbf`: `matches` pasa a ser lista | `nutricion/views/match_icbf.py` | Pendiente |
+| F1.5-5 | Rediseñar template: tabla → tarjetas por ingrediente | `templates/nutricion/match_icbf.html` | Pendiente |
+| F1.5-6 | Actualizar `api_guardar_match`: `get_or_create` en vez de `update_or_create` | `nutricion/views/match_icbf.py` | Pendiente |
+| F1.5-7 | Actualizar `api_eliminar_match`: recibir `match_id` (PK) | `nutricion/views/match_icbf.py` | Pendiente |
+| F1.5-8 | Actualizar JS: modal agrega match sin reemplazar; quitar usa `match_id` | `static/js/nutricion/match_icbf.js` | Pendiente |
+| F1.5-9 | Actualizar CSS: estilos de tarjeta, chips de productos, badge contador | `static/css/nutricion/match_icbf.css` | Pendiente |
 
 ### Fase 2 — Programación de menús por sede y fecha
 
@@ -409,19 +513,21 @@ El módulo `Api/` (app Django ya existente, creada para este fin) será el puent
 
 ---
 
-## Decisión pendiente — Manejo de múltiples presentaciones por ingrediente
+## Decisión — Manejo de múltiples productos por ingrediente
 
-> **Contexto:** Planeación señaló que un mismo ingrediente ICBF puede comprarse en varias presentaciones comerciales. Ejemplo: "Aceite de Palma" puede adquirirse en Botella 1000cc (920g) o Bidón 3000cc (2760g). El comprador elige el mix según precio y disponibilidad.
+> **✅ RESUELTA (2026-03-10):** La nutricionista confirmó que un mismo ingrediente ICBF puede comprarse en varios productos dentro de un mismo programa (distinta presentación, marca o tamaño). Se adopta **Opción A**.
+
+> **Contexto original:** Planeación señaló que un mismo ingrediente ICBF puede comprarse en varias presentaciones comerciales. Ejemplo: "Aceite de Palma" puede adquirirse en Botella 1000cc (920g) o Bidón 3000cc (2760g). El comprador elige el mix según precio y disponibilidad.
 >
-> **La decisión depende de cómo Siesa expone su catálogo** (cuando lleguen los tokens/endpoints). Dos opciones viables:
+> **La decisión ya no depende de la estructura de Siesa** — el requisito viene del flujo operativo confirmado por la nutricionista.
 
-### Opción A — Múltiples matches por ingrediente (más simple)
+### ✅ Opción A — Múltiples matches por ingrediente (ELEGIDA)
 
 Eliminar el `unique_together = [['id_alimento_icbf', 'id_programa']]` y reemplazarlo por `unique_together = [['id_alimento_icbf', 'id_programa', 'id_ingrediente_compras']]`. Se agrega un campo `es_principal` para marcar la presentación preferida.
 
-El nutricionista puede vincular el mismo ingrediente ICBF a varias presentaciones Siesa. El cálculo base usa la presentación marcada como principal; la orden de compra muestra todas las disponibles.
+La nutricionista puede vincular el mismo ingrediente ICBF a varias presentaciones Siesa. El cálculo base usa la presentación marcada como principal; la orden de compra muestra todas las disponibles.
 
-**Cuándo elegirla:** Si Siesa maneja cada presentación como un artículo independiente con su propio código.
+**Razón de la elección:** La nutricionista confirmó el requisito directamente. No depende de la estructura del catálogo Siesa.
 
 ### Opción B — Producto base + presentaciones como variantes (más correcta conceptualmente)
 
@@ -469,4 +575,5 @@ class OrdenCompraDetalle(models.Model):
 - **Simulacro primero:** La UI del match se construye con `TablaIngredientesSiesa`. La migración a Siesa real solo cambia la FK y la fuente del selector.
 - **Cron job, no polling:** La sincronización con Siesa es reactiva (delta), no un ciclo constante.
 - **Un menú NO se asocia a un programa directamente:** Ya tiene `id_contrato` (FK a `Programa`), el programa está implícito.
-- **Presentaciones múltiples:** Ver sección "Decisión pendiente" arriba — elegir Opción A u Opción B según estructura del catálogo Siesa.
+- **Match 1:N confirmado:** Se adoptó Opción A. El mismo ingrediente ICBF puede tener múltiples productos Siesa por programa. El campo `es_principal` marca el producto preferido para la orden de compra base.
+- **Vista rediseñada:** La tabla plana se reemplaza por tarjetas por ingrediente que muestran el contexto (menús y preparaciones donde aparece) y la lista de matches asignados.

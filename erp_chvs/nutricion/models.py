@@ -1398,12 +1398,15 @@ class ProcedimientoPreparacion(models.Model):
 
 class EquivalenciaICBFCompras(models.Model):
     """
-    Match entre un alimento ICBF y su producto equivalente de compras,
-    diferenciado por programa/contrato.
+    Match entre un alimento ICBF y su producto de compras, a nivel de menú.
 
-    Regla: un alimento ICBF tiene un único producto Siesa por programa.
-    El nutricionista realiza el match una sola vez; permanece aunque se
-    borren ingredientes de los menús.
+    Granularidad: (ingrediente_icbf, programa, menú) → 1 producto de compras.
+    El mismo ingrediente puede comprarse en presentaciones distintas según el menú.
+
+    Flujo de asignación:
+    - Masiva: asigna el mismo producto a todos los menús del programa donde
+      aparece el ingrediente (sobreescribe o solo los vacíos).
+    - Override: cambia el producto de un menú específico sin afectar los demás.
 
     SIMULACRO: id_ingrediente_compras apunta a TablaIngredientesSiesa.
     Cuando Api/ esté activo se migrará a la tabla oficial de Siesa.
@@ -1419,6 +1422,12 @@ class EquivalenciaICBFCompras(models.Model):
         on_delete=models.CASCADE,
         related_name='equivalencias_icbf',
         verbose_name="Programa/Contrato"
+    )
+    id_menu = models.ForeignKey(
+        'TablaMenus',
+        on_delete=models.CASCADE,
+        related_name='equivalencias_compras',
+        verbose_name="Menú"
     )
     id_ingrediente_compras = models.ForeignKey(
         TablaIngredientesSiesa,
@@ -1437,11 +1446,11 @@ class EquivalenciaICBFCompras(models.Model):
         db_table = 'nutricion_equivalencia_icbf_compras'
         verbose_name = "Equivalencia ICBF → Compras"
         verbose_name_plural = "Equivalencias ICBF → Compras"
-        unique_together = [['id_alimento_icbf', 'id_programa']]
+        unique_together = [['id_alimento_icbf', 'id_programa', 'id_menu']]
 
     def __str__(self):
         return (
             f"{self.id_alimento_icbf.nombre_del_alimento} → "
             f"{self.id_ingrediente_compras.nombre_ingrediente} "
-            f"[{self.id_programa.programa}]"
+            f"[Menú {self.id_menu.menu} · {self.id_programa.programa}]"
         )

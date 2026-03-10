@@ -71,6 +71,7 @@ from .match_icbf import (
     vista_match_icbf,
     api_productos_siesa,
     api_guardar_match,
+    api_guardar_match_bulk,
     api_eliminar_match,
     api_productos_siesa_crud,
     api_producto_siesa_detail,

@@ -1,6 +1,13 @@
 /* ===================================================
-   Match ICBF → Compras
+   Match ICBF → Compras  (granularidad por menú)
 =================================================== */
+
+/* Subtítulo de página */
+.page-subtitle {
+    font-size: 0.92rem;
+    color: #666;
+    margin-top: 4px;
+}
 
 /* Alerta simulacro */
 .alert-simulacro {
@@ -25,7 +32,9 @@
 }
 .link-catalogo:hover { text-decoration: underline; }
 
-/* Resumen de progreso */
+/* ===================================================
+   Resumen de progreso
+=================================================== */
 .match-resumen {
     background: #fff;
     border-radius: 10px;
@@ -97,53 +106,83 @@
     text-align: right;
 }
 
-/* Tabla de match */
-.match-tabla-container {
+/* ===================================================
+   Tarjetas de ingredientes
+=================================================== */
+.ingredientes-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ingrediente-card {
     background: #fff;
     border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,.07);
     overflow: hidden;
+    border-left: 4px solid #e5e7eb;
+    transition: box-shadow 0.2s;
 }
-.match-tabla {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.88rem;
+.ingrediente-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,.11); }
+.ingrediente-card.card-completo  { border-left-color: #16a34a; }
+.ingrediente-card.card-parcial   { border-left-color: #f59e0b; }
+.ingrediente-card.card-pendiente { border-left-color: #dc2626; }
+
+/* Cabecera de la tarjeta */
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 16px;
+    cursor: pointer;
+    user-select: none;
+    gap: 12px;
 }
-.match-tabla thead th {
-    background: #1e3a8a;
-    color: #fff;
-    padding: 12px 14px;
-    text-align: left;
-    font-weight: 600;
-    white-space: nowrap;
+.card-header:hover { background: #f8faff; }
+
+.card-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
 }
-.match-tabla tbody tr {
-    border-bottom: 1px solid #f0f0f0;
-    transition: background 0.15s;
-}
-.match-tabla tbody tr:hover { background: #f8faff; }
-.match-tabla tbody td { padding: 11px 14px; vertical-align: middle; }
 
 /* Semáforo */
-.col-estado { width: 36px; text-align: center; }
-.semaforo { font-size: 12px; }
-.semaforo-verde { color: #16a34a; }
-.semaforo-rojo  { color: #dc2626; }
+.semaforo { font-size: 11px; flex-shrink: 0; }
+.semaforo-verde   { color: #16a34a; }
+.semaforo-amarillo{ color: #f59e0b; }
+.semaforo-rojo    { color: #dc2626; }
 
-/* Filas */
-.fila-ok    { background: #f0fdf4; }
-.fila-pendiente { background: #fff; }
+/* Texto del ingrediente */
+.icbf-info { min-width: 0; }
+.icbf-nombre {
+    display: block;
+    font-weight: 600;
+    font-size: 0.93rem;
+    color: #111;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.icbf-meta {
+    display: block;
+    font-size: 0.77rem;
+    color: #888;
+    margin-top: 1px;
+}
+.icbf-codigo-inline { color: #aaa; }
 
-/* Textos de celdas */
-.icbf-nombre { display: block; font-weight: 500; color: #111; }
-.icbf-codigo { display: block; font-size: 0.78rem; color: #888; margin-top: 2px; }
-.siesa-nombre { display: block; font-weight: 500; color: #166534; }
-.siesa-codigo { display: inline-block; font-size: 0.75rem; color: #888; margin-left: 4px; }
-.siesa-vacio  { color: #9ca3af; font-size: 0.85rem; }
+/* Parte derecha de la cabecera */
+.card-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
 
-/* Acciones */
-.col-acciones { white-space: nowrap; }
-.btn-match {
+/* Botón "Asignar a todos" en la cabecera */
+.btn-asignar-todos {
     background: #1e3a8a;
     color: #fff;
     border: none;
@@ -152,23 +191,153 @@
     cursor: pointer;
     font-size: 0.8rem;
     font-weight: 600;
+    white-space: nowrap;
     transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
-.btn-match:hover { background: #1e40af; }
-.btn-quitar {
-    background: none;
-    border: 1px solid #fca5a5;
-    color: #dc2626;
-    padding: 5px 8px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    margin-left: 6px;
-    transition: background 0.2s;
-}
-.btn-quitar:hover { background: #fee2e2; }
+.btn-asignar-todos:hover { background: #1e40af; }
 
-/* ===== Modales ===== */
+/* Badges de progreso */
+.badge-progreso {
+    font-size: 0.77rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.badge-completo {
+    background: #dcfce7;
+    color: #15803d;
+}
+.badge-parcial {
+    background: #fef3c7;
+    color: #92400e;
+}
+.badge-sin-match {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.toggle-icon {
+    color: #9ca3af;
+    font-size: 0.85rem;
+    transition: transform 0.2s;
+}
+
+/* Cuerpo colapsable */
+.card-body {
+    display: none;
+    border-top: 1px solid #f0f0f0;
+    padding: 0;
+}
+.card-body.card-body-open { display: block; }
+
+/* ===================================================
+   Tabla de menús dentro de la tarjeta
+=================================================== */
+.menus-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.87rem;
+}
+.menus-tabla thead tr {
+    background: #f8faff;
+}
+.menus-tabla thead th {
+    padding: 9px 12px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    border-bottom: 1px solid #e5e7eb;
+    white-space: nowrap;
+}
+.menus-tabla tbody tr {
+    border-bottom: 1px solid #f3f4f6;
+    transition: background 0.15s;
+}
+.menus-tabla tbody tr:last-child { border-bottom: none; }
+.menus-tabla tbody tr:hover { background: #fafbff; }
+.menus-tabla td { padding: 10px 12px; vertical-align: middle; }
+
+/* Columnas */
+.col-menu   { width: 80px; }
+.col-prep   { color: #555; }
+.col-producto { min-width: 160px; }
+.col-accion { width: 80px; text-align: right; white-space: nowrap; }
+
+/* Badge del número de menú */
+.menu-badge {
+    display: inline-block;
+    background: #eff6ff;
+    color: #1e40af;
+    font-size: 0.77rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+/* Celda de producto */
+.prod-nombre {
+    display: block;
+    font-weight: 600;
+    color: #166534;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
+}
+.prod-detalle {
+    display: block;
+    font-size: 0.77rem;
+    color: #4b7c5e;
+    margin-top: 1px;
+}
+.prod-vacio {
+    color: #9ca3af;
+    font-style: italic;
+    font-size: 0.85rem;
+}
+
+/* Filas con/sin asignación */
+.fila-asignada td.col-producto { background: #f0fdf4; }
+.fila-vacia   td.col-producto  { background: #fafafa; }
+
+/* Botones de acción en cada fila */
+.btn-asignar-menu,
+.btn-quitar-menu {
+    width: 30px;
+    height: 30px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.82rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+.btn-asignar-menu {
+    background: #eff6ff;
+    color: #1e3a8a;
+    border: 1px solid #bfdbfe;
+}
+.btn-asignar-menu:hover { background: #dbeafe; }
+.btn-quitar-menu {
+    background: #fff0f0;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+    margin-left: 4px;
+}
+.btn-quitar-menu:hover { background: #fee2e2; }
+
+/* ===================================================
+   Modales
+=================================================== */
 .modal {
     display: none;
     position: fixed;
@@ -186,7 +355,7 @@
     max-height: 90vh;
     overflow-y: auto;
 }
-.modal-match-content   { width: 520px; max-width: 95vw; }
+.modal-match-content    { width: 520px; max-width: 95vw; }
 .modal-catalogo-content { width: 700px; max-width: 96vw; }
 
 .close {
@@ -200,17 +369,39 @@
 }
 .close:hover { color: #111; }
 
-/* Match modal — campo ICBF */
-.match-modal-icbf { margin-bottom: 16px; }
-.match-modal-icbf label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: .05em; }
-.match-icbf-label {
-    font-size: 1rem;
+/* Bloque de contexto en modales (ingrediente + menú) */
+.match-modal-contexto {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+.ctx-item {
+    flex: 1;
+    min-width: 160px;
+}
+.ctx-item label {
+    font-size: 0.76rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    display: block;
+    margin-bottom: 4px;
+}
+.ctx-value {
+    font-size: 0.95rem;
     font-weight: 600;
-    color: #1e3a8a;
-    margin: 4px 0 0;
-    padding: 10px 14px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin: 0;
+}
+.ctx-icbf {
     background: #f0f4ff;
-    border-radius: 7px;
+    color: #1e3a8a;
+}
+.ctx-menu {
+    background: #f0fdf4;
+    color: #166534;
 }
 
 /* Detalle del producto seleccionado */
@@ -224,16 +415,37 @@
 }
 .detalle-item { margin: 3px 0; color: #166534; }
 
-/* ===== Catálogo ===== */
+/* Opciones de modo bulk */
+.bulk-opciones {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 14px 0;
+    padding: 14px;
+    background: #f8faff;
+    border-radius: 7px;
+    border: 1px solid #bfdbfe;
+}
+.bulk-radio {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #333;
+}
+.bulk-radio input[type="radio"] { cursor: pointer; accent-color: #1e3a8a; }
+
+/* ===================================================
+   Catálogo simulacro
+=================================================== */
 .catalogo-toolbar {
     display: flex;
     gap: 10px;
     margin-bottom: 16px;
 }
 .catalogo-toolbar .form-control { flex: 1; }
-
 .catalogo-lista { max-height: 340px; overflow-y: auto; }
-
 .catalogo-item {
     display: flex;
     align-items: center;
@@ -243,10 +455,10 @@
     transition: background 0.15s;
 }
 .catalogo-item:hover { background: #f8faff; }
-.cat-info { display: flex; flex-direction: column; gap: 2px; }
-.cat-nombre { font-weight: 600; font-size: 0.9rem; color: #111; }
-.cat-codigo { font-size: 0.75rem; color: #888; }
-.cat-pres   { font-size: 0.8rem; color: #555; }
+.cat-info  { display: flex; flex-direction: column; gap: 2px; }
+.cat-nombre{ font-weight: 600; font-size: 0.9rem; color: #111; }
+.cat-codigo{ font-size: 0.75rem; color: #888; }
+.cat-pres  { font-size: 0.8rem; color: #555; }
 .cat-acciones { display: flex; gap: 6px; }
 .btn-cat-edit {
     background: none;
@@ -275,7 +487,7 @@
     font-size: 0.9rem;
 }
 
-/* Formulario de producto */
+/* Formulario de producto (catálogo) */
 .form-producto-container {
     margin-top: 20px;
     padding: 18px;
@@ -295,9 +507,12 @@
 }
 @media (max-width: 560px) { .form-grid-2 { grid-template-columns: 1fr; } }
 
-/* Subtítulo de página */
-.page-subtitle {
-    font-size: 0.92rem;
-    color: #666;
-    margin-top: 4px;
+/* Estado inicial oculto */
+.hidden { display: none !important; }
+
+/* Responsive: en pantallas pequeñas la tabla scrollea */
+@media (max-width: 640px) {
+    .card-body { overflow-x: auto; }
+    .menus-tabla { min-width: 480px; }
+    .card-header-right { flex-wrap: wrap; justify-content: flex-end; }
 }

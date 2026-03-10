@@ -486,7 +486,7 @@ Call **after a successful write** (POST/PUT/DELETE), never inside GET handlers. 
 | Módulo | Acciones registradas |
 |--------|----------------------|
 | `facturacion` | `cargue_excel`, `guardar_listados`, `transferir_grados`, `generar_pdf`, `generar_zip_masivo`, `reemplazar_focalizacion`, `pdf_prediligenciado` |
-| `nutricion` | `generar_menu_ia`, `generar_menus_automaticos`, `crear_menu`, `crear_menu_especial`, `editar_menu`, `eliminar_menu`, `copiar_modalidad`, `crear_preparacion`, `editar_preparacion`, `eliminar_preparacion`, `copiar_preparacion`, `agregar_ingredientes`, `eliminar_ingrediente`, `guardar_analisis`, `guardar_ingredientes_nivel`, `exportar_excel`, `guardar_firmas`, `editar_alimento`, `eliminar_alimento` |
+| `nutricion` | `generar_menu_ia`, `generar_menus_automaticos`, `crear_menu`, `crear_menu_especial`, `editar_menu`, `eliminar_menu`, `copiar_modalidad`, `crear_preparacion`, `editar_preparacion`, `eliminar_preparacion`, `copiar_preparacion`, `agregar_ingredientes`, `eliminar_ingrediente`, `guardar_analisis`, `guardar_ingredientes_nivel`, `exportar_excel`, `guardar_firmas`, `editar_alimento`, `eliminar_alimento`, `crear_match_icbf`, `editar_match_icbf`, `crear_match_icbf_bulk`, `eliminar_match_icbf`, `crear_producto_siesa`, `editar_producto_siesa`, `eliminar_producto_siesa` |
 | `planeacion` | `crear_programa`, `editar_programa`, `eliminar_programa`, `inicializar_ciclos`, `actualizar_racion` |
 | `costos` | `exportar_excel` |
 | `logistica` | `crear/editar/eliminar_tipo_ruta`, `crear/editar/eliminar_ruta`, `asignar_sede_ruta`, `editar_asignacion_ruta`, `eliminar_asignacion_ruta` |
