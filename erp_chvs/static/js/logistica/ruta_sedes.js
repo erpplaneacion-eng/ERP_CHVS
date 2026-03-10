@@ -11,6 +11,7 @@ class RutaSedesManager {
         this.saving = false;
         this.allSedes = [];
         this.municipioFiltro = '';
+        this.selectedSedes = new Set();
         this.init();
     }
 
@@ -142,7 +143,15 @@ class RutaSedesManager {
             chk.type = 'checkbox';
             chk.value = s.cod_interprise;
             chk.className = 'rs-sede-chk';
-            chk.addEventListener('change', () => this._actualizarContador());
+            chk.checked = this.selectedSedes.has(s.cod_interprise);
+            chk.addEventListener('change', () => {
+                if (chk.checked) {
+                    this.selectedSedes.add(s.cod_interprise);
+                } else {
+                    this.selectedSedes.delete(s.cod_interprise);
+                }
+                this._actualizarContador();
+            });
 
             const texto = document.createElement('span');
             texto.textContent = `${s.nombre_sede_educativa} — ${s['codigo_ie__nombre_institucion'] || ''}`;
@@ -155,7 +164,7 @@ class RutaSedesManager {
     }
 
     _actualizarContador() {
-        const total = document.querySelectorAll('.rs-sede-chk:checked').length;
+        const total = this.selectedSedes.size;
         const el = document.getElementById('rsSedesContador');
         if (!el) return;
         if (total === 0) {
@@ -236,14 +245,14 @@ class RutaSedesManager {
         document.getElementById('rsCreatePanel').classList.remove('rs-hidden');
         document.getElementById('rsEditPanel').classList.add('rs-hidden');
 
-        // Resetear buscador, filtro de municipio, checkboxes y contador
+        // Resetear buscador, filtro de municipio, selección y contador
         document.getElementById('rs_ruta').value = '';
         const buscador = document.getElementById('rsBuscadorSede');
         if (buscador) buscador.value = '';
         const filtroMun = document.getElementById('rsFiltroMunicipio');
         if (filtroMun) filtroMun.value = '';
         this.municipioFiltro = '';
-        document.querySelectorAll('.rs-sede-chk').forEach(c => { c.checked = false; });
+        this.selectedSedes = new Set();
         this._actualizarContador();
 
         document.getElementById('rutaSedeModal').style.display = 'block';
@@ -295,7 +304,7 @@ class RutaSedesManager {
         if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Guardando...'; }
 
         const id_ruta = document.getElementById('rs_ruta').value;
-        const sedes = Array.from(document.querySelectorAll('.rs-sede-chk:checked')).map(c => c.value);
+        const sedes = Array.from(this.selectedSedes);
 
         if (!id_ruta || sedes.length === 0) {
             this.saving = false;
