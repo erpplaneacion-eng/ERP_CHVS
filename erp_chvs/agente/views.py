@@ -61,7 +61,9 @@ def api_menus_por_programa_modalidad(request):
 
     menus = TablaMenus.objects.filter(
         id_contrato_id=programa_id,
-        id_modalidad_id=modalidad_id
+        id_modalidad_id=modalidad_id,
+    ).filter(
+        preparaciones__isnull=True,  # solo menús sin preparaciones
     ).order_by('menu').values('id_menu', 'menu')
 
     return JsonResponse({'menus': list(menus)})

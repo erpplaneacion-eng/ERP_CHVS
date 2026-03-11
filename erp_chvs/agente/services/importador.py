@@ -1,10 +1,12 @@
 from django.db import transaction
+from django.db.models import Prefetch
 from django.utils import timezone
 
 from nutricion.models import TablaMenus, TablaPreparaciones, TablaPreparacionIngredientes
 from principal.models import RegistroActividad
 
 from ..models import GeneracionIA, BorradorPreparacionIA, BorradorIngredienteIA
+from .inicializador_niveles import inicializar_niveles_para_menu
 
 
 def importar_borrador(generacion_id: int, menu_id: int, request) -> dict:
@@ -21,12 +23,25 @@ def importar_borrador(generacion_id: int, menu_id: int, request) -> dict:
     if str(menu.id_modalidad_id) != str(generacion.id_modalidad_id):
         return {'ok': False, 'error': 'El menú seleccionado no pertenece a la modalidad del borrador.'}
 
+    # Prefetch con select_related profundo para evitar N+1 en la resolución de
+    # componentes y grupos desde el catálogo ICBF
     preparaciones_borrador = BorradorPreparacionIA.objects.filter(
-        generacion=generacion
-    ).prefetch_related('ingredientes__alimento_icbf', 'componente_sugerido')
+        generacion=generacion,
+    ).select_related(
+        'componente_sugerido__id_grupo_alimentos',
+    ).prefetch_related(
+        Prefetch(
+            'ingredientes',
+            queryset=BorradorIngredienteIA.objects.select_related(
+                'alimento_icbf__id_componente__id_grupo_alimentos',
+            ),
+        ),
+    )
 
     creadas = 0
     advertencias = []
+    # Acumula (prep_real, ing_prep_real, alimento_icbf) para el inicializador de niveles
+    items_nivel = []
 
     try:
         with transaction.atomic():
@@ -37,11 +52,12 @@ def importar_borrador(generacion_id: int, menu_id: int, request) -> dict:
                     )
                     continue
 
-                ingredientes_validos = prep_borrador.ingredientes.filter(
-                    estado_validacion=BorradorIngredienteIA.VALIDO,
-                    alimento_icbf__isnull=False
-                )
-                if not ingredientes_validos.exists():
+                ingredientes_validos = [
+                    ing for ing in prep_borrador.ingredientes.all()
+                    if ing.estado_validacion == BorradorIngredienteIA.VALIDO
+                    and ing.alimento_icbf is not None
+                ]
+                if not ingredientes_validos:
                     advertencias.append(
                         f"'{prep_borrador.nombre_preparacion}' omitida: sin ingredientes válidos."
                     )
@@ -54,12 +70,25 @@ def importar_borrador(generacion_id: int, menu_id: int, request) -> dict:
                 )
 
                 for ing_borrador in ingredientes_validos:
-                    TablaPreparacionIngredientes.objects.create(
+                    alimento_icbf = ing_borrador.alimento_icbf
+
+                    # Resolver componente: ICBF propio → fallback preparación
+                    componente = alimento_icbf.id_componente or prep_borrador.componente_sugerido
+                    # Resolver grupo desde el componente resuelto
+                    grupo = componente.id_grupo_alimentos if componente else None
+
+                    ing_prep_real = TablaPreparacionIngredientes.objects.create(
                         id_preparacion=prep_real,
-                        id_ingrediente_siesa=ing_borrador.alimento_icbf,
+                        id_ingrediente_siesa=alimento_icbf,
+                        id_componente=componente,
+                        id_grupo_alimentos=grupo,
                     )
+                    items_nivel.append((prep_real, ing_prep_real, alimento_icbf))
 
                 creadas += 1
+
+            # Inicializar análisis nutricional por los 5 niveles educativos
+            inicializar_niveles_para_menu(menu, generacion.id_modalidad, items_nivel)
 
             generacion.id_menu = menu
             generacion.estado = GeneracionIA.ESTADO_APROBADO
