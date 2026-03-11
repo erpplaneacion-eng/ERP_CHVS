@@ -5,14 +5,12 @@ let municipios = [];
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', function() {
-    // Verificar que las funciones globales estén disponibles
     if (typeof window.showNotification !== 'function') {
         console.error('showNotification no está disponible desde main.js');
     }
 
     loadMunicipios();
-    updateStats();
-    setupSearch();
+    setupSearch(); // carga allInstituciones y actualiza stats en una sola llamada
 });
 
 // Funciones para cargar datos de referencia
@@ -200,8 +198,9 @@ async function loadInstitucionesTable() {
     try {
         const response = await fetch('/principal/api/instituciones/');
         const data = await response.json();
+        allInstituciones = data.instituciones;
         updateInstitucionesTable(data.instituciones);
-        updateStats(); // También actualizar estadísticas
+        _actualizarContadorInstituciones(allInstituciones.length);
     } catch (error) {
         console.error('Error al cargar instituciones:', error);
         showNotification('Error al cargar instituciones', 'error');
@@ -243,27 +242,6 @@ function updateInstitucionesTable(instituciones) {
     });
 }
 
-// Función para actualizar estadísticas
-async function updateStats() {
-    try {
-        const response = await fetch('/principal/api/instituciones/');
-        const data = await response.json();
-
-        // Actualizar el contador en el template si existe
-        const totalElement = document.querySelector('.header-left p strong');
-        if (totalElement) {
-            totalElement.textContent = data.instituciones.length;
-        }
-
-        // Actualizar estadísticas en la página principal si existe
-        const statsElement = document.getElementById('total-instituciones');
-        if (statsElement) {
-            statsElement.textContent = data.instituciones.length;
-        }
-    } catch (error) {
-        console.error('Error al actualizar estadísticas:', error);
-    }
-}
 
 // Función showNotification y event listeners para modales están disponibles globalmente desde main.js
 
@@ -410,10 +388,18 @@ async function loadAllInstitucionesForSearch() {
         const response = await fetch('/principal/api/instituciones/');
         const data = await response.json();
         allInstituciones = data.instituciones;
+        _actualizarContadorInstituciones(allInstituciones.length);
     } catch (error) {
         console.error('Error al cargar instituciones para búsqueda:', error);
         showNotification('Error al cargar datos para búsqueda', 'error');
     }
+}
+
+function _actualizarContadorInstituciones(total) {
+    const totalElement = document.querySelector('.header-left p strong');
+    if (totalElement) totalElement.textContent = total;
+    const statsElement = document.getElementById('total-instituciones');
+    if (statsElement) statsElement.textContent = total;
 }
 
 function performSearch() {

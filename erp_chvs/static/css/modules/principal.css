@@ -184,7 +184,7 @@
     cursor: pointer;
     text-decoration: none;
     font-weight: 500;
-    transition: all 0.3s ease;
+    transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .btn-primary {
@@ -422,7 +422,7 @@
     border: 2px solid #e9ecef;
     border-radius: 12px;
     padding: 0 20px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     overflow: hidden;
 }
@@ -551,7 +551,7 @@
 }
 
 .search-results-info::before {
-    content: 'ðŸ“Š';
+    content: '\1F4CA';
     font-size: 16px;
 }
 
@@ -623,17 +623,7 @@
     animation: spin 1s linear infinite;
 }
 
-/* Efecto de escritura para el placeholder */
-@keyframes typewriter {
-    from { width: 0; }
-    to { width: 100%; }
-}
-
-.search-box input::placeholder {
-    overflow: hidden;
-    white-space: nowrap;
-    animation: typewriter 2s steps(40, end) infinite;
-}
+/* Efecto de escritura para el placeholder eliminado — animación infinita impacta rendimiento */
 
 /* Efectos adicionales para el buscador */
 .search-box:hover {

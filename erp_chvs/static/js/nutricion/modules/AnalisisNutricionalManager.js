@@ -255,7 +255,7 @@ class AnalisisNutricionalManager {
                             <span class="nca-val" id="nivel-${index}-${def.key}">${total.toFixed(1)} ${def.suffix}</span>
                         </div>
                         <div class="nca-row">
-                            <span class="nca-lbl">Rec. ICBF</span>
+                            <span class="nca-lbl">Rec. REs335</span>
                             <span class="nca-val">${rec.toFixed(1)} ${def.suffix}</span>
                         </div>
                         <div class="nca-row nca-pct">

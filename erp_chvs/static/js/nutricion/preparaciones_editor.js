@@ -1278,7 +1278,7 @@
                     <div class="modal-field-group">
                         <label class="modal-label">
                             <i class="bi bi-basket3 modal-label-icon-green"></i>
-                            Ingredientes ICBF
+                            Ingredientes REs335
                             <span class="required-star">*</span>
                         </label>
                         <div class="input-search-wrapper">

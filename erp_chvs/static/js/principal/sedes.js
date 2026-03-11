@@ -5,14 +5,12 @@ let instituciones = [];
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', function() {
-    // Verificar que las funciones globales estén disponibles
     if (typeof window.showNotification !== 'function') {
         console.error('showNotification no está disponible desde main.js');
     }
 
     loadInstituciones();
-    updateStats();
-    setupSearch();
+    setupSearch(); // carga allSedes y actualiza stats en una sola llamada
 });
 
 // Funciones para cargar datos de referencia
@@ -243,8 +241,9 @@ async function loadSedesTable() {
     try {
         const response = await fetch('/principal/api/sedes/');
         const data = await response.json();
+        allSedes = data.sedes;
         updateSedesTable(data.sedes);
-        updateStats(); // También actualizar estadísticas
+        _actualizarContadorSedes(allSedes.length);
     } catch (error) {
         console.error('Error al cargar sedes:', error);
         showNotification('Error al cargar sedes', 'error');
@@ -303,27 +302,6 @@ function updateSedesTable(sedes) {
     });
 }
 
-// Función para actualizar estadísticas
-async function updateStats() {
-    try {
-        const response = await fetch('/principal/api/sedes/');
-        const data = await response.json();
-
-        // Actualizar el contador en el template si existe
-        const totalElement = document.querySelector('.header-left p strong');
-        if (totalElement) {
-            totalElement.textContent = data.sedes.length;
-        }
-
-        // Actualizar estadísticas en la página principal si existe
-        const statsElement = document.getElementById('total-sedes');
-        if (statsElement) {
-            statsElement.textContent = data.sedes.length;
-        }
-    } catch (error) {
-        console.error('Error al actualizar estadísticas:', error);
-    }
-}
 
 // Función showNotification y event listeners para modales están disponibles globalmente desde main.js
 
@@ -470,10 +448,18 @@ async function loadAllSedesForSearch() {
         const response = await fetch('/principal/api/sedes/');
         const data = await response.json();
         allSedes = data.sedes;
+        _actualizarContadorSedes(allSedes.length);
     } catch (error) {
         console.error('Error al cargar sedes para búsqueda:', error);
         showNotification('Error al cargar datos para búsqueda', 'error');
     }
+}
+
+function _actualizarContadorSedes(total) {
+    const totalElement = document.querySelector('.header-left p strong');
+    if (totalElement) totalElement.textContent = total;
+    const statsElement = document.getElementById('total-sedes');
+    if (statsElement) statsElement.textContent = total;
 }
 
 function performSearch() {
@@ -491,10 +477,11 @@ function performSearch() {
     }
 
     // Filtrar sedes
+    // cod_dane es BigIntegerField → llega como número, se convierte a string antes de comparar
     const filteredSedes = allSedes.filter(sede => {
         return (
             sede.cod_interprise.toLowerCase().includes(searchTerm) ||
-            sede.cod_dane.toLowerCase().includes(searchTerm) ||
+            String(sede.cod_dane).includes(searchTerm) ||
             sede.nombre_sede_educativa.toLowerCase().includes(searchTerm) ||
             (sede.nombre_generico_sede && sede.nombre_generico_sede.toLowerCase().includes(searchTerm)) ||
             (sede.codigo_ie__nombre_institucion && sede.codigo_ie__nombre_institucion.toLowerCase().includes(searchTerm)) ||

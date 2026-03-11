@@ -342,7 +342,7 @@ class CopiarMenuManager {
                     <div class="cm-add-ing-section">
                         <div class="cm-add-ing-search" id="cmSearch-${pIdx}" style="display:none">
                             <input type="text" class="cm-search-input"
-                                   placeholder="Buscar alimento ICBF..."
+                                   placeholder="Buscar alimento REs335..."
                                    oninput="window._copiarMenuMgr._buscarAlimento(${pIdx}, this.value)"
                                    autocomplete="off">
                             <div class="cm-search-results" id="cmSearchResults-${pIdx}"></div>
