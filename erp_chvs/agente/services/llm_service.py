@@ -19,7 +19,7 @@ def generar_borrador(contexto: dict, ocasion_especial: str = '') -> dict:
         response = model.generate_content(
             prompt,
             generation_config=genai.types.GenerationConfig(
-                temperature=0.2,
+                temperature=0.7,
                 response_mime_type='application/json',
             )
         )
@@ -104,6 +104,7 @@ INSTRUCCIONES:
 4. El campo "id_componente" debe ser uno de los IDs de componentes válidos o null.
 5. Incluye una justificación breve por preparación.
 6. En "procedimiento" escribe el paso a paso de elaboración (5 a 10 pasos numerados, en español, apropiado para cocina escolar industrial).
+7. VARIEDAD: Evita repetir los mismos ingredientes principales de los ejemplos anteriores. Si los ejemplos usan pollo, propón res, cerdo o pescado. Si usan guayaba, propón lulo, mora, maracuyá u otra fruta. Prioriza ingredientes que aparezcan poco en los ejemplos mostrados.
 
 Responde ÚNICAMENTE con este JSON estricto, sin texto adicional:
 
