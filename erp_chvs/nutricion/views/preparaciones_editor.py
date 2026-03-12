@@ -76,7 +76,7 @@ def _resolver_grupo_y_rango(menu, preparacion, ingrediente_icbf, componente=None
     }
 
 
-def _resolver_grupo_y_rango_por_nivel(menu, preparacion, ingrediente_icbf, nivel_escolar, componente=None, grupo_override=None):
+def _resolver_grupo_y_rango_por_nivel(menu, preparacion, ingrediente_icbf, nivel_escolar, componente=None, grupo_override=None, minuta_cache=None):
     """
     Resuelve grupo de alimentos y rango [min, max] para un ingrediente
     FILTRADO POR NIVEL ESCOLAR ESPECÃFICO.
@@ -102,21 +102,29 @@ def _resolver_grupo_y_rango_por_nivel(menu, preparacion, ingrediente_icbf, nivel
             'rango_abierto': False
         }
 
-    metas = MinutaPatronMeta.objects.filter(
-        id_modalidad=menu.id_modalidad,
-        id_grado_escolar_uapa=nivel_escolar,
-        id_grupo_alimentos=grupo
-    )
-
-    # Primero intentamos buscar una meta especÃ­fica para el componente
     meta = None
     componente_meta = componente or preparacion.id_componente
-    if componente_meta:
-        meta = metas.filter(id_componente=componente_meta).first()
 
-    # Si no hay meta especÃ­fica o no hay componente, buscamos la primera disponible para el grupo
-    if not meta:
-        meta = metas.first()
+    if minuta_cache is not None:
+        # Camino rapido: lookup en cache pre-cargado (sin queries a BD)
+        cache_comp, cache_base = minuta_cache
+        nivel_id = nivel_escolar.id_grado_escolar_uapa
+        grupo_id = grupo.id_grupo_alimentos
+        if componente_meta:
+            meta = cache_comp.get((nivel_id, grupo_id, componente_meta.id_componente))
+        if not meta:
+            meta = cache_base.get((nivel_id, grupo_id))
+    else:
+        # Camino original: queries directas a BD
+        metas = MinutaPatronMeta.objects.filter(
+            id_modalidad=menu.id_modalidad,
+            id_grado_escolar_uapa=nivel_escolar,
+            id_grupo_alimentos=grupo
+        )
+        if componente_meta:
+            meta = metas.filter(id_componente=componente_meta).first()
+        if not meta:
+            meta = metas.first()
 
     if meta:
         minimo = float(meta.peso_neto_minimo) if meta.peso_neto_minimo is not None else None
@@ -243,7 +251,7 @@ def _obtener_ingredientes_configurados_por_analisis(analisis):
     return ingredientes_configurados
 
 
-def _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados):
+def _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados, minuta_cache=None):
     filas_nivel = []
     prev_prep_id = None
     relaciones = TablaPreparacionIngredientes.objects.filter(
@@ -266,7 +274,8 @@ def _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados
             rel.id_ingrediente_siesa,
             nivel,
             componente=rel.id_componente,
-            grupo_override=rel.id_grupo_alimentos
+            grupo_override=rel.id_grupo_alimentos,
+            minuta_cache=minuta_cache,
         )
 
         key = f"{rel.id_preparacion_id}_{rel.id_ingrediente_siesa.codigo}"
@@ -446,19 +455,42 @@ def vista_preparaciones_editor(request, id_menu):
     if not tiene_relaciones_menu:
         TablaAnalisisNutricionalMenu.objects.filter(id_menu=menu).delete()
 
+    # Prefetch: una sola query para todos los análisis del menú (evita 1 query por nivel)
+    analisis_por_nivel = {
+        a.id_nivel_escolar_uapa_id: a
+        for a in TablaAnalisisNutricionalMenu.objects.filter(id_menu=menu)
+    }
+
+    # Cache de MinutaPatronMeta por modalidad (evita N+1 en _resolver_grupo_y_rango_por_nivel)
+    _cache_comp = {}   # (nivel_id, grupo_id, comp_id) → primera meta con ese componente
+    _cache_base = {}   # (nivel_id, grupo_id) → primera meta (fallback sin componente)
+    for _m in MinutaPatronMeta.objects.filter(
+        id_modalidad=menu.id_modalidad
+    ).select_related('id_grupo_alimentos'):
+        _nivel_id = _m.id_grado_escolar_uapa_id
+        _grupo_id = _m.id_grupo_alimentos_id
+        _comp_id = _m.id_componente_id
+        if not _grupo_id:
+            continue
+        if _comp_id:
+            _key = (_nivel_id, _grupo_id, _comp_id)
+            if _key not in _cache_comp:
+                _cache_comp[_key] = _m
+        _key_base = (_nivel_id, _grupo_id)
+        if _key_base not in _cache_base:
+            _cache_base[_key_base] = _m
+    minuta_cache = (_cache_comp, _cache_base)
+
     niveles_data = []
 
     for nivel in niveles_escolares:
-        analisis = TablaAnalisisNutricionalMenu.objects.filter(
-            id_menu=menu,
-            id_nivel_escolar_uapa=nivel
-        ).first()
+        analisis = analisis_por_nivel.get(nivel.id_grado_escolar_uapa)
 
         ingredientes_configurados = (
             _obtener_ingredientes_configurados_por_analisis(analisis)
             if analisis else {}
         )
-        filas_nivel = _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados)
+        filas_nivel = _construir_filas_nivel(menu, nivel, preparaciones, ingredientes_configurados, minuta_cache=minuta_cache)
 
         # Crear registro de análisis solo si realmente hay ingredientes a analizar en ese nivel.
         if filas_nivel and not analisis:

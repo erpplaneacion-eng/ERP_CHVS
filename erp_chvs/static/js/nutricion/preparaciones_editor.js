@@ -314,6 +314,14 @@
         cell.textContent = pesoBruto.toFixed(1);
     }
 
+    // Debounce para recalcularNivel: evita recalcular en cada tecla/movimiento de slider.
+    // Las operaciones baratas (pesoBruto, estadoFila, sincronizar) siguen siendo instantáneas.
+    const _recalcularTimers = {};
+    function recalcularNivelDebounced(nivelId) {
+        clearTimeout(_recalcularTimers[nivelId]);
+        _recalcularTimers[nivelId] = setTimeout(() => recalcularNivel(nivelId), 300);
+    }
+
     document.addEventListener('input', (e) => {
         if (e.target.classList.contains('input-peso')) {
             const row = e.target.closest('tr');
@@ -323,7 +331,7 @@
                 actualizarPesoBruto(row);
                 actualizarEstadoFila(row);
                 sincronizarSliderConInput(row);
-                recalcularNivel(nivelId);
+                recalcularNivelDebounced(nivelId);
             }
         }
 
@@ -335,7 +343,7 @@
                 sincronizarInputConSlider(row);
                 actualizarPesoBruto(row);
                 actualizarEstadoFila(row);
-                recalcularNivel(nivelId);
+                recalcularNivelDebounced(nivelId);
             }
         }
     });
