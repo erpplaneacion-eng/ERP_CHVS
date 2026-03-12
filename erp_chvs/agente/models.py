@@ -105,6 +105,7 @@ class BorradorPreparacionIA(models.Model):
         verbose_name="Estado de Validación"
     )
     observaciones = models.TextField(blank=True, verbose_name="Observaciones")
+    procedimiento = models.TextField(blank=True, verbose_name="Procedimiento de Preparación")
 
     class Meta:
         db_table = 'agente_borrador_preparacion_ia'

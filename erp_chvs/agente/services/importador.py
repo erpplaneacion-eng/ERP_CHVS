@@ -1,12 +1,34 @@
+import unicodedata
+
 from django.db import transaction
 from django.db.models import Prefetch
 from django.utils import timezone
 
-from nutricion.models import TablaMenus, TablaPreparaciones, TablaPreparacionIngredientes
+from fuzzywuzzy import fuzz
+
+from nutricion.models import TablaMenus, TablaPreparaciones, TablaPreparacionIngredientes, ProcedimientoPreparacion
 from principal.models import RegistroActividad
 
 from ..models import GeneracionIA, BorradorPreparacionIA, BorradorIngredienteIA
 from .inicializador_niveles import inicializar_niveles_para_menu
+
+_UMBRAL_DEDUP = 95  # umbral alto para evitar falsos positivos al escribir nuevos procedimientos
+
+
+def _normalizar(texto: str) -> str:
+    texto = unicodedata.normalize("NFKD", str(texto or ""))
+    texto = "".join(ch for ch in texto if not unicodedata.combining(ch))
+    return texto.lower().strip()
+
+
+def _existe_procedimiento_similar(nombre: str) -> bool:
+    """Devuelve True si ya hay un ProcedimientoPreparacion con ≥70% de similitud."""
+    nombre_norm = _normalizar(nombre)
+    for proc in ProcedimientoPreparacion.objects.filter(activo=True).only('nombre'):
+        score = fuzz.token_sort_ratio(nombre_norm, _normalizar(proc.nombre))
+        if score >= _UMBRAL_DEDUP:
+            return True
+    return False
 
 
 def importar_borrador(generacion_id: int, menu_id: int, request) -> dict:
@@ -68,6 +90,14 @@ def importar_borrador(generacion_id: int, menu_id: int, request) -> dict:
                     id_menu=menu,
                     id_componente=prep_borrador.componente_sugerido,
                 )
+
+                # Crear procedimiento en el catálogo si tiene texto y no existe uno similar
+                if prep_borrador.procedimiento and not _existe_procedimiento_similar(prep_borrador.nombre_preparacion):
+                    ProcedimientoPreparacion.objects.create(
+                        nombre=prep_borrador.nombre_preparacion,
+                        procedimiento=prep_borrador.procedimiento,
+                        activo=True,
+                    )
 
                 for ing_borrador in ingredientes_validos:
                     alimento_icbf = ing_borrador.alimento_icbf

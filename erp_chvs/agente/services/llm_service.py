@@ -103,6 +103,7 @@ INSTRUCCIONES:
 3. Usa ÚNICAMENTE los códigos de ingredientes del catálogo provisto.
 4. El campo "id_componente" debe ser uno de los IDs de componentes válidos o null.
 5. Incluye una justificación breve por preparación.
+6. En "procedimiento" escribe el paso a paso de elaboración (5 a 10 pasos numerados, en español, apropiado para cocina escolar industrial).
 
 Responde ÚNICAMENTE con este JSON estricto, sin texto adicional:
 
@@ -114,7 +115,8 @@ Responde ÚNICAMENTE con este JSON estricto, sin texto adicional:
       "ingredientes": [
         {{"codigo_icbf": "XXXX", "nombre": "Nombre del ingrediente"}}
       ],
-      "justificacion": "Razón breve"
+      "justificacion": "Razón breve",
+      "procedimiento": "1. Paso uno.\\n2. Paso dos.\\n3. Paso tres."
     }}
   ]
 }}"""

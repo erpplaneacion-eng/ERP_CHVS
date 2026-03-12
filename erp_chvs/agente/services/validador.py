@@ -61,6 +61,7 @@ def validar_preparaciones(preparaciones: list) -> list:
             'nombre': prep.get('nombre', ''),
             'id_componente': id_componente,
             'justificacion': prep.get('justificacion', ''),
+            'procedimiento': prep.get('procedimiento', ''),
             'estado_validacion': estado_prep,
             'observaciones': obs_prep,
             'ingredientes': ingredientes_validados,

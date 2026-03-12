@@ -22,13 +22,13 @@ class RoleAccessMiddleware:
 
         # Definir qué aplicaciones están permitidas por grupo
         group_permissions = {
-            'NUTRICION': ['nutricion', 'dashboard', 'principal'],
+            'NUTRICION': ['nutricion', 'dashboard', 'principal', 'agente'],
             'FACTURACION': ['facturacion', 'dashboard'],
             'PLANEACION': ['planeacion', 'dashboard'],
             'COSTOS': ['costos', 'dashboard'],
             'LOGISTICA': ['logistica', 'dashboard'],
             'CALIDAD': ['calidad', 'dashboard'],
-            'ADMINISTRACION': ['nutricion', 'facturacion', 'planeacion', 'principal', 'costos', 'logistica', 'calidad', 'dashboard']
+            'ADMINISTRACION': ['nutricion', 'facturacion', 'planeacion', 'principal', 'costos', 'logistica', 'calidad', 'dashboard', 'agente']
         }
 
         # Apps que siempre son accesibles para logueados (como el perfil o home)

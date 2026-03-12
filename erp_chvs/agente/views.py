@@ -125,6 +125,7 @@ def api_generar(request):
                 componente_sugerido=componente_obj,
                 estado_validacion=prep['estado_validacion'],
                 observaciones=prep['observaciones'],
+                procedimiento=prep.get('procedimiento', ''),
             )
 
             for ing in prep['ingredientes']:

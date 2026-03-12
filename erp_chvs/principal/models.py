@@ -194,6 +194,7 @@ class RegistroActividad(models.Model):
         ('costos', 'Costos'),
         ('logistica', 'Logística'),
         ('principal', 'Datos Maestros'),
+        ('agente', 'Agente IA'),
         ('dashboard', 'Dashboard'),
     ]
 

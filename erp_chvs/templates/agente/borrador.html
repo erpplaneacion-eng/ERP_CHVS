@@ -3,6 +3,10 @@
 
 {% block title %}Revisión de Borrador IA — {{ generacion.id_modalidad.modalidad }}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/agente/borrador.css' %}">
+{% endblock %}
+
 {% block content %}
 <div class="container py-4">
 
@@ -121,6 +125,20 @@
                 </table>
                 {% if prep.observaciones %}
                 <div class="px-3 py-2 text-muted small border-top">{{ prep.observaciones }}</div>
+                {% endif %}
+                {% if prep.procedimiento %}
+                <div class="border-top">
+                    <button class="btn btn-link btn-sm text-secondary px-3 py-2 w-100 text-start"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#proc-{{ prep.id }}"
+                            aria-expanded="false">
+                        📋 Ver procedimiento de preparación
+                    </button>
+                    <div class="collapse" id="proc-{{ prep.id }}">
+                        <div class="px-3 pb-3 small procedimiento-texto">{{ prep.procedimiento }}</div>
+                    </div>
+                </div>
                 {% endif %}
             </div>
         </div>
