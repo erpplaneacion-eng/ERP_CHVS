@@ -67,6 +67,12 @@ from .minuta_patron_rangos import (
     editar_minuta_patron_rango,
     eliminar_minuta_patron_rango,
 )
+from .procedimientos import (
+    lista_procedimientos,
+    api_procedimientos,
+    api_procedimiento_detail,
+    api_procedimiento_get,
+)
 from .match_icbf import (
     vista_match_icbf,
     api_productos_siesa,

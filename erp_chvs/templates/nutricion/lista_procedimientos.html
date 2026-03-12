@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Procedimientos de Preparación{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/nutricion/inline_styles.css' %}">
+<link rel="stylesheet" href="{% static 'css/nutricion/procedimientos.css' %}">
+{% endblock %}
+
+{% block content %}
+<h1>Procedimientos de Preparación</h1>
+<p>Catálogo de procedimientos paso a paso para las guías de preparación Excel.</p>
+
+<div class="search-container">
+    <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="Buscar por nombre o contenido del procedimiento (Enter para buscar)"
+            autocomplete="off"
+            value="{{ search_query|default:'' }}"
+        >
+        <button id="clearSearch" class="btn-clear-search {% if search_query %}show{% endif %}" title="Limpiar búsqueda">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div class="search-results-info">
+        <span id="searchResultsCount">
+            {% if search_query %}
+                Resultados para "<span class="highlight">{{ search_query }}</span>"
+            {% else %}
+                Mostrando todos los procedimientos
+            {% endif %}
+        </span>
+    </div>
+</div>
+
+<div class="actions-bar">
+    <button id="btn-nuevo-procedimiento" class="btn btn-success">
+        <i class="fas fa-plus"></i> Nuevo Procedimiento
+    </button>
+</div>
+
+<div class="table-container">
+    <table class="alimentos-table" id="procedimientosTable">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Procedimiento (vista previa)</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for proc in procedimientos_page %}
+            <tr data-id="{{ proc.pk }}">
+                <td><strong>{{ proc.nombre }}</strong></td>
+                <td class="procedimiento-preview">{{ proc.procedimiento|truncatechars:80 }}</td>
+                <td>
+                    {% if proc.activo %}
+                        <span class="badge-activo">Activo</span>
+                    {% else %}
+                        <span class="badge-inactivo">Inactivo</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <button
+                        class="btn btn-sm btn-warning edit-btn"
+                        title="Editar"
+                        data-id="{{ proc.pk }}"
+                    >
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button
+                        class="btn btn-sm btn-danger delete-btn"
+                        title="Eliminar"
+                        data-id="{{ proc.pk }}"
+                        data-nombre="{{ proc.nombre }}"
+                    >
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">
+                    {% if search_query %}
+                        No se encontraron procedimientos para "<strong>{{ search_query }}</strong>".
+                    {% else %}
+                        No hay procedimientos registrados.
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if procedimientos_page.has_other_pages %}
+<div class="pagination-container">
+    <nav aria-label="Paginación de procedimientos">
+        <ul class="pagination">
+            {% if procedimientos_page.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search_query %}&q={{ search_query }}{% endif %}">Primera</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ procedimientos_page.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">Anterior</a>
+                </li>
+            {% endif %}
+
+            <li class="page-item active">
+                <span class="page-link">
+                    Página {{ procedimientos_page.number }} de {{ procedimientos_page.paginator.num_pages }}
+                </span>
+            </li>
+
+            {% if procedimientos_page.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ procedimientos_page.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">Siguiente</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ procedimientos_page.paginator.num_pages }}{% if search_query %}&q={{ search_query }}{% endif %}">Última</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+<!-- Modal Crear / Editar -->
+<div id="procedimientoModal" class="modal-overlay hidden-initially">
+    <div class="modal-content modal-content-wide">
+        <div class="modal-header">
+            <h2 id="modalTitle">Nuevo Procedimiento</h2>
+            <span class="modal-close-btn">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div id="formValidationSummary" class="form-validation-summary hidden-initially"></div>
+            <div class="form-group">
+                <label for="input-nombre">Nombre de la preparación *</label>
+                <input type="text" id="input-nombre" class="form-control" maxlength="255" placeholder="Ej: Arroz con pollo">
+            </div>
+            <div class="form-group">
+                <label for="input-procedimiento">Procedimiento paso a paso *</label>
+                <textarea id="input-procedimiento" class="form-control procedimiento-textarea" rows="10"
+                    placeholder="1. Lavar y picar los ingredientes...&#10;2. Calentar el aceite...&#10;3. ..."></textarea>
+            </div>
+            <div class="form-group form-group-inline">
+                <label for="input-activo">
+                    <input type="checkbox" id="input-activo" checked>
+                    Activo (visible para las guías de preparación Excel)
+                </label>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-cancel-btn">Cancelar</button>
+                <button type="button" id="modal-submit-btn" class="btn btn-success">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmar Eliminación -->
+<div id="confirmModal" class="modal-overlay hidden-initially">
+    <div class="modal-content modal-content-small">
+        <div class="modal-header modal-header-danger">
+            <h2>Confirmar Eliminación</h2>
+            <span id="closeConfirm" class="modal-close-btn">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>¿Está seguro que desea eliminar el procedimiento <strong id="confirm-nombre"></strong>?</p>
+            <p class="text-muted small">Esta acción no se puede deshacer.</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="cancelDelete">Cancelar</button>
+            <button type="button" class="btn btn-danger" id="confirmDelete">Eliminar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/nutricion/procedimientos.js' %}"></script>
+{% endblock %}
