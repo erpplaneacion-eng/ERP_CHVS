@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import IntegrityError, connection
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -10,6 +11,28 @@ from principal.models import RegistroActividad
 
 from ..forms import MinutaPatronMetaForm
 from ..models import MinutaPatronMeta
+
+
+def _es_error_pk_duplicada(exc: Exception) -> bool:
+    mensaje = str(exc).lower()
+    return (
+        'nutricion_minuta_patron_rangos_pkey' in mensaje
+        or ('duplicate key value violates unique constraint' in mensaje and '(id)=' in mensaje)
+    )
+
+
+def _sincronizar_secuencia_minuta_patron_rangos() -> None:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT setval(
+                pg_get_serial_sequence('nutricion_minuta_patron_rangos', 'id'),
+                COALESCE(MAX(id), 1),
+                MAX(id) IS NOT NULL
+            )
+            FROM nutricion_minuta_patron_rangos;
+            """
+        )
 
 
 def _resumen_errores_form(form) -> str:
@@ -40,7 +63,13 @@ def lista_minuta_patron_rangos(request):
     if request.method == 'POST':
         form = MinutaPatronMetaForm(request.POST)
         if form.is_valid():
-            rango = form.save()
+            try:
+                rango = form.save()
+            except IntegrityError as exc:
+                if not _es_error_pk_duplicada(exc):
+                    raise
+                _sincronizar_secuencia_minuta_patron_rangos()
+                rango = form.save()
             mensaje_ok = 'Registro de minuta patrón creado correctamente.'
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'success': True, 'message': mensaje_ok})
