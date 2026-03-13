@@ -83,16 +83,11 @@
             <p class="text-center text-muted">Cargando checklist...</p>
         </div>
 
-        <div style="display:flex; gap:12px; margin-top:16px;">
-            <button class="btn btn-primary" id="btn-guardar-checklist">
-                <i class="fas fa-save"></i> Guardar Checklist
+        <div style="display:flex; gap:12px; margin-top:16px; align-items:center;">
+            <button class="btn btn-success" id="btn-finalizar-revision" disabled>
+                <i class="fas fa-flag-checkered"></i> Finalizar Revisión
             </button>
-            <button class="btn btn-danger" id="btn-devolver">
-                <i class="fas fa-undo"></i> Devolver al Líder
-            </button>
-            <button class="btn btn-success" id="btn-aprobar-compras">
-                <i class="fas fa-check"></i> Aprobar
-            </button>
+            <span id="label-pendientes" class="text-muted" style="font-size:13px;"></span>
         </div>
     </div>
 
@@ -151,6 +146,7 @@
     const DEVOLVER_URL = '{% url "contabilidad:api_devolver_compras" registro.pk %}';
     const APROBAR_URL = '{% url "contabilidad:api_aprobar_compras" registro.pk %}';
     const RESPONDER_URL = '{% url "contabilidad:api_responder_observacion" registro.pk %}';
+    const FINALIZAR_URL = '{% url "contabilidad:api_finalizar_revision" registro.pk %}';
     const HISTORIAL_URL = '{% url "contabilidad:api_historial" registro.pk %}';
 </script>
 {% endblock %}

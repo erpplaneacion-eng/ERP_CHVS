@@ -492,28 +492,57 @@
 }
 
 /* ===================================== */
-/* CHECKLIST POR FACTURA                 */
+/* CHECKLIST POR FACTURA — ACORDEÓN      */
 /* ===================================== */
 
 .checklist-factura-bloque {
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
     overflow: hidden;
 }
 
 .checklist-factura-header {
     background: #f1f5f9;
     padding: 10px 16px;
-    border-bottom: 1px solid #e2e8f0;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     font-size: 14px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
 }
 
-.checklist-factura-header i {
+.checklist-factura-header:hover {
+    background: #e2e8f0;
+}
+
+.checklist-factura-header i.fa-file-invoice {
     color: #1e3a8a;
+}
+
+.checklist-factura-header .chevron {
+    margin-left: auto;
+    color: #64748b;
+    transition: transform 0.25s ease;
+    font-size: 12px;
+}
+
+.checklist-factura-bloque.abierto .checklist-factura-header {
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.checklist-factura-bloque.abierto .chevron {
+    transform: rotate(180deg);
+}
+
+.checklist-factura-body {
+    display: none;
+}
+
+.checklist-factura-bloque.abierto .checklist-factura-body {
+    display: block;
 }
 
 .checklist-factura-bloque .checklist-table {
@@ -525,4 +554,34 @@
 .checklist-factura-bloque .checklist-table thead th {
     background: #f8fafc;
     font-size: 12px;
+}
+
+.checklist-badge-pendientes {
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+.checklist-badge-ok {
+    background: #d1fae5;
+    color: #065f46;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+.checklist-badge-gris {
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    margin-left: 4px;
 }

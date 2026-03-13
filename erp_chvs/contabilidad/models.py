@@ -91,12 +91,25 @@ class Factura(models.Model):
         related_name='facturas',
         verbose_name="Registro Contable"
     )
+    ESTADO_COMPRAS_CHOICES = [
+        ('PENDIENTE', 'Pendiente'),
+        ('APROBADA', 'Aprobada por Compras'),
+        ('DEVUELTA', 'Devuelta al Líder'),
+    ]
+
     numero_factura = models.CharField(max_length=100, verbose_name="Número de Factura")
     proveedor = models.CharField(max_length=200, verbose_name="Proveedor")
     concepto = models.CharField(max_length=300, verbose_name="Concepto")
     valor = models.DecimalField(max_digits=14, decimal_places=2, verbose_name="Valor")
     fecha_factura = models.DateField(verbose_name="Fecha de Factura")
     fecha_carga = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Carga")
+    estado_compras = models.CharField(
+        max_length=10,
+        choices=ESTADO_COMPRAS_CHOICES,
+        default='PENDIENTE',
+        verbose_name="Estado Compras",
+    )
+    comentario_devolucion = models.TextField(blank=True, verbose_name="Motivo de Devolución")
 
     class Meta:
         db_table = 'contabilidad_facturas'

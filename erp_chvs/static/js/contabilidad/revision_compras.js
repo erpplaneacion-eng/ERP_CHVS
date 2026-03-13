@@ -1,8 +1,10 @@
-// revision_compras.js — Revisión de Compras
+// revision_compras.js — Revisión de Compras (por factura)
 
 class RevisionComprasManager {
     constructor() {
         this.saving = false;
+        this.totalFacturas = 0;
+        this.decididas = 0;
         this.init();
     }
 
@@ -35,15 +37,11 @@ class RevisionComprasManager {
 
     setupModales() {
         const btnConfirmar = document.getElementById('btn-confirmar-recepcion');
-        const btnDevolver = document.getElementById('btn-devolver');
-        const btnAprobar = document.getElementById('btn-aprobar-compras');
-        const btnGuardarChecklist = document.getElementById('btn-guardar-checklist');
+        const btnFinalizar = document.getElementById('btn-finalizar-revision');
         const btnResponder = document.getElementById('btn-responder-observacion');
 
         if (btnConfirmar) btnConfirmar.addEventListener('click', () => this.confirmarRecepcion());
-        if (btnDevolver) btnDevolver.addEventListener('click', () => this.abrirModalDevolucion());
-        if (btnAprobar) btnAprobar.addEventListener('click', () => this.aprobar());
-        if (btnGuardarChecklist) btnGuardarChecklist.addEventListener('click', () => this.guardarChecklist());
+        if (btnFinalizar) btnFinalizar.addEventListener('click', () => this.finalizarRevision());
         if (btnResponder) btnResponder.addEventListener('click', () => this.responderObservacion());
 
         // Modal devolución
@@ -54,23 +52,27 @@ class RevisionComprasManager {
 
         if (closeBtn) closeBtn.addEventListener('click', () => this.cerrarModalDevolucion());
         if (cancelBtn) cancelBtn.addEventListener('click', () => this.cerrarModalDevolucion());
-        if (confirmarBtn) confirmarBtn.addEventListener('click', () => this.devolver());
+        if (confirmarBtn) confirmarBtn.addEventListener('click', () => this.confirmarDevolucionFactura());
 
         window.addEventListener('click', (e) => {
             if (e.target === modal) this.cerrarModalDevolucion();
         });
     }
 
-    abrirModalDevolucion() {
+    abrirModalDevolucion(facturaId, facturaNumero) {
         const modal = document.getElementById('devolucionModal');
         const textarea = document.getElementById('motivo-devolucion');
         if (textarea) textarea.value = '';
+        // Guardar la factura actual en el modal
+        modal.dataset.facturaId = facturaId;
+        const titulo = modal.querySelector('h3');
+        if (titulo) titulo.innerHTML = `<i class="fas fa-undo"></i> Devolver Factura ${facturaNumero}`;
         if (modal) modal.style.display = 'block';
     }
 
     cerrarModalDevolucion() {
         const modal = document.getElementById('devolucionModal');
-        if (modal) modal.style.display = 'none';
+        if (modal) { modal.style.display = 'none'; delete modal.dataset.facturaId; }
     }
 
     async cargarDetalle() {
@@ -156,87 +158,151 @@ class RevisionComprasManager {
             return;
         }
 
+        this.totalFacturas = facturas.length;
+        this.decididas = facturas.filter(f => f.estado_compras !== 'PENDIENTE').length;
+        this.actualizarBotonFinalizar();
+
         const fragment = document.createDocumentFragment();
         facturas.forEach(factura => {
-            const bloque = document.createElement('div');
-            bloque.className = 'checklist-factura-bloque';
-
-            const encabezado = document.createElement('div');
-            encabezado.className = 'checklist-factura-header';
-            encabezado.innerHTML = `
-                <i class="fas fa-file-invoice"></i>
-                <strong>${factura.numero_factura}</strong>
-                <span class="text-muted" style="margin-left:8px;">${factura.proveedor}</span>
-                <span class="text-muted" style="margin-left:8px; font-size:12px;">${factura.concepto}</span>
-            `;
-            bloque.appendChild(encabezado);
-
-            const tabla = document.createElement('table');
-            tabla.className = 'data-table checklist-table';
-            tabla.innerHTML = `
-                <thead>
-                    <tr>
-                        <th style="width:36px;">#</th>
-                        <th>Ítem</th>
-                        <th style="width:90px;">Obligatorio</th>
-                        <th style="width:140px;">Estado</th>
-                        <th>Observación</th>
-                    </tr>
-                </thead>
-            `;
-            const tbody = document.createElement('tbody');
-
-            if (!factura.verificaciones.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Sin ítems.</td></tr>';
-            } else {
-                const frag = document.createDocumentFragment();
-                factura.verificaciones.forEach((v, idx) => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${idx + 1}</td>
-                        <td>
-                            <strong>${v.item_nombre}</strong>
-                            ${v.item_descripcion ? `<br><small class="text-muted">${v.item_descripcion}</small>` : ''}
-                        </td>
-                        <td>${v.item_obligatorio ? '<span class="badge" style="background:#fee2e2;color:#991b1b;">Sí</span>' : '<span class="badge badge-secondary">No</span>'}</td>
-                        <td>
-                            <select class="checklist-estado-select" data-id="${v.id}" style="padding:6px; border:1px solid #ddd; border-radius:4px; min-width:100px;">
-                                <option value="PENDIENTE" ${v.estado === 'PENDIENTE' ? 'selected' : ''}>Pendiente</option>
-                                <option value="OK" ${v.estado === 'OK' ? 'selected' : ''}>OK</option>
-                                <option value="NO_OK" ${v.estado === 'NO_OK' ? 'selected' : ''}>No OK</option>
-                                <option value="NA" ${v.estado === 'NA' ? 'selected' : ''}>N/A</option>
-                            </select>
-                        </td>
-                        <td>
-                            <textarea class="checklist-obs-textarea" data-id="${v.id}" rows="2"
-                                style="width:100%; padding:6px; border:1px solid #ddd; border-radius:4px; font-size:13px; resize:vertical;"
-                                placeholder="Observación opcional...">${v.observacion || ''}</textarea>
-                        </td>
-                    `;
-                    frag.appendChild(tr);
-                });
-                tbody.appendChild(frag);
-            }
-
-            tabla.appendChild(tbody);
-            bloque.appendChild(tabla);
-            fragment.appendChild(bloque);
+            fragment.appendChild(this.crearBloqueFactura(factura));
         });
         container.appendChild(fragment);
     }
 
-    async guardarChecklist() {
-        if (this.saving) return;
-        this.saving = true;
+    crearBloqueFactura(factura) {
+        const estado = factura.estado_compras;
+        const badgeMap = {
+            APROBADA: '<span class="checklist-badge-ok"><i class="fas fa-check"></i> Aprobada</span>',
+            DEVUELTA:  '<span class="checklist-badge-pendientes"><i class="fas fa-undo"></i> Devuelta</span>',
+            PENDIENTE: '<span class="checklist-badge-gris">Pendiente</span>',
+        };
+        const badge = badgeMap[estado] || '';
 
-        const btn = document.getElementById('btn-guardar-checklist');
-        if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+        const bloque = document.createElement('div');
+        bloque.className = 'checklist-factura-bloque';
+        bloque.dataset.facturaId = factura.factura_id;
+        bloque.dataset.estadoCompras = estado;
 
-        const selects = document.querySelectorAll('.checklist-estado-select');
+        // Encabezado (acordeón) — todos colapsados por defecto
+        const encabezado = document.createElement('div');
+        encabezado.className = 'checklist-factura-header';
+        encabezado.innerHTML = `
+            <i class="fas fa-file-invoice"></i>
+            <strong>${factura.numero_factura}</strong>
+            <span class="text-muted" style="font-size:13px;">${factura.proveedor}</span>
+            <span class="text-muted" style="font-size:12px;">${factura.concepto}</span>
+            <span class="factura-estado-badge">${badge}</span>
+            <i class="fas fa-chevron-down chevron"></i>
+        `;
+        encabezado.addEventListener('click', () => bloque.classList.toggle('abierto'));
+        bloque.appendChild(encabezado);
+
+        // Body
+        const body = document.createElement('div');
+        body.className = 'checklist-factura-body';
+
+        // Banner si está devuelta
+        if (estado === 'DEVUELTA' && factura.comentario_devolucion) {
+            const banner = document.createElement('div');
+            banner.className = 'banner-devolucion';
+            banner.style.cssText = 'margin:12px 16px; border-radius:6px;';
+            banner.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <strong>Motivo:</strong> ${factura.comentario_devolucion}`;
+            body.appendChild(banner);
+        }
+
+        // Tabla checklist
+        const tabla = document.createElement('table');
+        tabla.className = 'data-table checklist-table';
+        tabla.innerHTML = `
+            <thead>
+                <tr>
+                    <th style="width:36px;">#</th>
+                    <th>Ítem</th>
+                    <th style="width:90px;">Obligatorio</th>
+                    <th style="width:140px;">Estado</th>
+                    <th>Observación</th>
+                </tr>
+            </thead>
+        `;
+        const tbody = document.createElement('tbody');
+        const editable = estado === 'PENDIENTE';
+
+        if (!factura.verificaciones.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Sin ítems.</td></tr>';
+        } else {
+            const frag = document.createDocumentFragment();
+            factura.verificaciones.forEach((v, i) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${i + 1}</td>
+                    <td>
+                        <strong>${v.item_nombre}</strong>
+                        ${v.item_descripcion ? `<br><small class="text-muted">${v.item_descripcion}</small>` : ''}
+                    </td>
+                    <td>${v.item_obligatorio ? '<span class="badge" style="background:#fee2e2;color:#991b1b;">Sí</span>' : '<span class="badge badge-secondary">No</span>'}</td>
+                    <td>
+                        ${editable
+                            ? `<select class="checklist-estado-select" data-id="${v.id}" style="padding:6px;border:1px solid #ddd;border-radius:4px;min-width:100px;">
+                                <option value="PENDIENTE" ${v.estado === 'PENDIENTE' ? 'selected' : ''}>Pendiente</option>
+                                <option value="OK" ${v.estado === 'OK' ? 'selected' : ''}>OK</option>
+                                <option value="NO_OK" ${v.estado === 'NO_OK' ? 'selected' : ''}>No OK</option>
+                                <option value="NA" ${v.estado === 'NA' ? 'selected' : ''}>N/A</option>
+                               </select>`
+                            : `<strong>${{OK:'OK',NO_OK:'No OK',NA:'N/A',PENDIENTE:'Pendiente'}[v.estado]||v.estado}</strong>`
+                        }
+                    </td>
+                    <td>
+                        ${editable
+                            ? `<textarea class="checklist-obs-textarea" data-id="${v.id}" rows="2"
+                                style="width:100%;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:13px;resize:vertical;"
+                                placeholder="Observación opcional...">${v.observacion || ''}</textarea>`
+                            : (v.observacion || '—')
+                        }
+                    </td>
+                `;
+                frag.appendChild(tr);
+            });
+            tbody.appendChild(frag);
+        }
+
+        tabla.appendChild(tbody);
+        body.appendChild(tabla);
+
+        // Botones por factura (solo si PENDIENTE)
+        if (editable) {
+            const acciones = document.createElement('div');
+            acciones.style.cssText = 'display:flex; gap:10px; padding:12px 16px; background:#f8fafc; border-top:1px solid #e2e8f0;';
+            acciones.innerHTML = `
+                <button class="btn btn-sm btn-success btn-aprobar-factura" data-factura-id="${factura.factura_id}">
+                    <i class="fas fa-check"></i> Aprobar Factura
+                </button>
+                <button class="btn btn-sm btn-danger btn-devolver-factura" data-factura-id="${factura.factura_id}" data-numero="${factura.numero_factura}">
+                    <i class="fas fa-undo"></i> Devolver Factura
+                </button>
+            `;
+            // Eventos
+            acciones.querySelector('.btn-aprobar-factura').addEventListener('click', () => {
+                this.aprobarFactura(factura.factura_id, bloque);
+            });
+            acciones.querySelector('.btn-devolver-factura').addEventListener('click', () => {
+                this.abrirModalDevolucion(factura.factura_id, factura.numero_factura);
+            });
+            body.appendChild(acciones);
+        }
+
+        bloque.appendChild(body);
+        return bloque;
+    }
+
+    async guardarChecklistFactura(facturaId) {
+        const bloque = document.querySelector(`.checklist-factura-bloque[data-factura-id="${facturaId}"]`);
+        if (!bloque) return;
+
+        const selects = bloque.querySelectorAll('.checklist-estado-select');
         const items = [];
         selects.forEach(sel => {
             const id = sel.dataset.id;
-            const obs = document.querySelector(`.checklist-obs-textarea[data-id="${id}"]`);
+            const obs = bloque.querySelector(`.checklist-obs-textarea[data-id="${id}"]`);
             items.push({
                 verificacion_id: parseInt(id),
                 estado: sel.value,
@@ -244,43 +310,166 @@ class RevisionComprasManager {
             });
         });
 
+        if (!items.length) return;
+
+        await fetch(GUARDAR_CHECKLIST_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': this.getCookie('csrftoken'),
+            },
+            body: JSON.stringify({ items }),
+        });
+    }
+
+    async aprobarFactura(facturaId, bloque) {
+        if (this.saving) return;
+        this.saving = true;
+
+        // Primero guardar el checklist de esta factura
+        await this.guardarChecklistFactura(facturaId);
+
         try {
-            const response = await fetch(GUARDAR_CHECKLIST_URL, {
+            const response = await fetch(`/contabilidad/api/facturas/${facturaId}/aprobar/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCookie('csrftoken'),
                 },
-                body: JSON.stringify({ items }),
+                body: JSON.stringify({}),
             });
             const data = await response.json();
             if (data.success) {
-                this.mostrarAlerta('Checklist guardado exitosamente.', 'success');
+                this.marcarFacturaDecidida(bloque, 'APROBADA');
+                this.mostrarAlerta('Factura aprobada.', 'success');
             } else {
-                this.mostrarAlerta(data.error || 'Error al guardar checklist.', 'error');
+                this.mostrarAlerta(data.error || 'Error al aprobar.', 'error');
             }
         } catch (error) {
             this.mostrarAlerta('Error de conexión.', 'error');
         } finally {
             this.saving = false;
-            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Guardar Checklist'; }
+        }
+    }
+
+    async confirmarDevolucionFactura() {
+        const modal = document.getElementById('devolucionModal');
+        const facturaId = modal?.dataset?.facturaId;
+        const motivo = document.getElementById('motivo-devolucion')?.value?.trim();
+
+        if (!motivo) {
+            this.mostrarAlerta('El motivo es obligatorio.', 'warning');
+            return;
+        }
+        if (!facturaId) return;
+
+        this.cerrarModalDevolucion();
+
+        // Primero guardar el checklist de esta factura
+        await this.guardarChecklistFactura(facturaId);
+
+        try {
+            const response = await fetch(`/contabilidad/api/facturas/${facturaId}/devolver/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCookie('csrftoken'),
+                },
+                body: JSON.stringify({ comentario: motivo }),
+            });
+            const data = await response.json();
+            if (data.success) {
+                const bloque = document.querySelector(`.checklist-factura-bloque[data-factura-id="${facturaId}"]`);
+                if (bloque) this.marcarFacturaDecidida(bloque, 'DEVUELTA', motivo);
+                this.mostrarAlerta('Factura devuelta al líder.', 'success');
+            } else {
+                this.mostrarAlerta(data.error || 'Error al devolver.', 'error');
+            }
+        } catch (error) {
+            this.mostrarAlerta('Error de conexión.', 'error');
+        }
+    }
+
+    marcarFacturaDecidida(bloque, nuevoEstado, motivo) {
+        bloque.dataset.estadoCompras = nuevoEstado;
+
+        // Actualizar badge en el encabezado
+        const badgeEl = bloque.querySelector('.factura-estado-badge');
+        if (badgeEl) {
+            badgeEl.innerHTML = nuevoEstado === 'APROBADA'
+                ? '<span class="checklist-badge-ok"><i class="fas fa-check"></i> Aprobada</span>'
+                : '<span class="checklist-badge-pendientes"><i class="fas fa-undo"></i> Devuelta</span>';
+        }
+
+        // Deshabilitar selects y textareas
+        bloque.querySelectorAll('.checklist-estado-select, .checklist-obs-textarea').forEach(el => {
+            el.disabled = true;
+        });
+
+        // Ocultar botones de acción
+        const acciones = bloque.querySelector('.btn-aprobar-factura')?.closest('div');
+        if (acciones) acciones.style.display = 'none';
+
+        // Actualizar contador y botón finalizar
+        this.decididas++;
+        this.actualizarBotonFinalizar();
+    }
+
+    actualizarBotonFinalizar() {
+        const btn = document.getElementById('btn-finalizar-revision');
+        const label = document.getElementById('label-pendientes');
+        const pendientes = this.totalFacturas - this.decididas;
+
+        if (btn) btn.disabled = pendientes > 0;
+        if (label) {
+            label.textContent = pendientes > 0
+                ? `${pendientes} factura${pendientes > 1 ? 's' : ''} sin decidir`
+                : 'Todas las facturas decididas — puedes finalizar';
+        }
+    }
+
+    async finalizarRevision() {
+        const confirmado = await Swal.fire({
+            title: '¿Finalizar revisión?',
+            text: 'Las facturas aprobadas pasarán a Contabilidad. Las devueltas regresarán al líder.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, finalizar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#0d9488',
+        });
+        if (!confirmado.isConfirmed) return;
+
+        try {
+            const response = await fetch(FINALIZAR_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCookie('csrftoken'),
+                },
+                body: JSON.stringify({}),
+            });
+            const data = await response.json();
+            if (data.success) {
+                this.mostrarAlerta('Revisión finalizada.', 'success');
+                setTimeout(() => window.location.href = '/contabilidad/bandeja-compras/', 1500);
+            } else {
+                this.mostrarAlerta(data.error || 'Error al finalizar.', 'error');
+            }
+        } catch (error) {
+            this.mostrarAlerta('Error de conexión.', 'error');
         }
     }
 
     async confirmarRecepcion() {
         if (this.saving) return;
         this.saving = true;
-
         const btn = document.getElementById('btn-confirmar-recepcion');
         if (btn) { btn.disabled = true; btn.textContent = 'Confirmando...'; }
-
         try {
             const response = await fetch(CONFIRMAR_URL, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCookie('csrftoken'),
-                },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCookie('csrftoken') },
                 body: JSON.stringify({}),
             });
             const data = await response.json();
@@ -298,96 +487,13 @@ class RevisionComprasManager {
         }
     }
 
-    async devolver() {
-        const motivo = document.getElementById('motivo-devolucion')?.value?.trim();
-        if (!motivo) {
-            this.mostrarAlerta('El motivo de devolución es obligatorio.', 'warning');
-            return;
-        }
-
-        this.cerrarModalDevolucion();
-
-        const confirmado = await Swal.fire({
-            title: '¿Devolver el registro?',
-            text: 'Se notificará al líder para que corrija y reenvíe.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Sí, devolver',
-            cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#d97706',
-        });
-
-        if (!confirmado.isConfirmed) return;
-
-        try {
-            const response = await fetch(DEVOLVER_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCookie('csrftoken'),
-                },
-                body: JSON.stringify({ comentario: motivo }),
-            });
-            const data = await response.json();
-            if (data.success) {
-                this.mostrarAlerta('Registro devuelto al líder.', 'success');
-                setTimeout(() => window.location.href = '/contabilidad/bandeja-compras/', 1500);
-            } else {
-                this.mostrarAlerta(data.error || 'Error al devolver.', 'error');
-            }
-        } catch (error) {
-            this.mostrarAlerta('Error de conexión.', 'error');
-        }
-    }
-
-    async aprobar() {
-        const confirmado = await Swal.fire({
-            title: '¿Aprobar el registro?',
-            text: 'El registro pasará a revisión de Contabilidad.',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Sí, aprobar',
-            cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#0d9488',
-        });
-
-        if (!confirmado.isConfirmed) return;
-
-        try {
-            const response = await fetch(APROBAR_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCookie('csrftoken'),
-                },
-                body: JSON.stringify({}),
-            });
-            const data = await response.json();
-            if (data.success) {
-                this.mostrarAlerta('Registro aprobado por Compras.', 'success');
-                setTimeout(() => window.location.href = '/contabilidad/bandeja-compras/', 1500);
-            } else {
-                this.mostrarAlerta(data.error || 'Error al aprobar.', 'error');
-            }
-        } catch (error) {
-            this.mostrarAlerta('Error de conexión.', 'error');
-        }
-    }
-
     async responderObservacion() {
         const respuesta = document.getElementById('respuesta-observacion')?.value?.trim();
-        if (!respuesta) {
-            this.mostrarAlerta('La respuesta es obligatoria.', 'warning');
-            return;
-        }
-
+        if (!respuesta) { this.mostrarAlerta('La respuesta es obligatoria.', 'warning'); return; }
         try {
             const response = await fetch(RESPONDER_URL, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCookie('csrftoken'),
-                },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCookie('csrftoken') },
                 body: JSON.stringify({ comentario: respuesta }),
             });
             const data = await response.json();
@@ -415,10 +521,7 @@ class RevisionComprasManager {
     renderHistorial(historial) {
         const container = document.getElementById('historial-container');
         if (!container) return;
-        if (!historial.length) {
-            container.innerHTML = '<p class="text-muted">Sin historial.</p>';
-            return;
-        }
+        if (!historial.length) { container.innerHTML = '<p class="text-muted">Sin historial.</p>'; return; }
         const fragment = document.createDocumentFragment();
         historial.forEach(h => {
             const item = document.createElement('div');
@@ -439,15 +542,13 @@ class RevisionComprasManager {
     mostrarAlerta(mensaje, tipo) {
         const colores = { success: '#27ae60', error: '#e74c3c', warning: '#f39c12', info: '#3498db' };
         const alerta = document.createElement('div');
-        alerta.style.cssText = `
-            position:fixed; top:20px; right:20px; z-index:10000;
-            padding:15px 20px; border-radius:5px; color:white; font-weight:500;
-            min-width:300px; box-shadow:0 4px 6px rgba(0,0,0,.1);
-            display:flex; align-items:center; gap:10px;
-            background-color:${colores[tipo] || colores.info};
-            animation: slideInRight 0.3s ease;
-        `;
-        alerta.innerHTML = `<span>${mensaje}</span><button style="background:none;border:none;color:white;font-size:18px;cursor:pointer;margin-left:auto;" onclick="this.parentElement.remove()">×</button>`;
+        alerta.style.cssText = `position:fixed;top:20px;right:20px;z-index:10000;padding:15px 20px;border-radius:5px;color:white;font-weight:500;min-width:300px;box-shadow:0 4px 6px rgba(0,0,0,.1);display:flex;align-items:center;gap:10px;background-color:${colores[tipo]||colores.info};`;
+        const closeBtn = document.createElement('button');
+        closeBtn.style.cssText = 'background:none;border:none;color:white;font-size:18px;cursor:pointer;margin-left:auto;';
+        closeBtn.textContent = '×';
+        closeBtn.addEventListener('click', () => alerta.remove());
+        alerta.appendChild(document.createTextNode(mensaje));
+        alerta.appendChild(closeBtn);
         document.body.appendChild(alerta);
         setTimeout(() => { if (alerta.parentElement) alerta.remove(); }, 5000);
     }
@@ -457,10 +558,7 @@ class RevisionComprasManager {
         if (document.cookie) {
             for (const cookie of document.cookie.split(';')) {
                 const c = cookie.trim();
-                if (c.startsWith(name + '=')) {
-                    cookieValue = decodeURIComponent(c.substring(name.length + 1));
-                    break;
-                }
+                if (c.startsWith(name + '=')) { cookieValue = decodeURIComponent(c.substring(name.length + 1)); break; }
             }
         }
         return cookieValue;

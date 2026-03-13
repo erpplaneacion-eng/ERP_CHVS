@@ -96,11 +96,16 @@ class ContabilidadService:
     @staticmethod
     def eliminar_factura(factura, usuario):
         """
-        Elimina una Factura. Solo permitido cuando el registro está en estado editable.
+        Elimina una Factura. En DEVUELTO_COMPRAS solo se pueden eliminar facturas DEVUELTA.
         """
-        if factura.registro.estado not in ContabilidadService.ESTADOS_EDITABLES:
+        estado_registro = factura.registro.estado
+        if estado_registro not in ContabilidadService.ESTADOS_EDITABLES:
             raise ValueError(
-                f"No se puede eliminar facturas en estado '{factura.registro.estado}'."
+                f"No se puede eliminar facturas en estado '{estado_registro}'."
+            )
+        if estado_registro == 'DEVUELTO_COMPRAS' and factura.estado_compras != 'DEVUELTA':
+            raise ValueError(
+                "Solo se pueden eliminar facturas que fueron devueltas por Compras."
             )
         factura.delete()
 
@@ -137,6 +142,17 @@ class ContabilidadService:
         es_reenvio = registro.estado == 'DEVUELTO_COMPRAS'
         fecha_field = 'fecha_reenvio' if es_reenvio else 'fecha_envio'
         accion = 'REENVIO' if es_reenvio else 'ENVIO'
+
+        if es_reenvio:
+            # Resetear solo las facturas DEVUELTA; las APROBADA permanecen
+            devueltas_ids = list(
+                registro.facturas.filter(estado_compras='DEVUELTA').values_list('id', flat=True)
+            )
+            # Borrar su checklist anterior (se recreará en confirmar_recepcion)
+            VerificacionChecklist.objects.filter(factura_id__in=devueltas_ids).delete()
+            registro.facturas.filter(id__in=devueltas_ids).update(
+                estado_compras='PENDIENTE', comentario_devolucion=''
+            )
 
         ContabilidadService._transicion(
             registro=registro,
@@ -210,37 +226,75 @@ class ContabilidadService:
 
     @staticmethod
     @transaction.atomic
-    def aprobar_compras(registro, usuario, comentario=''):
+    def aprobar_factura(factura, usuario):
         """
-        Transición EN_REVISION_COMPRAS → APROBADO_COMPRAS.
-        También acepta desde OBSERVADO_CONTABILIDAD (respuesta a observación).
-        Valida que no haya ítems obligatorios en PENDIENTE.
+        Compras aprueba una factura individual.
+        Valida que no queden ítems obligatorios en PENDIENTE en esa factura.
         """
-        if registro.estado not in ('EN_REVISION_COMPRAS', 'OBSERVADO_CONTABILIDAD'):
-            raise ValueError(
-                f"Solo se puede aprobar desde EN_REVISION_COMPRAS u OBSERVADO_CONTABILIDAD. "
-                f"Estado actual: '{registro.estado}'"
-            )
-
-        # Validar checklist: no puede haber ítems obligatorios en PENDIENTE en ninguna factura
-        pendientes_obligatorios = VerificacionChecklist.objects.filter(
-            factura__registro=registro,
-            estado='PENDIENTE',
-            item__obligatorio=True,
+        if factura.registro.estado != 'EN_REVISION_COMPRAS':
+            raise ValueError("Solo se puede aprobar facturas en estado EN_REVISION_COMPRAS.")
+        if factura.estado_compras != 'PENDIENTE':
+            raise ValueError("Esta factura ya fue decidida.")
+        pendientes = VerificacionChecklist.objects.filter(
+            factura=factura, estado='PENDIENTE', item__obligatorio=True,
         ).count()
-        if pendientes_obligatorios > 0:
+        if pendientes > 0:
             raise ValueError(
-                f"Hay {pendientes_obligatorios} ítem(s) obligatorio(s) del checklist sin verificar."
+                f"Hay {pendientes} ítem(s) obligatorio(s) del checklist sin verificar en esta factura."
+            )
+        factura.estado_compras = 'APROBADA'
+        factura.comentario_devolucion = ''
+        factura.save(update_fields=['estado_compras', 'comentario_devolucion'])
+
+    @staticmethod
+    @transaction.atomic
+    def devolver_factura(factura, usuario, comentario):
+        """
+        Compras devuelve una factura individual al líder con un motivo.
+        """
+        if factura.registro.estado != 'EN_REVISION_COMPRAS':
+            raise ValueError("Solo se puede devolver facturas en estado EN_REVISION_COMPRAS.")
+        if factura.estado_compras != 'PENDIENTE':
+            raise ValueError("Esta factura ya fue decidida.")
+        if not comentario or not comentario.strip():
+            raise ValueError("El motivo de devolución es obligatorio.")
+        factura.estado_compras = 'DEVUELTA'
+        factura.comentario_devolucion = comentario.strip()
+        factura.save(update_fields=['estado_compras', 'comentario_devolucion'])
+
+    @staticmethod
+    @transaction.atomic
+    def finalizar_revision_compras(registro, usuario):
+        """
+        Finaliza la revisión de Compras cuando todas las facturas han sido decididas.
+        - Si todas APROBADA → APROBADO_COMPRAS
+        - Si alguna DEVUELTA → DEVUELTO_COMPRAS
+        - No puede haber facturas en PENDIENTE.
+        """
+        if registro.estado != 'EN_REVISION_COMPRAS':
+            raise ValueError(
+                f"Solo se puede finalizar desde EN_REVISION_COMPRAS. Estado actual: '{registro.estado}'"
+            )
+        facturas = list(registro.facturas.all())
+        if not facturas:
+            raise ValueError("El registro no tiene facturas.")
+
+        pendientes = [f for f in facturas if f.estado_compras == 'PENDIENTE']
+        if pendientes:
+            raise ValueError(
+                f"Hay {len(pendientes)} factura(s) sin decidir. "
+                "Aprueba o devuelve cada factura antes de finalizar."
             )
 
-        if registro.estado == 'OBSERVADO_CONTABILIDAD':
-            # Respuesta a una observación de contabilidad
+        devueltas = [f for f in facturas if f.estado_compras == 'DEVUELTA']
+        if devueltas:
+            num = len(devueltas)
             ContabilidadService._transicion(
                 registro=registro,
-                accion='RESPUESTA_COMPRAS',
-                estado_nuevo='APROBADO_COMPRAS',
-                fecha_field='fecha_respuesta_compras',
-                comentario=comentario,
+                accion='DEVOLUCION_COMPRAS',
+                estado_nuevo='DEVUELTO_COMPRAS',
+                fecha_field='fecha_devolucion_compras',
+                comentario=f"{num} factura(s) devuelta(s) al líder para corrección.",
                 usuario=usuario,
             )
         else:
@@ -249,16 +303,38 @@ class ContabilidadService:
                 accion='APROBACION_COMPRAS',
                 estado_nuevo='APROBADO_COMPRAS',
                 fecha_field='fecha_aprobacion_compras',
-                comentario=comentario,
+                comentario='',
                 usuario=usuario,
             )
         return registro
 
     @staticmethod
+    @transaction.atomic
+    def aprobar_compras(registro, usuario, comentario=''):
+        """
+        Usado solo para la transición OBSERVADO_CONTABILIDAD → APROBADO_COMPRAS
+        (respuesta de Compras a una observación de Contabilidad).
+        """
+        if registro.estado != 'OBSERVADO_CONTABILIDAD':
+            raise ValueError(
+                f"aprobar_compras solo acepta desde OBSERVADO_CONTABILIDAD. "
+                f"Estado actual: '{registro.estado}'"
+            )
+        ContabilidadService._transicion(
+            registro=registro,
+            accion='RESPUESTA_COMPRAS',
+            estado_nuevo='APROBADO_COMPRAS',
+            fecha_field='fecha_respuesta_compras',
+            comentario=comentario,
+            usuario=usuario,
+        )
+        return registro
+
+    @staticmethod
     def inicializar_checklist(registro):
         """
-        Para cada factura del registro, crea filas de VerificacionChecklist
-        con los ItemChecklist activos aplicables al tipo del registro.
+        Para cada factura PENDIENTE del registro, crea filas de VerificacionChecklist.
+        Las facturas APROBADA mantienen su checklist anterior intacto.
         Usa ignore_conflicts=True para ser idempotente.
         """
         items = list(ItemChecklist.objects.filter(
@@ -267,7 +343,8 @@ class ContabilidadService:
             models.Q(tipo_proceso='AMBOS') | models.Q(tipo_proceso=registro.tipo)
         ))
 
-        facturas = list(registro.facturas.all())
+        # Solo facturas que están siendo revisadas en esta ronda
+        facturas = list(registro.facturas.filter(estado_compras='PENDIENTE'))
         verificaciones = [
             VerificacionChecklist(
                 factura=factura,

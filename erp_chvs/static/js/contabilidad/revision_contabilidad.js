@@ -89,19 +89,31 @@ class RevisionContabilidadManager {
         const etiquetasEstado = { OK: 'OK', NO_OK: 'No OK', NA: 'N/A', PENDIENTE: 'Pendiente' };
 
         const fragment = document.createDocumentFragment();
-        facturas.forEach(factura => {
+        facturas.forEach((factura, idx) => {
+            const pendientes = factura.verificaciones.filter(v => v.estado === 'PENDIENTE').length;
+            const todos_ok = factura.verificaciones.length > 0 && pendientes === 0;
+            const badge = pendientes > 0
+                ? `<span class="checklist-badge-pendientes">${pendientes} pendiente${pendientes > 1 ? 's' : ''}</span>`
+                : (todos_ok ? '<span class="checklist-badge-ok">Completo</span>' : '');
+
             const bloque = document.createElement('div');
-            bloque.className = 'checklist-factura-bloque';
+            bloque.className = `checklist-factura-bloque${idx === 0 ? ' abierto' : ''}`;
 
             const encabezado = document.createElement('div');
             encabezado.className = 'checklist-factura-header';
             encabezado.innerHTML = `
                 <i class="fas fa-file-invoice"></i>
                 <strong>${factura.numero_factura}</strong>
-                <span class="text-muted" style="margin-left:8px;">${factura.proveedor}</span>
-                <span class="text-muted" style="margin-left:8px; font-size:12px;">${factura.concepto}</span>
+                <span class="text-muted" style="font-size:13px;">${factura.proveedor}</span>
+                <span class="text-muted" style="font-size:12px;">${factura.concepto}</span>
+                ${badge}
+                <i class="fas fa-chevron-down chevron"></i>
             `;
+            encabezado.addEventListener('click', () => bloque.classList.toggle('abierto'));
             bloque.appendChild(encabezado);
+
+            const body = document.createElement('div');
+            body.className = 'checklist-factura-body';
 
             const tabla = document.createElement('table');
             tabla.className = 'data-table checklist-table';
@@ -123,11 +135,11 @@ class RevisionContabilidadManager {
                 tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Sin ítems.</td></tr>';
             } else {
                 const frag = document.createDocumentFragment();
-                factura.verificaciones.forEach((v, idx) => {
+                factura.verificaciones.forEach((v, i) => {
                     const tr = document.createElement('tr');
                     tr.style.background = coloresEstado[v.estado] || '';
                     tr.innerHTML = `
-                        <td>${idx + 1}</td>
+                        <td>${i + 1}</td>
                         <td><strong>${v.item_nombre}</strong>${v.item_descripcion ? '<br><small class="text-muted">' + v.item_descripcion + '</small>' : ''}</td>
                         <td>${v.item_obligatorio ? 'Sí' : 'No'}</td>
                         <td><strong>${etiquetasEstado[v.estado] || v.estado}</strong></td>
@@ -140,7 +152,8 @@ class RevisionContabilidadManager {
             }
 
             tabla.appendChild(tbody);
-            bloque.appendChild(tabla);
+            body.appendChild(tabla);
+            bloque.appendChild(body);
             fragment.appendChild(bloque);
         });
         container.appendChild(fragment);

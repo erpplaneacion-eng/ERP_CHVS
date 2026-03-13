@@ -122,6 +122,7 @@ class DetalleRegistroManager {
 
         tbody.innerHTML = '';
         const esEditable = this.estadosEditables.includes(REGISTRO_ESTADO);
+        const esDevuelto = REGISTRO_ESTADO === 'DEVUELTO_COMPRAS';
 
         if (!facturas.length) {
             tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Sin facturas agregadas aún.</td></tr>';
@@ -131,15 +132,34 @@ class DetalleRegistroManager {
                 const tr = document.createElement('tr');
                 const valor = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(f.valor);
                 const fecha = f.fecha_factura ? new Date(f.fecha_factura + 'T00:00:00').toLocaleDateString('es-CO') : '—';
+
+                // Badge de estado por factura (solo en DEVUELTO_COMPRAS)
+                let estadoBadge = '';
+                if (esDevuelto) {
+                    if (f.estado_compras === 'APROBADA') {
+                        estadoBadge = '<span class="checklist-badge-ok" style="font-size:11px;"><i class="fas fa-check"></i> Aprobada</span>';
+                        tr.style.background = '#f0fdf4';
+                    } else if (f.estado_compras === 'DEVUELTA') {
+                        estadoBadge = '<span class="checklist-badge-pendientes" style="font-size:11px;"><i class="fas fa-undo"></i> Devuelta</span>';
+                        tr.style.background = '#fff7ed';
+                    }
+                }
+
+                // Solo las facturas DEVUELTA pueden eliminarse en estado DEVUELTO_COMPRAS
+                const puedeEliminar = esEditable && (REGISTRO_ESTADO === 'BORRADOR' || f.estado_compras === 'DEVUELTA');
+
                 tr.innerHTML = `
                     <td>${idx + 1}</td>
-                    <td>${f.numero_factura}</td>
+                    <td>${f.numero_factura} ${estadoBadge}</td>
                     <td>${f.proveedor}</td>
-                    <td>${f.concepto}</td>
+                    <td>
+                        ${f.concepto}
+                        ${f.comentario_devolucion ? `<br><small style="color:#c0392b;"><i class="fas fa-exclamation-circle"></i> ${f.comentario_devolucion}</small>` : ''}
+                    </td>
                     <td>${valor}</td>
                     <td>${fecha}</td>
                     <td>
-                        ${esEditable ? `<button class="btn btn-sm btn-danger btn-eliminar-factura" data-id="${f.id}"><i class="fas fa-trash"></i></button>` : '—'}
+                        ${puedeEliminar ? `<button class="btn btn-sm btn-danger btn-eliminar-factura" data-id="${f.id}"><i class="fas fa-trash"></i></button>` : '—'}
                     </td>
                 `;
                 fragment.appendChild(tr);

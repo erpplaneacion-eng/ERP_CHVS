@@ -190,6 +190,8 @@ def api_detalle_registro(request, pk):
             'valor': float(f.valor),
             'fecha_factura': f.fecha_factura.isoformat() if f.fecha_factura else None,
             'fecha_carga': f.fecha_carga.isoformat() if f.fecha_carga else None,
+            'estado_compras': f.estado_compras,
+            'comentario_devolucion': f.comentario_devolucion,
         })
 
     data = {
@@ -211,6 +213,77 @@ def api_detalle_registro(request, pk):
         'facturas': facturas,
     }
     return JsonResponse({'success': True, 'data': data})
+
+
+@login_required
+@csrf_exempt
+def api_aprobar_factura(request, pk):
+    """POST — Compras aprueba una factura individual."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    if not _tiene_rol(request.user, 'COMPRAS_CONTABLE'):
+        return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
+
+    factura = get_object_or_404(Factura, pk=pk)
+    try:
+        ContabilidadService.aprobar_factura(factura, request.user)
+        RegistroActividad.registrar(
+            request, 'contabilidad', 'aprobar_factura',
+            f"Factura: {factura.numero_factura} | Registro: {factura.registro_id}"
+        )
+        return JsonResponse({'success': True})
+    except ValueError as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})
+
+
+@login_required
+@csrf_exempt
+def api_devolver_factura(request, pk):
+    """POST — Compras devuelve una factura individual al líder."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    if not _tiene_rol(request.user, 'COMPRAS_CONTABLE'):
+        return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
+
+    factura = get_object_or_404(Factura, pk=pk)
+    try:
+        data = json.loads(request.body)
+        comentario = data.get('comentario', '').strip()
+        ContabilidadService.devolver_factura(factura, request.user, comentario)
+        RegistroActividad.registrar(
+            request, 'contabilidad', 'devolver_factura',
+            f"Factura: {factura.numero_factura} | Registro: {factura.registro_id} | Motivo: {comentario[:80]}"
+        )
+        return JsonResponse({'success': True})
+    except ValueError as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})
+
+
+@login_required
+@csrf_exempt
+def api_finalizar_revision(request, pk):
+    """POST — Finaliza la revisión de Compras (todas las facturas decididas)."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    if not _tiene_rol(request.user, 'COMPRAS_CONTABLE'):
+        return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
+
+    registro = get_object_or_404(RegistroContable, pk=pk)
+    try:
+        ContabilidadService.finalizar_revision_compras(registro, request.user)
+        RegistroActividad.registrar(
+            request, 'contabilidad', 'finalizar_revision_compras',
+            f"Registro: {pk} | Estado final: {registro.estado}"
+        )
+        return JsonResponse({'success': True, 'estado': registro.estado})
+    except ValueError as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})
 
 
 @login_required
@@ -409,6 +482,8 @@ def api_checklist(request, pk):
             'numero_factura': factura.numero_factura,
             'proveedor': factura.proveedor,
             'concepto': factura.concepto,
+            'estado_compras': factura.estado_compras,
+            'comentario_devolucion': factura.comentario_devolucion,
             'verificaciones': [
                 {
                     'id': v.pk,
