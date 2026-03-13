@@ -81,43 +81,25 @@
                     <thead class="table-light">
                         <tr>
                             <th>Código ICBF</th>
-                            <th>Ingrediente sugerido</th>
-                            <th>Resuelto como</th>
-                            <th>Estado</th>
-                            <th>Acción</th>
+                            <th>Ingrediente (catálogo ICBF)</th>
+                            <th style="width:60px"></th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for ing in prep.ingredientes.all %}
-                        <tr id="ing-row-{{ ing.id }}"
-                            class="{% if ing.estado_validacion == 'no_encontrado' %}table-danger{% endif %}">
+                        <tr id="ing-row-{{ ing.id }}">
                             <td><code>{{ ing.codigo_icbf_sugerido }}</code></td>
-                            <td>{{ ing.nombre_sugerido }}</td>
-                            <td id="ing-resuelto-{{ ing.id }}">
+                            <td>
                                 {% if ing.alimento_icbf %}
                                     {{ ing.alimento_icbf.nombre_del_alimento }}
                                 {% else %}
-                                    <em class="text-muted">—</em>
-                                {% endif %}
-                            </td>
-                            <td id="ing-estado-{{ ing.id }}">
-                                {% if ing.estado_validacion == 'valido' %}
-                                    <span class="badge bg-success">✓ Válido</span>
-                                {% else %}
-                                    <span class="badge bg-danger">✗ No encontrado</span>
+                                    {{ ing.nombre_sugerido }}
                                 {% endif %}
                             </td>
                             <td>
-                                {% if ing.estado_validacion == 'no_encontrado' %}
-                                <div class="input-group input-group-sm" style="min-width:220px">
-                                    <input type="text"
-                                           class="form-control ing-buscar"
-                                           placeholder="Buscar ingrediente..."
-                                           data-ing-id="{{ ing.id }}"
-                                           autocomplete="off">
-                                    <div class="dropdown-menu ing-dropdown" id="dd-{{ ing.id }}"></div>
-                                </div>
-                                {% endif %}
+                                <button class="btn btn-link btn-sm text-danger p-0 btn-eliminar-ing"
+                                        data-ing-id="{{ ing.id }}"
+                                        title="Eliminar ingrediente">✕</button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -189,168 +171,19 @@
 
     {% endif %}
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-(function () {
-    const GENERACION_ID = {{ generacion.id }};
-    const MODALIDAD_ID = {{ generacion.id_modalidad.id_modalidades }};
-    const CSRF = '{{ csrf_token }}';
-
-    // Búsqueda de ingredientes con autocomplete
-    document.querySelectorAll('.ing-buscar').forEach(function (input) {
-        let timer;
-        const ingId = input.dataset.ingId;
-        const dd = document.getElementById('dd-' + ingId);
-
-        input.addEventListener('input', function () {
-            clearTimeout(timer);
-            const q = this.value.trim();
-            if (q.length < 2) { dd.classList.remove('show'); return; }
-
-            timer = setTimeout(function () {
-                fetch(`{% url 'agente:api_buscar_alimento' %}?q=${encodeURIComponent(q)}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        dd.innerHTML = '';
-                        if (!data.resultados.length) {
-                            dd.innerHTML = '<span class="dropdown-item text-muted">Sin resultados</span>';
-                        }
-                        data.resultados.forEach(function (a) {
-                            const item = document.createElement('a');
-                            item.className = 'dropdown-item';
-                            item.href = '#';
-                            item.textContent = `${a.nombre_del_alimento} (${a.codigo})`;
-                            item.addEventListener('click', function (e) {
-                                e.preventDefault();
-                                aplicarCorreccion(ingId, a.codigo, input, dd);
-                            });
-                            dd.appendChild(item);
-                        });
-                        dd.classList.add('show');
-                        input.parentElement.style.position = 'relative';
-                        dd.style.cssText = 'position:absolute;z-index:1050;max-height:200px;overflow-y:auto;';
-                    });
-            }, 300);
-        });
-
-        document.addEventListener('click', function (e) {
-            if (!input.contains(e.target)) dd.classList.remove('show');
-        });
-    });
-
-    function aplicarCorreccion(ingId, codigoNuevo, input, dd) {
-        dd.classList.remove('show');
-        input.disabled = true;
-
-        fetch('{% url "agente:api_corregir_ingrediente" %}', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
-            body: JSON.stringify({ingrediente_id: parseInt(ingId), codigo_icbf: codigoNuevo}),
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.ok) {
-                    const row = document.getElementById('ing-row-' + ingId);
-                    row.classList.remove('table-danger');
-                    document.getElementById('ing-resuelto-' + ingId).textContent = data.nombre;
-                    document.getElementById('ing-estado-' + ingId).innerHTML =
-                        '<span class="badge bg-success">✓ Corregido</span>';
-                    input.closest('td').innerHTML = '<span class="text-muted small">Corregido</span>';
-                } else {
-                    alert('No se pudo aplicar: ' + data.error);
-                    input.disabled = false;
-                }
-            });
-    }
-
-    // Cascading selector programa → menú destino
-    const selPrograma = document.getElementById('sel-programa-destino');
-    const selMenu = document.getElementById('sel-menu-destino');
-    const btnAprobar = document.getElementById('btn-aprobar');
-
-    if (selPrograma) {
-        selPrograma.addEventListener('change', function () {
-            const programaId = this.value;
-            selMenu.innerHTML = '<option value="">Cargando...</option>';
-            selMenu.disabled = true;
-            btnAprobar.disabled = true;
-
-            if (!programaId) {
-                selMenu.innerHTML = '<option value="">Primero seleccione un programa...</option>';
-                return;
-            }
-
-            fetch(`{% url 'agente:api_menus' %}?programa_id=${programaId}&modalidad_id=${MODALIDAD_ID}`)
-                .then(r => r.json())
-                .then(data => {
-                    selMenu.innerHTML = '<option value="">Seleccione menú...</option>';
-                    if (!data.menus.length) {
-                        selMenu.innerHTML = '<option value="">Sin menús disponibles para esta modalidad</option>';
-                        return;
-                    }
-                    data.menus.forEach(m => {
-                        selMenu.innerHTML += `<option value="${m.id_menu}">Menú ${m.menu}</option>`;
-                    });
-                    selMenu.disabled = false;
-                });
-        });
-
-        selMenu.addEventListener('change', function () {
-            btnAprobar.disabled = !this.value;
-        });
-    }
-
-    // Aprobar
-    btnAprobar && btnAprobar.addEventListener('click', function () {
-        const menuId = selMenu ? selMenu.value : null;
-        if (!menuId) return;
-
-        const menuTexto = selMenu.options[selMenu.selectedIndex].text;
-        if (!confirm(`¿Confirmas que revisaste el borrador y deseas importar las preparaciones al "${menuTexto}"?`)) return;
-
-        this.disabled = true;
-        this.textContent = 'Importando...';
-
-        fetch(`/agente/api/aprobar/${GENERACION_ID}/`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
-            body: JSON.stringify({menu_id: parseInt(menuId)}),
-        })
-            .then(r => r.json())
-            .then(data => {
-                const box = document.getElementById('alert-resultado');
-                if (data.ok) {
-                    box.className = 'alert alert-success mt-3';
-                    box.innerHTML = `<strong>✅ Importado correctamente.</strong> Se crearon <strong>${data.preparaciones_creadas}</strong> preparaciones en el menú.` +
-                        (data.advertencias && data.advertencias.length
-                            ? '<ul class="mt-2 mb-0">' + data.advertencias.map(a => `<li>${a}</li>`).join('') + '</ul>'
-                            : '');
-                    box.classList.remove('d-none');
-                    document.getElementById('btn-aprobar').classList.add('d-none');
-                    document.getElementById('btn-descartar').classList.add('d-none');
-                    document.querySelector('.card.border-success').classList.add('d-none');
-                } else {
-                    box.className = 'alert alert-danger mt-3';
-                    box.textContent = 'Error: ' + data.error;
-                    box.classList.remove('d-none');
-                    btnAprobar.disabled = false;
-                    btnAprobar.textContent = '✅ Aprobar e importar al menú seleccionado';
-                }
-            });
-    });
-
-    // Descartar
-    document.getElementById('btn-descartar').addEventListener('click', function () {
-        if (!confirm('¿Descartar este borrador? Esta acción no se puede deshacer.')) return;
-        fetch(`/agente/api/descartar/${GENERACION_ID}/`, {
-            method: 'POST',
-            headers: {'X-CSRFToken': CSRF},
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.ok) window.location.href = '{% url "agente:index" %}';
-            });
-    });
-})();
+window.BORRADOR_CONFIG = {
+    generacionId: {{ generacion.id }},
+    modalidadId: {{ generacion.id_modalidad.id_modalidades }},
+    csrf: '{{ csrf_token }}',
+    urlMenus: '{% url "agente:api_menus" %}',
+    urlEliminarIng: '{% url "agente:api_eliminar_ingrediente" %}',
+    urlDescartar: '{% url "agente:api_descartar" generacion.id %}',
+    urlIndex: '{% url "agente:index" %}',
+};
 </script>
+<script src="{% static 'js/agente/borrador.js' %}"></script>
 {% endblock %}

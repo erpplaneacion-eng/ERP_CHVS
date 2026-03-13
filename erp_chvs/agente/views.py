@@ -210,6 +210,26 @@ def api_aprobar(request, generacion_id):
 
 @login_required
 @require_POST
+def api_eliminar_ingrediente(request):
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
+
+    ingrediente_id = data.get('ingrediente_id')
+    ing = get_object_or_404(BorradorIngredienteIA, id=ingrediente_id)
+
+    # Verificar que el borrador aún esté pendiente de revisión
+    generacion = ing.borrador_preparacion.generacion
+    if generacion.estado != GeneracionIA.ESTADO_PENDIENTE:
+        return JsonResponse({'ok': False, 'error': 'El borrador ya no está en estado pendiente.'}, status=400)
+
+    ing.delete()
+    return JsonResponse({'ok': True})
+
+
+@login_required
+@require_POST
 def api_descartar(request, generacion_id):
     generacion = get_object_or_404(GeneracionIA, id=generacion_id)
     generacion.estado = GeneracionIA.ESTADO_DESCARTADO

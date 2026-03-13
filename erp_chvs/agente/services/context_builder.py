@@ -11,6 +11,7 @@ from principal.models import ModalidadesDeConsumo
 
 def obtener_contexto_modalidad(modalidad_id) -> dict:
     modalidad = ModalidadesDeConsumo.objects.get(id_modalidades=modalidad_id)
+    componentes = _obtener_componentes_modalidad(modalidad_id)
 
     return {
         'modalidad': {
@@ -18,8 +19,9 @@ def obtener_contexto_modalidad(modalidad_id) -> dict:
             'nombre': modalidad.modalidad,
         },
         'menus_similares': _obtener_menus_similares(modalidad_id),
-        'componentes_validos': _obtener_componentes_modalidad(modalidad_id),
-        'top_ingredientes': _obtener_top_ingredientes(modalidad_id),
+        'componentes_validos': componentes,
+        'ingredientes_por_componente': _obtener_ingredientes_por_componente(modalidad_id, componentes),
+        'catalogo_soporte': _obtener_catalogo_soporte(modalidad_id),
     }
 
 
@@ -48,6 +50,7 @@ def _obtener_menus_similares(modalidad_id) -> list:
             ]
             preps.append({
                 'nombre': p.preparacion,
+                'componente_id': p.id_componente.id_componente if p.id_componente else None,
                 'componente': p.id_componente.componente if p.id_componente else None,
                 'ingredientes': ingredientes,
             })
@@ -59,23 +62,64 @@ def _obtener_menus_similares(modalidad_id) -> list:
 def _obtener_componentes_modalidad(modalidad_id) -> list:
     componentes = ComponentesModalidades.objects.filter(
         id_modalidad=modalidad_id
-    ).values(
-        'id_componente__id_componente',
-        'id_componente__componente',
-        'id_componente__id_grupo_alimentos__grupo_alimentos',
-    )
+    ).select_related(
+        'id_componente__id_grupo_alimentos'
+    ).order_by('id_componente__componente')
     return [
         {
-            'id': c['id_componente__id_componente'],
-            'nombre': c['id_componente__componente'],
-            'grupo': c['id_componente__id_grupo_alimentos__grupo_alimentos'],
+            'id': c.id_componente.id_componente,
+            'nombre': c.id_componente.componente,
+            'grupo': c.id_componente.id_grupo_alimentos.grupo_alimentos,
         }
         for c in componentes
     ]
 
 
-def _obtener_top_ingredientes(modalidad_id, limit=50) -> list:
-    # Top 20 más usados (ancla de calidad) + muestra aleatoria por grupo para forzar variedad
+def _obtener_ingredientes_por_componente(modalidad_id, componentes: list) -> dict:
+    """
+    Para cada componente, retorna los ingredientes PRINCIPALES más usados
+    en preparaciones de ese componente (top 8 + 2 aleatorios para variedad).
+    Estos definen el ingrediente estrella de cada preparación.
+    """
+    resultado = {}
+    for comp in componentes:
+        comp_id = comp['id']
+
+        top_qs = TablaPreparacionIngredientes.objects.filter(
+            id_preparacion__id_menu__id_modalidad=modalidad_id,
+            id_preparacion__id_componente=comp_id,
+        ).values(
+            'id_ingrediente_siesa__codigo',
+            'id_ingrediente_siesa__nombre_del_alimento',
+        ).annotate(
+            frecuencia=Count('id')
+        ).order_by('-frecuencia')
+
+        top_list = list(top_qs)
+        top_8 = top_list[:8]
+        codigos_top = {i['id_ingrediente_siesa__codigo'] for i in top_8}
+
+        resto = [i for i in top_list[8:] if i['id_ingrediente_siesa__codigo'] not in codigos_top]
+        extras = random.sample(resto, min(2, len(resto))) if resto else []
+
+        resultado[comp_id] = [
+            {
+                'codigo': i['id_ingrediente_siesa__codigo'],
+                'nombre': i['id_ingrediente_siesa__nombre_del_alimento'],
+            }
+            for i in top_8 + extras
+        ]
+
+    return resultado
+
+
+def _obtener_catalogo_soporte(modalidad_id, limit=40) -> list:
+    """
+    Catálogo general de ingredientes usados en la modalidad.
+    Incluye condimentos, aceites, especias, verduras de guiso y otros
+    ingredientes de soporte que acompañan al ingrediente principal.
+    Top 20 más frecuentes + muestra aleatoria por grupo para variedad.
+    """
     top_qs = TablaPreparacionIngredientes.objects.filter(
         id_preparacion__id_menu__id_modalidad=modalidad_id
     ).values(
@@ -90,7 +134,7 @@ def _obtener_top_ingredientes(modalidad_id, limit=50) -> list:
     top_20 = top_list[:20]
     codigos_top = {i['id_ingrediente_siesa__codigo'] for i in top_20}
 
-    # Agrupar el resto por grupo de alimentos y tomar 1-2 aleatorios por grupo
+    # Muestra aleatoria por grupo para cubrir variedad de soporte
     grupos: dict = {}
     for item in top_list[20:]:
         grupo = item['id_ingrediente_siesa__id_componente__id_grupo_alimentos__grupo_alimentos'] or 'Sin grupo'
@@ -98,10 +142,8 @@ def _obtener_top_ingredientes(modalidad_id, limit=50) -> list:
 
     rotacion = []
     for items_grupo in grupos.values():
-        n = min(2, len(items_grupo))
-        rotacion.extend(random.sample(items_grupo, n))
+        rotacion.extend(random.sample(items_grupo, min(2, len(items_grupo))))
 
-    # Mezclar rotación y completar hasta el límite
     random.shuffle(rotacion)
     extras = [i for i in rotacion if i['id_ingrediente_siesa__codigo'] not in codigos_top]
     combinado = top_20 + extras[:limit - len(top_20)]

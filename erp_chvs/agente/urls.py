@@ -13,5 +13,6 @@ urlpatterns = [
     path('api/aprobar/<int:generacion_id>/', views.api_aprobar, name='api_aprobar'),
     path('api/descartar/<int:generacion_id>/', views.api_descartar, name='api_descartar'),
     path('api/corregir-ingrediente/', views.api_corregir_ingrediente, name='api_corregir_ingrediente'),
+    path('api/eliminar-ingrediente/', views.api_eliminar_ingrediente, name='api_eliminar_ingrediente'),
     path('api/buscar-alimento/', views.api_buscar_alimento, name='api_buscar_alimento'),
 ]

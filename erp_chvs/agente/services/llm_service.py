@@ -47,64 +47,76 @@ def generar_borrador(contexto: dict, ocasion_especial: str = '') -> dict:
 def _construir_prompt(contexto: dict, ocasion_especial: str = '') -> str:
     modalidad = contexto['modalidad']
     componentes = contexto['componentes_validos']
-    top_ingredientes = contexto['top_ingredientes']
+    ingredientes_por_componente = contexto.get('ingredientes_por_componente', {})
+    catalogo_soporte = contexto.get('catalogo_soporte', [])
     menus_similares = contexto['menus_similares']
 
+    # Bloque de ejemplos reales
     ejemplos_texto = ''
     for m in menus_similares[:3]:
         ejemplos_texto += f"\nMenú {m['menu']}:\n"
-        for p in m['preparaciones'][:4]:
+        for p in m['preparaciones']:
             ings = ', '.join(
                 f"{i['nombre']}({i['codigo']})" for i in p['ingredientes'][:5]
             )
             comp = p['componente'] or 'sin componente'
-            ejemplos_texto += f"  - {p['nombre']} [{comp}]: {ings}\n"
+            ejemplos_texto += f"  - [{p.get('componente_id') or '?'}] {p['nombre']} ({comp}): {ings}\n"
 
-    componentes_texto = '\n'.join(
-        f"  - {c['id']}: {c['nombre']} (grupo: {c['grupo']})"
-        for c in componentes
-    )
+    # Bloque de estructura: componente → ingrediente principal sugerido
+    estructura_texto = ''
+    for c in componentes:
+        ings_principales = ingredientes_por_componente.get(c['id'], [])
+        ings_str = ', '.join(
+            f"{i['nombre']}({i['codigo']})" for i in ings_principales
+        )
+        estructura_texto += f"  - {c['id']}: {c['nombre']} (grupo: {c['grupo']})\n"
+        if ings_str:
+            estructura_texto += f"    Ingrediente principal típico: {ings_str}\n"
 
+    # Catálogo de ingredientes de soporte
     catalogo_texto = '\n'.join(
         f"  - {i['codigo']}: {i['nombre']}"
-        for i in top_ingredientes[:40]
+        for i in catalogo_soporte
     )
 
     ocasion_bloque = ''
     if ocasion_especial:
         ocasion_bloque = f"""
+
 OCASIÓN ESPECIAL: {ocasion_especial}
 - Crea nombres de preparaciones creativos, divertidos y temáticos acordes a esta ocasión.
 - Ejemplos: para Halloween → "Poción de Lentejas Embrujada", "Arroz del Cementerio con Zanahoria";
   para Clausura → "Festín de Despedida", "Arroz Ceremonial con Pollo".
 - Los ingredientes y sus códigos ICBF deben ser los mismos del catálogo. Solo cambian los nombres.
-- La justificación debe explicar el nombre temático elegido.
-"""
+- La justificación debe explicar el nombre temático elegido."""
+
+    total_componentes = len(componentes)
 
     return f"""Eres un asistente nutricional experto del Programa de Alimentación Escolar (PAE) de Colombia.
 
-Tu tarea es proponer las preparaciones y sus ingredientes para un almuerzo escolar de la modalidad indicada.
+Tu tarea es proponer las preparaciones e ingredientes para un menú escolar de la modalidad indicada.
 
-MODALIDAD OBJETIVO:
-- Modalidad: {modalidad['nombre']}{ocasion_bloque}
+MODALIDAD OBJETIVO: {modalidad['nombre']}{ocasion_bloque}
 
-EJEMPLOS REALES DE ESTA MODALIDAD (úsalos como referencia, no los copies exactamente):
+EJEMPLOS REALES DE ESTA MODALIDAD (úsalos como referencia de estilo, NO los copies exactamente):
 {ejemplos_texto if ejemplos_texto else '(sin ejemplos previos disponibles)'}
 
-COMPONENTES VÁLIDOS PARA ESTA MODALIDAD (usa SOLO estos IDs de componente):
-{componentes_texto if componentes_texto else '(sin restricción de componentes)'}
+ESTRUCTURA OBLIGATORIA — genera EXACTAMENTE {total_componentes} preparaciones, UNA por cada componente:
+{estructura_texto}
+CATÁLOGO DE INGREDIENTES DE SOPORTE (condimentos, aceites, verduras de guiso, especias — úsalos libremente para complementar cualquier preparación):
+{catalogo_texto if catalogo_texto else '(no disponible)'}
 
-CATÁLOGO DE INGREDIENTES ICBF DISPONIBLES (usa ÚNICAMENTE estos códigos exactos):
-{catalogo_texto if catalogo_texto else '(catálogo no disponible)'}
-
-INSTRUCCIONES:
-1. Propón entre 3 y 5 preparaciones típicas de un almuerzo escolar colombiano.
-2. Cada preparación debe tener entre 1 y 6 ingredientes.
-3. Usa ÚNICAMENTE los códigos de ingredientes del catálogo provisto.
-4. El campo "id_componente" debe ser uno de los IDs de componentes válidos o null.
-5. Incluye una justificación breve por preparación.
-6. En "procedimiento" escribe el paso a paso de elaboración (5 a 10 pasos numerados, en español, apropiado para cocina escolar industrial).
-7. VARIEDAD: Evita repetir los mismos ingredientes principales de los ejemplos anteriores. Si los ejemplos usan pollo, propón res, cerdo o pescado. Si usan guayaba, propón lulo, mora, maracuyá u otra fruta. Prioriza ingredientes que aparezcan poco en los ejemplos mostrados.
+REGLAS ESTRICTAS:
+1. Genera exactamente {total_componentes} preparaciones, una por cada componente listado arriba.
+2. El campo "id_componente" de cada preparación DEBE ser exactamente el ID indicado (ej: "com1", "com3").
+3. No puedes repetir el mismo id_componente en dos preparaciones.
+4. El ingrediente PRINCIPAL de cada preparación debe ser uno de los "Ingrediente principal típico" de su componente.
+   Los ingredientes de soporte (sal, aceite, cebolla, tomate, ajo, cilantro, etc.) se toman del catálogo de soporte.
+5. Usa ÚNICAMENTE códigos que aparezcan en las listas anteriores. No inventes códigos.
+6. Cada preparación debe tener entre 2 y 8 ingredientes (principal + soporte).
+7. VARIEDAD: evita repetir los mismos ingredientes principales de los ejemplos. Si los ejemplos usan pollo, propón res, cerdo o pescado.
+8. En "procedimiento" escribe el paso a paso de elaboración (5 a 10 pasos numerados, en español, apropiado para cocina escolar industrial).
+9. Incluye una justificación breve por preparación.
 
 Responde ÚNICAMENTE con este JSON estricto, sin texto adicional:
 
@@ -112,7 +124,7 @@ Responde ÚNICAMENTE con este JSON estricto, sin texto adicional:
   "preparaciones": [
     {{
       "nombre": "Nombre de la preparación",
-      "id_componente": "C01",
+      "id_componente": "com1",
       "ingredientes": [
         {{"codigo_icbf": "XXXX", "nombre": "Nombre del ingrediente"}}
       ],
