@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Revisión Contabilidad — RC-{{ registro.pk }}{% endblock %}
+
+{% block content %}
+<div class="contabilidad-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2>
+                <a href="{% url 'contabilidad:bandeja_contabilidad' %}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                Revisión Contabilidad RC-{{ registro.pk }}
+            </h2>
+            <p>{{ registro.get_tipo_display }} | Período: {{ registro.periodo_mes }}/{{ registro.periodo_ano }} | Líder: {{ registro.lider.get_full_name|default:registro.lider.username }}</p>
+        </div>
+        <div class="header-actions">
+            <span class="estado-badge estado-badge-{{ registro.estado|lower|cut:'_' }}">
+                {{ registro.get_estado_display }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Descripción del registro -->
+    <div class="table-container" style="padding: 16px; margin-bottom: 16px;">
+        <p><strong>Descripción:</strong> {{ registro.descripcion|default:"(Sin descripción)" }}</p>
+        <p><strong>Fecha de creación:</strong> {{ registro.fecha_creacion|date:"d/m/Y H:i" }}</p>
+        {% if registro.fecha_aprobacion_compras %}
+        <p><strong>Aprobado por Compras:</strong> {{ registro.fecha_aprobacion_compras|date:"d/m/Y H:i" }}</p>
+        {% endif %}
+    </div>
+
+    <!-- Facturas (solo lectura) -->
+    <h3><i class="fas fa-file-invoice-dollar"></i> Facturas</h3>
+    <div class="table-container" style="margin-bottom: 24px;">
+        <table class="data-table" id="facturasTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>N° Factura</th>
+                    <th>Proveedor</th>
+                    <th>Concepto</th>
+                    <th>Valor</th>
+                    <th>Fecha Factura</th>
+                </tr>
+            </thead>
+            <tbody id="facturas-tbody">
+                <tr><td colspan="6" class="text-center">Cargando...</td></tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="4" style="text-align:right; font-weight:600; padding: 12px 16px;">Total:</td>
+                    <td id="valor-total" style="font-weight:700; padding: 12px 16px;">$0</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <!-- Checklist de Compras por factura (solo lectura) -->
+    <h3><i class="fas fa-tasks"></i> Resultado del Checklist de Compras</h3>
+    <div id="checklist-facturas-container" style="margin-bottom: 24px;">
+        <p class="text-center text-muted">Cargando checklist...</p>
+    </div>
+
+    <!-- Sección de acción de contabilidad -->
+    <div class="table-container" style="padding: 20px; margin-bottom: 24px;">
+        <h4><i class="fas fa-gavel"></i> Decisión de Contabilidad</h4>
+        <div class="form-group">
+            <label for="comentario-contabilidad">Comentario</label>
+            <textarea id="comentario-contabilidad" rows="4" placeholder="Comentario de aprobación u observación..."></textarea>
+        </div>
+        <div style="display:flex; gap:12px; margin-top:16px;">
+            <button class="btn btn-warning" id="btn-observar" style="background:#ca8a04; color:white;">
+                <i class="fas fa-comment-alt"></i> Observar a Compras
+            </button>
+            <button class="btn btn-success" id="btn-aprobar-cerrar">
+                <i class="fas fa-check-circle"></i> Aprobar y Cerrar
+            </button>
+        </div>
+    </div>
+
+    <!-- Historial -->
+    <div style="margin-top: 32px;">
+        <h3><i class="fas fa-history"></i> Historial</h3>
+        <div class="historial-timeline" id="historial-container">
+            <p class="text-center text-muted">Cargando historial...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const REGISTRO_ID = {{ registro.pk }};
+    const REGISTRO_ESTADO = '{{ registro.estado }}';
+    const DETALLE_URL = '{% url "contabilidad:api_detalle_registro" registro.pk %}';
+    const CHECKLIST_URL = '{% url "contabilidad:api_checklist" registro.pk %}';
+    const OBSERVAR_URL = '{% url "contabilidad:api_observar_contabilidad" registro.pk %}';
+    const APROBAR_URL = '{% url "contabilidad:api_aprobar_contabilidad" registro.pk %}';
+    const HISTORIAL_URL = '{% url "contabilidad:api_historial" registro.pk %}';
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/contabilidad/revision_contabilidad.js' %}"></script>
+{% endblock %}

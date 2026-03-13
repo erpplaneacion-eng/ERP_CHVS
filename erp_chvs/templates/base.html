@@ -31,6 +31,8 @@
     <link rel="stylesheet" href="{% static 'css/modules/logistica.css' %}">
     {% elif request.resolver_match.app_name == 'calidad' %}
     <link rel="stylesheet" href="{% static 'css/modules/calidad.css' %}">
+    {% elif request.resolver_match.app_name == 'contabilidad' %}
+    <link rel="stylesheet" href="{% static 'css/modules/contabilidad.css' %}">
     {% endif %}
 
     {% block extra_css %}{% endblock %}
@@ -107,6 +109,13 @@
                     <li><a href="{% url 'calidad:principal' %}"
                             class="nav-calidad {% if request.resolver_match.app_name == 'calidad' %}active{% endif %}">
                             <i class="fas fa-certificate"></i><span>Calidad</span>
+                        </a></li>
+                    {% endif %}
+
+                    {% if user|has_group:"ADMINISTRACION,LIDER_CONTABLE,COMPRAS_CONTABLE,CONTABILIDAD,GERENCIA" %}
+                    <li><a href="{% url 'contabilidad:principal' %}"
+                            class="nav-contabilidad {% if request.resolver_match.app_name == 'contabilidad' %}active{% endif %}">
+                            <i class="fas fa-calculator"></i><span>Contabilidad</span>
                         </a></li>
                     {% endif %}
                 </ul>
@@ -232,6 +241,22 @@
     <script src="{% static 'js/logistica/ruta_sedes.js' %}"></script>
     {% elif 'rutas' in request.path %}
     <script src="{% static 'js/logistica/rutas.js' %}"></script>
+    {% endif %}
+    {% elif request.resolver_match.app_name == 'contabilidad' %}
+    {% if 'mis-registros' in request.path %}
+    <script src="{% static 'js/contabilidad/mis_registros.js' %}"></script>
+    {% elif 'bandeja-compras' in request.path %}
+    <script src="{% static 'js/contabilidad/bandeja_compras.js' %}"></script>
+    {% elif 'revision-compras' in request.path %}
+    <script src="{% static 'js/contabilidad/revision_compras.js' %}"></script>
+    {% elif 'bandeja-contabilidad' in request.path %}
+    <script src="{% static 'js/contabilidad/bandeja_contabilidad.js' %}"></script>
+    {% elif 'revision-contabilidad' in request.path %}
+    <script src="{% static 'js/contabilidad/revision_contabilidad.js' %}"></script>
+    {% elif 'dashboard-gerencia' in request.path %}
+    <script src="{% static 'js/contabilidad/dashboard_gerencia.js' %}"></script>
+    {% elif 'registro' in request.path %}
+    <script src="{% static 'js/contabilidad/detalle_registro.js' %}"></script>
     {% endif %}
     {% endif %}
 

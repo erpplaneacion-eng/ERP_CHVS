@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bandeja de Compras{% endblock %}
+
+{% block content %}
+<div class="contabilidad-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-inbox"></i> Bandeja de Compras</h2>
+            <p>Registros pendientes de revisión por parte de Compras</p>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label for="filtro-tipo">Tipo:</label>
+            <select id="filtro-tipo">
+                <option value="">Todos</option>
+                <option value="SERVICIOS">Servicios</option>
+                <option value="MATERIAS_PRIMAS">Materias Primas</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filtro-estado">Estado:</label>
+            <select id="filtro-estado">
+                <option value="">Todos</option>
+                <option value="ENVIADO">Enviado</option>
+                <option value="EN_REVISION_COMPRAS">En Revisión</option>
+                <option value="OBSERVADO_CONTABILIDAD">Observado Contabilidad</option>
+            </select>
+        </div>
+        <button class="btn btn-outline-secondary" id="btn-limpiar-filtros">
+            <i class="fas fa-times"></i> Limpiar
+        </button>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table" id="bandejaTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Líder</th>
+                    <th>Período</th>
+                    <th>Tipo</th>
+                    <th># Docs</th>
+                    <th>Valor Total</th>
+                    <th>Estado</th>
+                    <th>Fecha Envío</th>
+                    <th>Tiempo</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="bandeja-tbody">
+                <tr><td colspan="10" class="text-center">Cargando registros...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const BANDEJA_URL = '{% url "contabilidad:api_listar_registros" %}';
+    const REVISION_BASE_URL = '/contabilidad/revision-compras/';
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/contabilidad/bandeja_compras.js' %}"></script>
+{% endblock %}

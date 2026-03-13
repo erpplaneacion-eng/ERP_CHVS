@@ -196,6 +196,7 @@ class RegistroActividad(models.Model):
         ('principal', 'Datos Maestros'),
         ('agente', 'Agente IA'),
         ('dashboard', 'Dashboard'),
+        ('contabilidad', 'Contabilidad'),
     ]
 
     usuario = models.ForeignKey(

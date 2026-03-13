@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Revisión Compras — RC-{{ registro.pk }}{% endblock %}
+
+{% block content %}
+<div class="contabilidad-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2>
+                <a href="{% url 'contabilidad:bandeja_compras' %}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                Revisión RC-{{ registro.pk }}
+            </h2>
+            <p>{{ registro.get_tipo_display }} | Período: {{ registro.periodo_mes }}/{{ registro.periodo_ano }} | Líder: {{ registro.lider.get_full_name|default:registro.lider.username }}</p>
+        </div>
+        <div class="header-actions">
+            <span class="estado-badge estado-badge-{{ registro.estado|lower|cut:'_' }}">
+                {{ registro.get_estado_display }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Banner de observación de contabilidad -->
+    <div id="banner-observacion" class="banner-observacion" style="display:none;">
+        <i class="fas fa-comment-alt"></i>
+        <strong>Observación de Contabilidad:</strong>
+        <span id="texto-observacion"></span>
+    </div>
+
+    <!-- Descripción del registro -->
+    <div class="table-container" style="padding: 16px; margin-bottom: 16px;">
+        <p><strong>Descripción:</strong> {{ registro.descripcion|default:"(Sin descripción)" }}</p>
+        <p><strong>Fecha de creación:</strong> {{ registro.fecha_creacion|date:"d/m/Y H:i" }}</p>
+        {% if registro.fecha_envio %}
+        <p><strong>Fecha de envío:</strong> {{ registro.fecha_envio|date:"d/m/Y H:i" }}</p>
+        {% endif %}
+    </div>
+
+    <!-- Facturas (solo lectura) -->
+    <h3><i class="fas fa-file-invoice-dollar"></i> Facturas</h3>
+    <div class="table-container" style="margin-bottom: 24px;">
+        <table class="data-table" id="facturasTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>N° Factura</th>
+                    <th>Proveedor</th>
+                    <th>Concepto</th>
+                    <th>Valor</th>
+                    <th>Fecha Factura</th>
+                </tr>
+            </thead>
+            <tbody id="facturas-tbody">
+                <tr><td colspan="6" class="text-center">Cargando...</td></tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="4" style="text-align:right; font-weight:600; padding: 12px 16px;">Total:</td>
+                    <td id="valor-total" style="font-weight:700; padding: 12px 16px;">$0</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <!-- Sección por estado -->
+    <div id="seccion-confirmar" style="display:none; margin-bottom: 24px;">
+        <div class="table-container" style="padding: 20px;">
+            <h4><i class="fas fa-box-open"></i> Confirmar Recepción de Documentos Físicos</h4>
+            <p class="text-muted">Al confirmar, se registra que los documentos físicos fueron recibidos y se inicia la revisión del checklist.</p>
+            <button class="btn btn-primary" id="btn-confirmar-recepcion">
+                <i class="fas fa-check-circle"></i> Confirmar Recepción
+            </button>
+        </div>
+    </div>
+
+    <!-- Checklist por factura -->
+    <div id="seccion-checklist" style="display:none; margin-bottom: 24px;">
+        <h3><i class="fas fa-tasks"></i> Checklist de Verificación por Factura</h3>
+        <div id="checklist-facturas-container">
+            <p class="text-center text-muted">Cargando checklist...</p>
+        </div>
+
+        <div style="display:flex; gap:12px; margin-top:16px;">
+            <button class="btn btn-primary" id="btn-guardar-checklist">
+                <i class="fas fa-save"></i> Guardar Checklist
+            </button>
+            <button class="btn btn-danger" id="btn-devolver">
+                <i class="fas fa-undo"></i> Devolver al Líder
+            </button>
+            <button class="btn btn-success" id="btn-aprobar-compras">
+                <i class="fas fa-check"></i> Aprobar
+            </button>
+        </div>
+    </div>
+
+    <!-- Sección respuesta a observación de contabilidad -->
+    <div id="seccion-responder-observacion" style="display:none; margin-bottom: 24px;">
+        <div class="table-container" style="padding: 20px;">
+            <h4><i class="fas fa-reply"></i> Responder Observación de Contabilidad</h4>
+            <div class="form-group">
+                <label for="respuesta-observacion">Respuesta *</label>
+                <textarea id="respuesta-observacion" rows="4" placeholder="Explique cómo se resolvió la observación..."></textarea>
+            </div>
+            <button class="btn btn-primary" id="btn-responder-observacion">
+                <i class="fas fa-paper-plane"></i> Responder y Re-aprobar
+            </button>
+        </div>
+    </div>
+
+    <!-- Historial -->
+    <div style="margin-top: 32px;">
+        <h3><i class="fas fa-history"></i> Historial</h3>
+        <div class="historial-timeline" id="historial-container">
+            <p class="text-center text-muted">Cargando historial...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal devolución -->
+<div class="modal" id="devolucionModal">
+    <div class="modal-content">
+        <div class="modal-header modal-header-warning">
+            <h3><i class="fas fa-undo"></i> Devolver al Líder</h3>
+            <span class="close" id="close-devolucion-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="motivo-devolucion">Motivo de devolución *</label>
+                <textarea id="motivo-devolucion" rows="4" placeholder="Explique por qué se devuelve el registro al líder..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancel-devolucion-modal">Cancelar</button>
+            <button class="btn btn-danger" id="btn-confirmar-devolucion">
+                <i class="fas fa-undo"></i> Confirmar Devolución
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const REGISTRO_ID = {{ registro.pk }};
+    const REGISTRO_ESTADO = '{{ registro.estado }}';
+    const DETALLE_URL = '{% url "contabilidad:api_detalle_registro" registro.pk %}';
+    const CONFIRMAR_URL = '{% url "contabilidad:api_confirmar_recepcion" registro.pk %}';
+    const CHECKLIST_URL = '{% url "contabilidad:api_checklist" registro.pk %}';
+    const GUARDAR_CHECKLIST_URL = '{% url "contabilidad:api_guardar_checklist" registro.pk %}';
+    const DEVOLVER_URL = '{% url "contabilidad:api_devolver_compras" registro.pk %}';
+    const APROBAR_URL = '{% url "contabilidad:api_aprobar_compras" registro.pk %}';
+    const RESPONDER_URL = '{% url "contabilidad:api_responder_observacion" registro.pk %}';
+    const HISTORIAL_URL = '{% url "contabilidad:api_historial" registro.pk %}';
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/contabilidad/revision_compras.js' %}"></script>
+{% endblock %}

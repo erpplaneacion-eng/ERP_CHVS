@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mis Registros Contables{% endblock %}
+
+{% block content %}
+<div class="contabilidad-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-file-invoice"></i> Mis Registros Contables</h2>
+            <p>Gestiona tus registros de servicios y materias primas</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" id="btn-nuevo-registro">
+                <i class="fas fa-plus"></i> Nuevo Registro
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label for="filtro-tipo">Tipo:</label>
+            <select id="filtro-tipo">
+                <option value="">Todos</option>
+                <option value="SERVICIOS">Servicios</option>
+                <option value="MATERIAS_PRIMAS">Materias Primas</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filtro-estado">Estado:</label>
+            <select id="filtro-estado">
+                <option value="">Todos</option>
+                <option value="BORRADOR">Borrador</option>
+                <option value="ENVIADO">Enviado</option>
+                <option value="EN_REVISION_COMPRAS">En Revisión Compras</option>
+                <option value="DEVUELTO_COMPRAS">Devuelto por Compras</option>
+                <option value="APROBADO_COMPRAS">Aprobado por Compras</option>
+                <option value="OBSERVADO_CONTABILIDAD">Observado Contabilidad</option>
+                <option value="CERRADO">Cerrado</option>
+            </select>
+        </div>
+        <button class="btn btn-outline-secondary" id="btn-limpiar-filtros">
+            <i class="fas fa-times"></i> Limpiar
+        </button>
+    </div>
+
+    <!-- Tabla de registros -->
+    <div class="table-container">
+        <table class="data-table" id="registrosTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Período</th>
+                    <th>Tipo</th>
+                    <th>Descripción</th>
+                    <th># Docs</th>
+                    <th>Valor Total</th>
+                    <th>Estado</th>
+                    <th>Fecha Envío</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="registros-tbody">
+                <tr>
+                    <td colspan="9" class="text-center">Cargando registros...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: Nuevo Registro -->
+<div class="modal" id="nuevoRegistroModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-plus-circle"></i> Nuevo Registro Contable</h3>
+            <span class="close" id="close-nuevo-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="nuevo-tipo">Tipo *</label>
+                <select id="nuevo-tipo">
+                    <option value="">-- Seleccione --</option>
+                    <option value="SERVICIOS">Servicios</option>
+                    <option value="MATERIAS_PRIMAS">Materias Primas</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="nuevo-mes">Mes del período *</label>
+                <select id="nuevo-mes">
+                    <option value="">-- Seleccione --</option>
+                    <option value="1">Enero</option>
+                    <option value="2">Febrero</option>
+                    <option value="3">Marzo</option>
+                    <option value="4">Abril</option>
+                    <option value="5">Mayo</option>
+                    <option value="6">Junio</option>
+                    <option value="7">Julio</option>
+                    <option value="8">Agosto</option>
+                    <option value="9">Septiembre</option>
+                    <option value="10">Octubre</option>
+                    <option value="11">Noviembre</option>
+                    <option value="12">Diciembre</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="nuevo-ano">Año del período *</label>
+                <input type="number" id="nuevo-ano" min="2020" max="2099" placeholder="Ej: 2025">
+            </div>
+            <div class="form-group">
+                <label for="nuevo-descripcion">Descripción</label>
+                <textarea id="nuevo-descripcion" rows="3" placeholder="Descripción opcional del registro..."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancel-nuevo-modal">Cancelar</button>
+            <button class="btn btn-primary" id="btn-guardar-registro">
+                <i class="fas fa-save"></i> Crear Registro
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const MIS_REGISTROS_URL = '{% url "contabilidad:api_listar_registros" %}';
+    const CREAR_REGISTRO_URL = '{% url "contabilidad:api_crear_registro" %}';
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/contabilidad/mis_registros.js' %}"></script>
+{% endblock %}

@@ -32,8 +32,24 @@ class Command(BaseCommand):
                 'apps': ['calidad'],
                 'description': 'Acceso a certificados de calidad del personal'
             },
+            'LIDER_CONTABLE': {
+                'apps': ['contabilidad'],
+                'description': 'Acceso para líderes que crean y envían registros contables'
+            },
+            'COMPRAS_CONTABLE': {
+                'apps': ['contabilidad'],
+                'description': 'Acceso para el área de Compras: confirma recepción, verifica checklist, aprueba o devuelve'
+            },
+            'CONTABILIDAD': {
+                'apps': ['contabilidad'],
+                'description': 'Acceso para el área de Contabilidad: revisión final, aprobación y cierre'
+            },
+            'GERENCIA': {
+                'apps': ['contabilidad'],
+                'description': 'Acceso de solo lectura con dashboard gerencial y trazabilidad completa'
+            },
             'ADMINISTRACION': {
-                'apps': ['nutricion', 'facturacion', 'planeacion', 'principal', 'dashboard', 'costos', 'logistica', 'calidad'],
+                'apps': ['nutricion', 'facturacion', 'planeacion', 'principal', 'dashboard', 'costos', 'logistica', 'calidad', 'contabilidad'],
                 'description': 'Acceso total al sistema'
             }
         }

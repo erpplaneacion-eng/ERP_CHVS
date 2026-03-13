@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Gerencia — Contabilidad{% endblock %}
+
+{% block content %}
+<div class="contabilidad-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-chart-bar"></i> Dashboard de Gerencia</h2>
+            <p>Trazabilidad completa del flujo contable</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" id="btn-actualizar">
+                <i class="fas fa-sync-alt"></i> Actualizar
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div id="kpi-container" class="dashboard-kpis" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:24px;">
+        <div class="kpi-loading text-muted">Cargando KPIs...</div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label for="filtro-lider">Líder:</label>
+            <select id="filtro-lider">
+                <option value="">Todos</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filtro-mes">Mes:</label>
+            <select id="filtro-mes">
+                <option value="">Todos</option>
+                <option value="1">Enero</option>
+                <option value="2">Febrero</option>
+                <option value="3">Marzo</option>
+                <option value="4">Abril</option>
+                <option value="5">Mayo</option>
+                <option value="6">Junio</option>
+                <option value="7">Julio</option>
+                <option value="8">Agosto</option>
+                <option value="9">Septiembre</option>
+                <option value="10">Octubre</option>
+                <option value="11">Noviembre</option>
+                <option value="12">Diciembre</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filtro-ano">Año:</label>
+            <input type="number" id="filtro-ano" min="2020" max="2099" placeholder="Ej: 2025" style="width:100px;">
+        </div>
+        <div class="filter-group">
+            <label for="filtro-tipo">Tipo:</label>
+            <select id="filtro-tipo">
+                <option value="">Todos</option>
+                <option value="SERVICIOS">Servicios</option>
+                <option value="MATERIAS_PRIMAS">Materias Primas</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filtro-estado">Estado:</label>
+            <select id="filtro-estado">
+                <option value="">Todos</option>
+                <option value="BORRADOR">Borrador</option>
+                <option value="ENVIADO">Enviado</option>
+                <option value="EN_REVISION_COMPRAS">En Revisión Compras</option>
+                <option value="DEVUELTO_COMPRAS">Devuelto Compras</option>
+                <option value="APROBADO_COMPRAS">Aprobado Compras</option>
+                <option value="OBSERVADO_CONTABILIDAD">Observado Contabilidad</option>
+                <option value="CERRADO">Cerrado</option>
+            </select>
+        </div>
+        <button class="btn btn-primary" id="btn-aplicar-filtros">
+            <i class="fas fa-filter"></i> Filtrar
+        </button>
+        <button class="btn btn-outline-secondary" id="btn-limpiar-filtros">
+            <i class="fas fa-times"></i> Limpiar
+        </button>
+    </div>
+
+    <!-- Tabla de registros -->
+    <div class="table-container">
+        <table class="data-table" id="dashboardTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Líder</th>
+                    <th>Período</th>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                    <th># Docs</th>
+                    <th>Valor Total</th>
+                    <th>Fecha Envío</th>
+                    <th>Fecha Cierre</th>
+                    <th>Duración (días)</th>
+                    <th>Devoluciones</th>
+                </tr>
+            </thead>
+            <tbody id="dashboard-tbody">
+                <tr><td colspan="11" class="text-center">Cargando datos...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const DASHBOARD_URL = '{% url "contabilidad:api_dashboard" %}';
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/contabilidad/dashboard_gerencia.js' %}"></script>
+{% endblock %}

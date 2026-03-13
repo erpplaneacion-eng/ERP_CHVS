@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load group_tags %}
+
+{% block title %}Contabilidad{% endblock %}
+
+{% block content %}
+<div id="contabilidad-dashboard-background">
+    <div class="module-dashboard">
+
+        {% if user|has_group:"LIDER_CONTABLE,ADMINISTRACION" %}
+        <a href="{% url 'contabilidad:mis_registros' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-file-invoice"></i>
+            </div>
+            <div class="card-content">
+                <h3>Mis Registros</h3>
+                <p>Crea y gestiona tus registros contables de servicios y materias primas.</p>
+            </div>
+        </a>
+        {% endif %}
+
+        {% if user|has_group:"COMPRAS_CONTABLE,ADMINISTRACION" %}
+        <a href="{% url 'contabilidad:bandeja_compras' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-inbox"></i>
+            </div>
+            <div class="card-content">
+                <h3>Bandeja de Compras</h3>
+                <p>Confirma recepción de documentos físicos, verifica el checklist y aprueba o devuelve registros.</p>
+            </div>
+        </a>
+        {% endif %}
+
+        {% if user|has_group:"CONTABILIDAD,ADMINISTRACION" %}
+        <a href="{% url 'contabilidad:bandeja_contabilidad' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-check-double"></i>
+            </div>
+            <div class="card-content">
+                <h3>Bandeja Contabilidad</h3>
+                <p>Revisión final de registros aprobados por Compras. Aprueba o envía observaciones.</p>
+            </div>
+        </a>
+        {% endif %}
+
+        {% if user|has_group:"GERENCIA,ADMINISTRACION" %}
+        <a href="{% url 'contabilidad:dashboard_gerencia' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <div class="card-content">
+                <h3>Dashboard Gerencia</h3>
+                <p>KPIs y trazabilidad completa del flujo contable por período, líder y estado.</p>
+            </div>
+        </a>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

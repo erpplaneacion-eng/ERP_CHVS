@@ -28,7 +28,11 @@ class RoleAccessMiddleware:
             'COSTOS': ['costos', 'dashboard'],
             'LOGISTICA': ['logistica', 'dashboard'],
             'CALIDAD': ['calidad', 'dashboard'],
-            'ADMINISTRACION': ['nutricion', 'facturacion', 'planeacion', 'principal', 'costos', 'logistica', 'calidad', 'dashboard', 'agente']
+            'LIDER_CONTABLE': ['contabilidad', 'dashboard'],
+            'COMPRAS_CONTABLE': ['contabilidad', 'dashboard'],
+            'CONTABILIDAD': ['contabilidad', 'dashboard'],
+            'GERENCIA': ['contabilidad', 'dashboard'],
+            'ADMINISTRACION': ['nutricion', 'facturacion', 'planeacion', 'principal', 'costos', 'logistica', 'calidad', 'dashboard', 'agente', 'contabilidad']
         }
 
         # Apps que siempre son accesibles para logueados (como el perfil o home)

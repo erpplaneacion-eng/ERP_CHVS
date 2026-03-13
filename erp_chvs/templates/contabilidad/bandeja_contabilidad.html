@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bandeja Contabilidad{% endblock %}
+
+{% block content %}
+<div class="contabilidad-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-check-double"></i> Bandeja de Contabilidad</h2>
+            <p>Registros aprobados por Compras pendientes de revisión final</p>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <label for="filtro-tipo">Tipo:</label>
+            <select id="filtro-tipo">
+                <option value="">Todos</option>
+                <option value="SERVICIOS">Servicios</option>
+                <option value="MATERIAS_PRIMAS">Materias Primas</option>
+            </select>
+        </div>
+        <button class="btn btn-outline-secondary" id="btn-limpiar-filtros">
+            <i class="fas fa-times"></i> Limpiar
+        </button>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table" id="bandejaContabilidadTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Líder</th>
+                    <th>Período</th>
+                    <th>Tipo</th>
+                    <th># Docs</th>
+                    <th>Valor Total</th>
+                    <th>Estado</th>
+                    <th>Fecha Aprobación Compras</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="bandeja-contabilidad-tbody">
+                <tr><td colspan="9" class="text-center">Cargando registros...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const BANDEJA_URL = '{% url "contabilidad:api_listar_registros" %}';
+    const REVISION_BASE_URL = '/contabilidad/revision-contabilidad/';
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/contabilidad/bandeja_contabilidad.js' %}"></script>
+{% endblock %}
