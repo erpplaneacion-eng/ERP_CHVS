@@ -1,6 +1,8 @@
 from django.db import models, transaction
 from django.utils import timezone
 
+from django.contrib.auth.models import User
+
 from .models import (
     RegistroContable, Factura, ItemChecklist,
     VerificacionChecklist, HistorialEstado
@@ -267,9 +269,13 @@ class ContabilidadService:
     def finalizar_revision_compras(registro, usuario):
         """
         Finaliza la revisión de Compras cuando todas las facturas han sido decididas.
-        - Si todas APROBADA → APROBADO_COMPRAS
-        - Si alguna DEVUELTA → DEVUELTO_COMPRAS
+        - Todas APROBADA          → APROBADO_COMPRAS (flujo normal)
+        - Todas DEVUELTA          → DEVUELTO_COMPRAS (sin split)
+        - Mixtas (ambas)          → SPLIT:
+            · Nuevo registro con las APROBADAS → APROBADO_COMPRAS (va al contador ya)
+            · Registro original con las DEVUELTAS → DEVUELTO_COMPRAS (líder corrige)
         - No puede haber facturas en PENDIENTE.
+        Retorna (registro_original, registro_nuevo_o_None).
         """
         if registro.estado != 'EN_REVISION_COMPRAS':
             raise ValueError(
@@ -287,17 +293,10 @@ class ContabilidadService:
             )
 
         devueltas = [f for f in facturas if f.estado_compras == 'DEVUELTA']
-        if devueltas:
-            num = len(devueltas)
-            ContabilidadService._transicion(
-                registro=registro,
-                accion='DEVOLUCION_COMPRAS',
-                estado_nuevo='DEVUELTO_COMPRAS',
-                fecha_field='fecha_devolucion_compras',
-                comentario=f"{num} factura(s) devuelta(s) al líder para corrección.",
-                usuario=usuario,
-            )
-        else:
+        aprobadas = [f for f in facturas if f.estado_compras == 'APROBADA']
+
+        if not devueltas:
+            # Todas aprobadas — flujo normal
             ContabilidadService._transicion(
                 registro=registro,
                 accion='APROBACION_COMPRAS',
@@ -306,7 +305,70 @@ class ContabilidadService:
                 comentario='',
                 usuario=usuario,
             )
-        return registro
+            return registro, None
+
+        if not aprobadas:
+            # Todas devueltas — sin split, devolver completo
+            ContabilidadService._transicion(
+                registro=registro,
+                accion='DEVOLUCION_COMPRAS',
+                estado_nuevo='DEVUELTO_COMPRAS',
+                fecha_field='fecha_devolucion_compras',
+                comentario=f"{len(devueltas)} factura(s) devuelta(s) al líder para corrección.",
+                usuario=usuario,
+            )
+            return registro, None
+
+        # --- SPLIT: hay aprobadas Y devueltas ---
+        now = timezone.now()
+
+        # 1. Crear nuevo registro para las facturas aprobadas
+        nuevo = RegistroContable.objects.create(
+            lider=registro.lider,
+            tipo=registro.tipo,
+            periodo_mes=registro.periodo_mes,
+            periodo_ano=registro.periodo_ano,
+            descripcion=registro.descripcion,
+            estado='APROBADO_COMPRAS',
+            registro_origen=registro,
+            # Heredar fechas relevantes para mantener trazabilidad del tiempo
+            fecha_envio=registro.fecha_envio,
+            fecha_entrega_fisica=registro.fecha_entrega_fisica,
+            fecha_inicio_revision_compras=registro.fecha_inicio_revision_compras,
+            fecha_aprobacion_compras=now,
+        )
+
+        # Historial del nuevo registro
+        HistorialEstado.objects.create(
+            registro=nuevo,
+            accion='CREACION',
+            estado_anterior='',
+            estado_nuevo='APROBADO_COMPRAS',
+            comentario=(
+                f"Registro derivado de RC-{registro.pk} por split de facturas. "
+                f"{len(aprobadas)} factura(s) aprobada(s) trasladadas."
+            ),
+            usuario=usuario,
+        )
+
+        # 2. Mover facturas aprobadas al nuevo registro
+        aprobadas_ids = [f.pk for f in aprobadas]
+        Factura.objects.filter(pk__in=aprobadas_ids).update(registro=nuevo)
+
+        # 3. Registro original: queda solo con las devueltas → DEVUELTO_COMPRAS
+        ContabilidadService._transicion(
+            registro=registro,
+            accion='DEVOLUCION_COMPRAS',
+            estado_nuevo='DEVUELTO_COMPRAS',
+            fecha_field='fecha_devolucion_compras',
+            comentario=(
+                f"{len(devueltas)} factura(s) devuelta(s) al líder para corrección. "
+                f"{len(aprobadas)} factura(s) aprobada(s) trasladadas al registro RC-{nuevo.pk}."
+            ),
+            usuario=usuario,
+        )
+
+        return registro, nuevo
 
     @staticmethod
     @transaction.atomic
@@ -568,5 +630,89 @@ class ContabilidadService:
             'registros': registros_data,
             'lideres': list(lideres),
         }
+
+    @staticmethod
+    def get_seguimiento_lideres():
+        """
+        Vista de seguimiento agrupada por líder.
+        Retorna lista de líderes con sus registros activos (no CERRADO),
+        cada uno con estado actual, días en estado y número de devoluciones.
+        Los registros CERRADO se incluyen con count para dar contexto histórico.
+        """
+        lideres_qs = User.objects.filter(
+            registros_contables__isnull=False
+        ).distinct().order_by('first_name', 'last_name', 'username')
+
+        resultado = []
+        now = timezone.now()
+
+        for lider in lideres_qs:
+            registros = RegistroContable.objects.filter(
+                lider=lider
+            ).select_related('registro_origen').order_by('-fecha_creacion')
+
+            registros_data = []
+            for r in registros:
+                # Días que lleva en el estado actual
+                ultima_transicion = r.historial.order_by('-fecha').first()
+                fecha_estado = ultima_transicion.fecha if ultima_transicion else r.fecha_creacion
+                dias_en_estado = (now - fecha_estado).days
+
+                num_devoluciones = r.historial.filter(accion='DEVOLUCION_COMPRAS').count()
+
+                registros_data.append({
+                    'id': r.pk,
+                    'tipo': r.tipo,
+                    'tipo_display': r.get_tipo_display(),
+                    'periodo_mes': r.periodo_mes,
+                    'periodo_ano': r.periodo_ano,
+                    'estado': r.estado,
+                    'estado_display': r.get_estado_display(),
+                    'dias_en_estado': dias_en_estado,
+                    'num_devoluciones': num_devoluciones,
+                    'valor_total': float(r.valor_total),
+                    'total_documentos': r.total_documentos,
+                    'fecha_creacion': r.fecha_creacion.isoformat(),
+                    'fecha_cierre': r.fecha_cierre.isoformat() if r.fecha_cierre else None,
+                    'registro_origen_id': r.registro_origen_id,
+                    'es_derivado': r.registro_origen_id is not None,
+                })
+
+            activos = [x for x in registros_data if x['estado'] != 'CERRADO']
+            cerrados = [x for x in registros_data if x['estado'] == 'CERRADO']
+
+            # Estado más crítico entre los activos (para ordenar el resumen)
+            _prioridad = {
+                'DEVUELTO_COMPRAS': 1,
+                'OBSERVADO_CONTABILIDAD': 2,
+                'ENVIADO': 3,
+                'EN_REVISION_COMPRAS': 4,
+                'APROBADO_COMPRAS': 5,
+                'APROBADO_CONTABILIDAD': 6,
+                'BORRADOR': 7,
+            }
+            estado_critico = min(
+                (x['estado'] for x in activos),
+                key=lambda e: _prioridad.get(e, 99),
+                default=None
+            )
+
+            resultado.append({
+                'lider_id': lider.pk,
+                'lider_nombre': lider.get_full_name() or lider.username,
+                'lider_username': lider.username,
+                'total_activos': len(activos),
+                'total_cerrados': len(cerrados),
+                'estado_critico': estado_critico,
+                'registros': registros_data,
+            })
+
+        # Ordenar: líderes con registros activos primero, luego por estado crítico
+        resultado.sort(key=lambda x: (
+            0 if x['total_activos'] > 0 else 1,
+            _prioridad.get(x['estado_critico'] or '', 99),
+        ))
+
+        return resultado
 
 

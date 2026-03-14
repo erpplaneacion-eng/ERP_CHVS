@@ -87,6 +87,14 @@ def dashboard_gerencia(request):
     return render(request, 'contabilidad/dashboard_gerencia.html')
 
 
+@login_required
+def seguimiento_lideres(request):
+    """Vista de seguimiento agrupada por líder — disponible para Compras, Contabilidad y Gerencia."""
+    if not _tiene_rol(request.user, 'COMPRAS_CONTABLE', 'CONTABILIDAD', 'GERENCIA'):
+        return render(request, 'contabilidad/sin_permiso.html', status=403)
+    return render(request, 'contabilidad/seguimiento_lideres.html')
+
+
 # --------------------------------------------------------------------------- #
 # APIs JSON                                                                    #
 # --------------------------------------------------------------------------- #
@@ -167,6 +175,8 @@ def api_listar_registros(request):
             'fecha_envio': r.fecha_envio.isoformat() if r.fecha_envio else None,
             'valor_total': float(r.valor_total),
             'total_documentos': r.total_documentos,
+            'registro_origen_id': r.registro_origen_id,
+            'es_derivado': r.registro_origen_id is not None,
         })
 
     return JsonResponse({'success': True, 'data': registros})
@@ -210,6 +220,10 @@ def api_detalle_registro(request, pk):
         'fecha_cierre': registro.fecha_cierre.isoformat() if registro.fecha_cierre else None,
         'valor_total': float(registro.valor_total),
         'total_documentos': registro.total_documentos,
+        'registro_origen_id': registro.registro_origen_id,
+        'registros_derivados': list(
+            registro.registros_derivados.values_list('id', flat=True)
+        ),
         'facturas': facturas,
     }
     return JsonResponse({'success': True, 'data': data})
@@ -274,12 +288,20 @@ def api_finalizar_revision(request, pk):
 
     registro = get_object_or_404(RegistroContable, pk=pk)
     try:
-        ContabilidadService.finalizar_revision_compras(registro, request.user)
+        registro, nuevo = ContabilidadService.finalizar_revision_compras(registro, request.user)
         RegistroActividad.registrar(
             request, 'contabilidad', 'finalizar_revision_compras',
             f"Registro: {pk} | Estado final: {registro.estado}"
+            + (f" | Derivado RC-{nuevo.pk}" if nuevo else "")
         )
-        return JsonResponse({'success': True, 'estado': registro.estado})
+        resp = {'success': True, 'estado': registro.estado}
+        if nuevo:
+            resp['registro_derivado_id'] = nuevo.pk
+            resp['mensaje'] = (
+                f"Se separaron las facturas aprobadas en el registro RC-{nuevo.pk}, "
+                "que ya fue enviado a Contabilidad."
+            )
+        return JsonResponse(resp)
     except ValueError as e:
         return JsonResponse({'success': False, 'error': str(e)})
     except Exception as e:
@@ -632,6 +654,20 @@ def api_historial(request, pk):
         })
 
     return JsonResponse({'success': True, 'data': historial})
+
+
+@login_required
+def api_seguimiento_lideres(request):
+    """GET — Registros agrupados por líder para vista de seguimiento."""
+    if request.method != 'GET':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    if not _tiene_rol(request.user, 'COMPRAS_CONTABLE', 'CONTABILIDAD', 'GERENCIA'):
+        return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
+    try:
+        data = ContabilidadService.get_seguimiento_lideres()
+        return JsonResponse({'success': True, 'data': data})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
 
 
 @login_required

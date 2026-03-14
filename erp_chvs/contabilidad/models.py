@@ -45,6 +45,17 @@ class RegistroContable(models.Model):
     )
     descripcion = models.TextField(blank=True, verbose_name="Descripción")
 
+    # Trazabilidad de splits: cuando un registro se divide por facturas mixtas,
+    # el nuevo registro (aprobadas) apunta al origen (con devueltas).
+    registro_origen = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='registros_derivados',
+        verbose_name="Registro Origen",
+    )
+
     # Fechas automáticas — todas seteadas por el servicio con timezone.now()
     fecha_creacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Creación")
     fecha_envio = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Envío")

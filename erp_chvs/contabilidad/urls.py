@@ -13,6 +13,7 @@ urlpatterns = [
     path('bandeja-contabilidad/', views.bandeja_contabilidad, name='bandeja_contabilidad'),
     path('revision-contabilidad/<int:pk>/', views.revision_contabilidad, name='revision_contabilidad'),
     path('dashboard-gerencia/', views.dashboard_gerencia, name='dashboard_gerencia'),
+    path('seguimiento-lideres/', views.seguimiento_lideres, name='seguimiento_lideres'),
 
     # ---- APIs JSON ----
     path('api/registros/', views.api_listar_registros, name='api_listar_registros'),
@@ -34,4 +35,5 @@ urlpatterns = [
     path('api/registros/<int:pk>/responder-observacion/', views.api_responder_observacion, name='api_responder_observacion'),
     path('api/registros/<int:pk>/historial/', views.api_historial, name='api_historial'),
     path('api/dashboard/', views.api_dashboard, name='api_dashboard'),
+    path('api/seguimiento-lideres/', views.api_seguimiento_lideres, name='api_seguimiento_lideres'),
 ]

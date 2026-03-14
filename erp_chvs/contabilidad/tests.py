@@ -175,6 +175,61 @@ class ContabilidadServiceTests(TestCase):
         factura.refresh_from_db()
         self.assertEqual(factura.estado_compras, 'PENDIENTE')
 
+    def test_split_facturas_mixtas(self):
+        """Cuando hay facturas aprobadas Y devueltas, finalizar debe hacer split."""
+        registro = ContabilidadService.crear_registro(
+            lider=self.lider, tipo='SERVICIOS', periodo_mes=3, periodo_ano=2025
+        )
+        # Agregar dos facturas
+        ContabilidadService.agregar_factura(registro, {
+            'numero_factura': 'FV-A', 'proveedor': 'P1', 'concepto': 'C1',
+            'valor': 500000, 'fecha_factura': '2025-03-01',
+        })
+        ContabilidadService.agregar_factura(registro, {
+            'numero_factura': 'FV-B', 'proveedor': 'P2', 'concepto': 'C2',
+            'valor': 800000, 'fecha_factura': '2025-03-01',
+        })
+
+        ContabilidadService.enviar(registro, self.lider)
+        ContabilidadService.confirmar_recepcion(registro, self.compras)
+
+        facturas = list(registro.facturas.order_by('numero_factura'))
+        fv_a, fv_b = facturas[0], facturas[1]
+
+        # Aprobar FV-A (marcar checklist OK)
+        ver_a = VerificacionChecklist.objects.filter(factura=fv_a, item__obligatorio=True).first()
+        ContabilidadService.guardar_checklist(
+            registro, [{'verificacion_id': ver_a.pk, 'estado': 'OK', 'observacion': ''}], self.compras
+        )
+        ContabilidadService.aprobar_factura(fv_a, self.compras)
+
+        # Devolver FV-B
+        ContabilidadService.devolver_factura(fv_b, self.compras, 'Falta firma')
+
+        # Finalizar → debe hacer split
+        registro_orig, nuevo = ContabilidadService.finalizar_revision_compras(registro, self.compras)
+
+        # El original queda DEVUELTO con solo la factura devuelta
+        registro_orig.refresh_from_db()
+        self.assertEqual(registro_orig.estado, 'DEVUELTO_COMPRAS')
+        self.assertEqual(registro_orig.facturas.count(), 1)
+        self.assertEqual(registro_orig.facturas.first().numero_factura, 'FV-B')
+
+        # El nuevo registro tiene la factura aprobada y va directo a APROBADO_COMPRAS
+        self.assertIsNotNone(nuevo)
+        nuevo.refresh_from_db()
+        self.assertEqual(nuevo.estado, 'APROBADO_COMPRAS')
+        self.assertEqual(nuevo.facturas.count(), 1)
+        self.assertEqual(nuevo.facturas.first().numero_factura, 'FV-A')
+
+        # Trazabilidad: el nuevo apunta al origen
+        self.assertEqual(nuevo.registro_origen_id, registro_orig.pk)
+
+        # El nuevo aparece en la bandeja de contabilidad de inmediato
+        bandeja = ContabilidadService.get_bandeja_contabilidad()
+        self.assertIn(nuevo, bandeja)
+        self.assertNotIn(registro_orig, bandeja)
+
     def test_devolucion_requiere_comentario(self):
         registro = self._crear_registro_con_factura()
         ContabilidadService.enviar(registro, self.lider)
