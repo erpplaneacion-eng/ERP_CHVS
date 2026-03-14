@@ -312,11 +312,10 @@ class ContabilidadServiceTests(TestCase):
 
     def test_dashboard_data_conteos(self):
         self._crear_registro_con_factura()  # BORRADOR
-        data = ContabilidadService.get_dashboard_data()
-        self.assertIn('conteos', data)
-        self.assertIn('BORRADOR', data['conteos'])
-        self.assertGreaterEqual(data['conteos']['BORRADOR'], 1)
-        self.assertIn('registros', data)
+        data = ContabilidadService.get_dashboard_unificado()
+        self.assertIn('kpis', data)
+        self.assertIn('BORRADOR', data['kpis'])
+        self.assertGreaterEqual(data['kpis']['BORRADOR'], 1)
         self.assertIn('lideres', data)
 
     # ------------------------------------------------------------------ #

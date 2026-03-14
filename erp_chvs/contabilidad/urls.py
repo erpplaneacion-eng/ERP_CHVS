@@ -36,4 +36,5 @@ urlpatterns = [
     path('api/registros/<int:pk>/historial/', views.api_historial, name='api_historial'),
     path('api/dashboard/', views.api_dashboard, name='api_dashboard'),
     path('api/seguimiento-lideres/', views.api_seguimiento_lideres, name='api_seguimiento_lideres'),
+    path('api/dashboard-unificado/', views.api_dashboard_unificado, name='api_dashboard_unificado'),
 ]

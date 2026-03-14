@@ -562,103 +562,94 @@ class ContabilidadService:
         ).select_related('lider').order_by('-fecha_creacion')
 
     @staticmethod
-    def get_dashboard_data(filtros=None):
+    @staticmethod
+    def get_dashboard_unificado(filtros=None):
         """
-        Datos para el dashboard de gerencia:
-        - Conteos por estado
-        - Lista de registros con métricas de tiempo, agrupados por líder
+        Vista unificada: KPIs globales + métricas históricas por líder.
+
+        Por líder devuelve:
+        - total_registros, total_activos, total_cerrados
+        - total_devoluciones (eventos DEVOLUCION_COMPRAS acumulados)
+        - valor_total_cerrado
+        - promedio_dias_cierre / max_dias_cierre  (fecha_envio → fecha_cierre)
+        - promedio_dias_reentrega / max_dias_reentrega  (fecha_devolucion → fecha_reenvio)
+        - estado_critico (estado más urgente entre los registros activos)
+        - registros: lista detallada con días_cierre y dias_reentrega por registro
         """
-        from django.db.models import Count, Q
-        from django.contrib.auth.models import User
+        from django.db.models import Count, Q, Subquery, OuterRef
 
         filtros = filtros or {}
 
-        qs = RegistroContable.objects.select_related('lider').all()
-
-        if filtros.get('lider_id'):
-            qs = qs.filter(lider_id=filtros['lider_id'])
-        if filtros.get('periodo_mes'):
-            qs = qs.filter(periodo_mes=filtros['periodo_mes'])
-        if filtros.get('periodo_ano'):
-            qs = qs.filter(periodo_ano=filtros['periodo_ano'])
-        if filtros.get('tipo'):
-            qs = qs.filter(tipo=filtros['tipo'])
-        if filtros.get('estado'):
-            qs = qs.filter(estado=filtros['estado'])
-
-        # Conteos por estado
-        conteos = {}
-        for estado_key, _ in RegistroContable.ESTADO_CHOICES:
-            conteos[estado_key] = RegistroContable.objects.filter(estado=estado_key).count()
-
-        # Lista de registros con métricas
-        registros_data = []
-        for r in qs.order_by('-fecha_creacion'):
-            # Duración total en días (desde creación hasta cierre, o hasta ahora)
-            fecha_fin = r.fecha_cierre or timezone.now()
-            duracion_dias = (fecha_fin - r.fecha_creacion).days
-
-            # Número de devoluciones
-            num_devoluciones = r.historial.filter(accion='DEVOLUCION_COMPRAS').count()
-
-            registros_data.append({
-                'id': r.pk,
-                'lider': r.lider.get_full_name() or r.lider.username,
-                'lider_id': r.lider_id,
-                'periodo_mes': r.periodo_mes,
-                'periodo_ano': r.periodo_ano,
-                'tipo': r.tipo,
-                'tipo_display': r.get_tipo_display(),
-                'estado': r.estado,
-                'estado_display': r.get_estado_display(),
-                'fecha_creacion': r.fecha_creacion.isoformat() if r.fecha_creacion else None,
-                'fecha_envio': r.fecha_envio.isoformat() if r.fecha_envio else None,
-                'fecha_cierre': r.fecha_cierre.isoformat() if r.fecha_cierre else None,
-                'duracion_dias': duracion_dias,
-                'num_devoluciones': num_devoluciones,
-                'valor_total': float(r.valor_total),
-                'total_documentos': r.total_documentos,
-            })
-
-        # Lista de líderes para filtros
-        lideres = User.objects.filter(
-            registros_contables__isnull=False
-        ).distinct().values('id', 'username', 'first_name', 'last_name')
-
-        return {
-            'conteos': conteos,
-            'registros': registros_data,
-            'lideres': list(lideres),
+        # KPIs globales (sin filtros de período/tipo para que siempre muestren totales reales)
+        conteos = {
+            estado_key: RegistroContable.objects.filter(estado=estado_key).count()
+            for estado_key, _ in RegistroContable.ESTADO_CHOICES
         }
 
-    @staticmethod
-    def get_seguimiento_lideres():
-        """
-        Vista de seguimiento agrupada por líder.
-        Retorna lista de líderes con sus registros activos (no CERRADO),
-        cada uno con estado actual, días en estado y número de devoluciones.
-        Los registros CERRADO se incluyen con count para dar contexto histórico.
-        """
-        lideres_qs = User.objects.filter(
-            registros_contables__isnull=False
-        ).distinct().order_by('first_name', 'last_name', 'username')
+        # Base filtrada con anotaciones para evitar N+1
+        qs_base = RegistroContable.objects.select_related(
+            'lider', 'registro_origen'
+        ).annotate(
+            num_devoluciones=Count(
+                'historial',
+                filter=Q(historial__accion='DEVOLUCION_COMPRAS')
+            ),
+            ultima_transicion=Subquery(
+                HistorialEstado.objects.filter(
+                    registro=OuterRef('pk')
+                ).order_by('-fecha').values('fecha')[:1]
+            ),
+        )
+
+        if filtros.get('lider_id'):
+            qs_base = qs_base.filter(lider_id=filtros['lider_id'])
+        if filtros.get('periodo_mes'):
+            qs_base = qs_base.filter(periodo_mes=filtros['periodo_mes'])
+        if filtros.get('periodo_ano'):
+            qs_base = qs_base.filter(periodo_ano=filtros['periodo_ano'])
+        if filtros.get('tipo'):
+            qs_base = qs_base.filter(tipo=filtros['tipo'])
+
+        now = timezone.now()
+        _prioridad = {
+            'DEVUELTO_COMPRAS': 1,
+            'OBSERVADO_CONTABILIDAD': 2,
+            'ENVIADO': 3,
+            'EN_REVISION_COMPRAS': 4,
+            'APROBADO_COMPRAS': 5,
+            'APROBADO_CONTABILIDAD': 6,
+            'BORRADOR': 7,
+        }
+
+        lideres_ids = qs_base.values_list('lider_id', flat=True).distinct()
+        lideres_qs = User.objects.filter(pk__in=lideres_ids).order_by(
+            'first_name', 'last_name', 'username'
+        )
 
         resultado = []
-        now = timezone.now()
-
         for lider in lideres_qs:
-            registros = RegistroContable.objects.filter(
-                lider=lider
-            ).select_related('registro_origen').order_by('-fecha_creacion')
+            registros = list(qs_base.filter(lider=lider).order_by('-fecha_creacion'))
 
             registros_data = []
-            for r in registros:
-                # Días que lleva en el estado actual
-                ultima_transicion = r.historial.order_by('-fecha').first()
-                fecha_estado = ultima_transicion.fecha if ultima_transicion else r.fecha_creacion
-                dias_en_estado = (now - fecha_estado).days
+            dias_cierre_list = []
+            dias_reentrega_list = []
+            total_devoluciones = 0
 
-                num_devoluciones = r.historial.filter(accion='DEVOLUCION_COMPRAS').count()
+            for r in registros:
+                fecha_estado = r.ultima_transicion or r.fecha_creacion
+                dias_en_estado = (now - fecha_estado).days if fecha_estado else 0
+
+                total_devoluciones += r.num_devoluciones
+
+                dias_cierre = None
+                if r.fecha_cierre and r.fecha_envio:
+                    dias_cierre = max(0, (r.fecha_cierre - r.fecha_envio).days)
+                    dias_cierre_list.append(dias_cierre)
+
+                dias_reentrega = None
+                if r.fecha_reenvio and r.fecha_devolucion_compras:
+                    dias_reentrega = max(0, (r.fecha_reenvio - r.fecha_devolucion_compras).days)
+                    dias_reentrega_list.append(dias_reentrega)
 
                 registros_data.append({
                     'id': r.pk,
@@ -669,11 +660,13 @@ class ContabilidadService:
                     'estado': r.estado,
                     'estado_display': r.get_estado_display(),
                     'dias_en_estado': dias_en_estado,
-                    'num_devoluciones': num_devoluciones,
+                    'num_devoluciones': r.num_devoluciones,
                     'valor_total': float(r.valor_total),
                     'total_documentos': r.total_documentos,
-                    'fecha_creacion': r.fecha_creacion.isoformat(),
+                    'fecha_envio': r.fecha_envio.isoformat() if r.fecha_envio else None,
                     'fecha_cierre': r.fecha_cierre.isoformat() if r.fecha_cierre else None,
+                    'dias_cierre': dias_cierre,
+                    'dias_reentrega': dias_reentrega,
                     'registro_origen_id': r.registro_origen_id,
                     'es_derivado': r.registro_origen_id is not None,
                 })
@@ -681,38 +674,50 @@ class ContabilidadService:
             activos = [x for x in registros_data if x['estado'] != 'CERRADO']
             cerrados = [x for x in registros_data if x['estado'] == 'CERRADO']
 
-            # Estado más crítico entre los activos (para ordenar el resumen)
-            _prioridad = {
-                'DEVUELTO_COMPRAS': 1,
-                'OBSERVADO_CONTABILIDAD': 2,
-                'ENVIADO': 3,
-                'EN_REVISION_COMPRAS': 4,
-                'APROBADO_COMPRAS': 5,
-                'APROBADO_CONTABILIDAD': 6,
-                'BORRADOR': 7,
-            }
+            promedio_dias_cierre = (
+                round(sum(dias_cierre_list) / len(dias_cierre_list), 1)
+                if dias_cierre_list else None
+            )
+            max_dias_cierre = max(dias_cierre_list) if dias_cierre_list else None
+            promedio_dias_reentrega = (
+                round(sum(dias_reentrega_list) / len(dias_reentrega_list), 1)
+                if dias_reentrega_list else None
+            )
+            max_dias_reentrega = max(dias_reentrega_list) if dias_reentrega_list else None
+            valor_total_cerrado = sum(x['valor_total'] for x in cerrados)
+
             estado_critico = min(
                 (x['estado'] for x in activos),
                 key=lambda e: _prioridad.get(e, 99),
-                default=None
+                default=None,
             )
 
             resultado.append({
                 'lider_id': lider.pk,
                 'lider_nombre': lider.get_full_name() or lider.username,
                 'lider_username': lider.username,
+                'total_registros': len(registros_data),
                 'total_activos': len(activos),
                 'total_cerrados': len(cerrados),
+                'total_devoluciones': total_devoluciones,
+                'valor_total_cerrado': valor_total_cerrado,
+                'promedio_dias_cierre': promedio_dias_cierre,
+                'max_dias_cierre': max_dias_cierre,
+                'promedio_dias_reentrega': promedio_dias_reentrega,
+                'max_dias_reentrega': max_dias_reentrega,
                 'estado_critico': estado_critico,
                 'registros': registros_data,
             })
 
-        # Ordenar: líderes con registros activos primero, luego por estado crítico
         resultado.sort(key=lambda x: (
             0 if x['total_activos'] > 0 else 1,
             _prioridad.get(x['estado_critico'] or '', 99),
         ))
 
-        return resultado
+        return {
+            'kpis': conteos,
+            'lideres': resultado,
+        }
+
 
 

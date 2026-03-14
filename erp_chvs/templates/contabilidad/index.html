@@ -44,14 +44,14 @@
         </a>
         {% endif %}
 
-        {% if user|has_group:"GERENCIA,ADMINISTRACION" %}
+        {% if user|has_group:"GERENCIA,CONTABILIDAD,COMPRAS_CONTABLE,ADMINISTRACION" %}
         <a href="{% url 'contabilidad:dashboard_gerencia' %}" class="card">
             <div class="card-icon">
-                <i class="fas fa-chart-bar"></i>
+                <i class="fas fa-users-cog"></i>
             </div>
             <div class="card-content">
-                <h3>Dashboard Gerencia</h3>
-                <p>KPIs y trazabilidad completa del flujo contable por período, líder y estado.</p>
+                <h3>Historial por Líder</h3>
+                <p>KPIs, tiempos de cierre, devoluciones y reentregas agrupados por líder responsable.</p>
             </div>
         </a>
         {% endif %}

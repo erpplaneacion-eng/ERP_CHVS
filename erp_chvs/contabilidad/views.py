@@ -81,18 +81,17 @@ def revision_contabilidad(request, pk):
 
 @login_required
 def dashboard_gerencia(request):
-    """Dashboard de gerencia con KPIs y trazabilidad completa."""
-    if not _tiene_rol(request.user, 'GERENCIA'):
+    """Vista unificada: historial de líderes + KPIs. Accesible para Compras, Contabilidad y Gerencia."""
+    if not _tiene_rol(request.user, 'GERENCIA', 'CONTABILIDAD', 'COMPRAS_CONTABLE'):
         return render(request, 'contabilidad/sin_permiso.html', status=403)
     return render(request, 'contabilidad/dashboard_gerencia.html')
 
 
 @login_required
 def seguimiento_lideres(request):
-    """Vista de seguimiento agrupada por líder — disponible para Compras, Contabilidad y Gerencia."""
-    if not _tiene_rol(request.user, 'COMPRAS_CONTABLE', 'CONTABILIDAD', 'GERENCIA'):
-        return render(request, 'contabilidad/sin_permiso.html', status=403)
-    return render(request, 'contabilidad/seguimiento_lideres.html')
+    """Redirige a la vista unificada dashboard_gerencia."""
+    from django.shortcuts import redirect
+    return redirect('contabilidad:dashboard_gerencia')
 
 
 # --------------------------------------------------------------------------- #
@@ -658,25 +657,23 @@ def api_historial(request, pk):
 
 @login_required
 def api_seguimiento_lideres(request):
-    """GET — Registros agrupados por líder para vista de seguimiento."""
-    if request.method != 'GET':
-        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
-    if not _tiene_rol(request.user, 'COMPRAS_CONTABLE', 'CONTABILIDAD', 'GERENCIA'):
-        return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
-    try:
-        data = ContabilidadService.get_seguimiento_lideres()
-        return JsonResponse({'success': True, 'data': data})
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+    """GET — Alias mantenido por compatibilidad; delega a api_dashboard_unificado."""
+    return api_dashboard_unificado(request)
 
 
 @login_required
 def api_dashboard(request):
-    """GET — Datos del dashboard de gerencia."""
+    """GET — Alias legacy; delega a api_dashboard_unificado."""
+    return api_dashboard_unificado(request)
+
+
+@login_required
+def api_dashboard_unificado(request):
+    """GET — Vista unificada: KPIs globales + historial de métricas por líder."""
     if request.method != 'GET':
         return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
 
-    if not _tiene_rol(request.user, 'GERENCIA'):
+    if not _tiene_rol(request.user, 'GERENCIA', 'CONTABILIDAD', 'COMPRAS_CONTABLE'):
         return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
 
     filtros = {
@@ -684,13 +681,11 @@ def api_dashboard(request):
         'periodo_mes': request.GET.get('periodo_mes'),
         'periodo_ano': request.GET.get('periodo_ano'),
         'tipo': request.GET.get('tipo'),
-        'estado': request.GET.get('estado'),
     }
-    # Limpiar filtros vacíos
     filtros = {k: v for k, v in filtros.items() if v}
 
     try:
-        data = ContabilidadService.get_dashboard_data(filtros)
+        data = ContabilidadService.get_dashboard_unificado(filtros)
         return JsonResponse({'success': True, 'data': data})
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})

@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Dashboard Gerencia — Contabilidad{% endblock %}
+{% block title %}Historial por Líder — Contabilidad{% endblock %}
 
 {% block content %}
 <div class="contabilidad-container">
     <div class="page-header">
         <div class="header-left">
-            <h2><i class="fas fa-chart-bar"></i> Dashboard de Gerencia</h2>
-            <p>Trazabilidad completa del flujo contable</p>
+            <h2><i class="fas fa-users-cog"></i> Historial de Entregas por Líder</h2>
+            <p>Métricas históricas de rendimiento: tiempos de cierre, reentregas y devoluciones</p>
         </div>
         <div class="header-actions">
             <button class="btn btn-primary" id="btn-actualizar">
@@ -18,39 +18,31 @@
     </div>
 
     <!-- KPI Cards -->
-    <div id="kpi-container" class="dashboard-kpis" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:24px;">
-        <div class="kpi-loading text-muted">Cargando KPIs...</div>
+    <div id="kpi-container" class="dashboard-kpis" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;">
+        <div class="text-muted" style="padding:12px;">Cargando KPIs...</div>
     </div>
 
     <!-- Filtros -->
     <div class="filter-bar">
         <div class="filter-group">
             <label for="filtro-lider">Líder:</label>
-            <select id="filtro-lider">
-                <option value="">Todos</option>
-            </select>
+            <select id="filtro-lider"><option value="">Todos</option></select>
         </div>
         <div class="filter-group">
             <label for="filtro-mes">Mes:</label>
             <select id="filtro-mes">
                 <option value="">Todos</option>
-                <option value="1">Enero</option>
-                <option value="2">Febrero</option>
-                <option value="3">Marzo</option>
-                <option value="4">Abril</option>
-                <option value="5">Mayo</option>
-                <option value="6">Junio</option>
-                <option value="7">Julio</option>
-                <option value="8">Agosto</option>
-                <option value="9">Septiembre</option>
-                <option value="10">Octubre</option>
-                <option value="11">Noviembre</option>
-                <option value="12">Diciembre</option>
+                <option value="1">Enero</option><option value="2">Febrero</option>
+                <option value="3">Marzo</option><option value="4">Abril</option>
+                <option value="5">Mayo</option><option value="6">Junio</option>
+                <option value="7">Julio</option><option value="8">Agosto</option>
+                <option value="9">Septiembre</option><option value="10">Octubre</option>
+                <option value="11">Noviembre</option><option value="12">Diciembre</option>
             </select>
         </div>
         <div class="filter-group">
             <label for="filtro-ano">Año:</label>
-            <input type="number" id="filtro-ano" min="2020" max="2099" placeholder="Ej: 2025" style="width:100px;">
+            <input type="number" id="filtro-ano" min="2020" max="2099" placeholder="Ej: 2025" style="width:90px;">
         </div>
         <div class="filter-group">
             <label for="filtro-tipo">Tipo:</label>
@@ -60,54 +52,45 @@
                 <option value="MATERIAS_PRIMAS">Materias Primas</option>
             </select>
         </div>
-        <div class="filter-group">
-            <label for="filtro-estado">Estado:</label>
-            <select id="filtro-estado">
-                <option value="">Todos</option>
-                <option value="BORRADOR">Borrador</option>
-                <option value="ENVIADO">Enviado</option>
-                <option value="EN_REVISION_COMPRAS">En Revisión Compras</option>
-                <option value="DEVUELTO_COMPRAS">Devuelto Compras</option>
-                <option value="APROBADO_COMPRAS">Aprobado Compras</option>
-                <option value="OBSERVADO_CONTABILIDAD">Observado Contabilidad</option>
-                <option value="CERRADO">Cerrado</option>
-            </select>
-        </div>
-        <button class="btn btn-primary" id="btn-aplicar-filtros">
-            <i class="fas fa-filter"></i> Filtrar
-        </button>
-        <button class="btn btn-outline-secondary" id="btn-limpiar-filtros">
-            <i class="fas fa-times"></i> Limpiar
-        </button>
+        <button class="btn btn-primary" id="btn-filtrar"><i class="fas fa-filter"></i> Filtrar</button>
+        <button class="btn btn-outline-secondary" id="btn-limpiar"><i class="fas fa-times"></i> Limpiar</button>
     </div>
 
-    <!-- Tabla de registros -->
-    <div class="table-container">
-        <table class="data-table" id="dashboardTable">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Líder</th>
-                    <th>Período</th>
-                    <th>Tipo</th>
-                    <th>Estado</th>
-                    <th># Docs</th>
-                    <th>Valor Total</th>
-                    <th>Fecha Envío</th>
-                    <th>Fecha Cierre</th>
-                    <th>Duración (días)</th>
-                    <th>Devoluciones</th>
-                </tr>
-            </thead>
-            <tbody id="dashboard-tbody">
-                <tr><td colspan="11" class="text-center">Cargando datos...</td></tr>
-            </tbody>
-        </table>
+    <!-- Tabla de líderes -->
+    <div id="cargando" class="text-center py-5 text-muted">
+        <i class="fas fa-spinner fa-spin fa-2x"></i>
+        <p class="mt-2">Cargando datos...</p>
+    </div>
+    <div id="tabla-container" style="display:none;">
+        <div class="table-container" style="overflow-x:auto;">
+            <table class="data-table" id="tabla-lideres">
+                <thead>
+                    <tr>
+                        <th style="width:32px;"></th>
+                        <th>Líder</th>
+                        <th>Estado</th>
+                        <th title="Total de registros contables">RC</th>
+                        <th title="Registros activos (no cerrados)">Activos</th>
+                        <th title="Registros cerrados">Cerrados</th>
+                        <th title="Total de facturas devueltas por compras">Devoluciones</th>
+                        <th title="Valor acumulado de registros cerrados">Valor Cerrado</th>
+                        <th title="Promedio de días desde envío hasta cierre">Prom. Cierre</th>
+                        <th title="Máximo de días desde envío hasta cierre">Máx. Cierre</th>
+                        <th title="Promedio de días desde devolución hasta reenvío">Prom. Reentrega</th>
+                        <th title="Máximo de días desde devolución hasta reenvío">Máx. Reentrega</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-lideres"></tbody>
+            </table>
+        </div>
+        <div id="sin-datos" class="text-center text-muted py-4" style="display:none;">
+            <i class="fas fa-users-slash fa-2x mb-2"></i><br>No hay líderes con registros.
+        </div>
     </div>
 </div>
 
 <script>
-    const DASHBOARD_URL = '{% url "contabilidad:api_dashboard" %}';
+    const DASHBOARD_URL = '{% url "contabilidad:api_dashboard_unificado" %}';
 </script>
 {% endblock %}
 
