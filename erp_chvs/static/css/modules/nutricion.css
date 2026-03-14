@@ -2,6 +2,17 @@
 /* MÓDULO NUTRICIÓN                      */
 /* ===================================== */
 
+/* Dashboard background */
+#nutricion-dashboard-background {
+    padding: 2rem;
+    min-height: calc(100vh - 60px);
+    background-image: url('/static/nutricion/images/fondo.webp');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
 /* Mensajes de Django */
 .messages-container {
     margin-bottom: 20px;

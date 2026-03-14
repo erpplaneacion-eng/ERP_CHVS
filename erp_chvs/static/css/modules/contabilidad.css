@@ -4,9 +4,28 @@
 
 /* Dashboard principal */
 #contabilidad-dashboard-background {
+    position: relative;
+    overflow: hidden;
     padding: 2rem;
     min-height: calc(100vh - 60px);
-    background: linear-gradient(135deg, #1e3a8a 0%, #0d9488 100%);
+    /* Blanco como fallback mientras carga Three.js */
+    background: #ffffff;
+}
+
+#contabilidad-bg-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    display: block;
+}
+
+/* Las cards quedan por encima del canvas */
+#contabilidad-dashboard-background .module-dashboard {
+    position: relative;
+    z-index: 1;
 }
 
 /* Contenedor general */

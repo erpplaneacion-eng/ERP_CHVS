@@ -23,7 +23,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-image: url('/static/calidad/images/calidad.jpg');
+    background-image: url('/static/calidad/images/calidad.webp');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

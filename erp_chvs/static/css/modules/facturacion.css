@@ -2,6 +2,17 @@
 /* MÓDULO FACTURACIÓN                    */
 /* ===================================== */
 
+/* Dashboard background */
+#facturacion-dashboard-background {
+    padding: 2rem;
+    min-height: calc(100vh - 60px);
+    background-image: url('/static/facturacion/images/fondofacturacion.webp');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
 /* Contenedores de facturación */
 .facturacion-container {
     padding: 20px;

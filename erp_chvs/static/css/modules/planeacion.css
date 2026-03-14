@@ -1,6 +1,17 @@
-sn/* ===================================== */
+/* ===================================== */
 /* MÓDULO PLANEACIÓN                     */
 /* ===================================== */
+
+/* Dashboard background */
+#planeacion-dashboard-background {
+    padding: 2rem;
+    min-height: calc(100vh - 60px);
+    background-image: url('/static/planeacion/images/fondoplanificacion.webp');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
 
 /* Contenedor general - Ya existe más abajo pero con mejor definición */
 

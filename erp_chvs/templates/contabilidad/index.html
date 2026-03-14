@@ -6,6 +6,7 @@
 
 {% block content %}
 <div id="contabilidad-dashboard-background">
+    <canvas id="contabilidad-bg-canvas"></canvas>
     <div class="module-dashboard">
 
         {% if user|has_group:"LIDER_CONTABLE,ADMINISTRACION" %}
@@ -58,4 +59,9 @@
 
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="{% static 'js/contabilidad/bg_contabilidad.js' %}"></script>
 {% endblock %}
