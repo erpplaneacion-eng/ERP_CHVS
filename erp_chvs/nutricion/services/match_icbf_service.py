@@ -47,6 +47,7 @@ def obtener_dashboard_match(programa_id):
             menus_filas.append({
                 'menu_id':       menu_data['menu_id'],
                 'menu_num':      menu_data['menu_num'],
+                'modalidad':     menu_data['modalidad'],
                 'preparaciones': menu_data['preparaciones'],
                 'match':         match,
             })
@@ -92,6 +93,7 @@ def _obtener_ingredientes_programa(programa_id):
             'id_ingrediente_siesa__id_componente',
             'id_preparacion',
             'id_preparacion__id_menu',
+            'id_preparacion__id_menu__id_modalidad',
         )
         .order_by(
             'id_ingrediente_siesa__nombre_del_alimento',
@@ -112,9 +114,10 @@ def _obtener_ingredientes_programa(programa_id):
         menu = uso.id_preparacion.id_menu
         if menu.id_menu not in grupos[codigo]['menus']:
             grupos[codigo]['menus'][menu.id_menu] = {
-                'menu_id':  menu.id_menu,
-                'menu_num': menu.menu,
-                'preps':    set(),
+                'menu_id':   menu.id_menu,
+                'menu_num':  menu.menu,
+                'modalidad': menu.id_modalidad.modalidad,
+                'preps':     set(),
             }
         grupos[codigo]['menus'][menu.id_menu]['preps'].add(uso.id_preparacion.preparacion)
 
@@ -125,6 +128,7 @@ def _obtener_ingredientes_programa(programa_id):
                 {
                     'menu_id':       m['menu_id'],
                     'menu_num':      m['menu_num'],
+                    'modalidad':     m['modalidad'],
                     'preparaciones': sorted(m['preps']),
                 }
                 for m in datos['menus'].values()

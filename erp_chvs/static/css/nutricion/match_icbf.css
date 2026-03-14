@@ -264,10 +264,24 @@
 .menus-tabla td { padding: 10px 12px; vertical-align: middle; }
 
 /* Columnas */
-.col-menu   { width: 80px; }
-.col-prep   { color: #555; }
-.col-producto { min-width: 160px; }
-.col-accion { width: 80px; text-align: right; white-space: nowrap; }
+.col-menu      { width: 80px; }
+.col-modalidad { width: 140px; }
+.col-prep      { color: #555; }
+.col-producto  { min-width: 160px; }
+.col-accion    { width: 80px; text-align: right; white-space: nowrap; }
+
+/* Badge de modalidad */
+.modalidad-badge {
+    display: inline-block;
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
 
 /* Badge del número de menú */
 .menu-badge {

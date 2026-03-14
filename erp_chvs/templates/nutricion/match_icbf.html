@@ -145,6 +145,7 @@
                     <thead>
                         <tr>
                             <th class="col-menu">Menú</th>
+                            <th class="col-modalidad">Modalidad</th>
                             <th>Preparación(es)</th>
                             <th>Producto de Compras</th>
                             <th class="col-accion"></th>
@@ -160,6 +161,9 @@
 
                             <td class="col-menu">
                                 <span class="menu-badge">{{ menu_row.menu_num }}</span>
+                            </td>
+                            <td class="col-modalidad">
+                                <span class="modalidad-badge">{{ menu_row.modalidad }}</span>
                             </td>
                             <td class="col-prep">
                                 {{ menu_row.preparaciones|join:", " }}
