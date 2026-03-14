@@ -64,7 +64,8 @@
         <p class="text-center text-muted">Cargando checklist...</p>
     </div>
 
-    <!-- Sección de acción de contabilidad -->
+    <!-- Sección de acción de contabilidad (solo visible si el registro está en estado revisable) -->
+    {% if registro.estado == 'APROBADO_COMPRAS' %}
     <div class="table-container" style="padding: 20px; margin-bottom: 24px;">
         <h4><i class="fas fa-gavel"></i> Decisión de Contabilidad</h4>
         <div class="form-group">
@@ -80,6 +81,7 @@
             </button>
         </div>
     </div>
+    {% endif %}
 
     <!-- Historial -->
     <div style="margin-top: 32px;">

@@ -193,7 +193,7 @@ class VerificacionChecklist(models.Model):
         unique_together = [['factura', 'item']]
 
     def __str__(self):
-        return f"{self.registro} | {self.item.nombre} | {self.get_estado_display()}"
+        return f"{self.factura} | {self.item.nombre} | {self.get_estado_display()}"
 
 
 class HistorialEstado(models.Model):
