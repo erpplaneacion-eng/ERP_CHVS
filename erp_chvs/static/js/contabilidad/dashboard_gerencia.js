@@ -203,20 +203,21 @@ class DashboardLideresManager {
         }
 
         const tabla = document.createElement('table');
+        tabla.className = 'sub-detalle-tabla';
         tabla.style.cssText = 'width:100%;border-collapse:collapse;font-size:13px;';
         tabla.innerHTML = `
             <thead>
-                <tr style="background:#e8eaf6;">
-                    <th style="padding:7px 10px;text-align:left;color:#1e3a8a;">RC</th>
-                    <th style="padding:7px 10px;text-align:left;color:#1e3a8a;">Tipo</th>
-                    <th style="padding:7px 10px;text-align:left;color:#1e3a8a;">Período</th>
-                    <th style="padding:7px 10px;text-align:left;color:#1e3a8a;">Estado</th>
-                    <th style="padding:7px 10px;text-align:center;color:#1e3a8a;" title="Días en el estado actual">Días estado</th>
-                    <th style="padding:7px 10px;text-align:center;color:#1e3a8a;">Devoluciones</th>
-                    <th style="padding:7px 10px;text-align:center;color:#1e3a8a;" title="Días desde envío hasta cierre">Días cierre</th>
-                    <th style="padding:7px 10px;text-align:center;color:#1e3a8a;" title="Días desde devolución hasta reenvío">Días reentrega</th>
-                    <th style="padding:7px 10px;text-align:center;color:#1e3a8a;">Docs</th>
-                    <th style="padding:7px 10px;text-align:right;color:#1e3a8a;">Valor</th>
+                <tr>
+                    <th style="padding:7px 10px;text-align:left;">RC</th>
+                    <th style="padding:7px 10px;text-align:left;">Tipo</th>
+                    <th style="padding:7px 10px;text-align:left;">Período</th>
+                    <th style="padding:7px 10px;text-align:left;">Estado</th>
+                    <th style="padding:7px 10px;text-align:center;" title="Días en el estado actual">Días estado</th>
+                    <th style="padding:7px 10px;text-align:center;">Devoluciones</th>
+                    <th style="padding:7px 10px;text-align:center;" title="Días desde envío hasta cierre">Días cierre</th>
+                    <th style="padding:7px 10px;text-align:center;" title="Días desde devolución hasta reenvío">Días reentrega</th>
+                    <th style="padding:7px 10px;text-align:center;">Docs</th>
+                    <th style="padding:7px 10px;text-align:right;">Valor</th>
                 </tr>
             </thead>
         `;

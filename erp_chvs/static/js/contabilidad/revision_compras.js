@@ -391,6 +391,7 @@ class RevisionComprasManager {
     }
 
     marcarFacturaDecidida(bloque, nuevoEstado, motivo) {
+        bloque.classList.remove('abierto');
         bloque.dataset.estadoCompras = nuevoEstado;
 
         // Actualizar badge en el encabezado

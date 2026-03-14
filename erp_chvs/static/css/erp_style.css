@@ -279,6 +279,12 @@ Sidebar
     box-shadow: 0 2px 10px rgba(214, 137, 16, 0.5);
 }
 
+.nav-contabilidad:hover, .nav-contabilidad.active {
+    background: #1a7f64;
+    color: white;
+    box-shadow: 0 2px 10px rgba(26, 127, 100, 0.5);
+}
+
 /* ---- Collapsed ---- */
 .sidebar.collapsed {
     width: 60px;

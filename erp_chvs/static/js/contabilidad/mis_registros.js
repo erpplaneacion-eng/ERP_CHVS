@@ -101,7 +101,7 @@ class MisRegistrosManager {
         tbody.innerHTML = '';
 
         if (!registros.length) {
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center">No se encontraron registros.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center">No se encontraron registros.</td></tr>';
             return;
         }
 
@@ -116,6 +116,7 @@ class MisRegistrosManager {
 
             tr.innerHTML = `
                 <td>${r.id}</td>
+                <td>${r.lider || '<span class="text-muted">—</span>'}</td>
                 <td>${r.periodo_mes}/${r.periodo_ano}</td>
                 <td>${r.tipo_display}</td>
                 <td>${r.descripcion || '<span class="text-muted">—</span>'}</td>
@@ -204,7 +205,7 @@ class MisRegistrosManager {
 
     mostrarError(msg) {
         const tbody = document.getElementById('registros-tbody');
-        if (tbody) tbody.innerHTML = `<tr><td colspan="9" class="text-center" style="color:#e74c3c;">${msg}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="10" class="text-center" style="color:#e74c3c;">${msg}</td></tr>`;
     }
 
     getCookie(name) {
