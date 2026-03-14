@@ -97,7 +97,7 @@ class RevisionContabilidadManager {
                 : (todos_ok ? '<span class="checklist-badge-ok">Completo</span>' : '');
 
             const bloque = document.createElement('div');
-            bloque.className = `checklist-factura-bloque${idx === 0 ? ' abierto' : ''}`;
+            bloque.className = 'checklist-factura-bloque';
 
             const encabezado = document.createElement('div');
             encabezado.className = 'checklist-factura-header';

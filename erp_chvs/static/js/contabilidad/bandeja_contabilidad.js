@@ -1,5 +1,4 @@
-// bandeja_contabilidad.js — Bandeja de Contabilidad
-
+// JavaScript para la bandeja de contabilidad
 class BandejaContabilidadManager {
     constructor() {
         this.allRegistros = [];
@@ -67,9 +66,9 @@ class BandejaContabilidadManager {
                 <td><span class="estado-badge estado-badge-${r.estado.toLowerCase().replace(/_/g, '')}">${r.estado_display}</span></td>
                 <td>${fechaEnvio}</td>
                 <td>
-                    <a href="${REVISION_BASE_URL}${r.id}/" class="btn btn-sm btn-primary">
-                        <i class="fas fa-search"></i> Revisar
-                    </a>
+                    ${r.estado !== 'DEVUELTO_COMPRAS'
+                        ? `<a href="${REVISION_BASE_URL}${r.id}/" class="btn btn-sm btn-primary"><i class="fas fa-search"></i> Revisar</a>`
+                        : '—'}
                 </td>
             `;
             fragment.appendChild(tr);
