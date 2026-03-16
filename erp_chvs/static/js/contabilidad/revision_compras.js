@@ -1,5 +1,40 @@
 // revision_compras.js — Revisión de Compras (por factura)
 
+function horasLaboralesEntre(inicioISO, finISO) {
+    if (!inicioISO || !finISO) return 0;
+    const OFFSET_MS = 5 * 60 * 60 * 1000; // Colombia UTC-5
+    const H_INI = 7, H_FIN = 16;
+    function toLocal(iso) {
+        const d = new Date(new Date(iso).getTime() - OFFSET_MS);
+        return d;
+    }
+    const inicio = toLocal(inicioISO);
+    const fin = toLocal(finISO);
+    if (fin <= inicio) return 0;
+    let total = 0;
+    let cur = new Date(Date.UTC(inicio.getUTCFullYear(), inicio.getUTCMonth(), inicio.getUTCDate(), inicio.getUTCHours(), inicio.getUTCMinutes(), inicio.getUTCSeconds()));
+    const finLocal = new Date(Date.UTC(fin.getUTCFullYear(), fin.getUTCMonth(), fin.getUTCDate(), fin.getUTCHours(), fin.getUTCMinutes(), fin.getUTCSeconds()));
+    while (cur < finLocal) {
+        const dow = cur.getUTCDay();
+        if (dow === 0 || dow === 6) {
+            const add = dow === 0 ? 1 : 2;
+            cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth(), cur.getUTCDate() + add, H_INI, 0, 0));
+            continue;
+        }
+        const iniHoy = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth(), cur.getUTCDate(), H_INI, 0, 0));
+        const finHoy = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth(), cur.getUTCDate(), H_FIN, 0, 0));
+        if (cur < iniHoy) cur = iniHoy;
+        if (cur >= finHoy) {
+            cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth(), cur.getUTCDate() + 1, H_INI, 0, 0));
+            continue;
+        }
+        const finEf = new Date(Math.min(finHoy.getTime(), finLocal.getTime()));
+        total += (finEf - cur) / 3600000;
+        cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth(), cur.getUTCDate() + 1, H_INI, 0, 0));
+    }
+    return Math.round(total * 10) / 10;
+}
+
 class RevisionComprasManager {
     constructor() {
         this.saving = false;
@@ -117,6 +152,24 @@ class RevisionComprasManager {
                 const tr = document.createElement('tr');
                 const valor = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(f.valor);
                 const fecha = f.fecha_factura ? new Date(f.fecha_factura + 'T00:00:00').toLocaleDateString('es-CO') : '—';
+
+                let indicadorEmision = '<span class="text-muted" style="font-size:11px;">—</span>';
+                const fechaRef = f.fecha_recepcion_lider || f.fecha_factura;
+                const tooltipRef = f.fecha_recepcion_lider ? 'Días entre recepción física y carga al sistema' : 'Días entre fecha de factura y carga al sistema (sin fecha de recepción)';
+                if (fechaRef && f.fecha_carga) {
+                    const diasRetraso = Math.max(0, Math.floor((new Date(f.fecha_carga) - new Date(fechaRef + 'T00:00:00')) / 86400000));
+                    const obs = f.observacion_retraso
+                        ? `<br><small style="color:#6b7280;font-style:italic;">"${f.observacion_retraso}"</small>`
+                        : '';
+                    if (diasRetraso === 0) {
+                        indicadorEmision = `<span style="font-size:11px;color:#16a34a;font-weight:600;" title="${tooltipRef}">0d</span>`;
+                    } else if (diasRetraso <= 2) {
+                        indicadorEmision = `<span style="font-size:11px;color:#d97706;font-weight:600;" title="${tooltipRef}">${diasRetraso}d ⚠️</span>${obs}`;
+                    } else {
+                        indicadorEmision = `<span style="font-size:11px;color:#dc2626;font-weight:700;" title="${tooltipRef}">${diasRetraso}d 🔴</span>${obs}`;
+                    }
+                }
+
                 tr.innerHTML = `
                     <td>${idx + 1}</td>
                     <td>${f.numero_factura}</td>
@@ -124,6 +177,7 @@ class RevisionComprasManager {
                     <td>${f.concepto}</td>
                     <td>${valor}</td>
                     <td>${fecha}</td>
+                    <td style="text-align:center;">${indicadorEmision}</td>
                 `;
                 fragment.appendChild(tr);
             });
@@ -430,16 +484,38 @@ class RevisionComprasManager {
     }
 
     async finalizarRevision() {
-        const confirmado = await Swal.fire({
+        const horas = horasLaboralesEntre(
+            typeof FECHA_INICIO_COMPRAS !== 'undefined' ? FECHA_INICIO_COMPRAS : null,
+            new Date().toISOString()
+        );
+        const superaLimite = horas > 5;
+
+        const swalConfig = {
             title: '¿Finalizar revisión?',
-            text: 'Las facturas aprobadas pasarán a Contabilidad. Las devueltas regresarán al líder.',
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Sí, finalizar',
             cancelButtonText: 'Cancelar',
             confirmButtonColor: '#0d9488',
-        });
-        if (!confirmado.isConfirmed) return;
+        };
+
+        if (superaLimite) {
+            swalConfig.html = `Las facturas aprobadas pasarán a Contabilidad. Las devueltas regresarán al líder.<br><br>
+                <strong>&#9888;&#65039; Asegúrese de haber cargado la información de forma correcta en SIESA antes de continuar.</strong><br><br>
+                <strong style="color:#c0392b;">&#9888;&#65039; Ha superado las 5 horas laborales (${horas}h transcurridas).<br>
+                Debe justificar el motivo de la demora.</strong>`;
+            swalConfig.input = 'textarea';
+            swalConfig.inputPlaceholder = 'Explique el motivo de la demora...';
+            swalConfig.inputValidator = (v) => { if (!v || !v.trim()) return 'La justificación es obligatoria.'; };
+        } else {
+            swalConfig.html = `Las facturas aprobadas pasarán a Contabilidad. Las devueltas regresarán al líder.<br><br>
+                <strong>&#9888;&#65039; Asegúrese de haber cargado la información de forma correcta en SIESA antes de continuar.</strong>`;
+        }
+
+        const result = await Swal.fire(swalConfig);
+        if (!result.isConfirmed) return;
+
+        const justificacion_demora = superaLimite ? result.value : '';
 
         try {
             const response = await fetch(FINALIZAR_URL, {
@@ -448,7 +524,7 @@ class RevisionComprasManager {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCookie('csrftoken'),
                 },
-                body: JSON.stringify({}),
+                body: JSON.stringify({ justificacion_demora }),
             });
             const data = await response.json();
             if (data.success) {

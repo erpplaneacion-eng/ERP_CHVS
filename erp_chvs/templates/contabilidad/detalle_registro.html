@@ -62,17 +62,20 @@
                     <th>Concepto</th>
                     <th>Valor</th>
                     <th>Fecha Factura</th>
+                    <th title="Días entre fecha de la factura y cuándo fue cargada al sistema">Retraso Carga</th>
+                    <th>Recepción Líder</th>
+                    <th>Días Retención</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody id="facturas-tbody">
-                <tr><td colspan="7" class="text-center">Cargando facturas...</td></tr>
+                <tr><td colspan="10" class="text-center">Cargando facturas...</td></tr>
             </tbody>
             <tfoot>
                 <tr>
                     <td colspan="4" style="text-align:right; font-weight:600; padding: 12px 16px;">Total:</td>
                     <td id="valor-total" style="font-weight:700; padding: 12px 16px;">$0</td>
-                    <td colspan="2"></td>
+                    <td colspan="5"></td>
                 </tr>
             </tfoot>
         </table>
@@ -122,6 +125,20 @@
                 <label for="factura-fecha">Fecha de Factura *</label>
                 <input type="date" id="factura-fecha">
             </div>
+            <div class="form-group">
+                <label for="factura-recepcion">Fecha de Recepción por Líder</label>
+                <input type="date" id="factura-recepcion">
+                <small class="form-hint">¿Cuándo recibió físicamente este documento?</small>
+            </div>
+            <div class="form-group" id="grupo-observacion-retraso" style="display:none;">
+                <label for="factura-observacion-retraso">
+                    <i class="fas fa-info-circle" style="color:#d97706;"></i>
+                    Observación del retraso <small style="color:#888;">(opcional)</small>
+                </label>
+                <textarea id="factura-observacion-retraso" rows="2"
+                    placeholder="Ej: La factura llegó tarde por parte del proveedor, se recibió el día..."></textarea>
+                <small class="form-hint">Se detectó un retraso entre la fecha de la factura y hoy. Puede explicar el motivo.</small>
+            </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" id="cancel-factura-modal">Cancelar</button>
@@ -154,6 +171,8 @@
 <script>
     const REGISTRO_ID = {{ registro.pk }};
     const REGISTRO_ESTADO = '{{ registro.estado }}';
+    const FECHA_ENVIO = '{{ registro.fecha_envio|date:"Y-m-d" }}' || null;
+    const FECHA_CREACION = '{{ registro.fecha_creacion|date:"c" }}';
     const DETALLE_URL = '{% url "contabilidad:api_detalle_registro" registro.pk %}';
     const FACTURAS_URL = '{% url "contabilidad:api_agregar_factura" registro.pk %}';
     const ENVIAR_URL = '{% url "contabilidad:api_enviar" registro.pk %}';

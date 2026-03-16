@@ -165,6 +165,10 @@ class DashboardLideresManager {
                 <td style="text-align:center;${lider.max_dias_cierre > 10 ? 'color:#c0392b;font-weight:700;' : ''}">${dias(lider.max_dias_cierre)}</td>
                 <td style="text-align:center;">${dias(lider.promedio_dias_reentrega)}</td>
                 <td style="text-align:center;${lider.max_dias_reentrega > 5 ? 'color:#d97706;font-weight:700;' : ''}">${dias(lider.max_dias_reentrega)}</td>
+                <td style="text-align:center;">${dias(lider.promedio_dias_retencion)}</td>
+                <td style="text-align:center;${lider.max_dias_retencion > 2 ? 'color:#c0392b;font-weight:700;' : ''}">${dias(lider.max_dias_retencion)}</td>
+                <td style="text-align:center;">${dias(lider.promedio_retraso_carga)}</td>
+                <td style="text-align:center;${lider.max_retraso_carga > 2 ? 'color:#dc2626;font-weight:700;' : ''}">${dias(lider.max_retraso_carga)}</td>
             `;
             fragment.appendChild(trLider);
 
@@ -175,7 +179,7 @@ class DashboardLideresManager {
             trDetalle.style.display = 'none';
 
             const td = document.createElement('td');
-            td.colSpan = 12;
+            td.colSpan = 16;
             td.style.cssText = 'padding:0;background:#f8f9ff;border-bottom:2px solid #e0e0e0;';
             td.appendChild(this._crearSubTabla(lider.registros));
             trDetalle.appendChild(td);
@@ -186,6 +190,36 @@ class DashboardLideresManager {
         });
 
         tbody.appendChild(fragment);
+    }
+
+    _fmtH(h) {
+        if (h === null || h === undefined) return '—';
+        if (h < 1) return '< 1h';
+        if (h < 24) return `${Math.round(h)}h`;
+        const d = Math.floor(h / 24);
+        const hRest = Math.round(h % 24);
+        return hRest > 0 ? `${d}d ${hRest}h` : `${d}d`;
+    }
+
+    _barraEtapas(lh, ch, coh) {
+        if (lh === null || ch === null || coh === null) return '—';
+        const total = lh + ch + coh;
+        // Si todo es 0 (ocurrió en segundos), mostrar tercios iguales
+        const pL  = total === 0 ? 33 : Math.round((lh / total) * 100);
+        const pC  = total === 0 ? 33 : Math.round((ch / total) * 100);
+        const pCo = total === 0 ? 34 : 100 - pL - pC;
+        return `
+            <div style="display:flex;height:14px;border-radius:4px;overflow:hidden;min-width:80px;"
+                 title="Líder: ${this._fmtH(lh)} | Compras: ${this._fmtH(ch)} | Contabilidad: ${this._fmtH(coh)}">
+                <div style="width:${pL}%;background:#1e3a8a;" title="Líder: ${this._fmtH(lh)}"></div>
+                <div style="width:${pC}%;background:#d97706;" title="Compras: ${this._fmtH(ch)}"></div>
+                <div style="width:${pCo}%;background:#0d9488;" title="Contabilidad: ${this._fmtH(coh)}"></div>
+            </div>
+            <div style="font-size:10px;color:#888;margin-top:2px;white-space:nowrap;">
+                <span style="color:#1e3a8a;">■</span> L
+                <span style="color:#d97706;margin-left:4px;">■</span> C
+                <span style="color:#0d9488;margin-left:4px;">■</span> Co
+            </div>`;
     }
 
     _crearSubTabla(registros) {
@@ -214,8 +248,12 @@ class DashboardLideresManager {
                     <th style="padding:7px 10px;text-align:left;">Estado</th>
                     <th style="padding:7px 10px;text-align:center;" title="Días en el estado actual">Días estado</th>
                     <th style="padding:7px 10px;text-align:center;">Devoluciones</th>
-                    <th style="padding:7px 10px;text-align:center;" title="Días desde envío hasta cierre">Días cierre</th>
-                    <th style="padding:7px 10px;text-align:center;" title="Días desde devolución hasta reenvío">Días reentrega</th>
+                    <th style="padding:7px 10px;text-align:center;color:#1e3a8a;" title="Tiempo desde creación hasta envío a Compras">T. Líder</th>
+                    <th style="padding:7px 10px;text-align:center;color:#d97706;" title="Tiempo que duró la revisión en Compras">T. Compras</th>
+                    <th style="padding:7px 10px;text-align:center;color:#0d9488;" title="Tiempo desde aprobación de Compras hasta cierre">T. Contab.</th>
+                    <th style="padding:7px 10px;text-align:center;" title="Distribución de tiempo por etapa (azul=Líder, naranja=Compras, verde=Contabilidad)">Distribución</th>
+                    <th style="padding:7px 10px;text-align:center;" title="Días entre recepción del líder y envío a Compras">Retención</th>
+                    <th style="padding:7px 10px;text-align:center;" title="Días entre fecha de la factura y carga al sistema">Ret. carga</th>
                     <th style="padding:7px 10px;text-align:center;">Docs</th>
                     <th style="padding:7px 10px;text-align:right;">Valor</th>
                 </tr>
@@ -243,6 +281,18 @@ class DashboardLideresManager {
                 ? `<span style="${r.dias_reentrega > 5 ? 'color:#d97706;font-weight:700;' : ''}">${r.dias_reentrega}d</span>`
                 : '—';
 
+            const diasRetencionVal = r.dias_retencion !== null && r.dias_retencion !== undefined
+                ? `<span style="${r.dias_retencion > 2 ? 'color:#c0392b;font-weight:700;' : 'color:#16a34a;font-weight:600;'}">${r.dias_retencion}d</span>`
+                : '—';
+
+            const tLider = r.tiempo_lider_h;
+            const tCompras = r.tiempo_compras_h;
+            const tConta = r.tiempo_contabilidad_h;
+
+            const tLiderStyle = tLider !== null && tLider > 9 ? 'color:#c0392b;font-weight:700;' : 'color:#1e3a8a;';
+            const tComprasStyle = tCompras !== null && tCompras > 48 ? 'color:#c0392b;font-weight:700;' : 'color:#d97706;';
+            const tContaStyle = tConta !== null && tConta > 48 ? 'color:#c0392b;font-weight:700;' : 'color:#0d9488;';
+
             tr.innerHTML = `
                 <td style="padding:7px 10px;">
                     <a href="/contabilidad/registro/${r.id}/" style="font-weight:600;color:#1e3a8a;">
@@ -260,8 +310,19 @@ class DashboardLideresManager {
                         ? `<span style="color:#d97706;font-weight:700;"><i class="fas fa-undo" style="font-size:10px;"></i> ${r.num_devoluciones}</span>`
                         : '—'}
                 </td>
-                <td style="padding:7px 10px;text-align:center;">${diasCierreVal}</td>
-                <td style="padding:7px 10px;text-align:center;">${diasReentregaVal}</td>
+                <td style="padding:7px 10px;text-align:center;${tLiderStyle}">${this._fmtH(tLider)}</td>
+                <td style="padding:7px 10px;text-align:center;${tComprasStyle}">
+                    ${this._fmtH(tCompras)}
+                    ${r.num_devoluciones > 0 ? '<br><span style="font-size:10px;color:#d97706;">🔄 incluye correc.</span>' : ''}
+                </td>
+                <td style="padding:7px 10px;text-align:center;${tContaStyle}">${this._fmtH(tConta)}</td>
+                <td style="padding:7px 10px;text-align:center;">${this._barraEtapas(tLider, tCompras, tConta)}</td>
+                <td style="padding:7px 10px;text-align:center;">${diasRetencionVal}</td>
+                <td style="padding:7px 10px;text-align:center;">${
+                    r.max_retraso_carga !== null && r.max_retraso_carga !== undefined
+                        ? `<span style="${r.max_retraso_carga > 2 ? 'color:#dc2626;font-weight:700;' : r.max_retraso_carga > 0 ? 'color:#d97706;' : 'color:#16a34a;'}">${r.max_retraso_carga}d</span>`
+                        : '—'
+                }</td>
                 <td style="padding:7px 10px;text-align:center;">${r.total_documentos}</td>
                 <td style="padding:7px 10px;text-align:right;">${fmt(r.valor_total)}</td>
             `;

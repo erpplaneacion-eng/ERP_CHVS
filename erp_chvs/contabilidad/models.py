@@ -71,6 +71,11 @@ class RegistroContable(models.Model):
     fecha_aprobacion_contabilidad = models.DateTimeField(null=True, blank=True, verbose_name="Fecha Aprobación Contabilidad")
     fecha_cierre = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Cierre")
 
+    # Justificaciones de demora (requeridas si se superan 5 horas laborales)
+    justificacion_demora_lider = models.TextField(blank=True, verbose_name="Justificación Demora Líder")
+    justificacion_demora_compras = models.TextField(blank=True, verbose_name="Justificación Demora Compras")
+    justificacion_demora_contabilidad = models.TextField(blank=True, verbose_name="Justificación Demora Contabilidad")
+
     class Meta:
         db_table = 'contabilidad_registros'
         verbose_name = "Registro Contable"
@@ -113,6 +118,11 @@ class Factura(models.Model):
     concepto = models.CharField(max_length=300, verbose_name="Concepto")
     valor = models.DecimalField(max_digits=14, decimal_places=2, verbose_name="Valor")
     fecha_factura = models.DateField(verbose_name="Fecha de Factura")
+    fecha_recepcion_lider = models.DateField(
+        null=True, blank=True,
+        verbose_name="Fecha de Recepción por Líder",
+        help_text="Fecha en que el líder recibió físicamente este documento."
+    )
     fecha_carga = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Carga")
     estado_compras = models.CharField(
         max_length=10,
@@ -121,6 +131,11 @@ class Factura(models.Model):
         verbose_name="Estado Compras",
     )
     comentario_devolucion = models.TextField(blank=True, verbose_name="Motivo de Devolución")
+    observacion_retraso = models.TextField(
+        blank=True,
+        verbose_name="Observación de Retraso",
+        help_text="Explicación opcional del líder sobre el retraso entre la fecha de la factura y su carga al sistema."
+    )
 
     class Meta:
         db_table = 'contabilidad_facturas'

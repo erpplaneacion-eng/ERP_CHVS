@@ -198,9 +198,11 @@ def api_detalle_registro(request, pk):
             'concepto': f.concepto,
             'valor': float(f.valor),
             'fecha_factura': f.fecha_factura.isoformat() if f.fecha_factura else None,
+            'fecha_recepcion_lider': f.fecha_recepcion_lider.isoformat() if f.fecha_recepcion_lider else None,
             'fecha_carga': f.fecha_carga.isoformat() if f.fecha_carga else None,
             'estado_compras': f.estado_compras,
             'comentario_devolucion': f.comentario_devolucion,
+            'observacion_retraso': f.observacion_retraso,
         })
 
     data = {
@@ -223,6 +225,12 @@ def api_detalle_registro(request, pk):
         'registros_derivados': list(
             registro.registros_derivados.values_list('id', flat=True)
         ),
+        'fecha_entrega_fisica': registro.fecha_entrega_fisica.isoformat() if registro.fecha_entrega_fisica else None,
+        'fecha_reentrega_fisica': registro.fecha_reentrega_fisica.isoformat() if registro.fecha_reentrega_fisica else None,
+        'fecha_aprobacion_compras': registro.fecha_aprobacion_compras.isoformat() if registro.fecha_aprobacion_compras else None,
+        'justificacion_demora_lider': registro.justificacion_demora_lider,
+        'justificacion_demora_compras': registro.justificacion_demora_compras,
+        'justificacion_demora_contabilidad': registro.justificacion_demora_contabilidad,
         'facturas': facturas,
     }
     return JsonResponse({'success': True, 'data': data})
@@ -287,7 +295,9 @@ def api_finalizar_revision(request, pk):
 
     registro = get_object_or_404(RegistroContable, pk=pk)
     try:
-        registro, nuevo = ContabilidadService.finalizar_revision_compras(registro, request.user)
+        data = json.loads(request.body) if request.body else {}
+        justificacion = data.get('justificacion_demora', '')
+        registro, nuevo = ContabilidadService.finalizar_revision_compras(registro, request.user, justificacion=justificacion)
         RegistroActividad.registrar(
             request, 'contabilidad', 'finalizar_revision_compras',
             f"Registro: {pk} | Estado final: {registro.estado}"
@@ -374,7 +384,9 @@ def api_enviar(request, pk):
         return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
 
     try:
-        ContabilidadService.enviar(registro, request.user)
+        data = json.loads(request.body) if request.body else {}
+        justificacion = data.get('justificacion_demora', '')
+        ContabilidadService.enviar(registro, request.user, justificacion=justificacion)
         RegistroActividad.registrar(
             request, 'contabilidad', 'enviar_registro',
             f"Registro: {pk} | Estado: {registro.estado}"
@@ -565,7 +577,8 @@ def api_observar_contabilidad(request, pk):
     try:
         data = json.loads(request.body)
         comentario = data.get('comentario', '').strip()
-        ContabilidadService.observar_contabilidad(registro, request.user, comentario)
+        justificacion = data.get('justificacion_demora', '')
+        ContabilidadService.observar_contabilidad(registro, request.user, comentario, justificacion=justificacion)
         RegistroActividad.registrar(
             request, 'contabilidad', 'observar_contabilidad',
             f"Registro: {pk} | Observación: {comentario[:80]}"
@@ -592,7 +605,8 @@ def api_aprobar_contabilidad(request, pk):
     try:
         data = json.loads(request.body) if request.body else {}
         comentario = data.get('comentario', '').strip()
-        ContabilidadService.aprobar_contabilidad(registro, request.user, comentario)
+        justificacion = data.get('justificacion_demora', '')
+        ContabilidadService.aprobar_contabilidad(registro, request.user, comentario, justificacion=justificacion)
         RegistroActividad.registrar(
             request, 'contabilidad', 'aprobar_contabilidad',
             f"Registro: {pk}"

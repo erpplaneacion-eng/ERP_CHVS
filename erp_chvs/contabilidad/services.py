@@ -1,3 +1,6 @@
+from datetime import timedelta
+
+import pytz
 from django.db import models, transaction
 from django.utils import timezone
 
@@ -7,6 +10,45 @@ from .models import (
     RegistroContable, Factura, ItemChecklist,
     VerificacionChecklist, HistorialEstado
 )
+
+_COLOMBIA_TZ = pytz.timezone('America/Bogota')
+_MAX_HORAS_LABORALES = 5
+_HORA_INICIO = 7   # 7am
+_HORA_FIN = 16     # 4pm
+
+
+def horas_laborales_entre(inicio, fin):
+    """
+    Calcula horas laborales (lun-vie, 7am-4pm hora Colombia) entre dos datetimes aware.
+    Retorna float. Devuelve 0.0 si inicio o fin son None o fin <= inicio.
+    """
+    if not inicio or not fin or fin <= inicio:
+        return 0.0
+    current = inicio.astimezone(_COLOMBIA_TZ)
+    fin_col = fin.astimezone(_COLOMBIA_TZ)
+    total = 0.0
+    while current < fin_col:
+        if current.weekday() >= 5:
+            days_to_monday = 7 - current.weekday()
+            current = (current + timedelta(days=days_to_monday)).replace(
+                hour=_HORA_INICIO, minute=0, second=0, microsecond=0
+            )
+            continue
+        inicio_hoy = current.replace(hour=_HORA_INICIO, minute=0, second=0, microsecond=0)
+        fin_hoy = current.replace(hour=_HORA_FIN, minute=0, second=0, microsecond=0)
+        if current < inicio_hoy:
+            current = inicio_hoy
+        if current >= fin_hoy:
+            current = (current + timedelta(days=1)).replace(
+                hour=_HORA_INICIO, minute=0, second=0, microsecond=0
+            )
+            continue
+        fin_efectivo = min(fin_hoy, fin_col)
+        total += (fin_efectivo - current).total_seconds() / 3600
+        current = (current + timedelta(days=1)).replace(
+            hour=_HORA_INICIO, minute=0, second=0, microsecond=0
+        )
+    return round(total, 2)
 
 
 class ContabilidadService:
@@ -92,6 +134,8 @@ class ContabilidadService:
             concepto=datos.get('concepto', '').strip(),
             valor=datos['valor'],
             fecha_factura=datos['fecha_factura'],
+            fecha_recepcion_lider=datos.get('fecha_recepcion_lider') or None,
+            observacion_retraso=datos.get('observacion_retraso', '').strip(),
         )
         return factura
 
@@ -129,7 +173,7 @@ class ContabilidadService:
 
     @staticmethod
     @transaction.atomic
-    def enviar(registro, usuario):
+    def enviar(registro, usuario, justificacion=''):
         """
         Transición BORRADOR/DEVUELTO → ENVIADO.
         Requiere al menos 1 factura. Distingue primer envío de reenvío.
@@ -140,6 +184,17 @@ class ContabilidadService:
             )
         if registro.facturas.count() == 0:
             raise ValueError("El registro debe tener al menos una factura antes de enviarse.")
+
+        # Validar tiempo — timer del líder: fecha_creacion → ahora
+        horas = horas_laborales_entre(registro.fecha_creacion, timezone.now())
+        if horas > _MAX_HORAS_LABORALES and not justificacion:
+            raise ValueError(
+                f"Han transcurrido {horas:.1f} horas laborales desde la creación del registro "
+                f"(máximo: {_MAX_HORAS_LABORALES}h). Debe ingresar una justificación de la demora."
+            )
+        if justificacion:
+            registro.justificacion_demora_lider = justificacion.strip()
+            registro.save(update_fields=['justificacion_demora_lider'])
 
         es_reenvio = registro.estado == 'DEVUELTO_COMPRAS'
         fecha_field = 'fecha_reenvio' if es_reenvio else 'fecha_envio'
@@ -156,12 +211,17 @@ class ContabilidadService:
                 estado_compras='PENDIENTE', comentario_devolucion=''
             )
 
+        comentario_envio = (
+            "Registro reenviado a Compras tras corrección de facturas devueltas."
+            if es_reenvio else
+            "Registro enviado a Compras para revisión física de documentos."
+        )
         ContabilidadService._transicion(
             registro=registro,
             accion=accion,
             estado_nuevo='ENVIADO',
             fecha_field=fecha_field,
-            comentario='',
+            comentario=comentario_envio,
             usuario=usuario,
         )
         return registro
@@ -190,12 +250,17 @@ class ContabilidadService:
         registro.estado = 'EN_REVISION_COMPRAS'
         registro.save()
 
+        comentario_recepcion = (
+            "Compras confirmó la reentrega física de los documentos. Inicio de revisión (ciclo de corrección)."
+            if es_reenvio else
+            "Compras confirmó la recepción física de los documentos. Inicio de revisión de facturas y checklist."
+        )
         HistorialEstado.objects.create(
             registro=registro,
             accion='CONFIRMACION_REENTREGA' if es_reenvio else 'CONFIRMACION_RECEPCION',
             estado_anterior='ENVIADO',
             estado_nuevo='EN_REVISION_COMPRAS',
-            comentario='',
+            comentario=comentario_recepcion,
             usuario=usuario,
         )
 
@@ -266,7 +331,7 @@ class ContabilidadService:
 
     @staticmethod
     @transaction.atomic
-    def finalizar_revision_compras(registro, usuario):
+    def finalizar_revision_compras(registro, usuario, justificacion=''):
         """
         Finaliza la revisión de Compras cuando todas las facturas han sido decididas.
         - Todas APROBADA          → APROBADO_COMPRAS (flujo normal)
@@ -285,6 +350,18 @@ class ContabilidadService:
         if not facturas:
             raise ValueError("El registro no tiene facturas.")
 
+        # Validar tiempo — timer de Compras: fecha_entrega_fisica (o reentrega) → ahora
+        fecha_inicio_compras = registro.fecha_reentrega_fisica or registro.fecha_entrega_fisica
+        horas = horas_laborales_entre(fecha_inicio_compras, timezone.now())
+        if horas > _MAX_HORAS_LABORALES and not justificacion:
+            raise ValueError(
+                f"Han transcurrido {horas:.1f} horas laborales desde la recepción del documento "
+                f"(máximo: {_MAX_HORAS_LABORALES}h). Debe ingresar una justificación de la demora."
+            )
+        if justificacion:
+            registro.justificacion_demora_compras = justificacion.strip()
+            registro.save(update_fields=['justificacion_demora_compras'])
+
         pendientes = [f for f in facturas if f.estado_compras == 'PENDIENTE']
         if pendientes:
             raise ValueError(
@@ -302,7 +379,10 @@ class ContabilidadService:
                 accion='APROBACION_COMPRAS',
                 estado_nuevo='APROBADO_COMPRAS',
                 fecha_field='fecha_aprobacion_compras',
-                comentario='',
+                comentario=(
+                    f"Compras aprobó las {len(aprobadas)} factura(s). "
+                    "Registro enviado a revisión de Contabilidad."
+                ),
                 usuario=usuario,
             )
             return registro, None
@@ -314,7 +394,10 @@ class ContabilidadService:
                 accion='DEVOLUCION_COMPRAS',
                 estado_nuevo='DEVUELTO_COMPRAS',
                 fecha_field='fecha_devolucion_compras',
-                comentario=f"{len(devueltas)} factura(s) devuelta(s) al líder para corrección.",
+                comentario=(
+                    f"Compras devolvió las {len(devueltas)} factura(s). "
+                    "Registro regresa al líder para corrección desde la etapa de Revisión de Compras."
+                ),
                 usuario=usuario,
             )
             return registro, None
@@ -362,8 +445,9 @@ class ContabilidadService:
             estado_nuevo='DEVUELTO_COMPRAS',
             fecha_field='fecha_devolucion_compras',
             comentario=(
-                f"{len(devueltas)} factura(s) devuelta(s) al líder para corrección. "
-                f"{len(aprobadas)} factura(s) aprobada(s) trasladadas al registro RC-{nuevo.pk}."
+                f"Split de facturas desde Revisión de Compras: "
+                f"{len(devueltas)} factura(s) devuelta(s) al líder para corrección — "
+                f"{len(aprobadas)} factura(s) aprobada(s) trasladadas al registro RC-{nuevo.pk} para continuar en Contabilidad."
             ),
             usuario=usuario,
         )
@@ -445,7 +529,7 @@ class ContabilidadService:
 
     @staticmethod
     @transaction.atomic
-    def observar_contabilidad(registro, usuario, comentario):
+    def observar_contabilidad(registro, usuario, comentario, justificacion=''):
         """
         Transición APROBADO_COMPRAS → OBSERVADO_CONTABILIDAD.
         Comentario obligatorio. Setea fecha_inicio_revision_contabilidad y
@@ -457,6 +541,16 @@ class ContabilidadService:
             )
         if not comentario or not comentario.strip():
             raise ValueError("El comentario es obligatorio para observar el registro.")
+
+        # Validar tiempo — timer de Contabilidad: fecha_aprobacion_compras → ahora
+        horas = horas_laborales_entre(registro.fecha_aprobacion_compras, timezone.now())
+        if horas > _MAX_HORAS_LABORALES and not justificacion:
+            raise ValueError(
+                f"Han transcurrido {horas:.1f} horas laborales desde la aprobación de Compras "
+                f"(máximo: {_MAX_HORAS_LABORALES}h). Debe ingresar una justificación de la demora."
+            )
+        if justificacion:
+            registro.justificacion_demora_contabilidad = justificacion.strip()
 
         now = timezone.now()
         registro.fecha_inicio_revision_contabilidad = now
@@ -476,7 +570,7 @@ class ContabilidadService:
 
     @staticmethod
     @transaction.atomic
-    def aprobar_contabilidad(registro, usuario, comentario=''):
+    def aprobar_contabilidad(registro, usuario, comentario='', justificacion=''):
         """
         Transición APROBADO_COMPRAS → CERRADO (aprobación + cierre en un solo paso).
         Setea fecha_inicio_revision_contabilidad, fecha_aprobacion_contabilidad y fecha_cierre.
@@ -485,6 +579,16 @@ class ContabilidadService:
             raise ValueError(
                 f"Solo se puede aprobar y cerrar desde APROBADO_COMPRAS. Estado actual: '{registro.estado}'"
             )
+
+        # Validar tiempo — timer de Contabilidad: fecha_aprobacion_compras → ahora
+        horas = horas_laborales_entre(registro.fecha_aprobacion_compras, timezone.now())
+        if horas > _MAX_HORAS_LABORALES and not justificacion:
+            raise ValueError(
+                f"Han transcurrido {horas:.1f} horas laborales desde la aprobación de Compras "
+                f"(máximo: {_MAX_HORAS_LABORALES}h). Debe ingresar una justificación de la demora."
+            )
+        if justificacion:
+            registro.justificacion_demora_contabilidad = justificacion.strip()
 
         now = timezone.now()
         registro.fecha_inicio_revision_contabilidad = now
@@ -498,7 +602,7 @@ class ContabilidadService:
             accion='APROBACION_CONTABILIDAD',
             estado_anterior='APROBADO_COMPRAS',
             estado_nuevo='APROBADO_CONTABILIDAD',
-            comentario=comentario or '',
+            comentario=comentario or 'Contabilidad aprobó el registro tras revisión de facturas y checklist.',
             usuario=usuario,
         )
         HistorialEstado.objects.create(
@@ -506,7 +610,7 @@ class ContabilidadService:
             accion='CIERRE',
             estado_anterior='APROBADO_CONTABILIDAD',
             estado_nuevo='CERRADO',
-            comentario='Cierre automático tras aprobación de contabilidad.',
+            comentario='Registro cerrado definitivamente. Proceso contable completado en todas las etapas.',
             usuario=usuario,
         )
         return registro
@@ -633,6 +737,8 @@ class ContabilidadService:
             registros_data = []
             dias_cierre_list = []
             dias_reentrega_list = []
+            dias_retencion_list = []
+            dias_retraso_carga_list = []
             total_devoluciones = 0
 
             for r in registros:
@@ -651,6 +757,53 @@ class ContabilidadService:
                     dias_reentrega = max(0, (r.fecha_reenvio - r.fecha_devolucion_compras).days)
                     dias_reentrega_list.append(dias_reentrega)
 
+                # Retraso de carga: fecha_carga − fecha_factura (máximo entre facturas del registro)
+                max_retraso_carga = None
+                retrasos = []
+                for fac in r.facturas.all():
+                    if fac.fecha_factura and fac.fecha_carga:
+                        retraso = max(0, (fac.fecha_carga.date() - fac.fecha_factura).days)
+                        retrasos.append(retraso)
+                if retrasos:
+                    max_retraso_carga = max(retrasos)
+                    dias_retraso_carga_list.append(max_retraso_carga)
+
+                # Días de retención: fecha_envio − fecha_recepcion_lider (máximo entre facturas)
+                dias_retencion = None
+                if r.fecha_envio:
+                    fechas_recepcion = list(
+                        r.facturas.exclude(fecha_recepcion_lider=None)
+                        .values_list('fecha_recepcion_lider', flat=True)
+                    )
+                    if fechas_recepcion:
+                        max_recepcion = max(fechas_recepcion)
+                        dias_retencion = max(0, (r.fecha_envio.date() - max_recepcion).days)
+                        dias_retencion_list.append(dias_retencion)
+
+                # Tiempo por etapa (en horas decimales)
+                tiempo_lider_h = None
+                if r.fecha_envio and r.fecha_creacion:
+                    tiempo_lider_h = round(
+                        max(0, (r.fecha_envio - r.fecha_creacion).total_seconds() / 3600), 1
+                    )
+
+                tiempo_compras_h = None
+                if r.fecha_aprobacion_compras:
+                    if r.fecha_reentrega_fisica and r.fecha_devolucion_compras and r.fecha_entrega_fisica:
+                        t1 = max(0, (r.fecha_devolucion_compras - r.fecha_entrega_fisica).total_seconds() / 3600)
+                        t2 = max(0, (r.fecha_aprobacion_compras - r.fecha_reentrega_fisica).total_seconds() / 3600)
+                        tiempo_compras_h = round(t1 + t2, 1)
+                    elif r.fecha_entrega_fisica:
+                        tiempo_compras_h = round(
+                            max(0, (r.fecha_aprobacion_compras - r.fecha_entrega_fisica).total_seconds() / 3600), 1
+                        )
+
+                tiempo_contabilidad_h = None
+                if r.fecha_cierre and r.fecha_aprobacion_compras:
+                    tiempo_contabilidad_h = round(
+                        max(0, (r.fecha_cierre - r.fecha_aprobacion_compras).total_seconds() / 3600), 1
+                    )
+
                 registros_data.append({
                     'id': r.pk,
                     'tipo': r.tipo,
@@ -667,6 +820,11 @@ class ContabilidadService:
                     'fecha_cierre': r.fecha_cierre.isoformat() if r.fecha_cierre else None,
                     'dias_cierre': dias_cierre,
                     'dias_reentrega': dias_reentrega,
+                    'dias_retencion': dias_retencion,
+                    'max_retraso_carga': max_retraso_carga,
+                    'tiempo_lider_h': tiempo_lider_h,
+                    'tiempo_compras_h': tiempo_compras_h,
+                    'tiempo_contabilidad_h': tiempo_contabilidad_h,
                     'registro_origen_id': r.registro_origen_id,
                     'es_derivado': r.registro_origen_id is not None,
                 })
@@ -684,6 +842,16 @@ class ContabilidadService:
                 if dias_reentrega_list else None
             )
             max_dias_reentrega = max(dias_reentrega_list) if dias_reentrega_list else None
+            promedio_dias_retencion = (
+                round(sum(dias_retencion_list) / len(dias_retencion_list), 1)
+                if dias_retencion_list else None
+            )
+            max_dias_retencion = max(dias_retencion_list) if dias_retencion_list else None
+            promedio_retraso_carga = (
+                round(sum(dias_retraso_carga_list) / len(dias_retraso_carga_list), 1)
+                if dias_retraso_carga_list else None
+            )
+            max_retraso_carga_lider = max(dias_retraso_carga_list) if dias_retraso_carga_list else None
             valor_total_cerrado = sum(x['valor_total'] for x in cerrados)
 
             estado_critico = min(
@@ -705,6 +873,10 @@ class ContabilidadService:
                 'max_dias_cierre': max_dias_cierre,
                 'promedio_dias_reentrega': promedio_dias_reentrega,
                 'max_dias_reentrega': max_dias_reentrega,
+                'promedio_dias_retencion': promedio_dias_retencion,
+                'max_dias_retencion': max_dias_retencion,
+                'promedio_retraso_carga': promedio_retraso_carga,
+                'max_retraso_carga': max_retraso_carga_lider,
                 'estado_critico': estado_critico,
                 'registros': registros_data,
             })

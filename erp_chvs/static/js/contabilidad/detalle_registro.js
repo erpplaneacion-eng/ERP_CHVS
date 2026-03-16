@@ -1,5 +1,41 @@
 // detalle_registro.js — Detalle de registro contable del líder
 
+function horasLaboralesEntre(inicioISO, finISO) {
+    if (!inicioISO || !finISO) return 0;
+    const OFFSET_MS = 5 * 60 * 60 * 1000; // Colombia UTC-5
+    const H_INI = 7, H_FIN = 16;
+    // Convertir a "hora local Colombia" usando UTC corrido
+    function toLocal(iso) {
+        const d = new Date(new Date(iso).getTime() - OFFSET_MS);
+        return d; // ahora getUTCHours() devuelve hora Colombia
+    }
+    const inicio = toLocal(inicioISO);
+    const fin = toLocal(finISO);
+    if (fin <= inicio) return 0;
+    let total = 0;
+    let cur = new Date(Date.UTC(inicio.getUTCFullYear(), inicio.getUTCMonth(), inicio.getUTCDate(), inicio.getUTCHours(), inicio.getUTCMinutes(), inicio.getUTCSeconds()));
+    const finLocal = new Date(Date.UTC(fin.getUTCFullYear(), fin.getUTCMonth(), fin.getUTCDate(), fin.getUTCHours(), fin.getUTCMinutes(), fin.getUTCSeconds()));
+    while (cur < finLocal) {
+        const dow = cur.getUTCDay();
+        if (dow === 0 || dow === 6) {
+            const add = dow === 0 ? 1 : 2;
+            cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth(), cur.getUTCDate() + add, H_INI, 0, 0));
+            continue;
+        }
+        const iniHoy = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth(), cur.getUTCDate(), H_INI, 0, 0));
+        const finHoy = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth(), cur.getUTCDate(), H_FIN, 0, 0));
+        if (cur < iniHoy) cur = iniHoy;
+        if (cur >= finHoy) {
+            cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth(), cur.getUTCDate() + 1, H_INI, 0, 0));
+            continue;
+        }
+        const finEf = new Date(Math.min(finHoy.getTime(), finLocal.getTime()));
+        total += (finEf - cur) / 3600000;
+        cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth(), cur.getUTCDate() + 1, H_INI, 0, 0));
+    }
+    return Math.round(total * 10) / 10;
+}
+
 class DetalleRegistroManager {
     constructor() {
         this.saving = false;
@@ -27,6 +63,20 @@ class DetalleRegistroManager {
         if (closeBtn) closeBtn.addEventListener('click', () => this.cerrarModal('facturaModal'));
         if (cancelBtn) cancelBtn.addEventListener('click', () => this.cerrarModal('facturaModal'));
         if (guardarBtn) guardarBtn.addEventListener('click', () => this.guardarFactura());
+
+        // Mostrar/ocultar campo de observación según retraso entre fecha factura y hoy
+        const inputFecha = document.getElementById('factura-fecha');
+        if (inputFecha) {
+            inputFecha.addEventListener('change', function () {
+                const grupo = document.getElementById('grupo-observacion-retraso');
+                if (!grupo) return;
+                if (!this.value) { grupo.style.display = 'none'; return; }
+                const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+                const emision = new Date(this.value + 'T00:00:00');
+                const dias = Math.floor((hoy - emision) / 86400000);
+                grupo.style.display = dias > 0 ? '' : 'none';
+            });
+        }
 
         window.addEventListener('click', (e) => {
             const m = document.getElementById('facturaModal');
@@ -70,6 +120,12 @@ class DetalleRegistroManager {
         document.getElementById('factura-concepto').value = '';
         document.getElementById('factura-valor').value = '';
         document.getElementById('factura-fecha').value = '';
+        document.getElementById('factura-recepcion').value = '';
+        const obsRetraso = document.getElementById('factura-observacion-retraso');
+        const grupoObs = document.getElementById('grupo-observacion-retraso');
+        if (obsRetraso) obsRetraso.value = '';
+        if (grupoObs) grupoObs.style.display = 'none';
+
         if (modal) modal.style.display = 'block';
     }
 
@@ -125,13 +181,46 @@ class DetalleRegistroManager {
         const esDevuelto = REGISTRO_ESTADO === 'DEVUELTO_COMPRAS';
 
         if (!facturas.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Sin facturas agregadas aún.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Sin facturas agregadas aún.</td></tr>';
         } else {
             const fragment = document.createDocumentFragment();
             facturas.forEach((f, idx) => {
                 const tr = document.createElement('tr');
                 const valor = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(f.valor);
                 const fecha = f.fecha_factura ? new Date(f.fecha_factura + 'T00:00:00').toLocaleDateString('es-CO') : '—';
+
+                // Indicador: días entre recepción del líder (o fecha_factura si no hay) y fecha_carga
+                let indicadorEmision = '<span class="text-muted" style="font-size:11px;">—</span>';
+                const fechaRef = f.fecha_recepcion_lider || f.fecha_factura;
+                const tooltipRef = f.fecha_recepcion_lider ? 'Días entre recepción física y carga al sistema' : 'Días entre fecha de factura y carga al sistema (sin fecha de recepción)';
+                if (fechaRef && f.fecha_carga) {
+                    const refDate = new Date(fechaRef + 'T00:00:00');
+                    const carga = new Date(f.fecha_carga);
+                    const diasRetraso = Math.max(0, Math.floor((carga - refDate) / 86400000));
+                    const obs = f.observacion_retraso
+                        ? `<br><small style="color:#6b7280;font-style:italic;">"${f.observacion_retraso}"</small>`
+                        : '';
+                    if (diasRetraso === 0) {
+                        indicadorEmision = `<span style="font-size:11px;color:#16a34a;font-weight:600;" title="${tooltipRef}">0d</span>`;
+                    } else if (diasRetraso <= 2) {
+                        indicadorEmision = `<span style="font-size:11px;color:#d97706;font-weight:600;" title="${tooltipRef}">${diasRetraso}d ⚠️</span>${obs}`;
+                    } else {
+                        indicadorEmision = `<span style="font-size:11px;color:#dc2626;font-weight:700;" title="${tooltipRef}">${diasRetraso}d 🔴</span>${obs}`;
+                    }
+                }
+
+                const fechaRecepcion = f.fecha_recepcion_lider
+                    ? new Date(f.fecha_recepcion_lider + 'T00:00:00').toLocaleDateString('es-CO')
+                    : '<span class="text-muted">—</span>';
+                // Días retención: si tenemos fecha_recepcion_lider y fecha_envio del registro
+                let diasRetencionCell = '<span class="text-muted">—</span>';
+                if (f.fecha_recepcion_lider && FECHA_ENVIO) {
+                    const rec = new Date(f.fecha_recepcion_lider + 'T00:00:00');
+                    const env = new Date(FECHA_ENVIO);
+                    const dias = Math.max(0, Math.round((env - rec) / 86400000));
+                    const color = dias === 0 ? '#16a34a' : dias <= 2 ? '#d97706' : '#dc2626';
+                    diasRetencionCell = `<span style="font-weight:600; color:${color};">${dias}d</span>`;
+                }
 
                 // Badge de estado por factura (solo en DEVUELTO_COMPRAS)
                 let estadoBadge = '';
@@ -158,6 +247,9 @@ class DetalleRegistroManager {
                     </td>
                     <td>${valor}</td>
                     <td>${fecha}</td>
+                    <td style="text-align:center;">${indicadorEmision}</td>
+                    <td>${fechaRecepcion}</td>
+                    <td>${diasRetencionCell}</td>
                     <td>
                         ${puedeEliminar ? `<button class="btn btn-sm btn-danger btn-eliminar-factura" data-id="${f.id}"><i class="fas fa-trash"></i></button>` : '—'}
                     </td>
@@ -193,6 +285,8 @@ class DetalleRegistroManager {
         const concepto = document.getElementById('factura-concepto')?.value?.trim();
         const valor = document.getElementById('factura-valor')?.value;
         const fecha_factura = document.getElementById('factura-fecha')?.value;
+        const fecha_recepcion_lider = document.getElementById('factura-recepcion')?.value || null;
+        const observacion_retraso = document.getElementById('factura-observacion-retraso')?.value?.trim() || '';
 
         if (!numero_factura || !proveedor || !concepto || !valor || !fecha_factura) {
             this.saving = false;
@@ -208,7 +302,7 @@ class DetalleRegistroManager {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCookie('csrftoken'),
                 },
-                body: JSON.stringify({ numero_factura, proveedor, concepto, valor: parseFloat(valor), fecha_factura }),
+                body: JSON.stringify({ numero_factura, proveedor, concepto, valor: parseFloat(valor), fecha_factura, fecha_recepcion_lider, observacion_retraso }),
             });
             const data = await response.json();
             if (data.success) {
@@ -251,8 +345,36 @@ class DetalleRegistroManager {
 
     async enviar() {
         if (this.saving) return;
-        this.saving = true;
 
+        const horas = horasLaboralesEntre(FECHA_CREACION, new Date().toISOString());
+        const superaLimite = horas > 5;
+
+        const swalConfig = {
+            title: '¿Enviar registro a Compras?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, enviar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#1e3a8a',
+        };
+
+        if (superaLimite) {
+            swalConfig.html = `El registro será enviado a Compras para revisión.<br><br>
+                <strong style="color:#c0392b;">&#9888;&#65039; Ha superado las 5 horas laborales (${horas}h transcurridas).<br>
+                Debe justificar el motivo de la demora.</strong>`;
+            swalConfig.input = 'textarea';
+            swalConfig.inputPlaceholder = 'Explique el motivo de la demora...';
+            swalConfig.inputValidator = (v) => { if (!v || !v.trim()) return 'La justificación es obligatoria.'; };
+        } else {
+            swalConfig.text = `El registro será enviado a Compras para revisión. (${horas}h laborales transcurridas)`;
+        }
+
+        const result = await Swal.fire(swalConfig);
+        if (!result.isConfirmed) return;
+
+        const justificacion_demora = superaLimite ? result.value : '';
+
+        this.saving = true;
         const btn = document.getElementById('btn-enviar');
         if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
 
@@ -263,7 +385,7 @@ class DetalleRegistroManager {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCookie('csrftoken'),
                 },
-                body: JSON.stringify({}),
+                body: JSON.stringify({ justificacion_demora }),
             });
             const data = await response.json();
             if (data.success) {
