@@ -310,12 +310,29 @@ class DashboardLideresManager {
                         ? `<span style="color:#d97706;font-weight:700;"><i class="fas fa-undo" style="font-size:10px;"></i> ${r.num_devoluciones}</span>`
                         : '—'}
                 </td>
-                <td style="padding:7px 10px;text-align:center;${tLiderStyle}">${this._fmtH(tLider)}</td>
+                <td style="padding:7px 10px;text-align:center;${tLiderStyle}">
+                    ${this._fmtH(tLider)}
+                    ${r.tiempo_lider_t2_h != null
+                        ? `<br><span style="font-size:10px;color:#1e3a8a;cursor:help;"
+                            title="1er envío: ${this._fmtH(r.tiempo_lider_t1_h)} | Corrección tras devolución: ${this._fmtH(r.tiempo_lider_t2_h)}">🔄 incluye correc.</span>`
+                        : ''}
+                </td>
                 <td style="padding:7px 10px;text-align:center;${tComprasStyle}">
                     ${this._fmtH(tCompras)}
-                    ${r.num_devoluciones > 0 ? '<br><span style="font-size:10px;color:#d97706;">🔄 incluye correc.</span>' : ''}
+                    ${r.num_devoluciones > 0
+                        ? `<br><span style="font-size:10px;color:#d97706;cursor:help;"
+                            title="${r.tiempo_compras_t2_h != null
+                                ? `1ra revisión: ${this._fmtH(r.tiempo_compras_t1_h)} | 2da revisión: ${this._fmtH(r.tiempo_compras_t2_h)}`
+                                : 'Hubo devolución — reentrega no registrada aún'}">🔄 incluye correc.</span>`
+                        : ''}
                 </td>
-                <td style="padding:7px 10px;text-align:center;${tContaStyle}">${this._fmtH(tConta)}</td>
+                <td style="padding:7px 10px;text-align:center;${tContaStyle}">
+                    ${this._fmtH(tConta)}
+                    ${r.tuvo_observacion_contabilidad
+                        ? `<br><span style="font-size:10px;color:#0d9488;cursor:help;"
+                            title="1ra revisión: ${this._fmtH(r.tiempo_conta_t1_h)} | 2da revisión: ${this._fmtH(r.tiempo_conta_t2_h)}">🔄 incluye correc.</span>`
+                        : ''}
+                </td>
                 <td style="padding:7px 10px;text-align:center;">${this._barraEtapas(tLider, tCompras, tConta)}</td>
                 <td style="padding:7px 10px;text-align:center;">${diasRetencionVal}</td>
                 <td style="padding:7px 10px;text-align:center;">${

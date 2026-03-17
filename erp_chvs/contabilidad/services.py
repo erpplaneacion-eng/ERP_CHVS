@@ -780,29 +780,39 @@ class ContabilidadService:
                         dias_retencion = max(0, (r.fecha_envio.date() - max_recepcion).days)
                         dias_retencion_list.append(dias_retencion)
 
-                # Tiempo por etapa (en horas decimales)
+                # Tiempo por etapa (en horas decimales) con desglose T1/T2
                 tiempo_lider_h = None
+                tiempo_lider_t1_h = None
+                tiempo_lider_t2_h = None
                 if r.fecha_envio and r.fecha_creacion:
-                    tiempo_lider_h = round(
-                        max(0, (r.fecha_envio - r.fecha_creacion).total_seconds() / 3600), 1
-                    )
+                    tiempo_lider_t1_h = round(max(0, (r.fecha_envio - r.fecha_creacion).total_seconds() / 3600), 1)
+                    if r.fecha_reenvio and r.fecha_devolucion_compras:
+                        tiempo_lider_t2_h = round(max(0, (r.fecha_reenvio - r.fecha_devolucion_compras).total_seconds() / 3600), 1)
+                        tiempo_lider_h = round(tiempo_lider_t1_h + tiempo_lider_t2_h, 1)
+                    else:
+                        tiempo_lider_h = tiempo_lider_t1_h
 
                 tiempo_compras_h = None
+                tiempo_compras_t1_h = None
+                tiempo_compras_t2_h = None
                 if r.fecha_aprobacion_compras:
                     if r.fecha_reentrega_fisica and r.fecha_devolucion_compras and r.fecha_entrega_fisica:
-                        t1 = max(0, (r.fecha_devolucion_compras - r.fecha_entrega_fisica).total_seconds() / 3600)
-                        t2 = max(0, (r.fecha_aprobacion_compras - r.fecha_reentrega_fisica).total_seconds() / 3600)
-                        tiempo_compras_h = round(t1 + t2, 1)
+                        tiempo_compras_t1_h = round(max(0, (r.fecha_devolucion_compras - r.fecha_entrega_fisica).total_seconds() / 3600), 1)
+                        tiempo_compras_t2_h = round(max(0, (r.fecha_aprobacion_compras - r.fecha_reentrega_fisica).total_seconds() / 3600), 1)
+                        tiempo_compras_h = round(tiempo_compras_t1_h + tiempo_compras_t2_h, 1)
                     elif r.fecha_entrega_fisica:
-                        tiempo_compras_h = round(
-                            max(0, (r.fecha_aprobacion_compras - r.fecha_entrega_fisica).total_seconds() / 3600), 1
-                        )
+                        tiempo_compras_h = round(max(0, (r.fecha_aprobacion_compras - r.fecha_entrega_fisica).total_seconds() / 3600), 1)
 
                 tiempo_contabilidad_h = None
+                tiempo_conta_t1_h = None
+                tiempo_conta_t2_h = None
                 if r.fecha_cierre and r.fecha_aprobacion_compras:
-                    tiempo_contabilidad_h = round(
-                        max(0, (r.fecha_cierre - r.fecha_aprobacion_compras).total_seconds() / 3600), 1
-                    )
+                    if r.fecha_observacion_contabilidad and r.fecha_respuesta_compras:
+                        tiempo_conta_t1_h = round(max(0, (r.fecha_observacion_contabilidad - r.fecha_aprobacion_compras).total_seconds() / 3600), 1)
+                        tiempo_conta_t2_h = round(max(0, (r.fecha_cierre - r.fecha_respuesta_compras).total_seconds() / 3600), 1)
+                        tiempo_contabilidad_h = round(tiempo_conta_t1_h + tiempo_conta_t2_h, 1)
+                    else:
+                        tiempo_contabilidad_h = round(max(0, (r.fecha_cierre - r.fecha_aprobacion_compras).total_seconds() / 3600), 1)
 
                 registros_data.append({
                     'id': r.pk,
@@ -823,8 +833,15 @@ class ContabilidadService:
                     'dias_retencion': dias_retencion,
                     'max_retraso_carga': max_retraso_carga,
                     'tiempo_lider_h': tiempo_lider_h,
+                    'tiempo_lider_t1_h': tiempo_lider_t1_h,
+                    'tiempo_lider_t2_h': tiempo_lider_t2_h,
                     'tiempo_compras_h': tiempo_compras_h,
+                    'tiempo_compras_t1_h': tiempo_compras_t1_h,
+                    'tiempo_compras_t2_h': tiempo_compras_t2_h,
                     'tiempo_contabilidad_h': tiempo_contabilidad_h,
+                    'tiempo_conta_t1_h': tiempo_conta_t1_h,
+                    'tiempo_conta_t2_h': tiempo_conta_t2_h,
+                    'tuvo_observacion_contabilidad': bool(r.fecha_observacion_contabilidad and r.fecha_respuesta_compras),
                     'registro_origen_id': r.registro_origen_id,
                     'es_derivado': r.registro_origen_id is not None,
                 })
