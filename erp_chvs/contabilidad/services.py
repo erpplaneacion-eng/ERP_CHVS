@@ -14,7 +14,7 @@ from .models import (
 _COLOMBIA_TZ = pytz.timezone('America/Bogota')
 _MAX_HORAS_LABORALES = 5
 _HORA_INICIO = 7   # 7am
-_HORA_FIN = 16     # 4pm
+_HORA_FIN = 15     # 3pm
 
 
 def horas_laborales_entre(inicio, fin):
@@ -780,14 +780,14 @@ class ContabilidadService:
                         dias_retencion = max(0, (r.fecha_envio.date() - max_recepcion).days)
                         dias_retencion_list.append(dias_retencion)
 
-                # Tiempo por etapa (en horas decimales) con desglose T1/T2
+                # Tiempo por etapa en horas laborales (lun-vie, 7am-4pm Colombia)
                 tiempo_lider_h = None
                 tiempo_lider_t1_h = None
                 tiempo_lider_t2_h = None
                 if r.fecha_envio and r.fecha_creacion:
-                    tiempo_lider_t1_h = round(max(0, (r.fecha_envio - r.fecha_creacion).total_seconds() / 3600), 1)
+                    tiempo_lider_t1_h = round(horas_laborales_entre(r.fecha_creacion, r.fecha_envio), 1)
                     if r.fecha_reenvio and r.fecha_devolucion_compras:
-                        tiempo_lider_t2_h = round(max(0, (r.fecha_reenvio - r.fecha_devolucion_compras).total_seconds() / 3600), 1)
+                        tiempo_lider_t2_h = round(horas_laborales_entre(r.fecha_devolucion_compras, r.fecha_reenvio), 1)
                         tiempo_lider_h = round(tiempo_lider_t1_h + tiempo_lider_t2_h, 1)
                     else:
                         tiempo_lider_h = tiempo_lider_t1_h
@@ -797,22 +797,22 @@ class ContabilidadService:
                 tiempo_compras_t2_h = None
                 if r.fecha_aprobacion_compras:
                     if r.fecha_reentrega_fisica and r.fecha_devolucion_compras and r.fecha_entrega_fisica:
-                        tiempo_compras_t1_h = round(max(0, (r.fecha_devolucion_compras - r.fecha_entrega_fisica).total_seconds() / 3600), 1)
-                        tiempo_compras_t2_h = round(max(0, (r.fecha_aprobacion_compras - r.fecha_reentrega_fisica).total_seconds() / 3600), 1)
+                        tiempo_compras_t1_h = round(horas_laborales_entre(r.fecha_entrega_fisica, r.fecha_devolucion_compras), 1)
+                        tiempo_compras_t2_h = round(horas_laborales_entre(r.fecha_reentrega_fisica, r.fecha_aprobacion_compras), 1)
                         tiempo_compras_h = round(tiempo_compras_t1_h + tiempo_compras_t2_h, 1)
                     elif r.fecha_entrega_fisica:
-                        tiempo_compras_h = round(max(0, (r.fecha_aprobacion_compras - r.fecha_entrega_fisica).total_seconds() / 3600), 1)
+                        tiempo_compras_h = round(horas_laborales_entre(r.fecha_entrega_fisica, r.fecha_aprobacion_compras), 1)
 
                 tiempo_contabilidad_h = None
                 tiempo_conta_t1_h = None
                 tiempo_conta_t2_h = None
                 if r.fecha_cierre and r.fecha_aprobacion_compras:
                     if r.fecha_observacion_contabilidad and r.fecha_respuesta_compras:
-                        tiempo_conta_t1_h = round(max(0, (r.fecha_observacion_contabilidad - r.fecha_aprobacion_compras).total_seconds() / 3600), 1)
-                        tiempo_conta_t2_h = round(max(0, (r.fecha_cierre - r.fecha_respuesta_compras).total_seconds() / 3600), 1)
+                        tiempo_conta_t1_h = round(horas_laborales_entre(r.fecha_aprobacion_compras, r.fecha_observacion_contabilidad), 1)
+                        tiempo_conta_t2_h = round(horas_laborales_entre(r.fecha_respuesta_compras, r.fecha_cierre), 1)
                         tiempo_contabilidad_h = round(tiempo_conta_t1_h + tiempo_conta_t2_h, 1)
                     else:
-                        tiempo_contabilidad_h = round(max(0, (r.fecha_cierre - r.fecha_aprobacion_compras).total_seconds() / 3600), 1)
+                        tiempo_contabilidad_h = round(horas_laborales_entre(r.fecha_aprobacion_compras, r.fecha_cierre), 1)
 
                 registros_data.append({
                     'id': r.pk,

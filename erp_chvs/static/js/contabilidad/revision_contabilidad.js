@@ -3,7 +3,7 @@
 function horasLaboralesEntre(inicioISO, finISO) {
     if (!inicioISO || !finISO) return 0;
     const OFFSET_MS = 5 * 60 * 60 * 1000; // Colombia UTC-5
-    const H_INI = 7, H_FIN = 16;
+    const H_INI = 7, H_FIN = 15;
     function toLocal(iso) {
         const d = new Date(new Date(iso).getTime() - OFFSET_MS);
         return d;

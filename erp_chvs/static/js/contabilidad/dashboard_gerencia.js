@@ -201,27 +201,6 @@ class DashboardLideresManager {
         return hRest > 0 ? `${d}d ${hRest}h` : `${d}d`;
     }
 
-    _barraEtapas(lh, ch, coh) {
-        if (lh === null || ch === null || coh === null) return '—';
-        const total = lh + ch + coh;
-        // Si todo es 0 (ocurrió en segundos), mostrar tercios iguales
-        const pL  = total === 0 ? 33 : Math.round((lh / total) * 100);
-        const pC  = total === 0 ? 33 : Math.round((ch / total) * 100);
-        const pCo = total === 0 ? 34 : 100 - pL - pC;
-        return `
-            <div style="display:flex;height:14px;border-radius:4px;overflow:hidden;min-width:80px;"
-                 title="Líder: ${this._fmtH(lh)} | Compras: ${this._fmtH(ch)} | Contabilidad: ${this._fmtH(coh)}">
-                <div style="width:${pL}%;background:#1e3a8a;" title="Líder: ${this._fmtH(lh)}"></div>
-                <div style="width:${pC}%;background:#d97706;" title="Compras: ${this._fmtH(ch)}"></div>
-                <div style="width:${pCo}%;background:#0d9488;" title="Contabilidad: ${this._fmtH(coh)}"></div>
-            </div>
-            <div style="font-size:10px;color:#888;margin-top:2px;white-space:nowrap;">
-                <span style="color:#1e3a8a;">■</span> L
-                <span style="color:#d97706;margin-left:4px;">■</span> C
-                <span style="color:#0d9488;margin-left:4px;">■</span> Co
-            </div>`;
-    }
-
     _crearSubTabla(registros) {
         const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
         const fmt = v => new Intl.NumberFormat('es-CO', {
@@ -251,7 +230,6 @@ class DashboardLideresManager {
                     <th style="padding:7px 10px;text-align:center;color:#1e3a8a;" title="Tiempo desde creación hasta envío a Compras">T. Líder</th>
                     <th style="padding:7px 10px;text-align:center;color:#d97706;" title="Tiempo que duró la revisión en Compras">T. Compras</th>
                     <th style="padding:7px 10px;text-align:center;color:#0d9488;" title="Tiempo desde aprobación de Compras hasta cierre">T. Contab.</th>
-                    <th style="padding:7px 10px;text-align:center;" title="Distribución de tiempo por etapa (azul=Líder, naranja=Compras, verde=Contabilidad)">Distribución</th>
                     <th style="padding:7px 10px;text-align:center;" title="Días entre recepción del líder y envío a Compras">Retención</th>
                     <th style="padding:7px 10px;text-align:center;" title="Días entre fecha de la factura y carga al sistema">Ret. carga</th>
                     <th style="padding:7px 10px;text-align:center;">Docs</th>
@@ -333,7 +311,6 @@ class DashboardLideresManager {
                             title="1ra revisión: ${this._fmtH(r.tiempo_conta_t1_h)} | 2da revisión: ${this._fmtH(r.tiempo_conta_t2_h)}">🔄 incluye correc.</span>`
                         : ''}
                 </td>
-                <td style="padding:7px 10px;text-align:center;">${this._barraEtapas(tLider, tCompras, tConta)}</td>
                 <td style="padding:7px 10px;text-align:center;">${diasRetencionVal}</td>
                 <td style="padding:7px 10px;text-align:center;">${
                     r.max_retraso_carga !== null && r.max_retraso_carga !== undefined
