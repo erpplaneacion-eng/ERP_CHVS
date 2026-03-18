@@ -737,7 +737,7 @@ class ContabilidadService:
             registros_data = []
             dias_cierre_list = []
             dias_reentrega_list = []
-            dias_retencion_list = []
+            revision_compras_list = []
             dias_retraso_carga_list = []
             total_devoluciones = 0
 
@@ -747,14 +747,16 @@ class ContabilidadService:
 
                 total_devoluciones += r.num_devoluciones
 
+                # Horas laborales totales del proceso (fecha_creacion → fecha_cierre)
                 dias_cierre = None
-                if r.fecha_cierre and r.fecha_envio:
-                    dias_cierre = max(0, (r.fecha_cierre - r.fecha_envio).days)
+                if r.fecha_cierre and r.fecha_creacion:
+                    dias_cierre = round(horas_laborales_entre(r.fecha_creacion, r.fecha_cierre), 1)
                     dias_cierre_list.append(dias_cierre)
 
+                # Horas laborales que tardó el líder en corregir tras devolución
                 dias_reentrega = None
                 if r.fecha_reenvio and r.fecha_devolucion_compras:
-                    dias_reentrega = max(0, (r.fecha_reenvio - r.fecha_devolucion_compras).days)
+                    dias_reentrega = round(horas_laborales_entre(r.fecha_devolucion_compras, r.fecha_reenvio), 1)
                     dias_reentrega_list.append(dias_reentrega)
 
                 # Retraso de carga: fecha_carga − fecha_factura (máximo entre facturas del registro)
@@ -768,19 +770,22 @@ class ContabilidadService:
                     max_retraso_carga = max(retrasos)
                     dias_retraso_carga_list.append(max_retraso_carga)
 
-                # Días de retención: fecha_envio − fecha_recepcion_lider (máximo entre facturas)
-                dias_retencion = None
-                if r.fecha_envio:
-                    fechas_recepcion = list(
-                        r.facturas.exclude(fecha_recepcion_lider=None)
-                        .values_list('fecha_recepcion_lider', flat=True)
-                    )
-                    if fechas_recepcion:
-                        max_recepcion = max(fechas_recepcion)
-                        dias_retencion = max(0, (r.fecha_envio.date() - max_recepcion).days)
-                        dias_retencion_list.append(dias_retencion)
+                # T. Revisión Compras: desde recepción física hasta decisión (aprobar o devolver)
+                tiempo_revision_compras_h = None
+                if r.fecha_entrega_fisica:
+                    if r.fecha_devolucion_compras and r.fecha_reentrega_fisica:
+                        # Con devolución: T1 + T2 de revisión interna
+                        t1_rev = horas_laborales_entre(r.fecha_entrega_fisica, r.fecha_devolucion_compras)
+                        t2_rev = horas_laborales_entre(r.fecha_reentrega_fisica, r.fecha_aprobacion_compras) if r.fecha_aprobacion_compras else 0
+                        tiempo_revision_compras_h = round(t1_rev + t2_rev, 1)
+                    elif r.fecha_devolucion_compras:
+                        tiempo_revision_compras_h = round(horas_laborales_entre(r.fecha_entrega_fisica, r.fecha_devolucion_compras), 1)
+                    elif r.fecha_aprobacion_compras:
+                        tiempo_revision_compras_h = round(horas_laborales_entre(r.fecha_entrega_fisica, r.fecha_aprobacion_compras), 1)
+                if tiempo_revision_compras_h is not None:
+                    revision_compras_list.append(tiempo_revision_compras_h)
 
-                # Tiempo por etapa en horas laborales (lun-vie, 7am-4pm Colombia)
+                # Tiempo por etapa en horas laborales (lun-vie, 7am-3pm Colombia)
                 tiempo_lider_h = None
                 tiempo_lider_t1_h = None
                 tiempo_lider_t2_h = None
@@ -795,13 +800,20 @@ class ContabilidadService:
                 tiempo_compras_h = None
                 tiempo_compras_t1_h = None
                 tiempo_compras_t2_h = None
-                if r.fecha_aprobacion_compras:
-                    if r.fecha_reentrega_fisica and r.fecha_devolucion_compras and r.fecha_entrega_fisica:
-                        tiempo_compras_t1_h = round(horas_laborales_entre(r.fecha_entrega_fisica, r.fecha_devolucion_compras), 1)
-                        tiempo_compras_t2_h = round(horas_laborales_entre(r.fecha_reentrega_fisica, r.fecha_aprobacion_compras), 1)
+                tiempo_compras_t3_h = None
+                if r.fecha_aprobacion_compras and r.fecha_envio:
+                    if r.fecha_devolucion_compras and r.fecha_reenvio:
+                        # Con devolución: T1 = envío líder → devolución, T2 = reenvío → aprobación
+                        tiempo_compras_t1_h = round(horas_laborales_entre(r.fecha_envio, r.fecha_devolucion_compras), 1)
+                        tiempo_compras_t2_h = round(horas_laborales_entre(r.fecha_reenvio, r.fecha_aprobacion_compras), 1)
                         tiempo_compras_h = round(tiempo_compras_t1_h + tiempo_compras_t2_h, 1)
-                    elif r.fecha_entrega_fisica:
-                        tiempo_compras_h = round(horas_laborales_entre(r.fecha_entrega_fisica, r.fecha_aprobacion_compras), 1)
+                    else:
+                        # Sin devolución: desde que el líder envió hasta que Compras aprobó
+                        tiempo_compras_h = round(horas_laborales_entre(r.fecha_envio, r.fecha_aprobacion_compras), 1)
+                    # T3: respuesta a observación de Contabilidad (Compras asume ese tiempo)
+                    if r.fecha_observacion_contabilidad and r.fecha_respuesta_compras:
+                        tiempo_compras_t3_h = round(horas_laborales_entre(r.fecha_observacion_contabilidad, r.fecha_respuesta_compras), 1)
+                        tiempo_compras_h = round((tiempo_compras_h or 0) + tiempo_compras_t3_h, 1)
 
                 tiempo_contabilidad_h = None
                 tiempo_conta_t1_h = None
@@ -830,7 +842,7 @@ class ContabilidadService:
                     'fecha_cierre': r.fecha_cierre.isoformat() if r.fecha_cierre else None,
                     'dias_cierre': dias_cierre,
                     'dias_reentrega': dias_reentrega,
-                    'dias_retencion': dias_retencion,
+                    'tiempo_revision_compras_h': tiempo_revision_compras_h,
                     'max_retraso_carga': max_retraso_carga,
                     'tiempo_lider_h': tiempo_lider_h,
                     'tiempo_lider_t1_h': tiempo_lider_t1_h,
@@ -838,6 +850,7 @@ class ContabilidadService:
                     'tiempo_compras_h': tiempo_compras_h,
                     'tiempo_compras_t1_h': tiempo_compras_t1_h,
                     'tiempo_compras_t2_h': tiempo_compras_t2_h,
+                    'tiempo_compras_t3_h': tiempo_compras_t3_h,
                     'tiempo_contabilidad_h': tiempo_contabilidad_h,
                     'tiempo_conta_t1_h': tiempo_conta_t1_h,
                     'tiempo_conta_t2_h': tiempo_conta_t2_h,
@@ -859,11 +872,11 @@ class ContabilidadService:
                 if dias_reentrega_list else None
             )
             max_dias_reentrega = max(dias_reentrega_list) if dias_reentrega_list else None
-            promedio_dias_retencion = (
-                round(sum(dias_retencion_list) / len(dias_retencion_list), 1)
-                if dias_retencion_list else None
+            promedio_revision_compras = (
+                round(sum(revision_compras_list) / len(revision_compras_list), 1)
+                if revision_compras_list else None
             )
-            max_dias_retencion = max(dias_retencion_list) if dias_retencion_list else None
+            max_revision_compras = max(revision_compras_list) if revision_compras_list else None
             promedio_retraso_carga = (
                 round(sum(dias_retraso_carga_list) / len(dias_retraso_carga_list), 1)
                 if dias_retraso_carga_list else None
@@ -890,8 +903,8 @@ class ContabilidadService:
                 'max_dias_cierre': max_dias_cierre,
                 'promedio_dias_reentrega': promedio_dias_reentrega,
                 'max_dias_reentrega': max_dias_reentrega,
-                'promedio_dias_retencion': promedio_dias_retencion,
-                'max_dias_retencion': max_dias_retencion,
+                'promedio_revision_compras': promedio_revision_compras,
+                'max_revision_compras': max_revision_compras,
                 'promedio_retraso_carga': promedio_retraso_carga,
                 'max_retraso_carga': max_retraso_carga_lider,
                 'estado_critico': estado_critico,

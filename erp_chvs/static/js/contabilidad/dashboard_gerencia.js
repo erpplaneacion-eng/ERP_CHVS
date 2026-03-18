@@ -161,12 +161,12 @@ class DashboardLideresManager {
                 </td>
                 <td style="text-align:center;">${devBadge}</td>
                 <td style="text-align:right;font-size:13px;">${fmt(lider.valor_total_cerrado)}</td>
-                <td style="text-align:center;">${dias(lider.promedio_dias_cierre)}</td>
-                <td style="text-align:center;${lider.max_dias_cierre > 10 ? 'color:#c0392b;font-weight:700;' : ''}">${dias(lider.max_dias_cierre)}</td>
-                <td style="text-align:center;">${dias(lider.promedio_dias_reentrega)}</td>
-                <td style="text-align:center;${lider.max_dias_reentrega > 5 ? 'color:#d97706;font-weight:700;' : ''}">${dias(lider.max_dias_reentrega)}</td>
-                <td style="text-align:center;">${dias(lider.promedio_dias_retencion)}</td>
-                <td style="text-align:center;${lider.max_dias_retencion > 2 ? 'color:#c0392b;font-weight:700;' : ''}">${dias(lider.max_dias_retencion)}</td>
+                <td style="text-align:center;">${this._fmtH(lider.promedio_dias_cierre)}</td>
+                <td style="text-align:center;${lider.max_dias_cierre > 40 ? 'color:#c0392b;font-weight:700;' : ''}">${this._fmtH(lider.max_dias_cierre)}</td>
+                <td style="text-align:center;">${this._fmtH(lider.promedio_dias_reentrega)}</td>
+                <td style="text-align:center;${lider.max_dias_reentrega > 8 ? 'color:#d97706;font-weight:700;' : ''}">${this._fmtH(lider.max_dias_reentrega)}</td>
+                <td style="text-align:center;color:#7c3aed;">${this._fmtH(lider.promedio_revision_compras)}</td>
+                <td style="text-align:center;${lider.max_revision_compras > 8 ? 'color:#c0392b;font-weight:700;' : 'color:#7c3aed;'}">${this._fmtH(lider.max_revision_compras)}</td>
                 <td style="text-align:center;">${dias(lider.promedio_retraso_carga)}</td>
                 <td style="text-align:center;${lider.max_retraso_carga > 2 ? 'color:#dc2626;font-weight:700;' : ''}">${dias(lider.max_retraso_carga)}</td>
             `;
@@ -229,8 +229,8 @@ class DashboardLideresManager {
                     <th style="padding:7px 10px;text-align:center;">Devoluciones</th>
                     <th style="padding:7px 10px;text-align:center;color:#1e3a8a;" title="Tiempo desde creación hasta envío a Compras">T. Líder</th>
                     <th style="padding:7px 10px;text-align:center;color:#d97706;" title="Tiempo que duró la revisión en Compras">T. Compras</th>
+                    <th style="padding:7px 10px;text-align:center;color:#7c3aed;" title="Tiempo desde que Compras confirma recepción física hasta que aprueba o devuelve">T. Revisión</th>
                     <th style="padding:7px 10px;text-align:center;color:#0d9488;" title="Tiempo desde aprobación de Compras hasta cierre">T. Contab.</th>
-                    <th style="padding:7px 10px;text-align:center;" title="Días entre recepción del líder y envío a Compras">Retención</th>
                     <th style="padding:7px 10px;text-align:center;" title="Días entre fecha de la factura y carga al sistema">Ret. carga</th>
                     <th style="padding:7px 10px;text-align:center;">Docs</th>
                     <th style="padding:7px 10px;text-align:right;">Valor</th>
@@ -251,17 +251,9 @@ class DashboardLideresManager {
                 ? 'color:#c0392b;font-weight:700;'
                 : '';
 
-            const diasCierreVal = r.dias_cierre !== null && r.dias_cierre !== undefined
-                ? `<span style="${r.dias_cierre > 10 ? 'color:#c0392b;font-weight:700;' : ''}">${r.dias_cierre}d</span>`
-                : '—';
-
-            const diasReentregaVal = r.dias_reentrega !== null && r.dias_reentrega !== undefined
-                ? `<span style="${r.dias_reentrega > 5 ? 'color:#d97706;font-weight:700;' : ''}">${r.dias_reentrega}d</span>`
-                : '—';
-
-            const diasRetencionVal = r.dias_retencion !== null && r.dias_retencion !== undefined
-                ? `<span style="${r.dias_retencion > 2 ? 'color:#c0392b;font-weight:700;' : 'color:#16a34a;font-weight:600;'}">${r.dias_retencion}d</span>`
-                : '—';
+            const tRevisionStyle = r.tiempo_revision_compras_h != null && r.tiempo_revision_compras_h > 8
+                ? 'color:#c0392b;font-weight:700;'
+                : 'color:#7c3aed;';
 
             const tLider = r.tiempo_lider_h;
             const tCompras = r.tiempo_compras_h;
@@ -297,13 +289,24 @@ class DashboardLideresManager {
                 </td>
                 <td style="padding:7px 10px;text-align:center;${tComprasStyle}">
                     ${this._fmtH(tCompras)}
-                    ${r.num_devoluciones > 0
+                    ${(r.num_devoluciones > 0 || r.tiempo_compras_t3_h != null)
                         ? `<br><span style="font-size:10px;color:#d97706;cursor:help;"
-                            title="${r.tiempo_compras_t2_h != null
-                                ? `1ra revisión: ${this._fmtH(r.tiempo_compras_t1_h)} | 2da revisión: ${this._fmtH(r.tiempo_compras_t2_h)}`
-                                : 'Hubo devolución — reentrega no registrada aún'}">🔄 incluye correc.</span>`
+                            title="${(() => {
+                                const partes = [];
+                                if (r.tiempo_compras_t2_h != null) {
+                                    partes.push(`1ra revisión: ${this._fmtH(r.tiempo_compras_t1_h)}`);
+                                    partes.push(`2da revisión: ${this._fmtH(r.tiempo_compras_t2_h)}`);
+                                } else if (r.num_devoluciones > 0) {
+                                    partes.push('Devolución — reentrega no registrada aún');
+                                }
+                                if (r.tiempo_compras_t3_h != null) {
+                                    partes.push(`Resp. observación Contab.: ${this._fmtH(r.tiempo_compras_t3_h)}`);
+                                }
+                                return partes.join(' | ');
+                            })()}">🔄 incluye correc.</span>`
                         : ''}
                 </td>
+                <td style="padding:7px 10px;text-align:center;${tRevisionStyle}">${this._fmtH(r.tiempo_revision_compras_h)}</td>
                 <td style="padding:7px 10px;text-align:center;${tContaStyle}">
                     ${this._fmtH(tConta)}
                     ${r.tuvo_observacion_contabilidad
@@ -311,7 +314,6 @@ class DashboardLideresManager {
                             title="1ra revisión: ${this._fmtH(r.tiempo_conta_t1_h)} | 2da revisión: ${this._fmtH(r.tiempo_conta_t2_h)}">🔄 incluye correc.</span>`
                         : ''}
                 </td>
-                <td style="padding:7px 10px;text-align:center;">${diasRetencionVal}</td>
                 <td style="padding:7px 10px;text-align:center;">${
                     r.max_retraso_carga !== null && r.max_retraso_carga !== undefined
                         ? `<span style="${r.max_retraso_carga > 2 ? 'color:#dc2626;font-weight:700;' : r.max_retraso_carga > 0 ? 'color:#d97706;' : 'color:#16a34a;'}">${r.max_retraso_carga}d</span>`
