@@ -314,11 +314,11 @@ def _dibujar_contenido_izquierdo(c: canvas.Canvas, cert, x: float, y: float, w: 
     c.drawCentredString(
         x + w / 2,
         top_y - 0.4 * cm,
-        _safe("LA CORPORACION HACIA UN VALLE SOLIDARIO"),
+        _safe("La Unión Temporal Alimentando Buga 2026"),
     )
 
     intro = (
-        "Identificado con NIT. 805.029.170-0 y en uso de sus facultades para capacitar y "
+        "Identificado con NIT. 902023530 y en uso de sus facultades para capacitar y "
         "certificar el desarrollo de actividades de Manipulacion de Alimentos, de acuerdo a la "
         "Resolucion 2674 de 2013 expedido por el Ministerio de Salud y Proteccion Social"
     )
