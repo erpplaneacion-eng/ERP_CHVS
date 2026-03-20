@@ -177,7 +177,7 @@ class CalculoService:
 
         for nutriente in nutrientes:
             total = totales.get(nutriente, 0)
-            req = requerimientos.get(nutriente, 0)
+            req = requerimientos.get(nutriente) or 0
 
             porcentaje = CalculoService.calcular_porcentaje_adecuacion(total, req)
             referencia = referencias.get(nutriente) if referencias else None

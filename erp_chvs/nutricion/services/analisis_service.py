@@ -503,9 +503,9 @@ class AnalisisNutricionalService:
                 'proteina': float(requerimiento.proteina_g),
                 'grasa': float(requerimiento.grasa_g),
                 'cho': float(requerimiento.cho_g),
-                'calcio': float(requerimiento.calcio_mg),
-                'hierro': float(requerimiento.hierro_mg),
-                'sodio': float(requerimiento.sodio_mg),
+                'calcio': float(requerimiento.calcio_mg) if requerimiento.calcio_mg is not None else None,
+                'hierro': float(requerimiento.hierro_mg) if requerimiento.hierro_mg is not None else None,
+                'sodio': float(requerimiento.sodio_mg) if requerimiento.sodio_mg is not None else None,
             }
 
         # Referencias de adecuación (vara de medición ICBF para semaforización)
@@ -520,9 +520,9 @@ class AnalisisNutricionalService:
                 'proteina': float(adecuacion_ref.proteina_porc),
                 'grasa':    float(adecuacion_ref.grasa_porc),
                 'cho':      float(adecuacion_ref.cho_porc),
-                'calcio':   float(adecuacion_ref.calcio_porc),
-                'hierro':   float(adecuacion_ref.hierro_porc),
-                'sodio':    float(adecuacion_ref.sodio_porc),
+                'calcio':   float(adecuacion_ref.calcio_porc) if adecuacion_ref.calcio_porc is not None else None,
+                'hierro':   float(adecuacion_ref.hierro_porc) if adecuacion_ref.hierro_porc is not None else None,
+                'sodio':    float(adecuacion_ref.sodio_porc) if adecuacion_ref.sodio_porc is not None else None,
             }
         except AdecuacionTotalPorcentaje.DoesNotExist:
             referencias_dict = None

@@ -593,16 +593,22 @@ class TablaRequerimientosNutricionales(models.Model):
     calcio_mg = models.DecimalField(
         max_digits=10,
         decimal_places=1,
+        null=True,
+        blank=True,
         verbose_name="Calcio (mg)"
     )
     hierro_mg = models.DecimalField(
         max_digits=10,
         decimal_places=1,
+        null=True,
+        blank=True,
         verbose_name="Hierro (mg)"
     )
     sodio_mg = models.DecimalField(
         max_digits=10,
         decimal_places=1,
+        null=True,
+        blank=True,
         verbose_name="Sodio (mg)"
     )
     id_nivel_escolar_uapa = models.ForeignKey(
@@ -686,16 +692,22 @@ class AdecuacionTotalPorcentaje(models.Model):
     calcio_porc = models.DecimalField(
         max_digits=5,
         decimal_places=1,
+        null=True,
+        blank=True,
         verbose_name="Calcio (%)"
     )
     hierro_porc = models.DecimalField(
         max_digits=5,
         decimal_places=1,
+        null=True,
+        blank=True,
         verbose_name="Hierro (%)"
     )
     sodio_porc = models.DecimalField(
         max_digits=5,
         decimal_places=1,
+        null=True,
+        blank=True,
         verbose_name="Sodio (%)"
     )
     id_nivel_escolar_uapa = models.ForeignKey(

@@ -108,10 +108,28 @@ NUTRITIONAL_HEADERS = [
     "SODIO (mg)"
 ]
 
+# Encabezados para Comedores Comunitarios / Adulto Mayor (sin niveles, 4 nutrientes)
+COMEDORES_NUTRITIONAL_HEADERS = [
+    "COMPONENTES",
+    "% COMESTIBLE",
+    "NOMBRE DE LA PREPARACION",
+    "NOMBRE DEL ALIMENTO (Ingredientes)",
+    "CÓDIGO DEL ALIMENTO",
+    "PESO BRUTO (g - cc)",
+    "PESO NETO (g - cc)",
+    "ENERGÍA (Kcal)",
+    "PROTEÍNA (g)",
+    "GRASA (g)",
+    "CHO (g)",
+]
+
 NUTRIENT_KEYS = [
     'calorias', 'proteina', 'grasa', 'cho',
     'calcio', 'hierro', 'sodio'
 ]
+
+# Sólo 4 nutrientes para Comedores (no evalúan calcio, hierro, sodio)
+NUTRIENT_KEYS_COMEDORES = ['calorias', 'proteina', 'grasa', 'cho']
 
 
 # =====================================================================
@@ -238,9 +256,10 @@ class ExcelReportDrawer:
             return "Ración Industrializada"
         return "Ración para Preparar en Sitio"
 
-    def _populate_headers(self, ws: Worksheet, start_row: int) -> None:
+    def _populate_headers(self, ws: Worksheet, start_row: int, is_comedores: bool = False) -> None:
         """Poblar encabezados de columnas."""
-        for col, header in enumerate(NUTRITIONAL_HEADERS, start=1):
+        headers = COMEDORES_NUTRITIONAL_HEADERS if is_comedores else NUTRITIONAL_HEADERS
+        for col, header in enumerate(headers, start=1):
             cell = ws.cell(row=start_row, column=col)
             cell.value = header
             cell.font = Font(bold=True)
@@ -248,7 +267,7 @@ class ExcelReportDrawer:
             cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
             cell.border = self.border
 
-    def _populate_ingredients_from_analysis(self, ws: Worksheet, start_row: int, nivel_data: Dict) -> int:
+    def _populate_ingredients_from_analysis(self, ws: Worksheet, start_row: int, nivel_data: Dict, is_comedores: bool = False) -> int:
         """Poblar ingredientes desde datos de análisis."""
         current_row = start_row
         left_align = Alignment(vertical='center', horizontal='left', wrap_text=True)
@@ -283,10 +302,13 @@ class ExcelReportDrawer:
                 else:
                     componente_groups.append([comp_ing, current_row, current_row])
 
-                ws.cell(row=current_row, column=self.layout.COL_GRUPO).value = ingrediente.get(
-                    'grupo_alimentos',
-                    preparacion.get('grupo_alimentos', 'SIN GRUPO')
-                )
+                if is_comedores:
+                    ws.cell(row=current_row, column=self.layout.COL_GRUPO).value = ingrediente.get('parte_comestible', 100)
+                else:
+                    ws.cell(row=current_row, column=self.layout.COL_GRUPO).value = ingrediente.get(
+                        'grupo_alimentos',
+                        preparacion.get('grupo_alimentos', 'SIN GRUPO')
+                    )
                 ws.cell(row=current_row, column=self.layout.COL_INGREDIENTE).value = ingrediente.get('nombre', '')
                 ws.cell(row=current_row, column=self.layout.COL_CODIGO).value = ingrediente.get('codigo_icbf', '')
                 ws.cell(row=current_row, column=self.layout.COL_PESO_BRUTO).value = ingrediente.get('peso_bruto_base', 0)
@@ -311,12 +333,14 @@ class ExcelReportDrawer:
                 ws.cell(row=current_row, column=self.layout.COL_PROTEINA).value = valores.get('proteina', 0)
                 ws.cell(row=current_row, column=self.layout.COL_GRASA).value = valores.get('grasa', 0)
                 ws.cell(row=current_row, column=self.layout.COL_CHO).value = valores.get('cho', 0)
-                ws.cell(row=current_row, column=self.layout.COL_CALCIO).value = valores.get('calcio', 0)
-                ws.cell(row=current_row, column=self.layout.COL_HIERRO).value = valores.get('hierro', 0)
-                ws.cell(row=current_row, column=self.layout.COL_SODIO).value = valores.get('sodio', 0)
+                if not is_comedores:
+                    ws.cell(row=current_row, column=self.layout.COL_CALCIO).value = valores.get('calcio', 0)
+                    ws.cell(row=current_row, column=self.layout.COL_HIERRO).value = valores.get('hierro', 0)
+                    ws.cell(row=current_row, column=self.layout.COL_SODIO).value = valores.get('sodio', 0)
 
                 # Aplicar bordes a toda la fila
-                for col_idx in range(self.layout.COL_COMPONENTE, self.layout.COL_SODIO + 1):
+                last_col = self.layout.COL_CHO if is_comedores else self.layout.COL_SODIO
+                for col_idx in range(self.layout.COL_COMPONENTE, last_col + 1):
                     ws.cell(row=current_row, column=col_idx).border = self.border
 
                 current_row += 1
@@ -346,16 +370,16 @@ class ExcelReportDrawer:
 
         return current_row - 1
 
-    def _add_calculations_section(self, ws: Worksheet, last_data_row: int, nivel_data: Dict) -> None:
+    def _add_calculations_section(self, ws: Worksheet, last_data_row: int, nivel_data: Dict, is_comedores: bool = False) -> None:
         """Agregar sección de totales, recomendaciones y adecuación."""
         total_row = last_data_row + 2
-        self._add_totals_row(ws, total_row, nivel_data)
+        self._add_totals_row(ws, total_row, nivel_data, is_comedores)
         req_row = total_row + 1
-        self._add_recommendations_row(ws, req_row, nivel_data)
+        self._add_recommendations_row(ws, req_row, nivel_data, is_comedores)
         pct_row = req_row + 1
-        self._add_adequacy_row(ws, pct_row, total_row, req_row)
+        self._add_adequacy_row(ws, pct_row, total_row, req_row, is_comedores)
 
-    def _add_totals_row(self, ws: Worksheet, row: int, nivel_data: Dict) -> None:
+    def _add_totals_row(self, ws: Worksheet, row: int, nivel_data: Dict, is_comedores: bool = False) -> None:
         """Agregar fila de totales."""
         ws.cell(row, 1).value = "TOTAL MENÚ"
         ws.cell(row, 1).font = Font(bold=True)
@@ -364,15 +388,16 @@ class ExcelReportDrawer:
         ws.cell(row, 1).alignment = Alignment(horizontal='center')
         ws.merge_cells(f'A{row}:G{row}')
 
+        keys = NUTRIENT_KEYS_COMEDORES if is_comedores else NUTRIENT_KEYS
         totales = nivel_data.get('totales', {})
-        for i, key in enumerate(NUTRIENT_KEYS, start=self.layout.COL_CALORIAS):
+        for i, key in enumerate(keys, start=self.layout.COL_CALORIAS):
             cell = ws.cell(row, i)
             cell.value = totales.get(key, 0)
             cell.fill = self.total_fill
             cell.border = self.border
             cell.alignment = Alignment(horizontal='center')
 
-    def _add_recommendations_row(self, ws: Worksheet, row: int, nivel_data: Dict) -> None:
+    def _add_recommendations_row(self, ws: Worksheet, row: int, nivel_data: Dict, is_comedores: bool = False) -> None:
         """Agregar fila de recomendaciones."""
         ws.cell(row, 1).border = self.border
         ws.cell(row, 1).alignment = Alignment(horizontal='center')
@@ -388,14 +413,16 @@ class ExcelReportDrawer:
             'hierro': 5.6,
             'sodio': 1133,
         }
-        for i, key in enumerate(NUTRIENT_KEYS, start=self.layout.COL_CALORIAS):
+        keys = NUTRIENT_KEYS_COMEDORES if is_comedores else NUTRIENT_KEYS
+        for i, key in enumerate(keys, start=self.layout.COL_CALORIAS):
             cell = ws.cell(row, i)
-            cell.value = requerimientos.get(key, default_values[key])
+            val = requerimientos.get(key)
+            cell.value = val if val is not None else default_values.get(key, 0)
             cell.fill = self.header_fill
             cell.border = self.border
             cell.alignment = Alignment(horizontal='center')
 
-    def _add_adequacy_row(self, ws: Worksheet, row: int, total_row: int, req_row: int) -> None:
+    def _add_adequacy_row(self, ws: Worksheet, row: int, total_row: int, req_row: int, is_comedores: bool = False) -> None:
         """Agregar fila de % adecuación con fórmulas."""
         ws.cell(row, 1).value = "% ADECUACIÓN"
         ws.cell(row, 1).font = Font(bold=True)
@@ -403,7 +430,8 @@ class ExcelReportDrawer:
         ws.cell(row, 1).alignment = Alignment(horizontal='center')
         ws.merge_cells(f'A{row}:G{row}')
 
-        for col in range(self.layout.COL_CALORIAS, self.layout.COL_SODIO + 1):
+        last_nutrient_col = self.layout.COL_CHO if is_comedores else self.layout.COL_SODIO
+        for col in range(self.layout.COL_CALORIAS, last_nutrient_col + 1):
             col_letter = get_column_letter(col)
             formula = f'=IF({col_letter}{req_row}=0,0,{col_letter}{total_row}/{col_letter}{req_row}*100)'
             cell = ws.cell(row, col)
@@ -600,12 +628,17 @@ class ExcelReportDrawer:
 
         self._populate_title(ws, start_row=start_row)
 
-        # Combinar título inmediatamente después de escribirlo
-        ws.merge_cells(start_row=start_row, start_column=4, end_row=start_row, end_column=14)
-
         nivel_data = self._extract_nivel_data(analisis_data, nivel_escolar_id)
         if not nivel_data:
             raise ValueError("No se encontró información del nivel escolar para el reporte")
+
+        # Detectar si es programa sin niveles (Comedores, Adulto Mayor)
+        is_comedores = nivel_data.get('nivel_escolar', {}).get('id') == 'general'
+
+        # Combinar título inmediatamente después de escribirlo
+        title_end_col = 11 if is_comedores else 14
+        ws.merge_cells(start_row=start_row, start_column=4, end_row=start_row, end_column=title_end_col)
+
         nivel_escolar_nombre = nivel_data.get('nivel_escolar', {}).get('nombre', 'N/A')
 
         admin_start_row = start_row + 1
@@ -622,14 +655,14 @@ class ExcelReportDrawer:
             ws.merge_cells(f'A{row}:C{row}')
 
         header_start_row = start_row + 9
-        self._populate_headers(ws, start_row=header_start_row)
+        self._populate_headers(ws, start_row=header_start_row, is_comedores=is_comedores)
 
         data_start_row = start_row + 10
         last_data_row = self._populate_ingredients_from_analysis(
-            ws, start_row=data_start_row, nivel_data=nivel_data
+            ws, start_row=data_start_row, nivel_data=nivel_data, is_comedores=is_comedores
         )
 
-        self._add_calculations_section(ws, last_data_row, nivel_data)
+        self._add_calculations_section(ws, last_data_row, nivel_data, is_comedores=is_comedores)
 
         # La sección de firmas comienza 6 filas después de los datos
         signatures_start_row = last_data_row + 6

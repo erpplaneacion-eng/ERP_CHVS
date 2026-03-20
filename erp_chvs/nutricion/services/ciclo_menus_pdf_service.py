@@ -707,8 +707,6 @@ class CicloMenusPdfService:
                     'prot': float(analisis.total_proteina or 0),
                     'grasa': float(analisis.total_grasa or 0),
                     'cho': float(analisis.total_cho or 0),
-                    'calcio': float(analisis.total_calcio or 0),
-                    'hierro': float(analisis.total_hierro or 0),
                 })
 
         if not filas_datos:
@@ -722,19 +720,15 @@ class CicloMenusPdfService:
             'prot': sum(f['prot'] for f in filas_datos) / n,
             'grasa': sum(f['grasa'] for f in filas_datos) / n,
             'cho': sum(f['cho'] for f in filas_datos) / n,
-            'calcio': sum(f['calcio'] for f in filas_datos) / n,
-            'hierro': sum(f['hierro'] for f in filas_datos) / n,
         }
         filas_datos.append(prom)
 
         header = [
             self._p("MENÚ", self.style_header),
-            self._p("CALORÍAS\n(kcal)", self.style_header),
+            self._p("ENERGÍA\n(Kcal)", self.style_header),
             self._p("PROTEÍNA\n(g)", self.style_header),
             self._p("GRASA\n(g)", self.style_header),
             self._p("CHO\n(g)", self.style_header),
-            self._p("CALCIO\n(mg)", self.style_header),
-            self._p("HIERRO\n(mg)", self.style_header),
         ]
         data = [header]
         for f in filas_datos:
@@ -744,12 +738,10 @@ class CicloMenusPdfService:
                 self._p(f"{f['prot']:.1f}", self.style_cell_center),
                 self._p(f"{f['grasa']:.1f}", self.style_cell_center),
                 self._p(f"{f['cho']:.1f}", self.style_cell_center),
-                self._p(f"{f['calcio']:.1f}", self.style_cell_center),
-                self._p(f"{f['hierro']:.2f}", self.style_cell_center),
             ]
             data.append(row)
 
-        col_widths = [26 * mm, 26 * mm, 26 * mm, 26 * mm, 26 * mm, 26 * mm, 26 * mm]
+        col_widths = [36 * mm, 34 * mm, 34 * mm, 34 * mm, 34 * mm]
         table = Table(data, colWidths=col_widths, hAlign="LEFT")
 
         n_rows = len(data)
