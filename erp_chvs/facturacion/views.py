@@ -905,13 +905,9 @@ def api_transferir_grados(request):
             registros_movidos = 0
             with transaction.atomic():
                 for registro in registros_a_copiar:
-                    try:
-                        # Actualizar la sede del registro existente (MOVER, no copiar)
-                        registro.sede = sede_destino
-                        registro.save()
-                        registros_movidos += 1
-                    except Exception as e:
-                        continue  # Continuar con el siguiente registro
+                    registro.sede = sede_destino
+                    registro.save()
+                    registros_movidos += 1
 
             RegistroActividad.registrar(
                 request, 'facturacion', 'transferir_grados',
