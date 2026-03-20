@@ -202,13 +202,13 @@ def _obtener_requerimientos_por_nivel(modalidad, tp_id='pae'):
         nivel_id = req.id_nivel_escolar_uapa.id_grado_escolar_uapa
         if nivel_id not in requerimientos_por_nivel:
             requerimientos_por_nivel[nivel_id] = {
-                'calorias': float(req.calorias_kcal),
-                'proteina': float(req.proteina_g),
-                'grasa': float(req.grasa_g),
-                'cho': float(req.cho_g),
-                'calcio': float(req.calcio_mg),
-                'hierro': float(req.hierro_mg),
-                'sodio': float(req.sodio_mg),
+                'calorias': float(req.calorias_kcal or 0),
+                'proteina': float(req.proteina_g or 0),
+                'grasa': float(req.grasa_g or 0),
+                'cho': float(req.cho_g or 0),
+                'calcio': float(req.calcio_mg or 0),
+                'hierro': float(req.hierro_mg or 0),
+                'sodio': float(req.sodio_mg or 0),
             }
 
     return requerimientos_por_nivel
