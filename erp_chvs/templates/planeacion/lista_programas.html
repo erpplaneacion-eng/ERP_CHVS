@@ -39,6 +39,7 @@
                     <h3>{{ programa.programa }}</h3>
                     <p><strong>Municipio:</strong> {{ programa.municipio.nombre_municipio|default:"Sin municipio" }}</p>
                     <p><strong>Periodo:</strong> {{ programa.fecha_inicial|date:"d/m/Y" }} - {{ programa.fecha_final|date:"d/m/Y" }}</p>
+                    <p><strong>Tipo:</strong> {{ programa.tipo_programa.nombre|default:"—" }}</p>
                     <p><strong>Contrato:</strong> {{ programa.contrato }}</p>
                     <p>
                         <strong>Estado:</strong>
@@ -60,6 +61,7 @@
                                 data-fecha-final="{{ programa.fecha_final|date:'Y-m-d' }}"
                                 data-estado="{{ programa.estado }}"
                                 data-contrato="{{ programa.contrato }}"
+                                data-tipo-programa="{{ programa.tipo_programa_id }}"
                                 data-imagen-url="{% if programa.imagen and programa.imagen.name %}{{ programa.imagen.url }}{% endif %}">
                             Ver / Editar
                         </button>
@@ -94,6 +96,7 @@
                     {% csrf_token %}
 
                     <p>{{ form.programa.label_tag }}{{ form.programa }}{{ form.programa.errors }}</p>
+                    <p>{{ form.tipo_programa.label_tag }}{{ form.tipo_programa }}{{ form.tipo_programa.errors }}</p>
 
                     <p>
                         <label for="municipio-search">Municipio:</label>

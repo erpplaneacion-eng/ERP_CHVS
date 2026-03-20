@@ -26,6 +26,23 @@ _ORDEN_NIVELES = [
 ]
 
 
+def get_niveles_ordenados(programa=None):
+    """Retorna lista de niveles ordenados según el tipo de programa.
+
+    Para programas sin niveles (adulto mayor, comedores comunitarios, etc.)
+    retorna ['general'].  Para PAE y cualquier programa con niveles retorna
+    los 5 niveles escolares en orden pedagógico.
+    """
+    if (
+        programa is not None
+        and hasattr(programa, 'tipo_programa')
+        and programa.tipo_programa is not None
+        and not programa.tipo_programa.tiene_niveles
+    ):
+        return ['general']
+    return list(_ORDEN_NIVELES)
+
+
 def _estado_semaforo(pct: float) -> str:
     if pct <= 35:
         return 'optimo'
@@ -40,9 +57,9 @@ def _porcentaje_adecuacion(total: float, req_val) -> float:
     return 0.0
 
 
-def inicializar_niveles_para_menu(menu, modalidad, items: list) -> None:
+def inicializar_niveles_para_menu(menu, modalidad, items: list, programa=None) -> None:
     """
-    Crea TablaAnalisisNutricionalMenu y TablaIngredientesPorNivel para los 5
+    Crea TablaAnalisisNutricionalMenu y TablaIngredientesPorNivel para los
     niveles educativos de un menú recién importado desde el agente IA.
 
     Debe llamarse dentro de una transaction.atomic() activa.
@@ -52,38 +69,70 @@ def inicializar_niveles_para_menu(menu, modalidad, items: list) -> None:
         modalidad: instancia de ModalidadesDeConsumo
         items: lista de tuplas (TablaPreparaciones, TablaPreparacionIngredientes,
                TablaAlimentos2018Icbf)  — una por cada ingrediente creado
+        programa: instancia de Programa (opcional) — para determinar tipo de programa
     """
     if not items:
         return
 
-    # Niveles en orden pedagógico
+    # Determinar niveles según tipo de programa
+    niveles_ids = get_niveles_ordenados(programa)
+
+    # Filtrar y ordenar los niveles existentes en la BD
     niveles = sorted(
-        TablaGradosEscolaresUapa.objects.all(),
+        TablaGradosEscolaresUapa.objects.filter(id_grado_escolar_uapa__in=niveles_ids),
         key=lambda n: (
-            _ORDEN_NIVELES.index(n.id_grado_escolar_uapa)
-            if n.id_grado_escolar_uapa in _ORDEN_NIVELES else 999
+            niveles_ids.index(n.id_grado_escolar_uapa)
+            if n.id_grado_escolar_uapa in niveles_ids else 999
         ),
     )
     if not niveles:
         return
 
-    # Pre-cargar MinutaPatronMeta para esta modalidad
+    # Determinar id_tipo_programa para filtrar config tables
+    if (
+        programa is not None
+        and hasattr(programa, 'tipo_programa')
+        and programa.tipo_programa is not None
+    ):
+        tp_id = programa.tipo_programa.id_tipo_programa
+    else:
+        tp_id = 'pae'
+
+    # Pre-cargar MinutaPatronMeta para esta modalidad y tipo_programa
     # Clave: (nivel_id, componente_id) → meta
     metas_dict = {
         (m.id_grado_escolar_uapa_id, m.id_componente_id): m
         for m in MinutaPatronMeta.objects.filter(
-            id_modalidad=modalidad
+            id_modalidad=modalidad,
+            tipo_programa_id=tp_id,
         ).select_related('id_grado_escolar_uapa', 'id_componente')
     }
+    # Fallback sin filtro de tipo_programa si no hay resultados
+    if not metas_dict:
+        metas_dict = {
+            (m.id_grado_escolar_uapa_id, m.id_componente_id): m
+            for m in MinutaPatronMeta.objects.filter(
+                id_modalidad=modalidad,
+            ).select_related('id_grado_escolar_uapa', 'id_componente')
+        }
 
-    # Pre-cargar requerimientos nutricionales para esta modalidad
+    # Pre-cargar requerimientos nutricionales para esta modalidad y tipo_programa
     # Clave: nivel_id → requerimiento
     reqs_dict = {
         r.id_nivel_escolar_uapa_id: r
-        for r in TablaRequerimientosNutricionales.objects.filter(id_modalidad=modalidad)
+        for r in TablaRequerimientosNutricionales.objects.filter(
+            id_modalidad=modalidad,
+            tipo_programa_id=tp_id,
+        )
     }
+    # Fallback sin filtro de tipo_programa si no hay resultados
+    if not reqs_dict:
+        reqs_dict = {
+            r.id_nivel_escolar_uapa_id: r
+            for r in TablaRequerimientosNutricionales.objects.filter(id_modalidad=modalidad)
+        }
 
-    for nivel in niveles:
+    for nivel in niveles:  # niveles ya ordenados según tipo_programa
         analisis, _ = TablaAnalisisNutricionalMenu.objects.get_or_create(
             id_menu=menu,
             id_nivel_escolar_uapa=nivel,

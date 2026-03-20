@@ -621,14 +621,22 @@ class TablaRequerimientosNutricionales(models.Model):
         null=True,  # Permitir NULL para compatibilidad con datos existentes
         blank=True
     )
+    tipo_programa = models.ForeignKey(
+        'principal.TipoPrograma',
+        on_delete=models.PROTECT,
+        db_column='tipo_programa',
+        null=True,
+        blank=True,
+        verbose_name='Tipo de Programa'
+    )
 
     class Meta:
         db_table = 'nutricion_total_aporte_promedio_diario'
         verbose_name = 'Requerimiento Nutricional'
         verbose_name_plural = 'Requerimientos Nutricionales'
         ordering = ['id_nivel_escolar_uapa', 'id_modalidad']
-        # Ahora la combinación única es nivel + modalidad
-        unique_together = [['id_nivel_escolar_uapa', 'id_modalidad']]
+        # Combinación única: nivel + modalidad + tipo_programa
+        unique_together = [['id_nivel_escolar_uapa', 'id_modalidad', 'tipo_programa']]
 
     def __str__(self):
         modalidad_str = f" - {self.id_modalidad.modalidad}" if self.id_modalidad else ""
@@ -706,13 +714,21 @@ class AdecuacionTotalPorcentaje(models.Model):
         null=True,
         blank=True
     )
+    tipo_programa = models.ForeignKey(
+        'principal.TipoPrograma',
+        on_delete=models.PROTECT,
+        db_column='tipo_programa',
+        null=True,
+        blank=True,
+        verbose_name='Tipo de Programa'
+    )
 
     class Meta:
         db_table = 'nutricion_adecuacion_total_porc'
         verbose_name = 'Adecuación Total Porcentaje'
         verbose_name_plural = 'Adecuaciones Totales Porcentaje'
         ordering = ['id_nivel_escolar_uapa', 'id_modalidad']
-        unique_together = [['id_nivel_escolar_uapa', 'id_modalidad']]
+        unique_together = [['id_nivel_escolar_uapa', 'id_modalidad', 'tipo_programa']]
 
     def __str__(self):
         modalidad_str = f" - {self.id_modalidad.modalidad}" if self.id_modalidad else ""
@@ -1159,12 +1175,20 @@ class MinutaPatronMeta(models.Model):
         blank=True,
         verbose_name="Peso Neto Máximo (g)"
     )
+    tipo_programa = models.ForeignKey(
+        'principal.TipoPrograma',
+        on_delete=models.PROTECT,
+        db_column='tipo_programa',
+        null=True,
+        blank=True,
+        verbose_name='Tipo de Programa'
+    )
 
     class Meta:
         db_table = 'nutricion_minuta_patron_rangos'
         verbose_name = "Meta de Minuta Patrón"
         verbose_name_plural = "Metas de Minuta Patrón"
-        unique_together = [['id_modalidad', 'id_grado_escolar_uapa', 'id_componente', 'id_grupo_alimentos']]
+        unique_together = [['id_modalidad', 'id_grado_escolar_uapa', 'id_componente', 'id_grupo_alimentos', 'tipo_programa']]
 
     def __str__(self):
         return f"{self.id_modalidad.modalidad} - {self.id_grado_escolar_uapa.nivel_escolar_uapa} - {self.id_componente.componente}"
@@ -1354,10 +1378,18 @@ class RecomendacionDiariaGradoMod(models.Model):
         verbose_name="Modalidad",
         related_name='recomendaciones_diarias'
     )
+    tipo_programa = models.ForeignKey(
+        'principal.TipoPrograma',
+        on_delete=models.PROTECT,
+        db_column='tipo_programa',
+        null=True,
+        blank=True,
+        verbose_name='Tipo de Programa'
+    )
 
     class Meta:
         db_table = 'nutricion_recomendacion_diaria_por_grado_mod'
-        unique_together = [['nivel_escolar_uapa', 'id_modalidades']]
+        unique_together = [['nivel_escolar_uapa', 'id_modalidades', 'tipo_programa']]
         verbose_name = "Recomendación Diaria por Grado y Modalidad"
         verbose_name_plural = "Recomendaciones Diarias por Grado y Modalidad"
 

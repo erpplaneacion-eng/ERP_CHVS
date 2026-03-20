@@ -140,6 +140,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 modalForm.querySelector('[name="fecha_final"]').value = data.fechaFinal;
                 modalForm.querySelector('[name="estado"]').value = data.estado;
                 modalForm.querySelector('[name="contrato"]').value = data.contrato;
+                const tipoProgramaSelect = modalForm.querySelector('[name="tipo_programa"]');
+                if (tipoProgramaSelect) tipoProgramaSelect.value = data.tipoPrograma;
 
                 if (data.imagenUrl && currentImageContainer && currentImageLink) {
                     currentImageLink.href = data.imagenUrl;

@@ -243,3 +243,18 @@ class RegistroActividad(models.Model):
             )
         except Exception as exc:
             logger.warning("No se pudo registrar actividad (%s/%s): %s", modulo, accion, exc)
+
+
+class TipoPrograma(models.Model):
+    id_tipo_programa = models.CharField(max_length=30, primary_key=True)
+    nombre = models.CharField(max_length=100)
+    tiene_niveles = models.BooleanField(default=True)
+    descripcion = models.TextField(blank=True)
+
+    class Meta:
+        db_table = 'principal_tipo_programa'
+        verbose_name = 'Tipo de Programa'
+        verbose_name_plural = 'Tipos de Programa'
+
+    def __str__(self):
+        return self.nombre

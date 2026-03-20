@@ -8,6 +8,43 @@ import copy
 from typing import Dict, List, Optional
 from django.db.models import QuerySet
 
+# Orden pedagógico de niveles PAE
+_ORDEN_NIVELES_PAE = [
+    'prescolar',
+    'primaria_1_2_3',
+    'primaria_4_5',
+    'secundaria',
+    'media_ciclo_complementario',
+]
+
+
+def _obtener_niveles_programa(programa):
+    """Retorna lista de niveles según el tipo de programa.
+
+    Para programas sin niveles (adulto mayor, comedores comunitarios, etc.)
+    retorna ['general'].  Para PAE y cualquier programa con niveles retorna
+    los 5 niveles escolares en orden pedagógico.
+    """
+    if (
+        programa is not None
+        and hasattr(programa, 'tipo_programa')
+        and programa.tipo_programa is not None
+        and not programa.tipo_programa.tiene_niveles
+    ):
+        return ['general']
+    return list(_ORDEN_NIVELES_PAE)
+
+
+def _tipo_programa_id(programa):
+    """Retorna el id_tipo_programa del programa, o 'pae' como fallback seguro."""
+    if (
+        programa is not None
+        and hasattr(programa, 'tipo_programa')
+        and programa.tipo_programa is not None
+    ):
+        return programa.tipo_programa.id_tipo_programa
+    return 'pae'
+
 from ..models import (
     MinutaPatronMeta,
     TablaMenus,
@@ -53,20 +90,31 @@ class AnalisisNutricionalService:
             TablaMenus.DoesNotExist: Si el menú no existe
         """
         # 1. Obtener menú y validar existencia
-        menu = TablaMenus.objects.select_related('id_contrato', 'id_modalidad').get(id_menu=id_menu)
+        menu = TablaMenus.objects.select_related(
+            'id_contrato', 'id_contrato__tipo_programa', 'id_modalidad'
+        ).get(id_menu=id_menu)
+
+        # Obtener tipo_programa del programa del menú (fallback 'pae')
+        tp_id = _tipo_programa_id(menu.id_contrato)
 
         # CAMBIO IMPORTANTE: Filtrar requerimientos por modalidad del menú
         # Cada modalidad (CAJM/JT, Almuerzo, etc.) tiene requerimientos específicos
         if menu.id_modalidad:
             requerimientos = TablaRequerimientosNutricionales.objects.filter(
-                id_modalidad=menu.id_modalidad
-            ).select_related('id_nivel_escolar_uapa', 'id_modalidad')
+                id_modalidad=menu.id_modalidad,
+                tipo_programa_id=tp_id,
+            ).select_related('id_nivel_escolar_uapa', 'id_modalidad', 'tipo_programa')
+            # Fallback: si no hay registros con tipo_programa, buscar sin filtro de tipo
+            if not requerimientos.exists():
+                requerimientos = TablaRequerimientosNutricionales.objects.filter(
+                    id_modalidad=menu.id_modalidad
+                ).select_related('id_nivel_escolar_uapa', 'id_modalidad', 'tipo_programa')
         else:
             # Fallback: Si el menú no tiene modalidad asignada, usar todos los requerimientos
             # (compatibilidad con datos antiguos)
             requerimientos = TablaRequerimientosNutricionales.objects.filter(
                 id_modalidad__isnull=True
-            ).select_related('id_nivel_escolar_uapa')
+            ).select_related('id_nivel_escolar_uapa', 'tipo_programa')
 
         # 2. Obtener datos base (pasamos el primer nivel para obtener valores mínimos por defecto)
         primer_nivel = requerimientos.first().id_nivel_escolar_uapa if requerimientos else None
@@ -432,10 +480,13 @@ class AnalisisNutricionalService:
 
         # Denominador: usar RecomendacionDiariaGradoMod (ICBF oficial) si existe,
         # si no, hacer fallback a TablaRequerimientosNutricionales.
+        # Filtrar por tipo_programa cuando está disponible desde el requerimiento.
+        tp_id = _tipo_programa_id(requerimiento.tipo_programa if hasattr(requerimiento, 'tipo_programa') else None)
         try:
             rec_diaria = RecomendacionDiariaGradoMod.objects.get(
                 nivel_escolar_uapa=nivel_escolar,
-                id_modalidades=requerimiento.id_modalidad
+                id_modalidades=requerimiento.id_modalidad,
+                tipo_programa_id=tp_id,
             )
             requerimientos_dict = {
                 'calorias': float(rec_diaria.calorias_kcal),
@@ -461,7 +512,8 @@ class AnalisisNutricionalService:
         try:
             adecuacion_ref = AdecuacionTotalPorcentaje.objects.get(
                 id_nivel_escolar_uapa=nivel_escolar,
-                id_modalidad=requerimiento.id_modalidad
+                id_modalidad=requerimiento.id_modalidad,
+                tipo_programa_id=tp_id,
             )
             referencias_dict = {
                 'calorias': float(adecuacion_ref.calorias_porc),
@@ -794,11 +846,19 @@ class AnalisisNutricionalService:
 
         # Calcular porcentajes: usar RecomendacionDiariaGradoMod (ICBF oficial) si existe,
         # si no, hacer fallback a TablaRequerimientosNutricionales.
+        # Obtener tipo_programa del programa del menú para los filtros
+        _tp = _tipo_programa_id(
+            analisis.id_menu.id_contrato
+            if analisis.id_menu and analisis.id_menu.id_contrato
+            else None
+        )
+
         def _obtener_denominadores(nivel_escolar_uapa, modalidad):
             try:
                 rec = RecomendacionDiariaGradoMod.objects.get(
                     nivel_escolar_uapa=nivel_escolar_uapa,
-                    id_modalidades=modalidad
+                    id_modalidades=modalidad,
+                    tipo_programa_id=_tp,
                 )
                 return {
                     'calorias': float(rec.calorias_kcal),
@@ -814,7 +874,8 @@ class AnalisisNutricionalService:
             try:
                 req = TablaRequerimientosNutricionales.objects.get(
                     id_nivel_escolar_uapa=nivel_escolar_uapa,
-                    id_modalidad=modalidad
+                    id_modalidad=modalidad,
+                    tipo_programa_id=_tp,
                 )
                 return {
                     'calorias': float(req.calorias_kcal),
@@ -855,7 +916,8 @@ class AnalisisNutricionalService:
             try:
                 adecuacion_ref = AdecuacionTotalPorcentaje.objects.get(
                     id_nivel_escolar_uapa=analisis.id_nivel_escolar_uapa,
-                    id_modalidad=analisis.id_menu.id_modalidad
+                    id_modalidad=analisis.id_menu.id_modalidad,
+                    tipo_programa_id=_tp,
                 )
                 refs = {
                     'calorias': float(adecuacion_ref.calorias_porc),

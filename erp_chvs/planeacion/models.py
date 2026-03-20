@@ -81,6 +81,14 @@ class Programa(models.Model):
     # Campo para el nombre del programa (texto corto)
     programa = models.CharField(max_length=200, verbose_name="Nombre del Programa")
 
+    # Tipo de programa (PAE, Adulto Mayor, Comedores Comunitarios, etc.)
+    tipo_programa = models.ForeignKey(
+        'principal.TipoPrograma',
+        on_delete=models.PROTECT,
+        db_column='tipo_programa',
+        verbose_name='Tipo de Programa'
+    )
+
     # Campos de fecha
     fecha_inicial = models.DateField(verbose_name="Fecha Inicial")
     fecha_final = models.DateField(verbose_name="Fecha Final")

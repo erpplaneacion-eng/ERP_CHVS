@@ -10,7 +10,8 @@ from .models import (
     TipoGenero,
     ModalidadesDeConsumo,
     NivelGradoEscolar,
-    TablaGradosEscolaresUapa
+    TablaGradosEscolaresUapa,
+    TipoPrograma,
 )
 
 # Definir el inline para PerfilUsuario
@@ -114,3 +115,9 @@ class RegistroActividadAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
+
+
+@admin.register(TipoPrograma)
+class TipoProgramaAdmin(admin.ModelAdmin):
+    list_display = ['id_tipo_programa', 'nombre', 'tiene_niveles', 'descripcion']
+    list_filter = ['tiene_niveles']

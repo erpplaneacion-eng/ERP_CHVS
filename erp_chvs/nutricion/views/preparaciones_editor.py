@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404, render
 from django.views.decorators.csrf import csrf_exempt
 
 from principal.models import TablaGradosEscolaresUapa
+from nutricion.services.analisis_service import _obtener_niveles_programa, _tipo_programa_id
 
 from ..models import (
     AdecuacionTotalPorcentaje,
@@ -152,21 +153,29 @@ def _resolver_grupo_y_rango_por_nivel(menu, preparacion, ingrediente_icbf, nivel
 NUTRIENTES_ANALISIS = ['calorias', 'proteina', 'grasa', 'cho', 'calcio', 'hierro', 'sodio']
 
 
-def _obtener_requerimientos_por_nivel(modalidad):
+def _obtener_requerimientos_por_nivel(modalidad, tp_id='pae'):
     """
     Denominadores nutricionales por nivel.
     Prioriza RecomendacionDiariaGradoMod (ICBF oficial); hace fallback a
     TablaRequerimientosNutricionales para niveles sin entrada nueva.
+    Filtra por tipo_programa (tp_id) para soportar múltiples tipos de programa.
     """
     requerimientos_por_nivel = {}
     if not modalidad:
         return requerimientos_por_nivel
 
-    # 1. Intentar usar RecomendacionDiariaGradoMod
+    # 1. Intentar usar RecomendacionDiariaGradoMod con tipo_programa
     try:
-        for rec in RecomendacionDiariaGradoMod.objects.filter(
-            id_modalidades=modalidad
-        ).select_related('nivel_escolar_uapa'):
+        qs = RecomendacionDiariaGradoMod.objects.filter(
+            id_modalidades=modalidad,
+            tipo_programa_id=tp_id,
+        ).select_related('nivel_escolar_uapa')
+        # Fallback sin filtro de tipo si no hay resultados
+        if not qs.exists():
+            qs = RecomendacionDiariaGradoMod.objects.filter(
+                id_modalidades=modalidad,
+            ).select_related('nivel_escolar_uapa')
+        for rec in qs:
             nivel_id = rec.nivel_escolar_uapa.id_grado_escolar_uapa
             requerimientos_por_nivel[nivel_id] = {
                 'calorias': float(rec.calorias_kcal),
@@ -181,9 +190,15 @@ def _obtener_requerimientos_por_nivel(modalidad):
         pass
 
     # 2. Fallback: TablaRequerimientosNutricionales para niveles no cubiertos
-    for req in TablaRequerimientosNutricionales.objects.filter(
-        id_modalidad=modalidad
-    ).select_related('id_nivel_escolar_uapa'):
+    qs_req = TablaRequerimientosNutricionales.objects.filter(
+        id_modalidad=modalidad,
+        tipo_programa_id=tp_id,
+    ).select_related('id_nivel_escolar_uapa')
+    if not qs_req.exists():
+        qs_req = TablaRequerimientosNutricionales.objects.filter(
+            id_modalidad=modalidad,
+        ).select_related('id_nivel_escolar_uapa')
+    for req in qs_req:
         nivel_id = req.id_nivel_escolar_uapa.id_grado_escolar_uapa
         if nivel_id not in requerimientos_por_nivel:
             requerimientos_por_nivel[nivel_id] = {
@@ -199,19 +214,27 @@ def _obtener_requerimientos_por_nivel(modalidad):
     return requerimientos_por_nivel
 
 
-def _obtener_referencias_por_nivel(modalidad):
+def _obtener_referencias_por_nivel(modalidad, tp_id='pae'):
     """
-    Porcentajes de adecuaciÃ³n de referencia (AdecuacionTotalPorcentaje).
-    Se usan como 'vara de mediciÃ³n' para la semaforizaciÃ³n por proximidad.
+    Porcentajes de adecuación de referencia (AdecuacionTotalPorcentaje).
+    Se usan como 'vara de medición' para la semaforización por proximidad.
+    Filtra por tipo_programa (tp_id) para soportar múltiples tipos de programa.
     """
     referencias_por_nivel = {}
     if not modalidad:
         return referencias_por_nivel
 
     try:
-        for ref in AdecuacionTotalPorcentaje.objects.filter(
-            id_modalidad=modalidad
-        ).select_related('id_nivel_escolar_uapa'):
+        qs = AdecuacionTotalPorcentaje.objects.filter(
+            id_modalidad=modalidad,
+            tipo_programa_id=tp_id,
+        ).select_related('id_nivel_escolar_uapa')
+        # Fallback sin filtro de tipo si no hay resultados
+        if not qs.exists():
+            qs = AdecuacionTotalPorcentaje.objects.filter(
+                id_modalidad=modalidad,
+            ).select_related('id_nivel_escolar_uapa')
+        for ref in qs:
             nivel_id = ref.id_nivel_escolar_uapa.id_grado_escolar_uapa
             referencias_por_nivel[nivel_id] = {
                 'calorias': float(ref.calorias_porc),
@@ -427,25 +450,28 @@ def _calcular_porcentajes_y_estados(totales, requerimientos, referencias=None):
 @login_required
 def vista_preparaciones_editor(request, id_menu):
     menu = get_object_or_404(
-        TablaMenus.objects.select_related('id_modalidad', 'id_contrato'),
+        TablaMenus.objects.select_related(
+            'id_modalidad', 'id_contrato', 'id_contrato__tipo_programa'
+        ),
         id_menu=id_menu
     )
 
-    # Orden pedagÃ³gico por nombre de nivel (independiente del valor del ID CharField).
-    _ORDEN_NIVELES = [
-        'prescolar',
-        'primaria_1_2_3',
-        'primaria_4_5',
-        'secundaria',
-        'media_ciclo_complementario',
-    ]
+    # Determinar tipo de programa para filtrar tablas de configuración
+    programa = menu.id_contrato
+    tp_id = _tipo_programa_id(programa)
+    tiene_niveles = True
+    if programa and hasattr(programa, 'tipo_programa') and programa.tipo_programa:
+        tiene_niveles = programa.tipo_programa.tiene_niveles
+
+    # Orden pedagógico de niveles según tipo de programa
+    _niveles_ids = _obtener_niveles_programa(programa)
     niveles_escolares = sorted(
-        TablaGradosEscolaresUapa.objects.all(),
-        key=lambda n: _ORDEN_NIVELES.index(n.nivel_escolar_uapa)
-                      if n.nivel_escolar_uapa in _ORDEN_NIVELES else 999
+        TablaGradosEscolaresUapa.objects.filter(id_grado_escolar_uapa__in=_niveles_ids),
+        key=lambda n: _niveles_ids.index(n.id_grado_escolar_uapa)
+                      if n.id_grado_escolar_uapa in _niveles_ids else 999
     )
-    requerimientos_por_nivel = _obtener_requerimientos_por_nivel(menu.id_modalidad)
-    referencias_por_nivel = _obtener_referencias_por_nivel(menu.id_modalidad)
+    requerimientos_por_nivel = _obtener_requerimientos_por_nivel(menu.id_modalidad, tp_id)
+    referencias_por_nivel = _obtener_referencias_por_nivel(menu.id_modalidad, tp_id)
 
     preparaciones = list(
         TablaPreparaciones.objects.filter(id_menu=menu)
@@ -467,12 +493,19 @@ def vista_preparaciones_editor(request, id_menu):
         for a in TablaAnalisisNutricionalMenu.objects.filter(id_menu=menu)
     }
 
-    # Cache de MinutaPatronMeta por modalidad (evita N+1 en _resolver_grupo_y_rango_por_nivel)
+    # Cache de MinutaPatronMeta por modalidad y tipo_programa
+    # (evita N+1 en _resolver_grupo_y_rango_por_nivel)
     _cache_comp = {}   # (nivel_id, grupo_id, comp_id) → primera meta con ese componente
     _cache_base = {}   # (nivel_id, grupo_id) → primera meta (fallback sin componente)
-    for _m in MinutaPatronMeta.objects.filter(
-        id_modalidad=menu.id_modalidad
-    ).select_related('id_grupo_alimentos'):
+    _minuta_qs = MinutaPatronMeta.objects.filter(
+        id_modalidad=menu.id_modalidad,
+        tipo_programa_id=tp_id,
+    ).select_related('id_grupo_alimentos')
+    if not _minuta_qs.exists():
+        _minuta_qs = MinutaPatronMeta.objects.filter(
+            id_modalidad=menu.id_modalidad,
+        ).select_related('id_grupo_alimentos')
+    for _m in _minuta_qs:
         _nivel_id = _m.id_grado_escolar_uapa_id
         _grupo_id = _m.id_grupo_alimentos_id
         _comp_id = _m.id_componente_id
@@ -539,10 +572,14 @@ def vista_preparaciones_editor(request, id_menu):
         ComponentesAlimentos.objects.values('id_componente', 'componente').order_by('componente')
     )
 
-    # Catálogos de grupos y componentes por modalidad (para cascade dropdowns en el editor)
-    minuta_rows = MinutaPatronMeta.objects.filter(
-        id_modalidad=menu.id_modalidad
-    ).select_related(
+    # Catálogos de grupos y componentes por modalidad y tipo_programa
+    _minuta_rows_qs = MinutaPatronMeta.objects.filter(
+        id_modalidad=menu.id_modalidad,
+        tipo_programa_id=tp_id,
+    )
+    if not _minuta_rows_qs.exists():
+        _minuta_rows_qs = MinutaPatronMeta.objects.filter(id_modalidad=menu.id_modalidad)
+    minuta_rows = _minuta_rows_qs.select_related(
         'id_grupo_alimentos', 'id_componente'
     ).values(
         'id_grupo_alimentos', 'id_grupo_alimentos__grupo_alimentos',
@@ -581,6 +618,8 @@ def vista_preparaciones_editor(request, id_menu):
         'componentes_json': json.dumps(componentes_catalogo),
         'grupos_json': json.dumps(grupos_catalogo),
         'componentes_por_grupo_json': json.dumps(componentes_por_grupo),
+        # Indica si el programa maneja niveles escolares (PAE) o nivel único (general)
+        'tiene_niveles': tiene_niveles,
     }
     return render(request, 'nutricion/preparaciones_editor.html', context)
 

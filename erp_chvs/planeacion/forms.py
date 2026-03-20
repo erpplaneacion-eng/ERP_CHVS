@@ -10,9 +10,13 @@ from datetime import date
 class ProgramaForm(forms.ModelForm):
     class Meta:
         model = Programa
-        fields = ['programa', 'municipio', 'fecha_inicial', 'fecha_final', 'estado', 'contrato', 'imagen']
-        
+        fields = ['programa', 'tipo_programa', 'municipio', 'fecha_inicial', 'fecha_final', 'estado', 'contrato', 'imagen']
+
         widgets = {
+            'tipo_programa': forms.Select(attrs={
+                'class': 'form-control',
+                'id': 'id_tipo_programa',
+            }),
             'fecha_inicial': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'fecha_final': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'programa': forms.TextInput(attrs={
