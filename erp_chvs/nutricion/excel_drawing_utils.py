@@ -666,7 +666,7 @@ class ExcelReportDrawer:
         # Como último recurso, devolver el primer nivel
         return analisis_por_nivel[0] if analisis_por_nivel else None
 
-    def _draw_single_report(self, ws: Worksheet, start_row: int, analisis_data: Dict, nivel_escolar_id: Optional[str] = None) -> int:
+    def _draw_single_report(self, ws: Worksheet, start_row: int, analisis_data: Dict, nivel_escolar_id: Optional[str] = None, show_title: bool = True) -> int:
         """
         Dibuja un reporte de análisis completo en la hoja y fila especificadas.
 
@@ -691,16 +691,21 @@ class ExcelReportDrawer:
         is_comedores = nivel_data.get('nivel_escolar', {}).get('id') == 'general'
         layout = self.comedores_layout if is_comedores else self.layout
 
-        # --- Título ---
-        title_text = "ANÁLISIS FISICO QUIMICO NUTRICIONAL DE MENUS" if is_comedores else "ANÁLISIS NUTRICIONAL"
-        title_cell = ws.cell(row=start_row, column=4)
-        title_cell.value = title_text
-        title_cell.font = Font(bold=True, size=16)
-        title_cell.alignment = Alignment(horizontal='center', vertical='center')
-        ws.merge_cells(
-            start_row=start_row, start_column=4,
-            end_row=start_row, end_column=layout.TITLE_END_COL
-        )
+        # --- Título (solo en el primer menú de la hoja) ---
+        if show_title:
+            title_text = "ANÁLISIS FISICO QUIMICO NUTRICIONAL DE MENUS" if is_comedores else "ANÁLISIS NUTRICIONAL"
+            if is_comedores:
+                title_col_start, title_col_end = 3, 6   # C:F
+            else:
+                title_col_start, title_col_end = 4, layout.TITLE_END_COL
+            title_cell = ws.cell(row=start_row, column=title_col_start)
+            title_cell.value = title_text
+            title_cell.font = Font(bold=True, size=16)
+            title_cell.alignment = Alignment(horizontal='center', vertical='center')
+            ws.merge_cells(
+                start_row=start_row, start_column=title_col_start,
+                end_row=start_row, end_column=title_col_end
+            )
 
         if is_comedores:
             # Sección admin compacta: solo "MENÚ No." en una fila

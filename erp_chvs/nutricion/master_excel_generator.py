@@ -63,7 +63,7 @@ class MasterNutritionalExcelGenerator(ExcelReportDrawer):
                     print(f"[DEBUG] Dibujando menú '{menu_nombre}' en nivel '{nivel_nombre}' (fila {current_row})")
 
                     # Dibujar el reporte y obtener la última fila real utilizada
-                    end_row = self._draw_single_report(ws, current_row, reconstructed_data, nivel_escolar_id=None)
+                    end_row = self._draw_single_report(ws, current_row, reconstructed_data, nivel_escolar_id=None, show_title=(i == 0))
 
                     print(f"[DEBUG] Menú '{menu_nombre}' dibujado correctamente (filas {current_row}-{end_row})")
 

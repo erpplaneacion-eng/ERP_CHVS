@@ -752,10 +752,13 @@ class AnalisisNutricionalService:
         programa = Programa.objects.get(id=programa_id)
         modalidad = ModalidadesDeConsumo.objects.get(id_modalidades=modalidad_id)
 
-        menus = TablaMenus.objects.filter(
+        tiene_niveles = getattr(getattr(programa, 'tipo_programa', None), 'tiene_niveles', True)
+        menus_qs = TablaMenus.objects.filter(
             id_contrato=programa,
             id_modalidad=modalidad
         ).order_by('menu')
+        # Comedores Comunitarios / Adulto Mayor: máximo 10 menús
+        menus = menus_qs[:10] if not tiene_niveles else menus_qs
 
         analisis_final_por_nivel = {}
 
