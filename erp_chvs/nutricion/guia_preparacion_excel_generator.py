@@ -143,9 +143,9 @@ class GuiaPreparacionExcelGenerator:
 
     def _build_sheet(self, ws, menu: TablaMenus, catalogo: List[Tuple[str, str]]) -> None:
         self._set_columns(ws)
-        self._draw_top(ws, menu)
-        row = 9
-        row = self._draw_table_header(ws, row)
+        table_start_row = self._draw_top(ws, menu)
+        row = self._draw_table_header(ws, table_start_row)
+        ws.freeze_panes = f"C{row}"  # congela encima de la primera fila de datos
         row_end = self._draw_table_body(ws, row, menu, catalogo)
         self._draw_signature_block(ws, row_end, menu)
         self._apply_all_borders(ws)
@@ -165,7 +165,8 @@ class GuiaPreparacionExcelGenerator:
             ws.column_dimensions[get_column_letter(col_idx)].width = 9
         ws.column_dimensions[get_column_letter(self.col_proc)].width = 42  # procedimiento
 
-    def _draw_top(self, ws, menu: TablaMenus):
+    def _draw_top(self, ws, menu: TablaMenus) -> int:
+        """Dibuja el bloque superior y retorna la fila donde debe empezar la tabla de ingredientes."""
         lc = get_column_letter(self.col_proc)  # última columna (ej: "R" para PAE, "F" para Comedores)
         ws.row_dimensions[1].height = 38
         ws.row_dimensions[2].height = 38
@@ -186,14 +187,16 @@ class GuiaPreparacionExcelGenerator:
         ws["A3"].fill = self.header_fill
         ws["A3"].border = self.border
 
+        es_comedores = len(self.niveles_orden) == 1
+        fila4_texto = "RACIONES PARA PREPARAR EN SITIO" if es_comedores else "COMPLEMENTO ALIMENTARIO JORNADA AM/PM PREPARADO EN SITIO"
         ws.merge_cells(f"A4:{lc}4")
-        ws["A4"] = "COMPLEMENTO ALIMENTARIO JORNADA AM/PM PREPARADO EN SITIO"
+        ws["A4"] = fila4_texto
         ws["A4"].font = Font(bold=True, size=11)
         ws["A4"].alignment = self.center
         ws["A4"].fill = self.header_fill
         ws["A4"].border = self.border
 
-        if len(self.niveles_orden) > 1:
+        if not es_comedores:
             # --- Layout PAE: filas 5-7 con sub-divisiones por escolaridad y grupo étnico ---
             ws.merge_cells("B5:D5")
             ws["B5"] = "PREESCOLAR - MEDIA Y CICLO COMPLEMENTARIO"
@@ -292,7 +295,7 @@ class GuiaPreparacionExcelGenerator:
                 ws["J7"].border = self.border
 
         else:
-            # --- Layout Comedores: filas 5-7 simplificadas ---
+            # --- Layout Comedores: solo fila 5 (nombre programa) + fila 6 (Menú N) ---
             ws.merge_cells(f"A5:{lc}5")
             ws["A5"] = str(menu.id_contrato.programa).upper() if menu.id_contrato else ""
             ws["A5"].alignment = self.center
@@ -300,23 +303,13 @@ class GuiaPreparacionExcelGenerator:
             ws["A5"].fill = self.header_fill
             ws["A5"].border = self.border
 
-            ws.merge_cells(f"A6:B6")
-            ws["A6"] = "GRUPO ETNICO"
-            ws["A6"].alignment = self.center
+            ws.merge_cells(f"A6:{lc}6")
+            ws["A6"] = f"Menu {menu.menu}"
             ws["A6"].font = Font(bold=True)
+            ws["A6"].alignment = self.center
             ws["A6"].fill = self.header_fill
             ws["A6"].border = self.border
-
-            ws.merge_cells(f"C6:{lc}6")
-            ws["C6"] = "SIN PERTENENCIA ÉTNICA"
-            ws["C6"].alignment = self.center
-            ws["C6"].fill = self.header_fill
-            ws["C6"].border = self.border
-
-            ws.merge_cells(f"A7:{lc}7")
-            ws["A7"] = ""
-            ws["A7"].fill = self.header_fill
-            ws["A7"].border = self.border
+            return 7  # tabla empieza en fila 7
 
         ws.merge_cells(f"A8:{lc}8")
         ws["A8"] = f"Menu {menu.menu}"
@@ -324,6 +317,7 @@ class GuiaPreparacionExcelGenerator:
         ws["A8"].alignment = self.center
         ws["A8"].fill = self.header_fill
         ws["A8"].border = self.border
+        return 9  # tabla empieza en fila 9 (PAE)
 
     def _draw_table_header(self, ws, start_row: int) -> int:
         row1 = start_row
@@ -493,7 +487,6 @@ class GuiaPreparacionExcelGenerator:
                 ws.cell(row=r, column=1).border = self.border
                 ws.cell(row=r, column=self.col_proc).border = self.border
 
-        ws.freeze_panes = "C11"
         return row
 
     def _build_index(self, ingredientes_guardados: List[TablaIngredientesPorNivel]) -> Dict[Tuple[str, int, str], TablaIngredientesPorNivel]:
