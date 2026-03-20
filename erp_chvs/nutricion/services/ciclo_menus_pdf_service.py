@@ -535,12 +535,13 @@ class CicloMenusPdfService:
         ordered_components: List[Tuple[str, str, List[str]]],
         include_ranges: bool = False,
         modalidad_id: str = "",
+        num_semanas: int = 4,
     ) -> Table:
         data: List[List[Paragraph]] = []
         spans: List[Tuple[int, int, int, int]] = []
         week_ranges: List[Tuple[int, int]] = []
 
-        for week in range(1, 5):
+        for week in range(1, num_semanas + 1):
             week_start = len(data)
             week_rows, week_spans = self._build_week_rows(
                 week_num=week,
@@ -673,9 +674,107 @@ class CicloMenusPdfService:
         )
         return table
 
+    def _build_tabla_nutricional_comedores(
+        self,
+        menus_by_number: Dict[int, TablaMenus],
+        programa_id: int,
+        modalidad_id: str,
+    ) -> Optional[Table]:
+        """
+        Genera tabla de resumen nutricional para Comedores Comunitarios (nivel 'general').
+        Muestra kcal, proteína, grasa, CHO, calcio, hierro por menú más el promedio.
+        Retorna None si no hay análisis guardados.
+        """
+        from ..models import TablaAnalisisNutricionalMenu
+        from principal.models import TablaGradosEscolaresUapa
+
+        try:
+            nivel_general = TablaGradosEscolaresUapa.objects.get(id_grado_escolar_uapa='general')
+        except TablaGradosEscolaresUapa.DoesNotExist:
+            return None
+
+        filas_datos = []
+        for num in sorted(menus_by_number.keys()):
+            menu = menus_by_number[num]
+            analisis = TablaAnalisisNutricionalMenu.objects.filter(
+                id_menu=menu,
+                id_nivel_escolar_uapa=nivel_general,
+            ).first()
+            if analisis:
+                filas_datos.append({
+                    'menu': f"Menú {num}",
+                    'cal': float(analisis.total_calorias or 0),
+                    'prot': float(analisis.total_proteina or 0),
+                    'grasa': float(analisis.total_grasa or 0),
+                    'cho': float(analisis.total_cho or 0),
+                    'calcio': float(analisis.total_calcio or 0),
+                    'hierro': float(analisis.total_hierro or 0),
+                })
+
+        if not filas_datos:
+            return None
+
+        # Calcular promedios
+        n = len(filas_datos)
+        prom = {
+            'menu': 'PROMEDIO',
+            'cal': sum(f['cal'] for f in filas_datos) / n,
+            'prot': sum(f['prot'] for f in filas_datos) / n,
+            'grasa': sum(f['grasa'] for f in filas_datos) / n,
+            'cho': sum(f['cho'] for f in filas_datos) / n,
+            'calcio': sum(f['calcio'] for f in filas_datos) / n,
+            'hierro': sum(f['hierro'] for f in filas_datos) / n,
+        }
+        filas_datos.append(prom)
+
+        header = [
+            self._p("MENÚ", self.style_header),
+            self._p("CALORÍAS\n(kcal)", self.style_header),
+            self._p("PROTEÍNA\n(g)", self.style_header),
+            self._p("GRASA\n(g)", self.style_header),
+            self._p("CHO\n(g)", self.style_header),
+            self._p("CALCIO\n(mg)", self.style_header),
+            self._p("HIERRO\n(mg)", self.style_header),
+        ]
+        data = [header]
+        for f in filas_datos:
+            row = [
+                self._p(f['menu'], self.style_cell_left if f['menu'] != 'PROMEDIO' else self.style_header),
+                self._p(f"{f['cal']:.1f}", self.style_cell_center),
+                self._p(f"{f['prot']:.1f}", self.style_cell_center),
+                self._p(f"{f['grasa']:.1f}", self.style_cell_center),
+                self._p(f"{f['cho']:.1f}", self.style_cell_center),
+                self._p(f"{f['calcio']:.1f}", self.style_cell_center),
+                self._p(f"{f['hierro']:.2f}", self.style_cell_center),
+            ]
+            data.append(row)
+
+        col_widths = [26 * mm, 26 * mm, 26 * mm, 26 * mm, 26 * mm, 26 * mm, 26 * mm]
+        table = Table(data, colWidths=col_widths, hAlign="LEFT")
+
+        n_rows = len(data)
+        style_cmds = [
+            ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING", (0, 0), (-1, -1), 1),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+            # Header row
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#d9d9d9")),
+            # Promedio row (última fila)
+            ("BACKGROUND", (0, n_rows - 1), (-1, n_rows - 1), colors.HexColor("#bfbfbf")),
+        ]
+        table.setStyle(TableStyle(style_cmds))
+        return table
+
     def generate(self, programa_id: int, modalidad_id: str) -> io.BytesIO:
-        programa = Programa.objects.select_related("municipio").get(id=programa_id)
+        programa = Programa.objects.select_related("municipio", "tipo_programa").get(id=programa_id)
         modalidad = ModalidadesDeConsumo.objects.get(id_modalidades=modalidad_id)
+
+        # Determinar si es programa con niveles (PAE) o sin niveles (Comedores, Adulto Mayor)
+        tiene_niveles = getattr(getattr(programa, 'tipo_programa', None), 'tiene_niveles', True)
+        max_menu = 20 if tiene_niveles else 10
+        num_semanas = 4 if tiene_niveles else 2
 
         menus = list(
             TablaMenus.objects.filter(id_contrato_id=programa_id, id_modalidad_id=modalidad_id)
@@ -685,7 +784,7 @@ class CicloMenusPdfService:
         menus_by_number: Dict[int, TablaMenus] = {}
         for menu in menus:
             num = self._menu_number(menu.menu)
-            if num and 1 <= num <= 20:
+            if num and 1 <= num <= max_menu:
                 menus_by_number[num] = menu
 
         prep_rows = list(
@@ -902,9 +1001,24 @@ class CicloMenusPdfService:
         content.extend(self._build_top_block(programa, modalidad))
         
         include_ranges = not es_cali
-        content.append(self._build_cycle_table(menus_by_number, menu_component_preps, ordered_components, include_ranges=include_ranges, modalidad_id=str(modalidad_id)))
+        content.append(self._build_cycle_table(
+            menus_by_number, menu_component_preps, ordered_components,
+            include_ranges=include_ranges, modalidad_id=str(modalidad_id),
+            num_semanas=num_semanas,
+        ))
         
         content.append(Spacer(1, 1.1 * mm))
+
+        # Para programas sin niveles (Comedores, Adulto Mayor): agregar tabla nutricional al final
+        if not tiene_niveles:
+            tabla_nutricional = self._build_tabla_nutricional_comedores(
+                menus_by_number, programa_id, modalidad_id
+            )
+            if tabla_nutricional is not None:
+                content.append(Spacer(1, 1.5 * mm))
+                content.append(tabla_nutricional)
+                content.append(Spacer(1, 1.1 * mm))
+
         content.append(self._build_signatures(programa))
 
         fit = KeepInFrame(doc.width, doc.height, content, mode="shrink")

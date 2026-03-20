@@ -19,6 +19,7 @@ from urllib.parse import urlparse
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 
 from principal.models import TablaGradosEscolaresUapa
 
@@ -37,7 +38,7 @@ from .models import (
 UMBRAL_COINCIDENCIA = 70  # porcentaje mínimo para aceptar un match
 
 
-NIVELES_ORDEN = [
+NIVELES_ORDEN_PAE = [
     "prescolar",
     "primaria_1_2_3",
     "primaria_4_5",
@@ -45,12 +46,16 @@ NIVELES_ORDEN = [
     "media_ciclo_complementario",
 ]
 
+# Alias de compatibilidad (no eliminar — puede ser importado externamente)
+NIVELES_ORDEN = NIVELES_ORDEN_PAE
+
 NIVELES_LABEL = {
     "prescolar": "PREESCOLAR",
     "primaria_1_2_3": "PRIMARIA: 1, 2 Y 3",
     "primaria_4_5": "PRIMARIA: 4 Y 5",
     "secundaria": "SECUNDARIA",
     "media_ciclo_complementario": "MEDIA Y CICLO COMPLEMENTARIO",
+    "general": "COMEDORES COMUNITARIOS",
 }
 
 
@@ -61,6 +66,9 @@ class GuiaPreparacionExcelGenerator:
         self.header_fill = PatternFill(start_color="D9EAD3", end_color="D9EAD3", fill_type="solid")
         self.center = Alignment(horizontal="center", vertical="center", wrap_text=True)
         self.left = Alignment(horizontal="left", vertical="center", wrap_text=True)
+        # Configuración dinámica de niveles; sobreescrita en generate()
+        self.niveles_orden: List[str] = list(NIVELES_ORDEN_PAE)
+        self.col_proc: int = 18  # columna de PROCEDIMIENTO (PAE default)
 
     def _cargar_catalogo(self) -> List[Tuple[str, str]]:
         """Carga el catálogo activo de procedimientos: [(nombre_normalizado, procedimiento)]."""
@@ -90,12 +98,24 @@ class GuiaPreparacionExcelGenerator:
         return mejor_texto if mejor_score >= UMBRAL_COINCIDENCIA else ""
 
     def generate(self, programa_id: int, modalidad_id: str) -> io.BytesIO:
+        # Determinar si el programa usa niveles educativos (PAE) o es un programa sin niveles
+        # (Comedores Comunitarios, Adulto Mayor, etc.)
+        from planeacion.models import Programa as ProgramaModel
+        try:
+            programa_obj = ProgramaModel.objects.select_related('tipo_programa').get(id=programa_id)
+            tiene_niveles = getattr(getattr(programa_obj, 'tipo_programa', None), 'tiene_niveles', True)
+        except ProgramaModel.DoesNotExist:
+            tiene_niveles = True
+
+        self.niveles_orden = list(NIVELES_ORDEN_PAE) if tiene_niveles else ['general']
+        self.col_proc = 2 + len(self.niveles_orden) * 3 + 1
+
         menus = list(
             TablaMenus.objects.filter(
                 id_contrato_id=programa_id,
                 id_modalidad_id=modalidad_id,
             )
-            .select_related("id_contrato", "id_modalidad")
+            .select_related("id_contrato", "id_contrato__tipo_programa", "id_modalidad")
         )
         menus.sort(key=self._menu_sort_key)
 
@@ -141,131 +161,164 @@ class GuiaPreparacionExcelGenerator:
     def _set_columns(self, ws):
         ws.column_dimensions["A"].width = 24  # preparacion
         ws.column_dimensions["B"].width = 22  # ingrediente
-        for col in "CDEFGHIJKLMNOPQ":
-            ws.column_dimensions[col].width = 9
-        ws.column_dimensions["R"].width = 42  # procedimiento
+        for col_idx in range(3, self.col_proc):
+            ws.column_dimensions[get_column_letter(col_idx)].width = 9
+        ws.column_dimensions[get_column_letter(self.col_proc)].width = 42  # procedimiento
 
     def _draw_top(self, ws, menu: TablaMenus):
+        lc = get_column_letter(self.col_proc)  # última columna (ej: "R" para PAE, "F" para Comedores)
         ws.row_dimensions[1].height = 38
         ws.row_dimensions[2].height = 38
-        ws.merge_cells("A1:R2")
+        ws.merge_cells(f"A1:{lc}2")
         ws["A1"].fill = self.header_fill
         ws["A1"].border = self.border
 
         # Logo programa (si existe)
         if menu.id_contrato and menu.id_contrato.imagen:
-            self._insert_image_field(ws, menu.id_contrato.imagen, "O1", max_w=180, max_h=60)
+            # Anclar logo en la penúltima columna de la fila 1
+            logo_col = get_column_letter(max(self.col_proc - 3, 2))
+            self._insert_image_field(ws, menu.id_contrato.imagen, f"{logo_col}1", max_w=180, max_h=60)
 
-        ws.merge_cells("A3:R3")
+        ws.merge_cells(f"A3:{lc}3")
         ws["A3"] = "GUIA DE PREPARACION DE ALIMENTOS Y ESTANDARIZACION DE RECETAS"
         ws["A3"].font = Font(bold=True, size=11)
         ws["A3"].alignment = self.center
         ws["A3"].fill = self.header_fill
         ws["A3"].border = self.border
 
-        ws.merge_cells("A4:R4")
+        ws.merge_cells(f"A4:{lc}4")
         ws["A4"] = "COMPLEMENTO ALIMENTARIO JORNADA AM/PM PREPARADO EN SITIO"
         ws["A4"].font = Font(bold=True, size=11)
         ws["A4"].alignment = self.center
         ws["A4"].fill = self.header_fill
         ws["A4"].border = self.border
 
-        # Fila 5 (encabezados superiores)
-        ws.merge_cells("B5:D5")
-        ws["B5"] = "PREESCOLAR - MEDIA Y CICLO COMPLEMENTARIO"
-        ws["B5"].alignment = self.center
-        ws["B5"].font = Font(bold=True)
-        ws["B5"].fill = self.header_fill
-        ws["B5"].border = self.border
+        if len(self.niveles_orden) > 1:
+            # --- Layout PAE: filas 5-7 con sub-divisiones por escolaridad y grupo étnico ---
+            ws.merge_cells("B5:D5")
+            ws["B5"] = "PREESCOLAR - MEDIA Y CICLO COMPLEMENTARIO"
+            ws["B5"].alignment = self.center
+            ws["B5"].font = Font(bold=True)
+            ws["B5"].fill = self.header_fill
+            ws["B5"].border = self.border
 
-        ws.merge_cells("E5:G5")
-        ws["E5"] = "OPERADOR"
-        ws["E5"].alignment = self.center
-        ws["E5"].font = Font(bold=True)
-        ws["E5"].fill = self.header_fill
-        ws["E5"].border = self.border
+            ws.merge_cells("E5:G5")
+            ws["E5"] = "OPERADOR"
+            ws["E5"].alignment = self.center
+            ws["E5"].font = Font(bold=True)
+            ws["E5"].fill = self.header_fill
+            ws["E5"].border = self.border
 
-        ws.merge_cells("H5:R5")
-        ws["H5"] = str(menu.id_contrato.programa).upper()
-        ws["H5"].alignment = self.center
-        ws["H5"].font = Font(bold=True)
-        ws["H5"].fill = self.header_fill
-        ws["H5"].border = self.border
+            ws.merge_cells(f"H5:{lc}5")
+            ws["H5"] = str(menu.id_contrato.programa).upper()
+            ws["H5"].alignment = self.center
+            ws["H5"].font = Font(bold=True)
+            ws["H5"].fill = self.header_fill
+            ws["H5"].border = self.border
 
-        # Fila 6
-        ws["A6"] = "ESCOLARIDAD"
-        ws["A6"].font = Font(bold=True)
-        ws["A6"].alignment = self.center
-        ws["A6"].fill = self.header_fill
-        ws["A6"].border = self.border
+            # Fila 6
+            ws["A6"] = "ESCOLARIDAD"
+            ws["A6"].font = Font(bold=True)
+            ws["A6"].alignment = self.center
+            ws["A6"].fill = self.header_fill
+            ws["A6"].border = self.border
 
-        ws["B6"] = "INDÍGENA"
-        ws["B6"].alignment = self.center
-        ws["B6"].fill = self.header_fill
-        ws["B6"].border = self.border
+            ws["B6"] = "INDÍGENA"
+            ws["B6"].alignment = self.center
+            ws["B6"].fill = self.header_fill
+            ws["B6"].border = self.border
 
-        ws.merge_cells("D6:E6")
-        ws["D6"] = "COMUNIDAD / PUEBLO INDÍGENA"
-        ws["D6"].alignment = self.center
-        ws["D6"].fill = self.header_fill
-        ws["D6"].border = self.border
+            ws.merge_cells("D6:E6")
+            ws["D6"] = "COMUNIDAD / PUEBLO INDÍGENA"
+            ws["D6"].alignment = self.center
+            ws["D6"].fill = self.header_fill
+            ws["D6"].border = self.border
 
-        ws.merge_cells("F6:G6")
-        ws["F6"] = ""
-        ws["F6"].alignment = self.center
-        ws["F6"].fill = self.header_fill
-        ws["F6"].border = self.border
+            ws.merge_cells("F6:G6")
+            ws["F6"] = ""
+            ws["F6"].alignment = self.center
+            ws["F6"].fill = self.header_fill
+            ws["F6"].border = self.border
 
-        ws.merge_cells("H6:I6")
-        ws["H6"] = "AFROCOLOMBIANO / PALENQUEROS"
-        ws["H6"].alignment = self.center
-        ws["H6"].fill = self.header_fill
-        ws["H6"].border = self.border
+            ws.merge_cells("H6:I6")
+            ws["H6"] = "AFROCOLOMBIANO / PALENQUEROS"
+            ws["H6"].alignment = self.center
+            ws["H6"].fill = self.header_fill
+            ws["H6"].border = self.border
 
-        ws.merge_cells("J6:R6")
-        ws["J6"] = ""
-        ws["J6"].alignment = self.center
-        ws["J6"].fill = self.header_fill
-        ws["J6"].border = self.border
+            if self.col_proc >= 10:
+                ws.merge_cells(f"J6:{lc}6")
+                ws["J6"] = ""
+                ws["J6"].alignment = self.center
+                ws["J6"].fill = self.header_fill
+                ws["J6"].border = self.border
 
-        # Fila 7
-        ws["A7"] = "GRUPO ETNICO"
-        ws["A7"].alignment = self.center
-        ws["A7"].font = Font(bold=True)
-        ws["A7"].fill = self.header_fill
-        ws["A7"].border = self.border
+            # Fila 7
+            ws["A7"] = "GRUPO ETNICO"
+            ws["A7"].alignment = self.center
+            ws["A7"].font = Font(bold=True)
+            ws["A7"].fill = self.header_fill
+            ws["A7"].border = self.border
 
-        ws["B7"] = "RAIZAL"
-        ws["B7"].alignment = self.center
-        ws["B7"].fill = self.header_fill
-        ws["B7"].border = self.border
+            ws["B7"] = "RAIZAL"
+            ws["B7"].alignment = self.center
+            ws["B7"].fill = self.header_fill
+            ws["B7"].border = self.border
 
-        ws.merge_cells("D7:E7")
-        ws["D7"] = "ROM"
-        ws["D7"].alignment = self.center
-        ws["D7"].fill = self.header_fill
-        ws["D7"].border = self.border
+            ws.merge_cells("D7:E7")
+            ws["D7"] = "ROM"
+            ws["D7"].alignment = self.center
+            ws["D7"].fill = self.header_fill
+            ws["D7"].border = self.border
 
-        ws.merge_cells("F7:G7")
-        ws["F7"] = ""
-        ws["F7"].alignment = self.center
-        ws["F7"].fill = self.header_fill
-        ws["F7"].border = self.border
+            ws.merge_cells("F7:G7")
+            ws["F7"] = ""
+            ws["F7"].alignment = self.center
+            ws["F7"].fill = self.header_fill
+            ws["F7"].border = self.border
 
-        ws.merge_cells("H7:I7")
-        ws["H7"] = "SIN PERTENENCIA ÉTNICA"
-        ws["H7"].alignment = self.center
-        ws["H7"].fill = self.header_fill
-        ws["H7"].border = self.border
+            ws.merge_cells("H7:I7")
+            ws["H7"] = "SIN PERTENENCIA ÉTNICA"
+            ws["H7"].alignment = self.center
+            ws["H7"].fill = self.header_fill
+            ws["H7"].border = self.border
 
-        ws.merge_cells("J7:R7")
-        ws["J7"] = "X"
-        ws["J7"].alignment = self.center
-        ws["J7"].font = Font(bold=True, size=13)
-        ws["J7"].fill = self.header_fill
-        ws["J7"].border = self.border
+            if self.col_proc >= 10:
+                ws.merge_cells(f"J7:{lc}7")
+                ws["J7"] = "X"
+                ws["J7"].alignment = self.center
+                ws["J7"].font = Font(bold=True, size=13)
+                ws["J7"].fill = self.header_fill
+                ws["J7"].border = self.border
 
-        ws.merge_cells("A8:R8")
+        else:
+            # --- Layout Comedores: filas 5-7 simplificadas ---
+            ws.merge_cells(f"A5:{lc}5")
+            ws["A5"] = str(menu.id_contrato.programa).upper() if menu.id_contrato else ""
+            ws["A5"].alignment = self.center
+            ws["A5"].font = Font(bold=True)
+            ws["A5"].fill = self.header_fill
+            ws["A5"].border = self.border
+
+            ws.merge_cells(f"A6:B6")
+            ws["A6"] = "GRUPO ETNICO"
+            ws["A6"].alignment = self.center
+            ws["A6"].font = Font(bold=True)
+            ws["A6"].fill = self.header_fill
+            ws["A6"].border = self.border
+
+            ws.merge_cells(f"C6:{lc}6")
+            ws["C6"] = "SIN PERTENENCIA ÉTNICA"
+            ws["C6"].alignment = self.center
+            ws["C6"].fill = self.header_fill
+            ws["C6"].border = self.border
+
+            ws.merge_cells(f"A7:{lc}7")
+            ws["A7"] = ""
+            ws["A7"].fill = self.header_fill
+            ws["A7"].border = self.border
+
+        ws.merge_cells(f"A8:{lc}8")
         ws["A8"] = f"Menu {menu.menu}"
         ws["A8"].font = Font(bold=True)
         ws["A8"].alignment = self.center
@@ -289,9 +342,9 @@ class GuiaPreparacionExcelGenerator:
         ws.cell(row=row1, column=2).fill = self.header_fill
 
         col = 3
-        for nivel_id in NIVELES_ORDEN:
+        for nivel_id in self.niveles_orden:
             ws.merge_cells(start_row=row1, start_column=col, end_row=row1, end_column=col + 2)
-            ws.cell(row=row1, column=col, value=NIVELES_LABEL[nivel_id])
+            ws.cell(row=row1, column=col, value=NIVELES_LABEL.get(nivel_id, nivel_id.upper()))
             ws.cell(row=row1, column=col).font = Font(bold=True)
             ws.cell(row=row1, column=col).alignment = self.center
             ws.cell(row=row1, column=col).fill = self.header_fill
@@ -305,14 +358,14 @@ class GuiaPreparacionExcelGenerator:
                 ws.cell(row=row2, column=c).fill = self.header_fill
             col += 3
 
-        ws.merge_cells(start_row=row1, start_column=18, end_row=row2, end_column=18)
-        ws.cell(row=row1, column=18, value="PROCEDIMIENTO DE PREPARACION")
-        ws.cell(row=row1, column=18).font = Font(bold=True)
-        ws.cell(row=row1, column=18).alignment = self.center
-        ws.cell(row=row1, column=18).fill = self.header_fill
+        ws.merge_cells(start_row=row1, start_column=self.col_proc, end_row=row2, end_column=self.col_proc)
+        ws.cell(row=row1, column=self.col_proc, value="PROCEDIMIENTO DE PREPARACION")
+        ws.cell(row=row1, column=self.col_proc).font = Font(bold=True)
+        ws.cell(row=row1, column=self.col_proc).alignment = self.center
+        ws.cell(row=row1, column=self.col_proc).fill = self.header_fill
 
         for r in (row1, row2):
-            for c in range(1, 19):
+            for c in range(1, self.col_proc + 1):
                 ws.cell(row=r, column=c).border = self.border
 
         return row2 + 1
@@ -400,9 +453,9 @@ class GuiaPreparacionExcelGenerator:
                         ws.cell(row=row, column=c).border = self.border
                     col += 3
 
-                ws.cell(row=row, column=18, value="")
-                ws.cell(row=row, column=18).alignment = self.left
-                ws.cell(row=row, column=18).border = self.border
+                ws.cell(row=row, column=self.col_proc, value="")
+                ws.cell(row=row, column=self.col_proc).alignment = self.left
+                ws.cell(row=row, column=self.col_proc).border = self.border
                 row += 1
 
             prep_end = row - 1
@@ -430,15 +483,15 @@ class GuiaPreparacionExcelGenerator:
                 col += 3
 
             # Procedimiento: texto del catálogo (o en blanco si no hubo match)
-            ws.merge_cells(start_row=prep_start, start_column=18, end_row=prep_end, end_column=18)
-            ws.cell(row=prep_start, column=18, value=procedimiento_texto)
-            ws.cell(row=prep_start, column=18).alignment = self.left
-            ws.cell(row=prep_start, column=18).border = self.border
+            ws.merge_cells(start_row=prep_start, start_column=self.col_proc, end_row=prep_end, end_column=self.col_proc)
+            ws.cell(row=prep_start, column=self.col_proc, value=procedimiento_texto)
+            ws.cell(row=prep_start, column=self.col_proc).alignment = self.left
+            ws.cell(row=prep_start, column=self.col_proc).border = self.border
 
-            # borde columna A/T en filas internas de merge
+            # borde columna A y columna procedimiento en filas internas de merge
             for r in range(prep_start, prep_end + 1):
                 ws.cell(row=r, column=1).border = self.border
-                ws.cell(row=r, column=18).border = self.border
+                ws.cell(row=r, column=self.col_proc).border = self.border
 
         ws.freeze_panes = "C11"
         return row
@@ -479,7 +532,7 @@ class GuiaPreparacionExcelGenerator:
                 if candidato and candidato not in por_key:
                     por_key[candidato] = nivel_id_str
 
-        return [(slot, por_key.get(self._normalize_nivel_key(slot))) for slot in NIVELES_ORDEN]
+        return [(slot, por_key.get(self._normalize_nivel_key(slot))) for slot in self.niveles_orden]
 
     def _get_bruto_neto(
         self,
@@ -527,42 +580,42 @@ class GuiaPreparacionExcelGenerator:
 
         rows = [start_row, start_row + 1]
         for r in rows:
-            for c in range(1, 19):
+            for c in range(1, self.col_proc + 1):
                 ws.cell(row=r, column=c).border = self.border
                 ws.cell(row=r, column=c).alignment = self.center
                 ws.cell(row=r, column=c).fill = self.header_fill
 
-        # Fila 1
-        ws.merge_cells(start_row=start_row, start_column=1, end_row=start_row, end_column=4)
+        # Dividir el espacio disponible en 4 zonas: etiqueta, nombre, matrícula label, matrícula valor+firma
+        # Para PAE (18 cols): etiqueta=1-4, nombre=5-8, mat_label=9-11, mat_val=12-13, firma_label=14, firma=15-18
+        # Para Comedores (6 cols): se ajusta proporcionalmente
+        cp = self.col_proc
+        # Zona 1 (etiqueta): cols 1-max(1, cp//4)
+        z1_end = max(1, cp // 4)
+        # Zona 2 (nombre): cols z1_end+1 - z1_end+max(1,(cp-z1_end)//3)
+        z2_end = min(z1_end + max(1, (cp - z1_end) // 3), cp - 1)
+        # Zona firma: cols z2_end+1 - cp
+        firma_col = z2_end + 1
+        firma_anchor = get_column_letter(firma_col)
+
+        # Fila 1 (elabora)
+        ws.merge_cells(start_row=start_row, start_column=1, end_row=start_row, end_column=z1_end)
         ws.cell(row=start_row, column=1, value="NOMBRE NUTRICIONISTA - DIETISTA POR PARTE DEL OPERADOR")
         ws.cell(row=start_row, column=1).alignment = self.left
         ws.cell(row=start_row, column=1).font = Font(bold=True)
 
-        ws.merge_cells(start_row=start_row, start_column=5, end_row=start_row, end_column=8)
-        ws.cell(row=start_row, column=5, value=elabora_nombre)
-        ws.cell(row=start_row, column=5).font = Font(bold=True)
+        ws.merge_cells(start_row=start_row, start_column=z1_end + 1, end_row=start_row, end_column=z2_end)
+        ws.cell(row=start_row, column=z1_end + 1, value=elabora_nombre)
+        ws.cell(row=start_row, column=z1_end + 1).font = Font(bold=True)
 
-        ws.merge_cells(start_row=start_row, start_column=9, end_row=start_row, end_column=11)
-        ws.cell(row=start_row, column=9, value="MATRÍCULA PROFESIONAL")
-        ws.cell(row=start_row, column=9).font = Font(bold=True)
-
-        ws.merge_cells(start_row=start_row, start_column=12, end_row=start_row, end_column=13)
-        ws.cell(row=start_row, column=12, value=elabora_matricula)
-        ws.cell(row=start_row, column=12).font = Font(bold=True)
-
-        ws.merge_cells(start_row=start_row, start_column=14, end_row=start_row, end_column=14)
-        ws.cell(row=start_row, column=14, value="FIRMA")
-        ws.cell(row=start_row, column=14).font = Font(bold=True)
-
-        ws.merge_cells(start_row=start_row, start_column=15, end_row=start_row, end_column=18)
+        ws.merge_cells(start_row=start_row, start_column=firma_col, end_row=start_row, end_column=cp)
         if elabora_img:
-            self._insert_signature_image(ws, elabora_img, f"O{start_row}")
+            self._insert_signature_image(ws, elabora_img, f"{firma_anchor}{start_row}")
         else:
-            ws.cell(row=start_row, column=15, value=elabora_firma_texto)
-            ws.cell(row=start_row, column=15).alignment = self.left
+            ws.cell(row=start_row, column=firma_col, value=elabora_firma_texto)
+            ws.cell(row=start_row, column=firma_col).alignment = self.left
 
-        # Fila 2
-        ws.merge_cells(start_row=start_row + 1, start_column=1, end_row=start_row + 1, end_column=4)
+        # Fila 2 (aprueba)
+        ws.merge_cells(start_row=start_row + 1, start_column=1, end_row=start_row + 1, end_column=z1_end)
         ws.cell(
             row=start_row + 1,
             column=1,
@@ -571,28 +624,16 @@ class GuiaPreparacionExcelGenerator:
         ws.cell(row=start_row + 1, column=1).alignment = self.left
         ws.cell(row=start_row + 1, column=1).font = Font(bold=True)
 
-        ws.merge_cells(start_row=start_row + 1, start_column=5, end_row=start_row + 1, end_column=8)
-        ws.cell(row=start_row + 1, column=5, value=aprueba_nombre)
-        ws.cell(row=start_row + 1, column=5).font = Font(bold=True)
+        ws.merge_cells(start_row=start_row + 1, start_column=z1_end + 1, end_row=start_row + 1, end_column=z2_end)
+        ws.cell(row=start_row + 1, column=z1_end + 1, value=aprueba_nombre)
+        ws.cell(row=start_row + 1, column=z1_end + 1).font = Font(bold=True)
 
-        ws.merge_cells(start_row=start_row + 1, start_column=9, end_row=start_row + 1, end_column=11)
-        ws.cell(row=start_row + 1, column=9, value="MATRÍCULA PROFESIONAL")
-        ws.cell(row=start_row + 1, column=9).font = Font(bold=True)
-
-        ws.merge_cells(start_row=start_row + 1, start_column=12, end_row=start_row + 1, end_column=13)
-        ws.cell(row=start_row + 1, column=12, value=aprueba_matricula)
-        ws.cell(row=start_row + 1, column=12).font = Font(bold=True)
-
-        ws.merge_cells(start_row=start_row + 1, start_column=14, end_row=start_row + 1, end_column=14)
-        ws.cell(row=start_row + 1, column=14, value="FIRMA")
-        ws.cell(row=start_row + 1, column=14).font = Font(bold=True)
-
-        ws.merge_cells(start_row=start_row + 1, start_column=15, end_row=start_row + 1, end_column=18)
+        ws.merge_cells(start_row=start_row + 1, start_column=firma_col, end_row=start_row + 1, end_column=cp)
         if aprueba_img:
-            self._insert_signature_image(ws, aprueba_img, f"O{start_row + 1}")
+            self._insert_signature_image(ws, aprueba_img, f"{firma_anchor}{start_row + 1}")
         else:
-            ws.cell(row=start_row + 1, column=15, value=aprueba_firma_texto)
-            ws.cell(row=start_row + 1, column=15).alignment = self.left
+            ws.cell(row=start_row + 1, column=firma_col, value=aprueba_firma_texto)
+            ws.cell(row=start_row + 1, column=firma_col).alignment = self.left
 
     @staticmethod
     def _get_image_source(field) -> str | None:
@@ -637,5 +678,5 @@ class GuiaPreparacionExcelGenerator:
     def _apply_all_borders(self, ws) -> None:
         max_row = ws.max_row
         for row in range(1, max_row + 1):
-            for col in range(1, 19):
+            for col in range(1, self.col_proc + 1):
                 ws.cell(row=row, column=col).border = self.border
