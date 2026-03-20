@@ -23,7 +23,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 @dataclass(frozen=True)
 class ExcelLayout:
-    """Constantes de diseño del Excel"""
+    """Constantes de diseño del Excel (PAE - 5 niveles educativos)"""
     # Filas
     TITLE_ROW = 1
     ADMIN_START_ROW = 2
@@ -51,6 +51,33 @@ class ExcelLayout:
     # Rangos
     TITLE_RANGE = 'D1:N1'
     TOTAL_LABEL_COLS = 3  # A:C
+    LABEL_MERGE_END = 7   # Merge A:G para etiquetas de totales/adecuación
+    LAST_DATA_COL = 14    # Última columna con datos (SODIO)
+    TITLE_END_COL = 14    # Fin del merge del título
+
+
+@dataclass(frozen=True)
+class ComedoresExcelLayout:
+    """Constantes de diseño para Comedores / Adulto Mayor (sin niveles, 4 nutrientes).
+    No hay columna GRUPO; las columnas se desplazan una posición a la izquierda y
+    los nutrientes empiezan en la columna 7.
+    """
+    # Columnas
+    COL_COMPONENTE: int = 1
+    COL_PREPARACION: int = 2   # Sin columna GRUPO
+    COL_INGREDIENTE: int = 3
+    COL_CODIGO: int = 4
+    COL_PESO_BRUTO: int = 5
+    COL_PESO_NETO: int = 6
+    COL_CALORIAS: int = 7      # Primera columna de nutrientes
+    COL_PROTEINA: int = 8
+    COL_GRASA: int = 9
+    COL_CHO: int = 10
+
+    # Rangos
+    LABEL_MERGE_END: int = 6   # Merge A:F para etiquetas de totales/adecuación
+    LAST_DATA_COL: int = 10    # Última columna con datos (CHO)
+    TITLE_END_COL: int = 10    # Fin del merge del título
 
 
 @dataclass(frozen=True)
@@ -108,10 +135,9 @@ NUTRITIONAL_HEADERS = [
     "SODIO (mg)"
 ]
 
-# Encabezados para Comedores Comunitarios / Adulto Mayor (sin niveles, 4 nutrientes)
+# Encabezados para Comedores Comunitarios / Adulto Mayor (sin GRUPO, 4 nutrientes, 10 cols)
 COMEDORES_NUTRITIONAL_HEADERS = [
     "COMPONENTES",
-    "% COMESTIBLE",
     "NOMBRE DE LA PREPARACION",
     "NOMBRE DEL ALIMENTO (Ingredientes)",
     "CÓDIGO DEL ALIMENTO",
@@ -144,6 +170,7 @@ class ExcelReportDrawer:
 
     def __init__(self):
         self.layout = ExcelLayout()
+        self.comedores_layout = ComedoresExcelLayout()
         self.styles = ExcelStyles()
         self.header_fill = self.styles.get_header_fill()
         self.total_fill = self.styles.get_total_fill()
@@ -272,6 +299,9 @@ class ExcelReportDrawer:
         current_row = start_row
         left_align = Alignment(vertical='center', horizontal='left', wrap_text=True)
 
+        # Layout dinámico según tipo de programa
+        layout = self.comedores_layout if is_comedores else self.layout
+
         # Contador de ingredientes totales procesados
         total_ingredients_added = 0
 
@@ -285,34 +315,34 @@ class ExcelReportDrawer:
 
             total_ingredients_added += num_ingredients
 
-            ws.cell(row=start_row_for_prep, column=self.layout.COL_PREPARACION).value = preparacion.get('nombre', '')
-            ws.cell(row=start_row_for_prep, column=self.layout.COL_PREPARACION).alignment = left_align
+            ws.cell(row=start_row_for_prep, column=layout.COL_PREPARACION).value = preparacion.get('nombre', '')
+            ws.cell(row=start_row_for_prep, column=layout.COL_PREPARACION).alignment = left_align
 
             # Para agrupar componentes consecutivos
-            componente_groups = [] # List of tuples (componente_str, start_row, end_row)
+            componente_groups = []  # List of [componente_str, start_row, end_row]
 
             for ingrediente in ingredients_in_prep:
                 comp_ing = str(ingrediente.get('componente', '')).strip()
                 if not comp_ing:
                     comp_ing = str(preparacion.get('componente', 'SIN COMPONENTE')).strip()
-                
-                # Check if we should group with previous
+
+                # Agrupar componentes consecutivos iguales
                 if componente_groups and componente_groups[-1][0] == comp_ing:
-                    componente_groups[-1][2] = current_row # Update end_row
+                    componente_groups[-1][2] = current_row
                 else:
                     componente_groups.append([comp_ing, current_row, current_row])
 
-                if is_comedores:
-                    ws.cell(row=current_row, column=self.layout.COL_GRUPO).value = ingrediente.get('parte_comestible', 100)
-                else:
+                # Columna GRUPO: solo en PAE
+                if not is_comedores:
                     ws.cell(row=current_row, column=self.layout.COL_GRUPO).value = ingrediente.get(
                         'grupo_alimentos',
                         preparacion.get('grupo_alimentos', 'SIN GRUPO')
                     )
-                ws.cell(row=current_row, column=self.layout.COL_INGREDIENTE).value = ingrediente.get('nombre', '')
-                ws.cell(row=current_row, column=self.layout.COL_CODIGO).value = ingrediente.get('codigo_icbf', '')
-                ws.cell(row=current_row, column=self.layout.COL_PESO_BRUTO).value = ingrediente.get('peso_bruto_base', 0)
-                ws.cell(row=current_row, column=self.layout.COL_PESO_NETO).value = ingrediente.get('peso_neto_base', 0)
+
+                ws.cell(row=current_row, column=layout.COL_INGREDIENTE).value = ingrediente.get('nombre', '')
+                ws.cell(row=current_row, column=layout.COL_CODIGO).value = ingrediente.get('codigo_icbf', '')
+                ws.cell(row=current_row, column=layout.COL_PESO_BRUTO).value = ingrediente.get('peso_bruto_base', 0)
+                ws.cell(row=current_row, column=layout.COL_PESO_NETO).value = ingrediente.get('peso_neto_base', 0)
 
                 valores = ingrediente.get('valores_finales_guardados')
                 if not valores:
@@ -329,42 +359,42 @@ class ExcelReportDrawer:
                         'sodio': (valores_por_100g.get('sodio_mg', 0) or 0) * factor,
                     }
 
-                ws.cell(row=current_row, column=self.layout.COL_CALORIAS).value = valores.get('calorias', 0)
-                ws.cell(row=current_row, column=self.layout.COL_PROTEINA).value = valores.get('proteina', 0)
-                ws.cell(row=current_row, column=self.layout.COL_GRASA).value = valores.get('grasa', 0)
-                ws.cell(row=current_row, column=self.layout.COL_CHO).value = valores.get('cho', 0)
+                ws.cell(row=current_row, column=layout.COL_CALORIAS).value = valores.get('calorias', 0)
+                ws.cell(row=current_row, column=layout.COL_PROTEINA).value = valores.get('proteina', 0)
+                ws.cell(row=current_row, column=layout.COL_GRASA).value = valores.get('grasa', 0)
+                ws.cell(row=current_row, column=layout.COL_CHO).value = valores.get('cho', 0)
                 if not is_comedores:
                     ws.cell(row=current_row, column=self.layout.COL_CALCIO).value = valores.get('calcio', 0)
                     ws.cell(row=current_row, column=self.layout.COL_HIERRO).value = valores.get('hierro', 0)
                     ws.cell(row=current_row, column=self.layout.COL_SODIO).value = valores.get('sodio', 0)
 
-                # Aplicar bordes a toda la fila
-                last_col = self.layout.COL_CHO if is_comedores else self.layout.COL_SODIO
-                for col_idx in range(self.layout.COL_COMPONENTE, last_col + 1):
+                # Bordes hasta la última columna de datos
+                for col_idx in range(layout.COL_COMPONENTE, layout.LAST_DATA_COL + 1):
                     ws.cell(row=current_row, column=col_idx).border = self.border
 
                 current_row += 1
 
-            # Render Componentes and merge if necessary
+            # Renderizar componentes y mergear si hay más de una fila
             for comp_str, start_r, end_r in componente_groups:
-                cell = ws.cell(row=start_r, column=self.layout.COL_COMPONENTE)
+                cell = ws.cell(row=start_r, column=layout.COL_COMPONENTE)
                 cell.value = comp_str
                 cell.alignment = left_align
                 if end_r > start_r:
-                    ws.merge_cells(start_row=start_r, start_column=self.layout.COL_COMPONENTE, end_row=end_r, end_column=self.layout.COL_COMPONENTE)
+                    ws.merge_cells(
+                        start_row=start_r, start_column=layout.COL_COMPONENTE,
+                        end_row=end_r, end_column=layout.COL_COMPONENTE
+                    )
 
             if num_ingredients > 1:
                 end_row_for_prep = current_row - 1
-                cols_to_merge = [self.layout.COL_PREPARACION]
-                for col_idx in cols_to_merge:
-                    # Primero aplicar el alineamiento ANTES de combinar
-                    cell_to_align = ws.cell(row=start_row_for_prep, column=col_idx)
-                    cell_to_align.alignment = left_align
-                    # Luego combinar
-                    ws.merge_cells(start_row=start_row_for_prep, start_column=col_idx, end_row=end_row_for_prep, end_column=col_idx)
+                cell_to_align = ws.cell(row=start_row_for_prep, column=layout.COL_PREPARACION)
+                cell_to_align.alignment = left_align
+                ws.merge_cells(
+                    start_row=start_row_for_prep, start_column=layout.COL_PREPARACION,
+                    end_row=end_row_for_prep, end_column=layout.COL_PREPARACION
+                )
 
         # Si no se agregó ningún ingrediente, retornar start_row - 1
-        # Esto evita problemas con menús vacíos
         if total_ingredients_added == 0:
             return start_row - 1
 
@@ -381,16 +411,22 @@ class ExcelReportDrawer:
 
     def _add_totals_row(self, ws: Worksheet, row: int, nivel_data: Dict, is_comedores: bool = False) -> None:
         """Agregar fila de totales."""
-        ws.cell(row, 1).value = "TOTAL MENÚ"
+        layout = self.comedores_layout if is_comedores else self.layout
+        label = "APORTE TOTAL NUTRIENTES DEL MENÚ" if is_comedores else "TOTAL MENÚ"
+
+        ws.cell(row, 1).value = label
         ws.cell(row, 1).font = Font(bold=True)
         ws.cell(row, 1).fill = self.total_fill
         ws.cell(row, 1).border = self.border
         ws.cell(row, 1).alignment = Alignment(horizontal='center')
-        ws.merge_cells(f'A{row}:G{row}')
+        ws.merge_cells(
+            start_row=row, start_column=1,
+            end_row=row, end_column=layout.LABEL_MERGE_END
+        )
 
         keys = NUTRIENT_KEYS_COMEDORES if is_comedores else NUTRIENT_KEYS
         totales = nivel_data.get('totales', {})
-        for i, key in enumerate(keys, start=self.layout.COL_CALORIAS):
+        for i, key in enumerate(keys, start=layout.COL_CALORIAS):
             cell = ws.cell(row, i)
             cell.value = totales.get(key, 0)
             cell.fill = self.total_fill
@@ -399,9 +435,18 @@ class ExcelReportDrawer:
 
     def _add_recommendations_row(self, ws: Worksheet, row: int, nivel_data: Dict, is_comedores: bool = False) -> None:
         """Agregar fila de recomendaciones."""
-        ws.cell(row, 1).border = self.border
-        ws.cell(row, 1).alignment = Alignment(horizontal='center')
-        ws.merge_cells(f'A{row}:G{row}')
+        layout = self.comedores_layout if is_comedores else self.layout
+
+        label_cell = ws.cell(row, 1)
+        if is_comedores:
+            label_cell.value = "RECOMENDACIÓN PARA EL GRUPO DE EDAD"
+            label_cell.font = Font(bold=True)
+        label_cell.border = self.border
+        label_cell.alignment = Alignment(horizontal='center')
+        ws.merge_cells(
+            start_row=row, start_column=1,
+            end_row=row, end_column=layout.LABEL_MERGE_END
+        )
 
         requerimientos = nivel_data.get('requerimientos', {})
         default_values = {
@@ -414,7 +459,7 @@ class ExcelReportDrawer:
             'sodio': 1133,
         }
         keys = NUTRIENT_KEYS_COMEDORES if is_comedores else NUTRIENT_KEYS
-        for i, key in enumerate(keys, start=self.layout.COL_CALORIAS):
+        for i, key in enumerate(keys, start=layout.COL_CALORIAS):
             cell = ws.cell(row, i)
             val = requerimientos.get(key)
             cell.value = val if val is not None else default_values.get(key, 0)
@@ -424,14 +469,19 @@ class ExcelReportDrawer:
 
     def _add_adequacy_row(self, ws: Worksheet, row: int, total_row: int, req_row: int, is_comedores: bool = False) -> None:
         """Agregar fila de % adecuación con fórmulas."""
-        ws.cell(row, 1).value = "% ADECUACIÓN"
+        layout = self.comedores_layout if is_comedores else self.layout
+        label = "% CUBRIMIENTO DEL MENÚ" if is_comedores else "% ADECUACIÓN"
+
+        ws.cell(row, 1).value = label
         ws.cell(row, 1).font = Font(bold=True)
         ws.cell(row, 1).border = self.border
         ws.cell(row, 1).alignment = Alignment(horizontal='center')
-        ws.merge_cells(f'A{row}:G{row}')
+        ws.merge_cells(
+            start_row=row, start_column=1,
+            end_row=row, end_column=layout.LABEL_MERGE_END
+        )
 
-        last_nutrient_col = self.layout.COL_CHO if is_comedores else self.layout.COL_SODIO
-        for col in range(self.layout.COL_CALORIAS, last_nutrient_col + 1):
+        for col in range(layout.COL_CALORIAS, layout.COL_CHO + 1):
             col_letter = get_column_letter(col)
             formula = f'=IF({col_letter}{req_row}=0,0,{col_letter}{total_row}/{col_letter}{req_row}*100)'
             cell = ws.cell(row, col)
@@ -626,38 +676,53 @@ class ExcelReportDrawer:
         logo_ref = menu_info.get('logo_path') or menu_info.get('logo_url')
         self._insert_logo(ws, logo_ref, f'A{start_row}')
 
-        self._populate_title(ws, start_row=start_row)
-
         nivel_data = self._extract_nivel_data(analisis_data, nivel_escolar_id)
         if not nivel_data:
             raise ValueError("No se encontró información del nivel escolar para el reporte")
 
         # Detectar si es programa sin niveles (Comedores, Adulto Mayor)
         is_comedores = nivel_data.get('nivel_escolar', {}).get('id') == 'general'
+        layout = self.comedores_layout if is_comedores else self.layout
 
-        # Combinar título inmediatamente después de escribirlo
-        title_end_col = 11 if is_comedores else 14
-        ws.merge_cells(start_row=start_row, start_column=4, end_row=start_row, end_column=title_end_col)
-
-        nivel_escolar_nombre = nivel_data.get('nivel_escolar', {}).get('nombre', 'N/A')
-
-        admin_start_row = start_row + 1
-        self._populate_administrative_section(
-            ws,
-            start_row=admin_start_row,
-            analisis_data=analisis_data,
-            nivel_escolar_nombre=nivel_escolar_nombre
+        # --- Título ---
+        title_text = "ANÁLISIS FISICO QUIMICO NUTRICIONAL DE MENUS" if is_comedores else "ANÁLISIS NUTRICIONAL"
+        title_cell = ws.cell(row=start_row, column=4)
+        title_cell.value = title_text
+        title_cell.font = Font(bold=True, size=16)
+        title_cell.alignment = Alignment(horizontal='center', vertical='center')
+        ws.merge_cells(
+            start_row=start_row, start_column=4,
+            end_row=start_row, end_column=layout.TITLE_END_COL
         )
 
-        # Combinar sección administrativa inmediatamente después de escribirla
-        for i in range(7):
-            row = admin_start_row + i
-            ws.merge_cells(f'A{row}:C{row}')
+        if is_comedores:
+            # Sección admin compacta: solo "MENÚ No." en una fila
+            menu_row = start_row + 1
+            ws.cell(row=menu_row, column=1).value = "MENÚ No."
+            ws.cell(row=menu_row, column=1).font = Font(bold=True)
+            ws.cell(row=menu_row, column=1).alignment = Alignment(horizontal='left', vertical='center')
+            ws.cell(row=menu_row, column=4).value = str(menu_info.get('nombre', 'N/A')).upper()
+            ws.cell(row=menu_row, column=4).alignment = Alignment(horizontal='left', vertical='center')
+            # Sin fila en blanco entre MENÚ No. y encabezados
+            header_start_row = start_row + 2
+        else:
+            # Sección administrativa completa (7 filas)
+            admin_start_row = start_row + 1
+            nivel_escolar_nombre = nivel_data.get('nivel_escolar', {}).get('nombre', 'N/A')
+            self._populate_administrative_section(
+                ws,
+                start_row=admin_start_row,
+                analisis_data=analisis_data,
+                nivel_escolar_nombre=nivel_escolar_nombre
+            )
+            for i in range(7):
+                r = admin_start_row + i
+                ws.merge_cells(f'A{r}:C{r}')
+            header_start_row = start_row + 9
 
-        header_start_row = start_row + 9
         self._populate_headers(ws, start_row=header_start_row, is_comedores=is_comedores)
 
-        data_start_row = start_row + 10
+        data_start_row = header_start_row + 1
         last_data_row = self._populate_ingredients_from_analysis(
             ws, start_row=data_start_row, nivel_data=nivel_data, is_comedores=is_comedores
         )
