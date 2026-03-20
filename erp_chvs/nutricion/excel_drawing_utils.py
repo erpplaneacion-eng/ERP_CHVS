@@ -407,7 +407,7 @@ class ExcelReportDrawer:
         req_row = total_row + 1
         self._add_recommendations_row(ws, req_row, nivel_data, is_comedores)
         pct_row = req_row + 1
-        self._add_adequacy_row(ws, pct_row, total_row, req_row, is_comedores)
+        self._add_adequacy_row(ws, pct_row, total_row, req_row, nivel_data, is_comedores)
 
     def _add_totals_row(self, ws: Worksheet, row: int, nivel_data: Dict, is_comedores: bool = False) -> None:
         """Agregar fila de totales."""
@@ -467,8 +467,10 @@ class ExcelReportDrawer:
             cell.border = self.border
             cell.alignment = Alignment(horizontal='center')
 
-    def _add_adequacy_row(self, ws: Worksheet, row: int, total_row: int, req_row: int, is_comedores: bool = False) -> None:
-        """Agregar fila de % adecuación con fórmulas."""
+    def _add_adequacy_row(self, ws: Worksheet, row: int, total_row: int, req_row: int, nivel_data: Dict = None, is_comedores: bool = False) -> None:
+        """Agregar fila de % adecuación.
+        Calcula los valores directamente en Python para garantizar que se muestren en Excel.
+        """
         layout = self.comedores_layout if is_comedores else self.layout
         label = "% CUBRIMIENTO DEL MENÚ" if is_comedores else "% ADECUACIÓN"
 
@@ -481,13 +483,18 @@ class ExcelReportDrawer:
             end_row=row, end_column=layout.LABEL_MERGE_END
         )
 
-        for col in range(layout.COL_CALORIAS, layout.COL_CHO + 1):
-            col_letter = get_column_letter(col)
-            formula = f'=IF({col_letter}{req_row}=0,0,{col_letter}{total_row}/{col_letter}{req_row}*100)'
-            cell = ws.cell(row, col)
-            cell.value = formula
+        keys = NUTRIENT_KEYS_COMEDORES if is_comedores else NUTRIENT_KEYS
+        totales = (nivel_data or {}).get('totales', {}) or {}
+        requerimientos = (nivel_data or {}).get('requerimientos', {}) or {}
+
+        for i, key in enumerate(keys, start=layout.COL_CALORIAS):
+            cell = ws.cell(row, i)
+            total = float(totales.get(key) or 0)
+            req = float(requerimientos.get(key) or 0)
+            value = round(total / req * 100, 2) if req > 0 else 0
+            cell.value = value
             cell.border = self.border
-            cell.number_format = '0.00"%"'
+            cell.number_format = '0.00'
             cell.alignment = Alignment(horizontal='center')
 
     def _add_signatures(self, ws: Worksheet, start_row: int, menu_info: Optional[Dict] = None) -> None:
@@ -729,12 +736,14 @@ class ExcelReportDrawer:
 
         self._add_calculations_section(ws, last_data_row, nivel_data, is_comedores=is_comedores)
 
-        # La sección de firmas comienza 6 filas después de los datos
-        signatures_start_row = last_data_row + 6
-        self._add_signatures(ws, signatures_start_row, menu_info=menu_info)
-
-        # Calcular la última fila del reporte
-        # Sección de firmas ocupa aproximadamente 5-6 filas
-        final_row = signatures_start_row + 5
+        if is_comedores:
+            # Sin sección de firmas para Comedores / Adulto Mayor
+            # total_row=+2, req_row=+3, pct_row=+4 → dejar 2 filas de margen
+            final_row = last_data_row + 6
+        else:
+            signatures_start_row = last_data_row + 6
+            self._add_signatures(ws, signatures_start_row, menu_info=menu_info)
+            # Sección de firmas ocupa aproximadamente 5-6 filas
+            final_row = signatures_start_row + 5
 
         return final_row
