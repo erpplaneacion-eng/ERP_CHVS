@@ -14,7 +14,7 @@ from reportlab.platypus import Image, KeepInFrame, Paragraph, SimpleDocTemplate,
 from rapidfuzz import fuzz
 
 from planeacion.models import Programa
-from principal.models import ModalidadesDeConsumo
+from principal.models import ModalidadesDeConsumo, PrincipalDepartamento
 
 from ..models import FirmaNutricionalContrato, TablaMenus, TablaPreparaciones
 
@@ -41,6 +41,16 @@ def _get_rl_image(field):
     except Exception:
         return None
 
+
+# Componentes para programas sin niveles (Comedores Comunitarios, Adulto Mayor, etc.)
+COMPONENTES_PDF_COMEDORES = [
+    (["com19"], "PRINCIPIO O SOPA"),
+    (["com2"], "PROTEÍNA"),
+    (["com3"], "CEREAL (ARROZ)"),
+    (["com8"], "TUBÉRCULOS, PLÁTANOS"),
+    (["com9"], "HORTALIZAS Y VERDURAS"),
+    (["com12"], "FRUTA ENTERA O EN JUGO"),
+]
 
 # Mapeos para municipios genéricos (Yumbo, Buga, etc.)
 COMPONENTES_PDF_YUMBO = {
@@ -244,6 +254,7 @@ class CicloMenusPdfService:
 
     def _build_top_block(self, programa: Programa, modalidad: ModalidadesDeConsumo) -> List:
         items: List = []
+        tiene_niveles = getattr(getattr(programa, 'tipo_programa', None), 'tiene_niveles', True)
         is_cali = programa.municipio and "cali" in programa.municipio.nombre_municipio.lower()
 
         logo_cell = ""
@@ -259,7 +270,80 @@ class CicloMenusPdfService:
             else:
                 logo_cell = self._p(programa.programa or "", self.style_cell_left)
 
-        if is_cali:
+        if not tiene_niveles:
+            # ── Bloque encabezado para Comedores Comunitarios ──────────────────
+            # Fila 1: Logo
+            head = Table([[logo_cell]], colWidths=[182 * mm], hAlign="LEFT")
+            head.setStyle(TableStyle([
+                ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 2),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+                ("TOPPADDING", (0, 0), (-1, -1), 2),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+            ]))
+            items.append(head)
+
+            # Fila 2: Título
+            title = Table([[self._p("PLANEACIÓN CICLO DE MENÚS", self.style_title)]], colWidths=[182 * mm], hAlign="LEFT")
+            title.setStyle(TableStyle([
+                ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("TOPPADDING", (0, 0), (-1, -1), 2),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+            ]))
+            items.append(title)
+
+            # Fila 3: Subtítulo
+            sub = Table([[self._p("RACIÓN PARA PREPARAR EN EL SITIO - ALMUERZO", self.style_subtitle)]], colWidths=[182 * mm], hAlign="LEFT")
+            sub.setStyle(TableStyle([
+                ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#6f6f6f")),
+                ("TOPPADDING", (0, 0), (-1, -1), 1),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+            ]))
+            items.append(sub)
+
+            # Filas 4-6: Metadatos (OPERADOR, DEPARTAMENTO/MUNICIPIO, PROYECTO)
+            try:
+                dpto_val = PrincipalDepartamento.objects.get(
+                    codigo_departamento=programa.municipio.codigo_departamento
+                ).nombre_departamento.upper() if programa.municipio else "N/A"
+            except (PrincipalDepartamento.DoesNotExist, Exception):
+                dpto_val = "N/A"
+            municipio_val = programa.municipio.nombre_municipio.upper() if programa.municipio else "N/A"
+
+            meta_data = [
+                # OPERADOR (fila 4)
+                [self._p("OPERADOR", self.style_cell_left), self._p(programa.programa or "N/A", self.style_cell_center), "", "", ""],
+                # DEPARTAMENTO / MUNICIPIO (fila 5)
+                [self._p("DEPARTAMENTO", self.style_cell_left), self._p(dpto_val, self.style_cell_center), self._p("MUNICIPIO", self.style_cell_left), self._p(municipio_val, self.style_cell_center), ""],
+                # PROYECTO (fila 6)
+                [self._p("PROYECTO:", self.style_cell_left), self._p("Comedores Comunitarios", self.style_cell_center), "", "", ""],
+            ]
+            col_widths = [26 * mm, 46 * mm, 30 * mm, 30 * mm, 50 * mm]
+            meta = Table(meta_data, colWidths=col_widths, hAlign="LEFT")
+            meta.setStyle(TableStyle([
+                ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
+                ("GRID", (0, 0), (-1, -1), 0.8, colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("TOPPADDING", (0, 0), (-1, -1), 1),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+                # OPERADOR
+                ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#d9d9d9")),
+                ("SPAN", (1, 0), (4, 0)),
+                # DEPARTAMENTO / MUNICIPIO
+                ("BACKGROUND", (0, 1), (0, 1), colors.HexColor("#d9d9d9")),
+                ("BACKGROUND", (2, 1), (2, 1), colors.HexColor("#d9d9d9")),
+                ("SPAN", (3, 1), (4, 1)),
+                # PROYECTO
+                ("BACKGROUND", (0, 2), (0, 2), colors.HexColor("#d9d9d9")),
+                ("SPAN", (1, 2), (4, 2)),
+            ]))
+            items.append(meta)
+
+        elif is_cali:
             # Fila 1: Logo
             head = Table([[logo_cell]], colWidths=[182 * mm], hAlign="LEFT")
             head.setStyle(TableStyle([
@@ -790,8 +874,12 @@ class CicloMenusPdfService:
         municipio_nombre = (programa.municipio.nombre_municipio if programa.municipio else "").upper()
         es_cali = "CALI" in municipio_nombre
         
-        mapa_componentes = COMPONENTES_PDF_CALI if es_cali else COMPONENTES_PDF_YUMBO
-        config_modalidad = mapa_componentes.get(str(modalidad_id), [])
+        if not tiene_niveles:
+            config_modalidad = COMPONENTES_PDF_COMEDORES
+        elif es_cali:
+            config_modalidad = COMPONENTES_PDF_CALI.get(str(modalidad_id), [])
+        else:
+            config_modalidad = COMPONENTES_PDF_YUMBO.get(str(modalidad_id), [])
 
         menu_component_preps: Dict[int, Dict[str, List[str]]] = defaultdict(lambda: defaultdict(list))
         menu_g3_componentes: Dict[int, List[str]] = defaultdict(list)
@@ -992,7 +1080,7 @@ class CicloMenusPdfService:
         content: List = []
         content.extend(self._build_top_block(programa, modalidad))
         
-        include_ranges = not es_cali
+        include_ranges = not es_cali and tiene_niveles
         content.append(self._build_cycle_table(
             menus_by_number, menu_component_preps, ordered_components,
             include_ranges=include_ranges, modalidad_id=str(modalidad_id),
