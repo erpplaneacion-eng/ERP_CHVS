@@ -11,6 +11,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Deprecated**: `ocr_validation` and `iagenerativa` apps removed.
 **Not yet active**: `Api/` app (Siesa ERP integration) — not in `INSTALLED_APPS`, empty stub. See `erp_chvs/planeacion/PROPUESTA_INTEGRACION_SIESA.md` for the planned SC/RQI connectors (Solicitudes de Compra and Requisiciones de Inventario to SIESA ERP SAAS).
 **`calidad/` app**: ACTIVE — employee quality certificates (BPM), external employee DB lookup, landscape A4 PDF generation, and WhatsApp bot integration via external `apiw` service (Railway). See `erp_chvs/WHATSAPP_BOT_INTEGRACION.md` for full setup documentation.
+**`agente/` app**: ACTIVE — AI-powered preparation generator (Gemini 2.5 Flash, temp=0.7) with human-in-the-loop review. Replaces the old `generar_menu_con_ia()` / `gemini_service.py` / `minuta_service.py` flow that no longer exists in `nutricion`.
+**`contabilidad/` app**: ACTIVE — accounting document workflow: leaders upload invoices, Compras reviews/approves per-invoice, Contabilidad gives final approval. Multi-role workflow with audit trail and KPI dashboard.
 
 ## Setup (run from `ERP_CHVS/`)
 
@@ -66,10 +68,12 @@ ERP_CHVS/
 ├── erp_chvs/              # Django project root (all commands run here)
 │   ├── erp_chvs/          # Settings, URLs, WSGI/ASGI
 │   ├── principal/         # Master data: departments, municipalities, institutions, schools
-│   ├── nutricion/         # Nutritional planning, menus, AI generation
+│   ├── nutricion/         # Nutritional planning, menus, preparations, ingredients
 │   ├── planeacion/        # Programs, planning periods, rations
 │   ├── facturacion/       # PAE focalization list processing (Excel → PDF)
 │   ├── dashboard/         # Dashboard entry point
+│   ├── agente/            # AI preparation generator (Gemini, human-in-the-loop)
+│   ├── contabilidad/      # Accounting document workflow (invoices → Compras → Contabilidad)
 │   ├── Api/               # [Planned] Siesa ERP integration
 │   ├── static/            # CSS/JS (module-specific subdirectories)
 │   └── templates/         # base.html + app subdirectories
@@ -85,12 +89,14 @@ ERP_CHVS/
 | App | Purpose |
 |-----|---------|
 | `principal` | Master data CRUD (departments, municipalities, institutions, sedes, modalities) |
-| `nutricion` | Menus, preparations, ingredients, nutritional analysis, AI generation |
+| `nutricion` | Menus, preparations, ingredients, nutritional analysis |
 | `planeacion` | Programs, planning periods, ration configuration |
 | `facturacion` | Excel focalization list upload, validation, PDF attendance reports |
 | `costos` | Nutritional cost matrix (cross-tab menus × ingredients × levels), Excel export. Key endpoints: `GET /costos/matriz-nutricional/`, `GET /costos/exportar-excel/` |
 | `logistica` | Delivery route management: routes, route types, sede assignment with visit order |
 | `calidad` | Employee quality certificates: search by ID from external DB, generate landscape A4 PDF |
+| `agente` | AI-powered menu preparation generator with human-in-the-loop review (Gemini 2.5 Flash) |
+| `contabilidad` | Accounting invoice workflow: leaders → Compras review → Contabilidad approval |
 | `dashboard` | Main dashboard after login |
 
 ### Service-Oriented Architecture
@@ -105,9 +111,7 @@ views.py → services.py → persistence_service.py → models.py
 ```
 
 **Nutricion services** (`nutricion/services/`):
-- `menu_service.py` — Menu CRUD, `generar_menu_con_ia()` orchestrator
-- `gemini_service.py` — Gemini 2.5 Flash (temp=0.2), generates for ALL educational levels in one call
-- `minuta_service.py` — Standard pattern menus from `nutricion/data/minuta_patron.json`
+- `menu_service.py` — Menu CRUD, `generar_menus_automaticos()` (bulk empty-menu creation, NOT AI)
 - `analisis_service.py` — Nutritional analysis + semaforización per level + modality
 - `calculo_service.py` — Pure stateless calculation functions
 - `copiar_menu_service.py` — `CopiarMenuService.copiar_modalidad_completa()` (atomic deep copy of menus between programs)
@@ -124,7 +128,7 @@ views.py → services.py → persistence_service.py → models.py
 - `master_excel_generator.py` — Generates nutritional preparation guide Excel (`MasterNutritionalExcelGenerator`). Called from `exportes.py` → `GET /nutricion/exportar-guias-preparacion/<programa_id>/<modalidad_id>/`
 
 **Nutricion views** (`nutricion/views/` package):
-- `core.py` — Main views, `api_generar_menu_ia`
+- `core.py` — Main views
 - `menus_api.py` — Menu CRUD API endpoints
 - `copiar_menu_api.py` — Copy modality between programs APIs (`api_copiar_menu_programas`, uses `CopiarMenuService`)
 - `preparaciones_api.py` — Preparations + ingredients API
@@ -134,6 +138,7 @@ views.py → services.py → persistence_service.py → models.py
 - `preparaciones_editor.py` — Preparations editor view (standalone page with editable ingredient weights per level, dynamic peso bruto column, 4-state semaforización)
 - `firmas.py` — Nutritional contract signatures (`FirmaNutricionalContrato` model, per-program form at `/nutricion/firmas-contrato/`)
 - `minuta_patron_rangos.py` — CRUD for `MinutaPatronMeta` model (patron menu metadata and ranges, uses `MinutaPatronMetaForm`)
+- `procedimientos.py` — CRUD for `ProcedimientoPreparacion` catalog (preparation step-by-step procedures, auto-populated by the `agente` app on import)
 
 ### Logistica Models
 
@@ -250,13 +255,17 @@ sorted(queryset, key=lambda n: _ORDEN_NIVELES.index(n.nivel_escolar_uapa) if n.n
 
 | Group | Access |
 |-------|--------|
-| `NUTRICION` | nutricion, dashboard, principal |
+| `NUTRICION` | nutricion, agente, dashboard, principal |
 | `FACTURACION` | facturacion, dashboard |
 | `PLANEACION` | planeacion, dashboard |
 | `COSTOS` | costos, dashboard |
 | `LOGISTICA` | logistica, dashboard |
 | `CALIDAD` | calidad, dashboard |
-| `ADMINISTRACION` | nutricion, facturacion, planeacion, principal, costos, logistica, calidad, dashboard |
+| `LIDER_CONTABLE` | contabilidad, dashboard |
+| `COMPRAS_CONTABLE` | contabilidad, dashboard |
+| `CONTABILIDAD` | contabilidad, dashboard |
+| `GERENCIA` | contabilidad, dashboard |
+| `ADMINISTRACION` | nutricion, facturacion, planeacion, principal, costos, logistica, calidad, agente, contabilidad, dashboard |
 
 A user can belong to **multiple groups** — their allowed apps are the **union** of all group permissions. Superusers bypass all restrictions. Set up with `python manage.py setup_groups`.
 
@@ -379,18 +388,44 @@ Helper APIs: `GET /facturacion/api/conteo-estudiantes-por-nivel/`, `GET /factura
 
 Grade transfer between sedes: `GET /facturacion/api/obtener-sedes-con-grados/`, `POST /facturacion/api/transferir-grados/`.
 
-### Nutricion: AI Menu Generation
-Single Gemini API call generates menus for ALL 5 educational levels:
+### Agente: AI-Powered Preparation Generator (human-in-the-loop)
+
+Generates preparations + ingredients for an **existing empty menu** using Gemini 2.5 Flash (temp=0.7). The user must review and approve the draft before anything is persisted to production tables.
+
 ```
-MenuService.generar_menu_con_ia()
-    → MinutaService (per level from minuta_patron.json)
-    → GeminiService.generar_menu(niveles, minutas_por_nivel)
-    → Atomic transaction:
-        TablaMenus + TablaPreparaciones + TablaPreparacionIngredientes (M2M)
-        FOR EACH LEVEL:
-            TablaAnalisisNutricionalMenu
-            TablaIngredientesPorNivel (peso_neto, peso_bruto, nutrients calculated)
+POST /agente/api/generar/  {modalidad_id, ocasion_especial?}
+    → context_builder.obtener_contexto_modalidad():
+        - Random sample of 5 real menus as style examples
+        - Top-8 + 2 random ingredients per component (frequency-ranked)
+        - Support catalog: top-20 + random rotation by group (condiments, oils, etc.)
+    → llm_service.generar_borrador(): Gemini 2.5 Flash, JSON response
+    → validador.validar_preparaciones(): checks codes against TablaAlimentos2018Icbf
+    → Saves GeneracionIA (estado=pendiente_revision) + BorradorPreparacionIA + BorradorIngredienteIA
+
+GET /agente/borrador/<generacion_id>/   — review page
+    → User can: correct invalid ingredients (autocomplete search), delete ingredients,
+      select destination menu (programa + modalidad + empty menu), approve or discard
+
+POST /agente/api/aprobar/<generacion_id>/  {menu_id}
+    → importador.importar_borrador(): atomic transaction
+        - Creates TablaPreparaciones + TablaPreparacionIngredientes
+        - Creates ProcedimientoPreparacion if name not already similar (fuzzy ≥95%)
+        - Calls inicializador_niveles.inicializar_niveles_para_menu():
+            → Creates TablaAnalisisNutricionalMenu + TablaIngredientesPorNivel
+              for all 5 educational levels using MinutaPatronMeta weights
+        - GeneracionIA.estado = aprobado, records approver + timestamp
 ```
+
+**Models** (`agente/models.py`):
+- `GeneracionIA` — one record per LLM call: modalidad, prompt, raw response, estado, audit fields
+- `BorradorPreparacionIA` — proposed preparation (estado_validacion: valida/con_duda/invalida)
+- `BorradorIngredienteIA` — proposed ingredient (estado_validacion: valido/no_encontrado)
+
+**States**: `procesando` → `pendiente_revision` → `aprobado` / `descartado` / `error`
+
+**Ocasión especial**: optional field that instructs Gemini to create thematic names (e.g. "Halloween" → "Poción de Lentejas Embrujada"). Ingredients and ICBF codes remain the same; only names change.
+
+Key files: `agente/views.py`, `agente/services/context_builder.py`, `agente/services/llm_service.py`, `agente/services/validador.py`, `agente/services/importador.py`, `agente/services/inicializador_niveles.py`.
 
 ### Planeacion: Ration Planning from Focalization Lists
 Populates `PlanificacionRaciones` from existing `ListadosFocalizacion` data, grouped by sede + educational level:
@@ -451,6 +486,43 @@ Eliminar:
 **Catálogo simulacro**: CRUD de `TablaIngredientesSiesa` en `/nutricion/api/match/catalogo/` — reemplazar por integración real con SIESA cuando esté disponible.
 
 Key files: `nutricion/views/match_icbf.py`, `nutricion/services/match_icbf_service.py`, `static/js/nutricion/match_icbf.js`, `static/css/nutricion/match_icbf.css`. Plan de integración: `planeacion/PLAN_MATCH_ICBF_COMPRAS.md`.
+
+### Contabilidad: Accounting Invoice Workflow
+
+Multi-role workflow for processing PAE accounting documents (invoices). Two document types: `SERVICIOS` and `MATERIAS_PRIMAS`.
+
+**Roles**: `LIDER_CONTABLE` (creates/sends), `COMPRAS_CONTABLE` (reviews invoices per-item), `CONTABILIDAD` (final approval), `GERENCIA` (dashboard/KPIs only).
+
+**States**: `BORRADOR` → `ENVIADO` → `EN_REVISION_COMPRAS` → `DEVUELTO_COMPRAS` / `APROBADO_COMPRAS` → `OBSERVADO_CONTABILIDAD` → `APROBADO_CONTABILIDAD` → `CERRADO`
+
+```
+Líder creates RegistroContable (tipo, periodo_mes, periodo_ano)
+    → adds Facturas (numero_factura, proveedor, concepto, valor, fecha_factura)
+    → POST /contabilidad/api/registros/<pk>/enviar/
+Compras receives it in bandeja_compras
+    → reviews per-invoice checklist (ItemChecklist items, VerificacionChecklist)
+    → approves or returns each Factura individually
+    → POST /contabilidad/api/registros/<pk>/finalizar-revision/
+        → If all approved → estado=APROBADO_COMPRAS → goes to Contabilidad
+        → If mixed (some approved, some returned) → SPLIT:
+            New RegistroContable (approved invoices) → APROBADO_COMPRAS
+            Original (returned invoices) → DEVUELTO_COMPRAS → back to Líder
+Contabilidad reviews
+    → can observe (returns to Compras with comment) or approve → CERRADO
+```
+
+**Models** (`contabilidad/models.py`):
+- `RegistroContable` — main document header (tipo, periodo, lider, estado, demora justifications)
+- `Factura` — invoice line (numero_factura, proveedor, concepto, valor, estado_compras per-invoice)
+- `ItemChecklist` — configurable checklist items (tipo_proceso: SERVICIOS/MATERIAS_PRIMAS/AMBOS)
+- `VerificacionChecklist` — per-factura checklist verification (estado: PENDIENTE/OK/NO_OK/NA)
+- `HistorialEstado` — full audit trail of every state transition
+
+**Split logic**: when `finalizar_revision_compras()` finds mixed results (some APROBADA, some DEVUELTA invoices), it automatically creates a new `RegistroContable` with only the approved invoices and routes it directly to Contabilidad. The original keeps the returned invoices.
+
+**Key pages**: `/contabilidad/mis-registros/`, `/contabilidad/bandeja-compras/`, `/contabilidad/bandeja-contabilidad/`, `/contabilidad/dashboard-gerencia/`
+
+Key files: `contabilidad/models.py`, `contabilidad/views.py`, `contabilidad/services.py`, `contabilidad/urls.py`.
 
 ### Calidad: WhatsApp Bot — Certificados BPM
 
@@ -518,10 +590,12 @@ Call **after a successful write** (POST/PUT/DELETE), never inside GET handlers. 
 | Módulo | Acciones registradas |
 |--------|----------------------|
 | `facturacion` | `cargue_excel`, `guardar_listados`, `transferir_grados`, `generar_pdf`, `generar_zip_masivo`, `reemplazar_focalizacion`, `pdf_prediligenciado` |
-| `nutricion` | `generar_menu_ia`, `generar_menus_automaticos`, `crear_menu`, `crear_menu_especial`, `editar_menu`, `eliminar_menu`, `copiar_modalidad`, `crear_preparacion`, `editar_preparacion`, `eliminar_preparacion`, `copiar_preparacion`, `agregar_ingredientes`, `eliminar_ingrediente`, `guardar_analisis`, `guardar_ingredientes_nivel`, `exportar_excel`, `guardar_firmas`, `editar_alimento`, `eliminar_alimento`, `crear_match_icbf`, `editar_match_icbf`, `crear_match_icbf_bulk`, `eliminar_match_icbf`, `crear_producto_siesa`, `editar_producto_siesa`, `eliminar_producto_siesa` |
+| `nutricion` | `generar_menus_automaticos`, `crear_menu`, `crear_menu_especial`, `editar_menu`, `eliminar_menu`, `copiar_modalidad`, `crear_preparacion`, `editar_preparacion`, `eliminar_preparacion`, `copiar_preparacion`, `agregar_ingredientes`, `eliminar_ingrediente`, `guardar_analisis`, `guardar_ingredientes_nivel`, `exportar_excel`, `guardar_firmas`, `editar_alimento`, `eliminar_alimento`, `crear_match_icbf`, `editar_match_icbf`, `crear_match_icbf_bulk`, `eliminar_match_icbf`, `crear_producto_siesa`, `editar_producto_siesa`, `eliminar_producto_siesa` |
+| `agente` | `aprobar_borrador_ia` |
 | `planeacion` | `crear_programa`, `editar_programa`, `eliminar_programa`, `inicializar_ciclos`, `actualizar_racion` |
 | `costos` | `exportar_excel` |
 | `logistica` | `crear/editar/eliminar_tipo_ruta`, `crear/editar/eliminar_ruta`, `asignar_sede_ruta`, `editar_asignacion_ruta`, `eliminar_asignacion_ruta` |
+| `contabilidad` | `crear_registro`, `agregar_factura`, `eliminar_factura`, `enviar_registro`, `confirmar_recepcion`, `devolver_registro`, `finalizar_revision_compras`, `aprobar_factura`, `devolver_factura`, `guardar_checklist`, `observar_contabilidad`, `responder_observacion`, `aprobar_contabilidad`, `aprobar_compras` |
 | `principal` | `crear/editar/eliminar_departamento`, `crear/editar/eliminar_municipio`, `crear/editar/eliminar_tipo_documento`, `crear/editar/eliminar_tipo_genero`, `crear/editar/eliminar_modalidad`, `crear/editar/eliminar_institucion`, `crear/editar/eliminar_sede`, `crear/editar/eliminar_nivel_grado`, `guardar_programa_modalidades` |
 
 Consultable desde Django admin (`/admin/principal/registroactividad/`) o por ORM:
