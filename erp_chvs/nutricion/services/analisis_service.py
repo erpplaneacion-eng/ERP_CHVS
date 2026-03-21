@@ -826,15 +826,15 @@ class AnalisisNutricionalService:
         }
 
         for ing in ingredientes:
-            totales['calorias'] += float(ing.calorias)
-            totales['proteina'] += float(ing.proteina)
-            totales['grasa'] += float(ing.grasa)
-            totales['cho'] += float(ing.cho)
-            totales['calcio'] += float(ing.calcio)
-            totales['hierro'] += float(ing.hierro)
-            totales['sodio'] += float(ing.sodio)
-            totales['peso_neto'] += float(ing.peso_neto)
-            totales['peso_bruto'] += float(ing.peso_bruto)
+            totales['calorias'] += float(ing.calorias or 0)
+            totales['proteina'] += float(ing.proteina or 0)
+            totales['grasa'] += float(ing.grasa or 0)
+            totales['cho'] += float(ing.cho or 0)
+            totales['calcio'] += float(ing.calcio or 0)
+            totales['hierro'] += float(ing.hierro or 0)
+            totales['sodio'] += float(ing.sodio or 0)
+            totales['peso_neto'] += float(ing.peso_neto or 0)
+            totales['peso_bruto'] += float(ing.peso_bruto or 0)
 
         # Actualizar análisis
         analisis.total_calorias = totales['calorias']
@@ -864,13 +864,13 @@ class AnalisisNutricionalService:
                     tipo_programa_id=_tp,
                 )
                 return {
-                    'calorias': float(rec.calorias_kcal),
-                    'proteina': float(rec.proteina_g),
-                    'grasa': float(rec.grasa_g),
-                    'cho': float(rec.cho_g),
-                    'calcio': float(rec.calcio_mg),
-                    'hierro': float(rec.hierro_mg),
-                    'sodio': float(rec.sodio_mg),
+                    'calorias': float(rec.calorias_kcal or 0),
+                    'proteina': float(rec.proteina_g or 0),
+                    'grasa': float(rec.grasa_g or 0),
+                    'cho': float(rec.cho_g or 0),
+                    'calcio': float(rec.calcio_mg or 0),
+                    'hierro': float(rec.hierro_mg or 0),
+                    'sodio': float(rec.sodio_mg or 0),
                 }
             except RecomendacionDiariaGradoMod.DoesNotExist:
                 pass
@@ -881,13 +881,13 @@ class AnalisisNutricionalService:
                     tipo_programa_id=_tp,
                 )
                 return {
-                    'calorias': float(req.calorias_kcal),
-                    'proteina': float(req.proteina_g),
-                    'grasa': float(req.grasa_g),
-                    'cho': float(req.cho_g),
-                    'calcio': float(req.calcio_mg),
-                    'hierro': float(req.hierro_mg),
-                    'sodio': float(req.sodio_mg),
+                    'calorias': float(req.calorias_kcal or 0),
+                    'proteina': float(req.proteina_g or 0),
+                    'grasa': float(req.grasa_g or 0),
+                    'cho': float(req.cho_g or 0),
+                    'calcio': float(req.calcio_mg or 0),
+                    'hierro': float(req.hierro_mg or 0),
+                    'sodio': float(req.sodio_mg or 0),
                 }
             except TablaRequerimientosNutricionales.DoesNotExist:
                 return None
@@ -923,13 +923,13 @@ class AnalisisNutricionalService:
                     tipo_programa_id=_tp,
                 )
                 refs = {
-                    'calorias': float(adecuacion_ref.calorias_porc),
-                    'proteina': float(adecuacion_ref.proteina_porc),
-                    'grasa':    float(adecuacion_ref.grasa_porc),
-                    'cho':      float(adecuacion_ref.cho_porc),
-                    'calcio':   float(adecuacion_ref.calcio_porc),
-                    'hierro':   float(adecuacion_ref.hierro_porc),
-                    'sodio':    float(adecuacion_ref.sodio_porc),
+                    'calorias': float(adecuacion_ref.calorias_porc or 0),
+                    'proteina': float(adecuacion_ref.proteina_porc or 0),
+                    'grasa':    float(adecuacion_ref.grasa_porc or 0),
+                    'cho':      float(adecuacion_ref.cho_porc or 0),
+                    'calcio':   float(adecuacion_ref.calcio_porc or 0),
+                    'hierro':   float(adecuacion_ref.hierro_porc or 0),
+                    'sodio':    float(adecuacion_ref.sodio_porc or 0),
                 }
             except AdecuacionTotalPorcentaje.DoesNotExist:
                 refs = {}
