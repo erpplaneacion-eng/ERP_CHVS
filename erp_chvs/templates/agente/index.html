@@ -82,14 +82,58 @@
         }
     });
 
+    const spinnerTexto = document.getElementById('btn-generar-spinner');
+    const btnTexto = document.getElementById('btn-generar-texto');
+
+    function _mostrarSpinner(msg) {
+        btnTexto.classList.add('d-none');
+        spinnerTexto.classList.remove('d-none');
+        spinnerTexto.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>' + msg;
+        btnGenerar.disabled = true;
+    }
+
+    function _mostrarError(msg) {
+        errorBox.textContent = 'Error: ' + msg;
+        errorBox.classList.remove('d-none');
+        btnTexto.classList.remove('d-none');
+        spinnerTexto.classList.add('d-none');
+        btnGenerar.disabled = false;
+    }
+
+    function _iniciarPollingGeneracion(generacionId) {
+        var intentos = 0;
+        var maxIntentos = 60; // 3 min máx (60 × 3s)
+        var timer = setInterval(function () {
+            intentos++;
+            fetch('{% url "agente:api_generar" %}'.replace('/generar/', '/generar/' + generacionId + '/estado/'))
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.estado === 'pendiente_revision') {
+                        clearInterval(timer);
+                        window.location.href = '/agente/borrador/' + generacionId + '/';
+                    } else if (data.estado === 'error') {
+                        clearInterval(timer);
+                        _mostrarError(data.error || 'El servidor no pudo generar el borrador.');
+                    } else if (intentos >= maxIntentos) {
+                        clearInterval(timer);
+                        _mostrarError('La generación tardó demasiado. Intenta de nuevo.');
+                    }
+                })
+                .catch(function () {
+                    if (intentos >= maxIntentos) {
+                        clearInterval(timer);
+                        _mostrarError('No se pudo contactar al servidor.');
+                    }
+                });
+        }, 3000);
+    }
+
     btnGenerar.addEventListener('click', function () {
         const modalidadId = selModalidad.value;
         if (!modalidadId) return;
 
         errorBox.classList.add('d-none');
-        document.getElementById('btn-generar-texto').classList.add('d-none');
-        document.getElementById('btn-generar-spinner').classList.remove('d-none');
-        btnGenerar.disabled = true;
+        _mostrarSpinner('Consultando disponibilidad...');
 
         fetch('{% url "agente:api_generar" %}', {
             method: 'POST',
@@ -102,31 +146,33 @@
                 ocasion_especial: inpOcasion.value.trim(),
             }),
         })
-            .then(function(r) {
+            .then(function (r) {
                 if (!r.ok) {
-                    return r.text().then(function(txt) {
+                    return r.text().then(function (txt) {
                         throw new Error('HTTP ' + r.status + ' — ' + txt.substring(0, 200));
                     });
                 }
                 return r.json();
             })
-            .then(data => {
-                if (data.ok) {
-                    window.location.href = `/agente/borrador/${data.generacion_id}/`;
+            .then(function (data) {
+                if (!data.ok) {
+                    _mostrarError(data.error || 'Error desconocido');
+                    return;
+                }
+                if (data.fuente === 'pool') {
+                    // Borrador disponible de inmediato — animación corta
+                    _mostrarSpinner('Preparando borrador...');
+                    setTimeout(function () {
+                        window.location.href = '/agente/borrador/' + data.generacion_id + '/';
+                    }, 1800);
                 } else {
-                    errorBox.textContent = 'Error: ' + (data.error || 'Error desconocido');
-                    errorBox.classList.remove('d-none');
-                    document.getElementById('btn-generar-texto').classList.remove('d-none');
-                    document.getElementById('btn-generar-spinner').classList.add('d-none');
-                    btnGenerar.disabled = false;
+                    // Generación en vivo — polling hasta que esté listo
+                    _mostrarSpinner('Generando con IA... puede tardar unos segundos');
+                    _iniciarPollingGeneracion(data.generacion_id);
                 }
             })
-            .catch(err => {
-                errorBox.textContent = err.message;
-                errorBox.classList.remove('d-none');
-                document.getElementById('btn-generar-texto').classList.remove('d-none');
-                document.getElementById('btn-generar-spinner').classList.add('d-none');
-                btnGenerar.disabled = false;
+            .catch(function (err) {
+                _mostrarError(err.message);
             });
     });
 })();

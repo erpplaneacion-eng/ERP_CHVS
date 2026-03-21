@@ -1,8 +1,13 @@
 import json
+import threading
+import time
+import logging
 
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from nutricion.models import (
@@ -11,12 +16,162 @@ from nutricion.models import (
 from planeacion.models import Programa
 from principal.models import ModalidadesDeConsumo
 
-from .models import GeneracionIA, BorradorPreparacionIA, BorradorIngredienteIA
+from .models import GeneracionIA, BorradorPreparacionIA, BorradorIngredienteIA, LoteGeneracion
 from .services.context_builder import obtener_contexto_modalidad
 from .services.llm_service import generar_borrador
 from .services.validador import validar_preparaciones
 from .services.importador import importar_borrador
 
+logger = logging.getLogger(__name__)
+
+
+# ── Helpers internos ─────────────────────────────────────────────────────────
+
+def _guardar_borradores(generacion, preparaciones_validadas):
+    """Crea BorradorPreparacionIA + BorradorIngredienteIA a partir de preparaciones validadas."""
+    for prep in preparaciones_validadas:
+        componente_obj = None
+        if prep['id_componente']:
+            try:
+                componente_obj = ComponentesAlimentos.objects.get(
+                    id_componente=prep['id_componente']
+                )
+            except ComponentesAlimentos.DoesNotExist:
+                pass
+
+        prep_borrador = BorradorPreparacionIA.objects.create(
+            generacion=generacion,
+            nombre_preparacion=prep['nombre'],
+            componente_sugerido=componente_obj,
+            estado_validacion=prep['estado_validacion'],
+            observaciones=prep['observaciones'],
+            procedimiento=prep.get('procedimiento', ''),
+        )
+
+        for ing in prep['ingredientes']:
+            alimento = None
+            if ing['estado_validacion'] == 'valido':
+                try:
+                    alimento = TablaAlimentos2018Icbf.objects.get(codigo=ing['codigo_icbf'])
+                except TablaAlimentos2018Icbf.DoesNotExist:
+                    pass
+
+            BorradorIngredienteIA.objects.create(
+                borrador_preparacion=prep_borrador,
+                codigo_icbf_sugerido=ing.get('codigo_icbf', ''),
+                nombre_sugerido=ing.get('nombre', ''),
+                alimento_icbf=alimento,
+                estado_validacion=ing['estado_validacion'],
+                observaciones=ing.get('observaciones', ''),
+            )
+
+
+def _ejecutar_generacion(generacion_id, modalidad_id, ocasion_especial, estado_final):
+    """
+    Ejecuta el ciclo completo de generación para un GeneracionIA ya creado.
+    Llamar desde un hilo de background.
+    estado_final: GeneracionIA.ESTADO_PENDIENTE o GeneracionIA.ESTADO_POOL
+    """
+    from django.db import connection as db_conn
+    try:
+        generacion = GeneracionIA.objects.get(id=generacion_id)
+        contexto = obtener_contexto_modalidad(modalidad_id)
+        resultado_llm = generar_borrador(contexto, ocasion_especial)
+
+        if not resultado_llm['ok']:
+            generacion.estado = GeneracionIA.ESTADO_ERROR
+            generacion.errores_validacion = [resultado_llm.get('error', 'Error desconocido')]
+            generacion.save()
+            return
+
+        preparaciones_validadas = validar_preparaciones(resultado_llm['preparaciones'])
+
+        generacion.prompt_final = resultado_llm['prompt']
+        generacion.respuesta_cruda = resultado_llm['respuesta_cruda']
+        generacion.estado = estado_final
+        generacion.save()
+
+        _guardar_borradores(generacion, preparaciones_validadas)
+
+    except Exception as e:
+        logger.error(f"Error en hilo de generación [{generacion_id}]: {e}")
+        try:
+            gen = GeneracionIA.objects.get(id=generacion_id)
+            gen.estado = GeneracionIA.ESTADO_ERROR
+            gen.errores_validacion = [str(e)]
+            gen.save()
+        except Exception:
+            pass
+    finally:
+        db_conn.close()
+
+
+def _hilo_lote(lote_id):
+    """Hilo de background para generar N borradores en lote (para el pool)."""
+    from django.db import connection as db_conn
+    try:
+        lote = LoteGeneracion.objects.get(id=lote_id)
+        modalidad_id = lote.modalidad_id
+        ocasion = lote.ocasion_especial
+        cantidad = lote.cantidad_total
+
+        for i in range(cantidad):
+            try:
+                generacion = GeneracionIA.objects.create(
+                    id_modalidad=lote.modalidad,
+                    ocasion_especial=ocasion,
+                    usuario_solicitante=lote.usuario,
+                    estado=GeneracionIA.ESTADO_PROCESANDO,
+                )
+
+                contexto = obtener_contexto_modalidad(modalidad_id)
+                resultado_llm = generar_borrador(contexto, ocasion)
+
+                if not resultado_llm['ok']:
+                    generacion.estado = GeneracionIA.ESTADO_ERROR
+                    generacion.errores_validacion = [resultado_llm.get('error', 'Error')]
+                    generacion.save()
+                    lote.cantidad_fallida += 1
+                    lote.resultados = lote.resultados + [{'num': i + 1, 'ok': False, 'error': resultado_llm.get('error', 'Error LLM')}]
+                else:
+                    preparaciones_validadas = validar_preparaciones(resultado_llm['preparaciones'])
+                    generacion.prompt_final = resultado_llm['prompt']
+                    generacion.respuesta_cruda = resultado_llm['respuesta_cruda']
+                    generacion.estado = GeneracionIA.ESTADO_POOL
+                    generacion.save()
+                    _guardar_borradores(generacion, preparaciones_validadas)
+                    lote.cantidad_exitosa += 1
+                    lote.resultados = lote.resultados + [{'num': i + 1, 'ok': True, 'generacion_id': generacion.id}]
+
+            except Exception as e:
+                logger.error(f"Error en lote {lote_id} item {i + 1}: {e}")
+                lote.cantidad_fallida += 1
+                lote.resultados = lote.resultados + [{'num': i + 1, 'ok': False, 'error': str(e)}]
+
+            lote.cantidad_procesada = i + 1
+            lote.save(update_fields=['cantidad_procesada', 'cantidad_exitosa', 'cantidad_fallida', 'resultados'])
+
+            if i < cantidad - 1:
+                time.sleep(1.5)
+
+        lote.estado = LoteGeneracion.COMPLETADO
+        lote.fecha_fin = timezone.now()
+        lote.save(update_fields=['estado', 'fecha_fin'])
+
+    except Exception as e:
+        logger.error(f"Error crítico en lote {lote_id}: {e}")
+        try:
+            lote = LoteGeneracion.objects.get(id=lote_id)
+            lote.estado = LoteGeneracion.ERROR
+            lote.fecha_fin = timezone.now()
+            lote.save(update_fields=['estado', 'fecha_fin'])
+        except Exception:
+            pass
+    finally:
+        db_conn.close()
+
+
+# ── Vistas de página ──────────────────────────────────────────────────────────
 
 @login_required
 def index(request):
@@ -47,6 +202,36 @@ def borrador_view(request, generacion_id):
 
 
 @login_required
+def generar_lote_view(request):
+    """
+    Página para rellenar el pool de borradores pre-generados.
+    El nutricionista selecciona Modalidad + Cantidad y el servidor orquesta
+    la generación en background (threading), permitiendo navegar libremente.
+    """
+    modalidades = ModalidadesDeConsumo.objects.order_by('modalidad')
+
+    borradores_pendientes = (
+        GeneracionIA.objects
+        .filter(
+            estado=GeneracionIA.ESTADO_PENDIENTE,
+            usuario_solicitante=request.user,
+        )
+        .select_related(
+            'id_modalidad',
+            'id_menu__id_contrato',
+        )
+        .order_by('-fecha_creacion')[:50]
+    )
+
+    return render(request, 'agente/generar_lote.html', {
+        'modalidades': modalidades,
+        'borradores_pendientes': borradores_pendientes,
+    })
+
+
+# ── API de generación individual ──────────────────────────────────────────────
+
+@login_required
 def api_programas(request):
     programas = Programa.objects.filter(estado='activo').order_by('programa').values('id', 'programa', 'contrato')
     return JsonResponse({'programas': list(programas)})
@@ -63,7 +248,7 @@ def api_menus_por_programa_modalidad(request):
         id_contrato_id=programa_id,
         id_modalidad_id=modalidad_id,
     ).filter(
-        preparaciones__isnull=True,  # solo menús sin preparaciones
+        preparaciones__isnull=True,
     ).order_by('menu').values('id_menu', 'menu')
 
     return JsonResponse({'menus': list(menus)})
@@ -82,16 +267,35 @@ def api_generar(request):
         return JsonResponse({'ok': False, 'error': 'Falta modalidad_id'}, status=400)
 
     ocasion_especial = data.get('ocasion_especial', '').strip()[:100]
-    # Parámetro opcional: pre-asigna el menú destino (usado por generación por lote)
     menu_id_destino = data.get('menu_id_destino')
 
     modalidad = get_object_or_404(ModalidadesDeConsumo, id_modalidades=modalidad_id)
 
-    # Validar menú destino si se proporcionó
     menu_destino = None
     if menu_id_destino:
         menu_destino = get_object_or_404(TablaMenus, id_menu=menu_id_destino)
 
+    # ── Intentar pool (solo cuando no hay ocasión especial) ──────────────────
+    if not ocasion_especial and not menu_id_destino:
+        with transaction.atomic():
+            borrador_pool = (
+                GeneracionIA.objects
+                .select_for_update(skip_locked=True)
+                .filter(estado=GeneracionIA.ESTADO_POOL, id_modalidad=modalidad)
+                .order_by('fecha_creacion')
+                .first()
+            )
+            if borrador_pool:
+                borrador_pool.estado = GeneracionIA.ESTADO_PENDIENTE
+                borrador_pool.usuario_solicitante = request.user
+                borrador_pool.save(update_fields=['estado', 'usuario_solicitante'])
+                return JsonResponse({
+                    'ok': True,
+                    'generacion_id': borrador_pool.id,
+                    'fuente': 'pool',
+                })
+
+    # ── Generación en vivo (hilo de background) ───────────────────────────────
     generacion = GeneracionIA.objects.create(
         id_modalidad=modalidad,
         ocasion_especial=ocasion_especial,
@@ -100,68 +304,26 @@ def api_generar(request):
         id_menu=menu_destino,
     )
 
-    try:
-        contexto = obtener_contexto_modalidad(modalidad_id)
-        resultado_llm = generar_borrador(contexto, ocasion_especial)
+    hilo = threading.Thread(
+        target=_ejecutar_generacion,
+        args=(generacion.id, modalidad_id, ocasion_especial, GeneracionIA.ESTADO_PENDIENTE),
+        daemon=True,
+    )
+    hilo.start()
 
-        if not resultado_llm['ok']:
-            generacion.estado = GeneracionIA.ESTADO_ERROR
-            generacion.errores_validacion = [resultado_llm.get('error', 'Error desconocido')]
-            generacion.save()
-            return JsonResponse({'ok': False, 'error': resultado_llm.get('error')})
+    return JsonResponse({'ok': True, 'generacion_id': generacion.id, 'fuente': 'vivo'})
 
-        preparaciones_validadas = validar_preparaciones(resultado_llm['preparaciones'])
 
-        generacion.prompt_final = resultado_llm['prompt']
-        generacion.respuesta_cruda = resultado_llm['respuesta_cruda']
-        generacion.estado = GeneracionIA.ESTADO_PENDIENTE
-        generacion.save()
-
-        for prep in preparaciones_validadas:
-            componente_obj = None
-            if prep['id_componente']:
-                try:
-                    componente_obj = ComponentesAlimentos.objects.get(
-                        id_componente=prep['id_componente']
-                    )
-                except ComponentesAlimentos.DoesNotExist:
-                    pass
-
-            prep_borrador = BorradorPreparacionIA.objects.create(
-                generacion=generacion,
-                nombre_preparacion=prep['nombre'],
-                componente_sugerido=componente_obj,
-                estado_validacion=prep['estado_validacion'],
-                observaciones=prep['observaciones'],
-                procedimiento=prep.get('procedimiento', ''),
-            )
-
-            for ing in prep['ingredientes']:
-                alimento = None
-                if ing['estado_validacion'] == 'valido':
-                    try:
-                        alimento = TablaAlimentos2018Icbf.objects.get(
-                            codigo=ing['codigo_icbf']
-                        )
-                    except TablaAlimentos2018Icbf.DoesNotExist:
-                        pass
-
-                BorradorIngredienteIA.objects.create(
-                    borrador_preparacion=prep_borrador,
-                    codigo_icbf_sugerido=ing.get('codigo_icbf', ''),
-                    nombre_sugerido=ing.get('nombre', ''),
-                    alimento_icbf=alimento,
-                    estado_validacion=ing['estado_validacion'],
-                    observaciones=ing.get('observaciones', ''),
-                )
-
-        return JsonResponse({'ok': True, 'generacion_id': generacion.id})
-
-    except Exception as e:
-        generacion.estado = GeneracionIA.ESTADO_ERROR
-        generacion.errores_validacion = [str(e)]
-        generacion.save()
-        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+@login_required
+def api_estado_generacion(request, generacion_id):
+    """Consulta el estado de una generación individual (para polling desde el frontend)."""
+    generacion = get_object_or_404(GeneracionIA, id=generacion_id)
+    return JsonResponse({
+        'ok': True,
+        'estado': generacion.estado,
+        'generacion_id': generacion.id,
+        'error': generacion.errores_validacion[0] if generacion.errores_validacion else None,
+    })
 
 
 @login_required
@@ -227,7 +389,6 @@ def api_eliminar_ingrediente(request):
     ingrediente_id = data.get('ingrediente_id')
     ing = get_object_or_404(BorradorIngredienteIA, id=ingrediente_id)
 
-    # Verificar que el borrador aún esté pendiente de revisión
     generacion = ing.borrador_preparacion.generacion
     if generacion.estado != GeneracionIA.ESTADO_PENDIENTE:
         return JsonResponse({'ok': False, 'error': 'El borrador ya no está en estado pendiente.'}, status=400)
@@ -258,35 +419,67 @@ def api_buscar_alimento(request):
     return JsonResponse({'resultados': list(alimentos)})
 
 
-# ── Generación por lote ──────────────────────────────────────────────────────
+# ── API de generación en lote ─────────────────────────────────────────────────
 
 @login_required
-def generar_lote_view(request):
+@require_POST
+def api_iniciar_lote(request):
     """
-    Página para generar múltiples borradores en lote.
-    El nutricionista selecciona Programa + Modalidad + Cantidad y el frontend
-    orquesta N llamadas secuenciales a api_generar.
+    POST /agente/api/lote/iniciar/
+    Crea un LoteGeneracion y lanza el hilo de background.
+    Retorna {ok, lote_id} inmediatamente.
     """
-    modalidades = ModalidadesDeConsumo.objects.order_by('modalidad')
-    programas = Programa.objects.filter(estado='activo').order_by('programa')
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
 
-    borradores_pendientes = (
-        GeneracionIA.objects
-        .filter(
-            estado=GeneracionIA.ESTADO_PENDIENTE,
-            usuario_solicitante=request.user,
-        )
-        .select_related(
-            'id_modalidad',
-            'id_menu__id_contrato',
-        )
-        .order_by('-fecha_creacion')[:50]
+    modalidad_id = data.get('modalidad_id')
+    cantidad = data.get('cantidad', 5)
+    ocasion_especial = data.get('ocasion_especial', '').strip()[:100]
+
+    if not modalidad_id:
+        return JsonResponse({'ok': False, 'error': 'Falta modalidad_id'}, status=400)
+
+    try:
+        cantidad = int(cantidad)
+        if not 1 <= cantidad <= 20:
+            return JsonResponse({'ok': False, 'error': 'La cantidad debe estar entre 1 y 20'}, status=400)
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Cantidad inválida'}, status=400)
+
+    modalidad = get_object_or_404(ModalidadesDeConsumo, id_modalidades=modalidad_id)
+
+    lote = LoteGeneracion.objects.create(
+        usuario=request.user,
+        modalidad=modalidad,
+        ocasion_especial=ocasion_especial,
+        cantidad_total=cantidad,
     )
 
-    return render(request, 'agente/generar_lote.html', {
-        'modalidades': modalidades,
-        'programas': programas,
-        'borradores_pendientes': borradores_pendientes,
+    hilo = threading.Thread(target=_hilo_lote, args=(lote.id,), daemon=True)
+    hilo.start()
+
+    return JsonResponse({'ok': True, 'lote_id': lote.id})
+
+
+@login_required
+def api_estado_lote(request, lote_id):
+    """
+    GET /agente/api/lote/<lote_id>/estado/
+    Retorna el estado actual del lote para polling desde el frontend.
+    """
+    lote = get_object_or_404(LoteGeneracion, id=lote_id, usuario=request.user)
+    return JsonResponse({
+        'ok': True,
+        'lote_id': lote.id,
+        'estado': lote.estado,
+        'cantidad_total': lote.cantidad_total,
+        'cantidad_procesada': lote.cantidad_procesada,
+        'cantidad_exitosa': lote.cantidad_exitosa,
+        'cantidad_fallida': lote.cantidad_fallida,
+        'resultados': lote.resultados,
+        'fecha_fin': lote.fecha_fin.isoformat() if lote.fecha_fin else None,
     })
 
 
@@ -294,10 +487,8 @@ def generar_lote_view(request):
 @require_POST
 def api_crear_menus_lote(request):
     """
-    POST /agente/api/lote/crear-menus/
-    Crea N menús vacíos para el programa+modalidad seleccionados.
-    Retorna los IDs de los menús creados para que el JS los use como
-    menu_id_destino en cada llamada a api_generar.
+    Mantenido por compatibilidad con URL existente.
+    La nueva lógica usa api_iniciar_lote.
     """
     try:
         data = json.loads(request.body)
@@ -335,7 +526,6 @@ def api_borradores_pendientes(request):
     """
     GET /agente/api/lote/borradores/
     Retorna los borradores pendientes del usuario actual.
-    Usado por el frontend del lote para refrescar la tabla sin recargar página.
     """
     borradores = (
         GeneracionIA.objects

@@ -9,6 +9,7 @@ from principal.models import ModalidadesDeConsumo
 
 class GeneracionIA(models.Model):
     ESTADO_PROCESANDO = 'procesando'
+    ESTADO_POOL = 'disponible_pool'
     ESTADO_PENDIENTE = 'pendiente_revision'
     ESTADO_APROBADO = 'aprobado'
     ESTADO_DESCARTADO = 'descartado'
@@ -16,6 +17,7 @@ class GeneracionIA(models.Model):
 
     ESTADOS = [
         (ESTADO_PROCESANDO, 'Procesando'),
+        (ESTADO_POOL, 'Disponible en Pool'),
         (ESTADO_PENDIENTE, 'Pendiente de Revisión'),
         (ESTADO_APROBADO, 'Aprobado'),
         (ESTADO_DESCARTADO, 'Descartado'),
@@ -157,3 +159,42 @@ class BorradorIngredienteIA(models.Model):
 
     def __str__(self):
         return f"{self.nombre_sugerido} [{self.estado_validacion}]"
+
+
+class LoteGeneracion(models.Model):
+    PROCESANDO = 'procesando'
+    COMPLETADO = 'completado'
+    ERROR = 'error'
+
+    ESTADOS = [
+        (PROCESANDO, 'Procesando'),
+        (COMPLETADO, 'Completado'),
+        (ERROR, 'Error'),
+    ]
+
+    usuario = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True,
+        related_name='lotes_generacion', verbose_name="Usuario"
+    )
+    modalidad = models.ForeignKey(
+        'principal.ModalidadesDeConsumo', on_delete=models.CASCADE,
+        verbose_name="Modalidad"
+    )
+    ocasion_especial = models.CharField(max_length=100, blank=True)
+    cantidad_total = models.PositiveIntegerField()
+    cantidad_procesada = models.PositiveIntegerField(default=0)
+    cantidad_exitosa = models.PositiveIntegerField(default=0)
+    cantidad_fallida = models.PositiveIntegerField(default=0)
+    estado = models.CharField(max_length=20, choices=ESTADOS, default=PROCESANDO)
+    resultados = models.JSONField(default=list)
+    fecha_inicio = models.DateTimeField(auto_now_add=True)
+    fecha_fin = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'agente_lote_generacion'
+        verbose_name = "Lote de Generación"
+        verbose_name_plural = "Lotes de Generación"
+        ordering = ['-fecha_inicio']
+
+    def __str__(self):
+        return f"Lote {self.id} — {self.modalidad} x{self.cantidad_total} ({self.estado})"

@@ -14,8 +14,9 @@
         <div>
             <h3 class="mb-1">Generación de Menús en Lote — IA</h3>
             <p class="text-muted mb-0">
-                Selecciona el programa, la modalidad y la cantidad de menús a generar.
-                La IA creará los menús vacíos y generará un borrador de preparaciones para cada uno.
+                Genera borradores en background para el pool de la IA.
+                Puedes navegar a otro módulo — el servidor sigue generando y puedes volver a ver el progreso.
+                Al aprobar cada borrador elegirás el programa y menú destino.
             </p>
         </div>
         <a href="{% url 'agente:index' %}" class="btn btn-outline-secondary">← Generación individual</a>
@@ -29,17 +30,7 @@
         <div class="card-body">
             <div class="row g-3">
 
-                <div class="col-md-4">
-                    <label class="form-label fw-semibold">Programa / Contrato</label>
-                    <select id="sel-programa" class="form-select">
-                        <option value="">Seleccione un programa...</option>
-                        {% for p in programas %}
-                        <option value="{{ p.id }}">{{ p.programa }} ({{ p.contrato }})</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="col-md-4">
+                <div class="col-md-5">
                     <label class="form-label fw-semibold">Modalidad de consumo</label>
                     <select id="sel-modalidad" class="form-select">
                         <option value="">Seleccione una modalidad...</option>
@@ -49,7 +40,7 @@
                     </select>
                 </div>
 
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label class="form-label fw-semibold">
                         Cantidad de menús
                         <span class="text-muted fw-normal">(1–20)</span>
@@ -59,7 +50,7 @@
                     <div class="form-text">PAE: 20 · Comedores: 10</div>
                 </div>
 
-                <div class="col-md-2">
+                <div class="col-md-4">
                     <label class="form-label fw-semibold">
                         Ocasión especial
                         <span class="text-muted fw-normal">(opcional)</span>
@@ -174,9 +165,10 @@
 <script>
 window.LOTE_CONFIG = {
     csrf: '{{ csrf_token }}',
-    urlCrearMenus: '{% url "agente:api_crear_menus_lote" %}',
     urlGenerar: '{% url "agente:api_generar" %}',
     urlBorradores: '{% url "agente:api_borradores_pendientes" %}',
+    urlIniciarLote: '{% url "agente:api_iniciar_lote" %}',
+    urlEstadoLote: '{% url "agente:api_estado_lote" lote_id=0 %}'.replace('/0/estado/', '/'),
 };
 </script>
 <script src="{% static 'js/agente/generar_lote.js' %}"></script>

@@ -137,6 +137,7 @@ REGLAS ESTRICTAS:
 7. VARIEDAD: evita repetir los mismos ingredientes principales de los ejemplos. Si los ejemplos usan pollo, propón res, cerdo o pescado.
 8. En "procedimiento" escribe el paso a paso de elaboración (5 a 10 pasos numerados, en español, apropiado para cocina escolar industrial).
 9. Incluye una justificación breve por preparación.
+10. INOCUIDAD — OBLIGATORIO (PAE Colombia, Resolución 2674/2013 INVIMA): En el procedimiento NO menciones ni uses utensilios de madera (cucharas de madera, tablas de picar de madera, recipientes de madera ni ningún material poroso). Usa ÚNICAMENTE utensilios de acero inoxidable, plástico grado alimentario o vidrio templado. Los materiales porosos están prohibidos en cocinas del PAE por normas sanitarias.
 
 Responde ÚNICAMENTE con este JSON estricto, sin texto adicional:
 

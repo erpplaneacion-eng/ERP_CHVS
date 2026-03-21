@@ -94,33 +94,28 @@ class MenuService:
         Genera múltiples menús automáticamente.
         """
         # Validar que no existan menús previos
-        menus_existentes = MenuService.contar_menus_modalidad(
-            id_programa,
-            id_modalidad
-        )
-
-        if menus_existentes > 0:
-            raise ValueError(
-                f'Ya existen {menus_existentes} menús para esta modalidad. '
-                'Elimínelos primero antes de generar nuevos.'
-            )
-
-        # Obtener modalidad para el nombre
         modalidad = ModalidadesDeConsumo.objects.get(id_modalidades=id_modalidad)
         programa = Programa.objects.get(id=id_programa)
+
+        # Calcular el siguiente número disponible según los menús ya existentes
+        # con nombre numérico puro (los regulares del ciclo semanal)
+        numeros_usados = set(
+            TablaMenus.objects
+            .filter(id_contrato_id=id_programa, id_modalidad_id=id_modalidad)
+            .values_list('menu', flat=True)
+        )
+        numeros_usados = {int(n) for n in numeros_usados if n.isdigit()}
+        siguiente = max(numeros_usados, default=0) + 1
 
         menus_creados = []
 
         with transaction.atomic():
-            for i in range(1, cantidad + 1):
-                nombre_menu = f"Menú {i} - {modalidad.modalidad}"
-
+            for i in range(siguiente, siguiente + cantidad):
                 menu = TablaMenus.objects.create(
-                    menu=nombre_menu,
+                    menu=str(i),
                     id_contrato=programa,
                     id_modalidad=modalidad
                 )
-
                 menus_creados.append(menu)
 
         return menus_creados
