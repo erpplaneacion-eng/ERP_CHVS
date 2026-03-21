@@ -82,24 +82,50 @@
                         <tr>
                             <th>Código ICBF</th>
                             <th>Ingrediente (catálogo ICBF)</th>
-                            <th style="width:60px"></th>
+                            <th style="width:100px"></th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for ing in prep.ingredientes.all %}
-                        <tr id="ing-row-{{ ing.id }}">
-                            <td><code>{{ ing.codigo_icbf_sugerido }}</code></td>
+                        <tr id="ing-row-{{ ing.id }}"
+                            class="{% if ing.estado_validacion == 'no_encontrado' %}table-danger{% endif %}">
+                            <td>
+                                <code>{{ ing.codigo_icbf_sugerido }}</code>
+                                {% if ing.estado_validacion == 'no_encontrado' %}
+                                    <span class="badge bg-danger ms-1" title="{{ ing.observaciones }}">No encontrado</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 {% if ing.alimento_icbf %}
                                     {{ ing.alimento_icbf.nombre_del_alimento }}
                                 {% else %}
-                                    {{ ing.nombre_sugerido }}
+                                    <span class="text-danger fst-italic">{{ ing.nombre_sugerido }}</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="text-end">
+                                {% if ing.estado_validacion == 'no_encontrado' %}
+                                <button class="btn btn-warning btn-sm btn-corregir-ing me-1"
+                                        data-ing-id="{{ ing.id }}"
+                                        title="Buscar y corregir ingrediente">✏️</button>
+                                {% endif %}
                                 <button class="btn btn-link btn-sm text-danger p-0 btn-eliminar-ing"
                                         data-ing-id="{{ ing.id }}"
                                         title="Eliminar ingrediente">✕</button>
+                            </td>
+                        </tr>
+                        <tr id="ing-busqueda-{{ ing.id }}" class="d-none bg-light">
+                            <td colspan="3" class="py-2 px-3">
+                                <div class="input-group input-group-sm">
+                                    <input type="text"
+                                           class="form-control inp-buscar-alimento"
+                                           data-ing-id="{{ ing.id }}"
+                                           placeholder="Escribe nombre del alimento..."
+                                           autocomplete="off">
+                                    <button class="btn btn-outline-secondary btn-cancelar-correccion"
+                                            data-ing-id="{{ ing.id }}">Cancelar</button>
+                                </div>
+                                <div id="ing-sugerencias-{{ ing.id }}"
+                                     class="list-group mt-1 ing-sugerencias-list"></div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -130,6 +156,27 @@
     </div>
 
     <!-- Selector de menú destino -->
+    {% if generacion.id_menu %}
+    {# Menú pre-asignado desde generación por lote — no necesita selector #}
+    <div class="card mt-4 border-success">
+        <div class="card-header bg-success text-white">
+            <strong>Menú destino (pre-asignado)</strong>
+        </div>
+        <div class="card-body">
+            <p class="mb-1">
+                <strong>{{ generacion.id_menu.menu }}</strong>
+                {% if generacion.id_menu.id_contrato %}
+                — {{ generacion.id_menu.id_contrato.programa }}
+                {% endif %}
+            </p>
+            <div class="form-text">
+                Menú asignado automáticamente durante la generación en lote.
+                Puedes aprobarlo directamente o descartarlo.
+            </div>
+        </div>
+    </div>
+    {% else %}
+    {# Menú no asignado — flujo unitario normal #}
     <div class="card mt-4 border-success">
         <div class="card-header bg-success text-white">
             <strong>¿A qué menú deseas importar estas preparaciones?</strong>
@@ -157,6 +204,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <div id="alert-resultado" class="alert d-none mt-3"></div>
 
@@ -164,7 +212,8 @@
         <button id="btn-descartar" class="btn btn-outline-danger">
             🗑 Descartar borrador
         </button>
-        <button id="btn-aprobar" class="btn btn-success btn-lg" disabled>
+        <button id="btn-aprobar" class="btn btn-success btn-lg"
+                {% if not generacion.id_menu %}disabled{% endif %}>
             ✅ Aprobar e importar al menú seleccionado
         </button>
     </div>
@@ -181,8 +230,11 @@ window.BORRADOR_CONFIG = {
     csrf: '{{ csrf_token }}',
     urlMenus: '{% url "agente:api_menus" %}',
     urlEliminarIng: '{% url "agente:api_eliminar_ingrediente" %}',
+    urlCorregirIng: '{% url "agente:api_corregir_ingrediente" %}',
+    urlBuscarAlimento: '{% url "agente:api_buscar_alimento" %}',
     urlDescartar: '{% url "agente:api_descartar" generacion.id %}',
     urlIndex: '{% url "agente:index" %}',
+    menuIdPreasignado: {% if generacion.id_menu %}{{ generacion.id_menu.id_menu }}{% else %}null{% endif %},
 };
 </script>
 <script src="{% static 'js/agente/borrador.js' %}"></script>

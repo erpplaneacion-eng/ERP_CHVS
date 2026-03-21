@@ -82,14 +82,22 @@ def api_generar(request):
         return JsonResponse({'ok': False, 'error': 'Falta modalidad_id'}, status=400)
 
     ocasion_especial = data.get('ocasion_especial', '').strip()[:100]
+    # Parámetro opcional: pre-asigna el menú destino (usado por generación por lote)
+    menu_id_destino = data.get('menu_id_destino')
 
     modalidad = get_object_or_404(ModalidadesDeConsumo, id_modalidades=modalidad_id)
+
+    # Validar menú destino si se proporcionó
+    menu_destino = None
+    if menu_id_destino:
+        menu_destino = get_object_or_404(TablaMenus, id_menu=menu_id_destino)
 
     generacion = GeneracionIA.objects.create(
         id_modalidad=modalidad,
         ocasion_especial=ocasion_especial,
         usuario_solicitante=request.user,
         estado=GeneracionIA.ESTADO_PROCESANDO,
+        id_menu=menu_destino,
     )
 
     try:
@@ -248,3 +256,113 @@ def api_buscar_alimento(request):
     ).values('codigo', 'nombre_del_alimento')[:20]
 
     return JsonResponse({'resultados': list(alimentos)})
+
+
+# ── Generación por lote ──────────────────────────────────────────────────────
+
+@login_required
+def generar_lote_view(request):
+    """
+    Página para generar múltiples borradores en lote.
+    El nutricionista selecciona Programa + Modalidad + Cantidad y el frontend
+    orquesta N llamadas secuenciales a api_generar.
+    """
+    modalidades = ModalidadesDeConsumo.objects.order_by('modalidad')
+    programas = Programa.objects.filter(estado='activo').order_by('programa')
+
+    borradores_pendientes = (
+        GeneracionIA.objects
+        .filter(
+            estado=GeneracionIA.ESTADO_PENDIENTE,
+            usuario_solicitante=request.user,
+        )
+        .select_related(
+            'id_modalidad',
+            'id_menu__id_contrato',
+        )
+        .order_by('-fecha_creacion')[:50]
+    )
+
+    return render(request, 'agente/generar_lote.html', {
+        'modalidades': modalidades,
+        'programas': programas,
+        'borradores_pendientes': borradores_pendientes,
+    })
+
+
+@login_required
+@require_POST
+def api_crear_menus_lote(request):
+    """
+    POST /agente/api/lote/crear-menus/
+    Crea N menús vacíos para el programa+modalidad seleccionados.
+    Retorna los IDs de los menús creados para que el JS los use como
+    menu_id_destino en cada llamada a api_generar.
+    """
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
+
+    programa_id = data.get('programa_id')
+    modalidad_id = data.get('modalidad_id')
+    cantidad = data.get('cantidad', 5)
+
+    if not programa_id or not modalidad_id:
+        return JsonResponse({'ok': False, 'error': 'Faltan programa_id o modalidad_id'}, status=400)
+
+    try:
+        cantidad = int(cantidad)
+        if not 1 <= cantidad <= 20:
+            return JsonResponse({'ok': False, 'error': 'La cantidad debe estar entre 1 y 20'}, status=400)
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Cantidad inválida'}, status=400)
+
+    from nutricion.services.menu_service import MenuService
+    try:
+        menus = MenuService.generar_menus_automaticos(programa_id, modalidad_id, cantidad)
+    except ValueError as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': f'Error al crear menús: {e}'}, status=500)
+
+    menu_ids = [m.id_menu for m in menus]
+    return JsonResponse({'ok': True, 'menu_ids': menu_ids, 'cantidad': len(menu_ids)})
+
+
+@login_required
+def api_borradores_pendientes(request):
+    """
+    GET /agente/api/lote/borradores/
+    Retorna los borradores pendientes del usuario actual.
+    Usado por el frontend del lote para refrescar la tabla sin recargar página.
+    """
+    borradores = (
+        GeneracionIA.objects
+        .filter(
+            estado=GeneracionIA.ESTADO_PENDIENTE,
+            usuario_solicitante=request.user,
+        )
+        .select_related('id_modalidad', 'id_menu__id_contrato')
+        .order_by('-fecha_creacion')[:50]
+    )
+
+    data = []
+    for b in borradores:
+        menu_str = ''
+        programa_str = ''
+        if b.id_menu:
+            menu_str = b.id_menu.menu
+            if b.id_menu.id_contrato:
+                programa_str = b.id_menu.id_contrato.programa
+
+        data.append({
+            'id': b.id,
+            'modalidad': b.id_modalidad.modalidad,
+            'menu': menu_str,
+            'programa': programa_str,
+            'fecha': b.fecha_creacion.strftime('%d/%m/%Y %H:%M'),
+            'url_borrador': f'/agente/borrador/{b.id}/',
+        })
+
+    return JsonResponse({'ok': True, 'borradores': data})

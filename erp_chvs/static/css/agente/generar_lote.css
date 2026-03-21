@@ -1,0 +1,31 @@
+/* generar_lote.css — Estilos para la página de generación por lote */
+
+/* Log de resultados del lote */
+.log-lote-container {
+    max-height: 380px;
+    overflow-y: auto;
+    font-size: 0.875rem;
+}
+
+.log-item {
+    border-radius: 4px;
+    line-height: 1.4;
+}
+
+/* Barra de progreso */
+#barra-progreso {
+    transition: width 0.4s ease;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Tabla de borradores */
+#tabla-borradores th {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+#tabla-borradores td {
+    vertical-align: middle;
+    font-size: 0.9rem;
+}

@@ -15,4 +15,9 @@ urlpatterns = [
     path('api/corregir-ingrediente/', views.api_corregir_ingrediente, name='api_corregir_ingrediente'),
     path('api/eliminar-ingrediente/', views.api_eliminar_ingrediente, name='api_eliminar_ingrediente'),
     path('api/buscar-alimento/', views.api_buscar_alimento, name='api_buscar_alimento'),
+
+    # Generación por lote
+    path('generar-lote/', views.generar_lote_view, name='generar_lote'),
+    path('api/lote/crear-menus/', views.api_crear_menus_lote, name='api_crear_menus_lote'),
+    path('api/lote/borradores/', views.api_borradores_pendientes, name='api_borradores_pendientes'),
 ]

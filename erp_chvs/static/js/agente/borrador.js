@@ -2,33 +2,130 @@
     const cfg = window.BORRADOR_CONFIG;
     if (!cfg) return;
 
-    const { generacionId, modalidadId, csrf, urlMenus, urlEliminarIng, urlDescartar, urlIndex } = cfg;
+    const { generacionId, modalidadId, csrf, urlMenus, urlEliminarIng, urlCorregirIng,
+            urlBuscarAlimento, urlDescartar, urlIndex, menuIdPreasignado } = cfg;
 
-    // Eliminar ingrediente
+    // ── Eliminar / Corregir ingrediente ──────────────────────────────────────
     const listaPrep = document.getElementById('lista-preparaciones');
     if (listaPrep) {
-        listaPrep.addEventListener('click', function (e) {
-            const btn = e.target.closest('.btn-eliminar-ing');
-            if (!btn) return;
-            const ingId = btn.dataset.ingId;
-            if (!confirm('¿Eliminar este ingrediente del borrador?')) return;
-            btn.disabled = true;
 
-            fetch(urlEliminarIng, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-                body: JSON.stringify({ ingrediente_id: parseInt(ingId) }),
-            })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.ok) {
-                        document.getElementById('ing-row-' + ingId).remove();
-                    } else {
-                        alert('Error: ' + data.error);
-                        btn.disabled = false;
+        listaPrep.addEventListener('click', function (e) {
+            // Eliminar
+            const btnElim = e.target.closest('.btn-eliminar-ing');
+            if (btnElim) {
+                const ingId = btnElim.dataset.ingId;
+                if (!confirm('¿Eliminar este ingrediente del borrador?')) return;
+                btnElim.disabled = true;
+                fetch(urlEliminarIng, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                    body: JSON.stringify({ ingrediente_id: parseInt(ingId) }),
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.ok) {
+                            document.getElementById('ing-row-' + ingId).remove();
+                            document.getElementById('ing-busqueda-' + ingId)?.remove();
+                        } else {
+                            alert('Error: ' + data.error);
+                            btnElim.disabled = false;
+                        }
+                    });
+                return;
+            }
+
+            // Abrir buscador de corrección
+            const btnCorr = e.target.closest('.btn-corregir-ing');
+            if (btnCorr) {
+                const ingId = btnCorr.dataset.ingId;
+                const filaBusqueda = document.getElementById('ing-busqueda-' + ingId);
+                if (filaBusqueda) {
+                    filaBusqueda.classList.toggle('d-none');
+                    if (!filaBusqueda.classList.contains('d-none')) {
+                        filaBusqueda.querySelector('.inp-buscar-alimento').focus();
                     }
-                });
+                }
+                return;
+            }
+
+            // Cancelar corrección
+            const btnCancel = e.target.closest('.btn-cancelar-correccion');
+            if (btnCancel) {
+                const ingId = btnCancel.dataset.ingId;
+                document.getElementById('ing-busqueda-' + ingId)?.classList.add('d-none');
+            }
         });
+
+        // Autocomplete de búsqueda de alimentos (delegado)
+        let _debounceTimer = null;
+        listaPrep.addEventListener('input', function (e) {
+            const inp = e.target.closest('.inp-buscar-alimento');
+            if (!inp) return;
+
+            clearTimeout(_debounceTimer);
+            const ingId = inp.dataset.ingId;
+            const q = inp.value.trim();
+            const lista = document.getElementById('ing-sugerencias-' + ingId);
+
+            if (q.length < 2) {
+                lista.innerHTML = '';
+                return;
+            }
+
+            _debounceTimer = setTimeout(function () {
+                fetch(urlBuscarAlimento + '?q=' + encodeURIComponent(q))
+                    .then(r => r.json())
+                    .then(data => {
+                        lista.innerHTML = '';
+                        if (!data.resultados.length) {
+                            lista.innerHTML = '<div class="list-group-item text-muted small">Sin resultados</div>';
+                            return;
+                        }
+                        const frag = document.createDocumentFragment();
+                        data.resultados.forEach(function (al) {
+                            const item = document.createElement('button');
+                            item.type = 'button';
+                            item.className = 'list-group-item list-group-item-action small py-1';
+                            item.innerHTML = '<code class="me-2">' + al.codigo + '</code>' + al.nombre_del_alimento;
+                            item.addEventListener('click', function () {
+                                _aplicarCorreccion(ingId, al.codigo, inp, lista);
+                            });
+                            frag.appendChild(item);
+                        });
+                        lista.appendChild(frag);
+                    });
+            }, 300);
+        });
+    }
+
+    function _aplicarCorreccion(ingId, codigoIcbf, inp, lista) {
+        inp.disabled = true;
+        fetch(urlCorregirIng, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({ ingrediente_id: parseInt(ingId), codigo_icbf: codigoIcbf }),
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) {
+                    const fila = document.getElementById('ing-row-' + ingId);
+                    // Quitar rojo y badge "No encontrado"
+                    fila.classList.remove('table-danger');
+                    fila.querySelector('.badge.bg-danger')?.remove();
+                    fila.querySelector('.btn-corregir-ing')?.remove();
+                    // Actualizar nombre del ingrediente
+                    const tdNombre = fila.cells[1];
+                    tdNombre.textContent = data.nombre;
+                    // Actualizar código mostrado
+                    fila.cells[0].querySelector('code').textContent = codigoIcbf;
+                    // Ocultar fila de búsqueda
+                    document.getElementById('ing-busqueda-' + ingId)?.classList.add('d-none');
+                    lista.innerHTML = '';
+                } else {
+                    alert('Error: ' + data.error);
+                    inp.disabled = false;
+                }
+            });
     }
 
     // Cascading selector programa → menú destino
@@ -76,10 +173,13 @@
     // Aprobar
     if (btnAprobar) {
         btnAprobar.addEventListener('click', function () {
-            const menuId = selMenu ? selMenu.value : null;
+            // Usa menú pre-asignado (lote) o el seleccionado manualmente (flujo unitario)
+            const menuId = menuIdPreasignado || (selMenu ? selMenu.value : null);
             if (!menuId) return;
 
-            const menuTexto = selMenu.options[selMenu.selectedIndex].text;
+            const menuTexto = menuIdPreasignado
+                ? 'menú pre-asignado'
+                : (selMenu ? selMenu.options[selMenu.selectedIndex].text : '');
             if (!confirm(`¿Confirmas que revisaste el borrador y deseas importar las preparaciones al "${menuTexto}"?`)) return;
 
             this.disabled = true;

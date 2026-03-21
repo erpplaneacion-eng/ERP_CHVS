@@ -13,7 +13,16 @@ MODELO = 'gemini-2.5-flash'
 def generar_borrador(contexto: dict, ocasion_especial: str = '') -> dict:
     genai.configure(api_key=os.environ.get('GEMINI_API_KEY', ''))
     model = genai.GenerativeModel(MODELO)
-    prompt = _construir_prompt(contexto, ocasion_especial)
+
+    # Enriquecer el prompt con contexto normativo desde Pinecone (RAG)
+    from agente.services.rag_service import obtener_contexto_normativo
+    consulta_rag = (
+        f"gramajes requerimientos nutricionales frecuencias semanales "
+        f"{contexto['modalidad']['nombre']} PAE Colombia Resolución 00335"
+    )
+    contexto_rag = obtener_contexto_normativo(consulta_rag, top_k=5)
+
+    prompt = _construir_prompt(contexto, ocasion_especial, contexto_rag=contexto_rag)
 
     try:
         response = model.generate_content(
@@ -44,7 +53,7 @@ def generar_borrador(contexto: dict, ocasion_especial: str = '') -> dict:
         }
 
 
-def _construir_prompt(contexto: dict, ocasion_especial: str = '') -> str:
+def _construir_prompt(contexto: dict, ocasion_especial: str = '', contexto_rag: str = '') -> str:
     modalidad = contexto['modalidad']
     componentes = contexto['componentes_validos']
     ingredientes_por_componente = contexto.get('ingredientes_por_componente', {})
@@ -79,6 +88,17 @@ def _construir_prompt(contexto: dict, ocasion_especial: str = '') -> str:
         for i in catalogo_soporte
     )
 
+    # Bloque de normativa (RAG) — solo si Pinecone retornó resultados
+    rag_bloque = ''
+    if contexto_rag:
+        rag_bloque = f"""
+
+NORMATIVA VIGENTE — Resolución PAE (fragmentos recuperados por relevancia semántica):
+{contexto_rag}
+
+Verifica que los gramajes y frecuencias propuestos sean coherentes con esta normativa.
+"""
+
     ocasion_bloque = ''
     if ocasion_especial:
         ocasion_bloque = f"""
@@ -105,7 +125,7 @@ ESTRUCTURA OBLIGATORIA — genera EXACTAMENTE {total_componentes} preparaciones,
 {estructura_texto}
 CATÁLOGO DE INGREDIENTES DE SOPORTE (condimentos, aceites, verduras de guiso, especias — úsalos libremente para complementar cualquier preparación):
 {catalogo_texto if catalogo_texto else '(no disponible)'}
-
+{rag_bloque}
 REGLAS ESTRICTAS:
 1. Genera exactamente {total_componentes} preparaciones, una por cada componente listado arriba.
 2. El campo "id_componente" de cada preparación DEBE ser exactamente el ID indicado (ej: "com1", "com3").
