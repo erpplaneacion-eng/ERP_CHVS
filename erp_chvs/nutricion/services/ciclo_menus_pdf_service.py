@@ -320,7 +320,7 @@ class CicloMenusPdfService:
                 # DEPARTAMENTO / MUNICIPIO (fila 5)
                 [self._p("DEPARTAMENTO", self.style_cell_left), self._p(dpto_val, self.style_cell_center), self._p("MUNICIPIO", self.style_cell_left), self._p(municipio_val, self.style_cell_center), ""],
                 # PROYECTO (fila 6)
-                [self._p("PROYECTO:", self.style_cell_left), self._p("Comedores Comunitarios", self.style_cell_center), "", "", ""],
+                [self._p("PROYECTO:", self.style_cell_left), self._p("COMEDORES COMUNITARIOS", self.style_cell_center), "", "", ""],
             ]
             col_widths = [26 * mm, 46 * mm, 30 * mm, 30 * mm, 50 * mm]
             meta = Table(meta_data, colWidths=col_widths, hAlign="LEFT")
