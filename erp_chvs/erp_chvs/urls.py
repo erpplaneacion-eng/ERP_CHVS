@@ -1,12 +1,14 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views # Importa las vistas de autenticación de Django
-from django.contrib.auth.views import LogoutView 
+from django.contrib.auth.views import LogoutView
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import TemplateView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('vtco430m6ada7v5kdumgrpf8pqfzf1.html', TemplateView.as_view(template_name='vtco430m6ada7v5kdumgrpf8pqfzf1.html', content_type='text/html')),
     
     # La URL raíz (/) es ahora la página de login principal.
     # Usará home.html y redirigirá a los usuarios autenticados.
