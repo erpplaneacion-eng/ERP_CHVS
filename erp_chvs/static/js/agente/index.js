@@ -1,10 +1,10 @@
 /**
- * index.js — NOVA Neural Studio: generación individual de preparaciones IA
+ * index.js — NIA Neural Studio: generación individual de preparaciones IA
  */
 (function () {
     'use strict';
 
-    const CFG = window.NOVA_CONFIG;
+    const CFG = window.NIA_CONFIG;
 
     const selModal    = document.getElementById('sel-modalidad');
     const inpOcasion  = document.getElementById('inp-ocasion');

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}NOVA — Asistente Nutricional IA{% endblock %}
+{% block title %}NIA — Asistente Nutricional IA{% endblock %}
 
 {% block extra_css %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,7 +19,7 @@
             <i class="fa-solid fa-brain"></i>
         </div>
         <div>
-            <div class="nova-agent-name">NOVA</div>
+            <div class="nova-agent-name">NIA</div>
             <div class="nova-agent-status">Asistente Nutricional IA &nbsp;·&nbsp; En línea</div>
         </div>
         <a href="{% url 'agente:generar_lote' %}" class="nova-lote-btn">
@@ -39,7 +39,7 @@
         <div class="nova-msg msg-2">
             <div class="nova-mini-av"><i class="fa-solid fa-brain"></i></div>
             <div class="nova-bubble">
-                Soy <strong>NOVA</strong>, tu asistente de nutrición IA para el PAE.
+                Soy <strong>NIA</strong>, tu asistente de nutrición IA para el PAE.
                 Creo preparaciones culinarias basándome en la <em>Resolución 3803 de 2016</em>
                 y el historial de menús de cada modalidad.
                 ¿Para qué modalidad crearemos preparaciones hoy?
@@ -98,7 +98,7 @@
         <div class="nova-gen-orb">
             <i class="fa-solid fa-circle-notch fa-spin"></i>
         </div>
-        <div class="nova-gen-label">NOVA está trabajando</div>
+        <div class="nova-gen-label">NIA está trabajando para ti</div>
         <div class="nova-gen-msg" id="gen-msg">Consultando base de conocimientos PAE...</div>
         <div class="nova-gen-sub" id="gen-sub">Esto puede tomar unos segundos</div>
         <div class="nova-gen-bar-wrap"><div class="nova-gen-bar"></div></div>
@@ -116,7 +116,7 @@
 
 {% block extra_js %}
 <script>
-window.NOVA_CONFIG = {
+window.NIA_CONFIG = {
     csrf:       '{{ csrf_token }}',
     urlGenerar: '{% url "agente:api_generar" %}',
 };
