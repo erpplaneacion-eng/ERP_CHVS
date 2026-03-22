@@ -13,12 +13,16 @@ urlpatterns = [
     path('api/generar/<int:generacion_id>/estado/', views.api_estado_generacion, name='api_estado_generacion'),
     path('api/aprobar/<int:generacion_id>/', views.api_aprobar, name='api_aprobar'),
     path('api/descartar/<int:generacion_id>/', views.api_descartar, name='api_descartar'),
+    path('api/rechazar/<int:generacion_id>/', views.api_rechazar_borrador, name='api_rechazar_borrador'),
+    path('api/borrador/<int:generacion_id>/preview/', views.api_borrador_preview, name='api_borrador_preview'),
     path('api/corregir-ingrediente/', views.api_corregir_ingrediente, name='api_corregir_ingrediente'),
     path('api/eliminar-ingrediente/', views.api_eliminar_ingrediente, name='api_eliminar_ingrediente'),
     path('api/buscar-alimento/', views.api_buscar_alimento, name='api_buscar_alimento'),
 
     # Generación en lote / pool
     path('generar-lote/', views.generar_lote_view, name='generar_lote'),
+    path('api/lote/tomar/', views.api_tomar_del_pool, name='api_tomar_del_pool'),
+    path('api/lote/pool-disponible/', views.api_pool_disponible, name='api_pool_disponible'),
     path('api/lote/iniciar/', views.api_iniciar_lote, name='api_iniciar_lote'),
     path('api/lote/<int:lote_id>/estado/', views.api_estado_lote, name='api_estado_lote'),
     path('api/lote/crear-menus/', views.api_crear_menus_lote, name='api_crear_menus_lote'),

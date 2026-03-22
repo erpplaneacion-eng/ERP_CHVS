@@ -407,6 +407,47 @@ def api_descartar(request, generacion_id):
 
 
 @login_required
+@require_POST
+def api_rechazar_borrador(request, generacion_id):
+    """Devuelve un borrador al pool (disponible para otro nutricionista)."""
+    generacion = get_object_or_404(
+        GeneracionIA, id=generacion_id, usuario_solicitante=request.user
+    )
+    generacion.estado = GeneracionIA.ESTADO_POOL
+    generacion.usuario_solicitante = None
+    generacion.save(update_fields=['estado', 'usuario_solicitante'])
+    return JsonResponse({'ok': True})
+
+
+@login_required
+def api_borrador_preview(request, generacion_id):
+    """Resumen ligero de un borrador para mostrar en las tarjetas del lote."""
+    generacion = get_object_or_404(GeneracionIA, id=generacion_id)
+    preparaciones = generacion.preparaciones.prefetch_related(
+        'componente_sugerido', 'ingredientes'
+    ).all()
+
+    preps_data = []
+    for p in preparaciones:
+        invalidos = sum(
+            1 for i in p.ingredientes.all()
+            if i.estado_validacion == BorradorIngredienteIA.NO_ENCONTRADO
+        )
+        preps_data.append({
+            'nombre': p.nombre_preparacion,
+            'componente': p.componente_sugerido.componente if p.componente_sugerido else '—',
+            'num_ingredientes': p.ingredientes.count(),
+            'invalidos': invalidos,
+        })
+
+    return JsonResponse({
+        'ok': True,
+        'modalidad': generacion.id_modalidad.modalidad if generacion.id_modalidad else '',
+        'preparaciones': preps_data,
+    })
+
+
+@login_required
 def api_buscar_alimento(request):
     q = request.GET.get('q', '').strip()
     if len(q) < 2:
@@ -420,6 +461,82 @@ def api_buscar_alimento(request):
 
 
 # ── API de generación en lote ─────────────────────────────────────────────────
+
+@login_required
+def api_pool_disponible(request):
+    """
+    GET /agente/api/lote/pool-disponible/?modalidad_id=X
+    Retorna cuántos borradores hay en el pool para la modalidad indicada.
+    """
+    modalidad_id = request.GET.get('modalidad_id')
+    if not modalidad_id:
+        return JsonResponse({'ok': False, 'error': 'Falta modalidad_id'}, status=400)
+
+    cantidad = GeneracionIA.objects.filter(
+        estado=GeneracionIA.ESTADO_POOL,
+        id_modalidad_id=modalidad_id,
+    ).count()
+
+    return JsonResponse({'ok': True, 'disponibles': cantidad})
+
+
+@login_required
+@require_POST
+def api_tomar_del_pool(request):
+    """
+    POST /agente/api/lote/tomar/
+    Asigna N borradores del pool al nutricionista actual (estado → pendiente_revision).
+    Retorna la lista de generacion_ids tomados.
+    """
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
+
+    modalidad_id = data.get('modalidad_id')
+    cantidad = data.get('cantidad', 5)
+
+    if not modalidad_id:
+        return JsonResponse({'ok': False, 'error': 'Falta modalidad_id'}, status=400)
+
+    try:
+        cantidad = int(cantidad)
+        if not 1 <= cantidad <= 20:
+            return JsonResponse({'ok': False, 'error': 'La cantidad debe estar entre 1 y 20'}, status=400)
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Cantidad inválida'}, status=400)
+
+    modalidad = get_object_or_404(ModalidadesDeConsumo, id_modalidades=modalidad_id)
+
+    tomados = []
+    with transaction.atomic():
+        borradores = (
+            GeneracionIA.objects
+            .select_for_update(skip_locked=True)
+            .filter(estado=GeneracionIA.ESTADO_POOL, id_modalidad=modalidad)
+            .order_by('fecha_creacion')[:cantidad]
+        )
+        for b in borradores:
+            b.estado = GeneracionIA.ESTADO_PENDIENTE
+            b.usuario_solicitante = request.user
+            b.save(update_fields=['estado', 'usuario_solicitante'])
+            tomados.append(b.id)
+
+    if not tomados:
+        return JsonResponse({
+            'ok': False,
+            'error': f'No hay borradores disponibles en el pool para la modalidad "{modalidad.modalidad}". '
+                     f'El sistema los genera automáticamente cada 24h.',
+        })
+
+    solicitados = cantidad
+    return JsonResponse({
+        'ok': True,
+        'tomados': len(tomados),
+        'solicitados': solicitados,
+        'ids': tomados,
+    })
+
 
 @login_required
 @require_POST

@@ -1,14 +1,7 @@
 /**
  * generar_lote.js
- * Orquestador de generación de borradores en lote para la app agente.
- *
- * Flujo:
- *  1. Usuario selecciona Modalidad + Cantidad → inicia lote
- *  2. POST a api_iniciar_lote → servidor lanza hilo background → retorna lote_id
- *  3. Frontend hace polling cada 3s a api_estado_lote/<lote_id>/
- *  4. Progreso en tiempo real con barra + log
- *  5. El usuario puede navegar a otro módulo y volver: el lote_id se guarda en localStorage
- *     y el polling se reanuda automáticamente al cargar la página
+ * Simula generación en tiempo real tomando borradores del pool.
+ * Cada tarjeta muestra animación de "thinking" antes de revelar el contenido.
  */
 
 (function () {
@@ -16,271 +9,225 @@
 
     const CFG = window.LOTE_CONFIG;
 
-    // Elementos del DOM
     const selModalidad = document.getElementById('sel-modalidad');
-    const inpCantidad = document.getElementById('inp-cantidad');
-    const inpOcasion = document.getElementById('inp-ocasion');
-    const btnIniciar = document.getElementById('btn-iniciar-lote');
-    const btnCancelar = document.getElementById('btn-cancelar');
-    const panelProgreso = document.getElementById('panel-progreso');
-    const barraProgreso = document.getElementById('barra-progreso');
-    const tituloProgreso = document.getElementById('titulo-progreso');
-    const logLote = document.getElementById('log-lote');
-    const tbodyBorradores = document.getElementById('tbody-borradores');
-    const sinBorradores = document.getElementById('sin-borradores');
-    const badgePendientes = document.getElementById('badge-pendientes');
+    const inpCantidad  = document.getElementById('inp-cantidad');
+    const btnGenerar   = document.getElementById('btn-generar');
+    const alertaForm   = document.getElementById('alerta-form');
+    const gridMenus    = document.getElementById('grid-menus');
+    const resumenFinal = document.getElementById('resumen-final');
 
-    const LOTE_KEY = 'agente_lote_activo_id';
-    const POLL_INTERVAL_MS = 3000;
+    // ── Habilitar botón ───────────────────────────────────────────────────────
 
-    let _pollingTimer = null;
-    let _ultimoProcesado = 0;
-    let _totalActual = 0;
+    selModalidad.addEventListener('change', _actualizarBoton);
+    inpCantidad.addEventListener('input', _actualizarBoton);
 
-    // ── Habilitación del botón ────────────────────────────────────────────
-
-    function actualizarBoton() {
-        const valido = selModalidad.value && parseInt(inpCantidad.value) >= 1;
-        btnIniciar.disabled = !valido || !!_pollingTimer;
+    function _actualizarBoton() {
+        btnGenerar.disabled = !selModalidad.value || parseInt(inpCantidad.value) < 1;
+        alertaForm.classList.add('d-none');
     }
 
-    selModalidad.addEventListener('change', actualizarBoton);
-    inpCantidad.addEventListener('input', actualizarBoton);
+    // ── Flujo principal ───────────────────────────────────────────────────────
 
-    // ── Barra de progreso ─────────────────────────────────────────────────
-
-    function actualizarBarra(actual, total) {
-        const pct = total > 0 ? Math.round((actual / total) * 100) : 0;
-        barraProgreso.style.width = pct + '%';
-        barraProgreso.setAttribute('aria-valuenow', pct);
-        barraProgreso.textContent = actual + '/' + total;
-        tituloProgreso.textContent = 'Generando borradores en servidor... ' + actual + ' de ' + total;
-    }
-
-    // ── Log de resultados ─────────────────────────────────────────────────
-
-    function agregarLogItem(html, tipo) {
-        const item = document.createElement('div');
-        item.className = 'alert alert-' + tipo + ' py-1 px-2 mb-1 small log-item';
-        item.innerHTML = html;
-        logLote.appendChild(item);
-        logLote.scrollTop = logLote.scrollHeight;
-        return item;
-    }
-
-    // ── Polling ───────────────────────────────────────────────────────────
-
-    function iniciarPolling(loteId, total) {
-        _ultimoProcesado = 0;
-        _totalActual = total;
-        panelProgreso.classList.remove('d-none');
-        logLote.innerHTML = '';
-        actualizarBarra(0, total);
-        tituloProgreso.textContent = 'El servidor está generando ' + total + ' borradores en background...';
-        btnIniciar.disabled = true;
-
-        _pollingTimer = setInterval(function () {
-            _consultarEstado(loteId);
-        }, POLL_INTERVAL_MS);
-    }
-
-    function _consultarEstado(loteId) {
-        fetch(CFG.urlEstadoLote + loteId + '/estado/')
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                if (!data.ok) return;
-
-                actualizarBarra(data.cantidad_procesada, data.cantidad_total);
-
-                // Mostrar solo los nuevos resultados
-                var nuevos = data.resultados.slice(_ultimoProcesado);
-                nuevos.forEach(function (r) {
-                    if (r.ok) {
-                        agregarLogItem(
-                            '✓ Borrador ' + r.num + ' listo. ' +
-                            '<a href="/agente/borrador/' + r.generacion_id + '/" ' +
-                            'target="_blank" class="alert-link">Revisar y aprobar →</a>',
-                            'success'
-                        );
-                    } else {
-                        agregarLogItem(
-                            '✗ Borrador ' + r.num + ': ' + (r.error || 'Error al generar'),
-                            'danger'
-                        );
-                    }
-                });
-                _ultimoProcesado = data.resultados.length;
-
-                if (data.estado !== 'procesando') {
-                    _detenerPolling();
-                    localStorage.removeItem(LOTE_KEY);
-                    _finalizarLote(data.cantidad_exitosa, data.cantidad_fallida);
-                }
-            })
-            .catch(function (err) {
-                console.warn('Error al consultar estado del lote:', err);
-            });
-    }
-
-    function _detenerPolling() {
-        if (_pollingTimer) {
-            clearInterval(_pollingTimer);
-            _pollingTimer = null;
-        }
-    }
-
-    // ── Flujo principal ───────────────────────────────────────────────────
-
-    btnIniciar.addEventListener('click', async function () {
-        if (_pollingTimer) return;
-
+    btnGenerar.addEventListener('click', async function () {
         const modalidadId = selModalidad.value;
-        const cantidad = Math.min(20, Math.max(1, parseInt(inpCantidad.value) || 5));
-        const ocasion = inpOcasion.value.trim();
+        const cantidad    = Math.min(20, Math.max(1, parseInt(inpCantidad.value) || 5));
+        if (!modalidadId) return;
 
-        btnIniciar.disabled = true;
+        // Resetear estado visual
+        btnGenerar.disabled = true;
+        btnGenerar.textContent = 'Generando...';
+        alertaForm.classList.add('d-none');
+        gridMenus.innerHTML = '';
+        gridMenus.classList.remove('d-none');
+        resumenFinal.classList.add('d-none');
 
+        // 1. Tomar del pool
+        let ids;
         try {
-            const resp = await fetch(CFG.urlIniciarLote, {
+            const resp = await fetch(CFG.urlTomarPool, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': CFG.csrf,
-                },
-                body: JSON.stringify({
-                    modalidad_id: modalidadId,
-                    cantidad: cantidad,
-                    ocasion_especial: ocasion,
-                }),
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CFG.csrf },
+                body: JSON.stringify({ modalidad_id: modalidadId, cantidad }),
             });
             const data = await resp.json();
-
             if (!data.ok) {
-                alert('Error al iniciar lote: ' + (data.error || 'Error desconocido'));
-                btnIniciar.disabled = false;
+                _mostrarAlerta(data.error, 'warning');
+                _resetBoton();
                 return;
             }
-
-            localStorage.setItem(LOTE_KEY, JSON.stringify({ loteId: data.lote_id, total: cantidad }));
-            iniciarPolling(data.lote_id, cantidad);
-
-        } catch (err) {
-            alert('Error de red: ' + err.message);
-            btnIniciar.disabled = false;
-        }
-    });
-
-    // ── Cancelar (detiene polling, el hilo en servidor continúa) ─────────
-
-    btnCancelar.addEventListener('click', function () {
-        _detenerPolling();
-        localStorage.removeItem(LOTE_KEY);
-        tituloProgreso.textContent = 'Seguimiento cancelado (el servidor puede seguir generando)';
-        btnCancelar.disabled = false;
-        btnIniciar.disabled = false;
-        agregarLogItem('ℹ️ Dejaste de ver el progreso. Los borradores que se generen aparecerán en la tabla al recargar.', 'info');
-    });
-
-    // ── Finalizar lote ────────────────────────────────────────────────────
-
-    function _finalizarLote(exitosos, fallidos) {
-        btnIniciar.disabled = false;
-        tituloProgreso.textContent = 'Lote completado';
-        barraProgreso.classList.remove('progress-bar-animated');
-
-        const tipo = fallidos === 0 ? 'success' : (exitosos > 0 ? 'warning' : 'danger');
-        agregarLogItem(
-            '<strong>Resumen:</strong> ' + exitosos + ' borradores generados, ' + fallidos + ' fallidos.',
-            tipo
-        );
-
-        setTimeout(cargarBorradores, 1000);
-    }
-
-    // ── Tabla de borradores ───────────────────────────────────────────────
-
-    async function cargarBorradores() {
-        try {
-            const resp = await fetch(CFG.urlBorradores);
-            const data = await resp.json();
-            if (!data.ok || !data.borradores.length) {
-                if (tbodyBorradores) tbodyBorradores.innerHTML = '';
-                if (sinBorradores) sinBorradores.classList.remove('d-none');
-                if (badgePendientes) badgePendientes.textContent = '0';
-                return;
-            }
-            if (sinBorradores) sinBorradores.classList.add('d-none');
-            if (badgePendientes) badgePendientes.textContent = data.borradores.length;
-
-            if (!tbodyBorradores) return;
-            const frag = document.createDocumentFragment();
-            data.borradores.forEach(function (b, idx) {
-                const tr = document.createElement('tr');
-                tr.id = 'fila-borrador-' + b.id;
-                tr.innerHTML =
-                    '<td class="text-muted">' + (idx + 1) + '</td>' +
-                    '<td>' + b.modalidad + '</td>' +
-                    '<td>' + (b.menu || '<span class="text-muted fst-italic">Sin asignar</span>') + '</td>' +
-                    '<td>' + (b.programa || '<span class="text-muted">—</span>') + '</td>' +
-                    '<td class="text-muted small">' + b.fecha + '</td>' +
-                    '<td><a href="' + b.url_borrador + '" class="btn btn-sm btn-outline-primary" target="_blank">Ver / Aprobar</a></td>';
-                frag.appendChild(tr);
-            });
-            tbodyBorradores.innerHTML = '';
-            tbodyBorradores.appendChild(frag);
+            ids = data.ids;
         } catch (e) {
-            console.warn('No se pudo actualizar la tabla de borradores:', e);
+            _mostrarAlerta('Error de red: ' + e.message, 'danger');
+            _resetBoton();
+            return;
+        }
+
+        // 2. Mostrar tarjetas con animación secuencial
+        let aprobados = 0;
+        let rechazados = 0;
+
+        for (let i = 0; i < ids.length; i++) {
+            const id = ids[i];
+
+            // Crear tarjeta en estado "thinking"
+            const card = _crearCartaPensando(id, i + 1);
+            gridMenus.appendChild(card);
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            // Simular tiempo de generación (1.2s – 2.8s aleatorio)
+            const thinkTime = 1200 + Math.random() * 1600;
+            await _sleep(thinkTime);
+
+            // Obtener datos reales y revelar
+            try {
+                const preview = await _fetchPreview(id);
+                _revelarCarta(card, id, preview);
+            } catch (e) {
+                _revelarCartaError(card, i + 1);
+            }
+
+            // Pausa breve entre tarjetas
+            if (i < ids.length - 1) await _sleep(300);
+        }
+
+        // 3. Resumen final
+        _mostrarResumen(ids.length);
+        _resetBoton();
+    });
+
+    // ── Crear tarjeta en estado thinking ─────────────────────────────────────
+
+    function _crearCartaPensando(id, num) {
+        const col = document.createElement('div');
+        col.className = 'col-md-6 col-xl-4';
+        col.id = 'col-card-' + id;
+        col.innerHTML = `
+            <div class="menu-card card h-100 shadow-sm border-0 card-thinking">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="text-muted small">Generando...</span>
+                    </div>
+                    <div class="thinking-area flex-grow-1 d-flex flex-column align-items-start justify-content-center gap-2">
+                        <div class="thinking-line w-75"></div>
+                        <div class="thinking-line w-50"></div>
+                        <div class="thinking-line w-85"></div>
+                        <div class="thinking-line w-60"></div>
+                        <div class="thinking-line w-70"></div>
+                    </div>
+                    <div class="thinking-dots mt-3">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+            </div>`;
+        return col;
+    }
+
+    // ── Revelar tarjeta con contenido real ────────────────────────────────────
+
+    function _revelarCarta(col, id, preview) {
+        const prepsHtml = preview.preparaciones.map(p => {
+            const badge = p.invalidos > 0
+                ? `<span class="badge bg-warning text-dark ms-1" title="${p.invalidos} ingrediente(s) sin código">${p.invalidos} ⚠</span>`
+                : '<span class="badge bg-success ms-1">✓</span>';
+            return `<li class="prep-item">
+                        <span class="prep-nombre">${p.nombre}</span>${badge}
+                        <span class="text-muted small ms-1">(${p.componente})</span>
+                    </li>`;
+        }).join('');
+
+        const card = col.querySelector('.menu-card');
+        card.classList.remove('card-thinking');
+        card.classList.add('card-revealed');
+        card.innerHTML = `
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="text-muted small">${preview.modalidad}</span>
+                </div>
+                <ul class="prep-list flex-grow-1 mb-3">${prepsHtml}</ul>
+                <div class="d-flex gap-2 mt-auto">
+                    <a href="${CFG.urlBorrador}${id}/"
+                       target="_blank"
+                       class="btn btn-success btn-sm flex-grow-1">
+                        ✅ Revisar y aprobar
+                    </a>
+                    <button class="btn btn-outline-secondary btn-sm btn-rechazar"
+                            data-id="${id}" title="Devolver al pool">
+                        ✕
+                    </button>
+                </div>
+            </div>`;
+
+        // Listener del botón rechazar
+        card.querySelector('.btn-rechazar').addEventListener('click', function () {
+            _rechazarBorrador(id, col);
+        });
+    }
+
+    function _revelarCartaError(col, num) {
+        const card = col.querySelector('.menu-card');
+        card.classList.remove('card-thinking');
+        card.classList.add('border-warning');
+        card.innerHTML = `
+            <div class="card-body text-center text-muted py-4">
+                <p class="mb-0">⚠️ No se pudo cargar el menú ${num}</p>
+                <small>Intenta recargar la página</small>
+            </div>`;
+    }
+
+    // ── Rechazar borrador → vuelve al pool ────────────────────────────────────
+
+    async function _rechazarBorrador(id, col) {
+        const btn = col.querySelector('.btn-rechazar');
+        if (btn) btn.disabled = true;
+
+        try {
+            const resp = await fetch(CFG.urlRechazar + id + '/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CFG.csrf },
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                col.classList.add('card-rechazada');
+                setTimeout(function () { col.remove(); }, 400);
+            }
+        } catch (e) {
+            if (btn) btn.disabled = false;
         }
     }
 
-    // ── Reanudar polling si el usuario volvió con un lote activo ─────────
+    // ── Fetch preview ─────────────────────────────────────────────────────────
 
-    (function reanudarSiHayLoteActivo() {
-        const guardado = localStorage.getItem(LOTE_KEY);
-        if (!guardado) return;
+    function _fetchPreview(id) {
+        return fetch(CFG.urlPreview + id + '/preview/')
+            .then(function (r) { return r.json(); });
+    }
 
-        var info;
-        try { info = JSON.parse(guardado); } catch (e) { localStorage.removeItem(LOTE_KEY); return; }
+    // ── Resumen final ─────────────────────────────────────────────────────────
 
-        // Verificar estado actual antes de reanudar
-        fetch(CFG.urlEstadoLote + info.loteId + '/estado/')
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                if (!data.ok) { localStorage.removeItem(LOTE_KEY); return; }
+    function _mostrarResumen(total) {
+        resumenFinal.className = 'alert alert-success mt-4';
+        resumenFinal.innerHTML =
+            `<strong>✅ ${total} menú${total !== 1 ? 's' : ''} generado${total !== 1 ? 's' : ''}.</strong> ` +
+            'Revisa cada tarjeta y aprueba los que quieras importar a producción. ' +
+            'Los que rechaces vuelven al pool automáticamente.';
+        resumenFinal.classList.remove('d-none');
+    }
 
-                if (data.estado === 'procesando') {
-                    // Reanudar polling
-                    _ultimoProcesado = data.resultados.length;
-                    _totalActual = data.cantidad_total;
-                    panelProgreso.classList.remove('d-none');
-                    actualizarBarra(data.cantidad_procesada, data.cantidad_total);
-                    tituloProgreso.textContent = '↩️ Reanudando seguimiento del lote en curso...';
-                    btnIniciar.disabled = true;
+    // ── Utilidades ────────────────────────────────────────────────────────────
 
-                    // Mostrar resultados ya obtenidos
-                    logLote.innerHTML = '';
-                    data.resultados.forEach(function (r) {
-                        if (r.ok) {
-                            agregarLogItem(
-                                '✓ Borrador ' + r.num + ' (ya generado) — ' +
-                                '<a href="/agente/borrador/' + r.generacion_id + '/" target="_blank" class="alert-link">Ver →</a>',
-                                'success'
-                            );
-                        } else {
-                            agregarLogItem('✗ Borrador ' + r.num + ': ' + (r.error || 'Error'), 'danger');
-                        }
-                    });
+    function _mostrarAlerta(msg, tipo) {
+        alertaForm.className = 'alert alert-' + tipo + ' mt-3';
+        alertaForm.textContent = msg;
+        alertaForm.classList.remove('d-none');
+    }
 
-                    _pollingTimer = setInterval(function () {
-                        _consultarEstado(info.loteId);
-                    }, POLL_INTERVAL_MS);
-                } else {
-                    // Lote ya terminó mientras el usuario estaba fuera
-                    localStorage.removeItem(LOTE_KEY);
-                    cargarBorradores();
-                }
-            })
-            .catch(function () { localStorage.removeItem(LOTE_KEY); });
-    })();
+    function _resetBoton() {
+        btnGenerar.disabled = false;
+        btnGenerar.textContent = '✨ Generar menús';
+    }
+
+    function _sleep(ms) {
+        return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
 
 })();
