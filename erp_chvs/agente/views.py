@@ -181,6 +181,19 @@ def index(request):
 
 @login_required
 def borrador_view(request, generacion_id):
+    # Si el borrador está en el pool, asignarlo atómicamente a este usuario
+    with transaction.atomic():
+        locked = (
+            GeneracionIA.objects
+            .select_for_update(skip_locked=True)
+            .filter(id=generacion_id, estado=GeneracionIA.ESTADO_POOL)
+            .first()
+        )
+        if locked:
+            locked.estado = GeneracionIA.ESTADO_PENDIENTE
+            locked.usuario_solicitante = request.user
+            locked.save(update_fields=['estado', 'usuario_solicitante'])
+
     generacion = get_object_or_404(
         GeneracionIA.objects.select_related(
             'id_modalidad', 'id_menu__id_modalidad', 'id_menu__id_contrato', 'usuario_solicitante'
@@ -410,12 +423,15 @@ def api_descartar(request, generacion_id):
 @require_POST
 def api_rechazar_borrador(request, generacion_id):
     """Devuelve un borrador al pool (disponible para otro nutricionista)."""
-    generacion = get_object_or_404(
-        GeneracionIA, id=generacion_id, usuario_solicitante=request.user
-    )
-    generacion.estado = GeneracionIA.ESTADO_POOL
-    generacion.usuario_solicitante = None
-    generacion.save(update_fields=['estado', 'usuario_solicitante'])
+    generacion = get_object_or_404(GeneracionIA, id=generacion_id)
+    # Ya está en el pool — nada que hacer
+    if generacion.estado == GeneracionIA.ESTADO_POOL:
+        return JsonResponse({'ok': True})
+    # Solo puede devolver al pool el usuario que lo tiene asignado
+    if generacion.estado == GeneracionIA.ESTADO_PENDIENTE and generacion.usuario_solicitante == request.user:
+        generacion.estado = GeneracionIA.ESTADO_POOL
+        generacion.usuario_solicitante = None
+        generacion.save(update_fields=['estado', 'usuario_solicitante'])
     return JsonResponse({'ok': True})
 
 
@@ -508,33 +524,25 @@ def api_tomar_del_pool(request):
 
     modalidad = get_object_or_404(ModalidadesDeConsumo, id_modalidades=modalidad_id)
 
-    tomados = []
-    with transaction.atomic():
-        borradores = (
-            GeneracionIA.objects
-            .select_for_update(skip_locked=True)
-            .filter(estado=GeneracionIA.ESTADO_POOL, id_modalidad=modalidad)
-            .order_by('fecha_creacion')[:cantidad]
-        )
-        for b in borradores:
-            b.estado = GeneracionIA.ESTADO_PENDIENTE
-            b.usuario_solicitante = request.user
-            b.save(update_fields=['estado', 'usuario_solicitante'])
-            tomados.append(b.id)
+    ids = list(
+        GeneracionIA.objects
+        .filter(estado=GeneracionIA.ESTADO_POOL, id_modalidad=modalidad)
+        .order_by('fecha_creacion')
+        .values_list('id', flat=True)[:cantidad]
+    )
 
-    if not tomados:
+    if not ids:
         return JsonResponse({
             'ok': False,
             'error': f'No hay borradores disponibles en el pool para la modalidad "{modalidad.modalidad}". '
                      f'El sistema los genera automáticamente cada 24h.',
         })
 
-    solicitados = cantidad
     return JsonResponse({
         'ok': True,
-        'tomados': len(tomados),
-        'solicitados': solicitados,
-        'ids': tomados,
+        'tomados': len(ids),
+        'solicitados': cantidad,
+        'ids': ids,
     })
 
 

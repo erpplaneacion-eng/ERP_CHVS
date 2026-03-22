@@ -90,7 +90,7 @@ def rellenar_pool(min_por_modalidad=20, pausa_entre_llamadas=1.5, ids_modalidad=
 
     for modalidad in modalidades:
         en_pool = GeneracionIA.objects.filter(
-            estado=GeneracionIA.ESTADO_POOL,
+            estado__in=[GeneracionIA.ESTADO_POOL, GeneracionIA.ESTADO_PENDIENTE],
             id_modalidad=modalidad,
         ).count()
 

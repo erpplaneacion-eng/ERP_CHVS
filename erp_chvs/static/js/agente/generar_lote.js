@@ -174,25 +174,11 @@
             </div>`;
     }
 
-    // ── Rechazar borrador → vuelve al pool ────────────────────────────────────
+    // ── Rechazar tarjeta → ocultar (borrador permanece en pool) ──────────────
 
-    async function _rechazarBorrador(id, col) {
-        const btn = col.querySelector('.btn-rechazar');
-        if (btn) btn.disabled = true;
-
-        try {
-            const resp = await fetch(CFG.urlRechazar + id + '/', {
-                method: 'POST',
-                headers: { 'X-CSRFToken': CFG.csrf },
-            });
-            const data = await resp.json();
-            if (data.ok) {
-                col.classList.add('card-rechazada');
-                setTimeout(function () { col.remove(); }, 400);
-            }
-        } catch (e) {
-            if (btn) btn.disabled = false;
-        }
+    function _rechazarBorrador(id, col) {
+        col.classList.add('card-rechazada');
+        setTimeout(function () { col.remove(); }, 400);
     }
 
     // ── Fetch preview ─────────────────────────────────────────────────────────
