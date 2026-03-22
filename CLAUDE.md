@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Deprecated**: `ocr_validation` and `iagenerativa` apps removed.
 **Not yet active**: `Api/` app (Siesa ERP integration) — not in `INSTALLED_APPS`, empty stub. See `erp_chvs/planeacion/PROPUESTA_INTEGRACION_SIESA.md` for the planned SC/RQI connectors (Solicitudes de Compra and Requisiciones de Inventario to SIESA ERP SAAS).
 **`calidad/` app**: ACTIVE — employee quality certificates (BPM), external employee DB lookup, landscape A4 PDF generation, and WhatsApp bot integration via external `apiw` service (Railway). See `erp_chvs/WHATSAPP_BOT_INTEGRACION.md` for full setup documentation.
-**`agente/` app**: ACTIVE — AI-powered preparation generator (Gemini 2.5 Flash, temp=0.7) with human-in-the-loop review. Replaces the old `generar_menu_con_ia()` / `gemini_service.py` / `minuta_service.py` flow that no longer exists in `nutricion`.
+**`agente/` app**: ACTIVE — AI-powered preparation generator (Gemini 2.5 Flash, temp=0.7) with human-in-the-loop review, pre-generated borrador pool, batch generation, and optional RAG via Pinecone (normative documents). Replaces the old `generar_menu_con_ia()` / `gemini_service.py` / `minuta_service.py` flow that no longer exists in `nutricion`.
 **`contabilidad/` app**: ACTIVE — accounting document workflow: leaders upload invoices, Compras reviews/approves per-invoice, Contabilidad gives final approval. Multi-role workflow with audit trail and KPI dashboard.
 
 ## Setup (run from `ERP_CHVS/`)
@@ -56,6 +56,10 @@ python manage.py dbshell
 python manage.py setup_groups          # Create default RBAC groups
 python manage.py optimizar_logos       # Optimize institution logos for PDFs
 python manage.py inspeccionar_db       # Database structure inspector
+python manage.py rellenar_pool         # Fill agente pre-generated borrador pool (default min=20/modality)
+python manage.py rellenar_pool --min 10 --modalidad "COMPLEMENTO PM"  # Targeted refill
+python manage.py ingestar_normativo    # Ingest PAE normative JSON/PDFs into Pinecone for RAG
+python manage.py ingestar_normativo --archivo /ruta/archivo.json --dry-run
 
 # AI integration test
 python test_gemini.py
@@ -286,6 +290,11 @@ DB_PORT=5432
 
 GEMINI_API_KEY=your-key
 
+# Agente — RAG via Pinecone (optional; RAG silently disabled if not set)
+# PINECONE_API_KEY=<key>
+# PINECONE_INDEX=minutas-index       # default
+# PINECONE_NAMESPACE=minutas         # default
+
 # Calidad — WhatsApp bot integration
 CALIDAD_WA_API_KEY=<shared with ERP_API_KEY in apiw Railway service>
 EMPLEADOS_DB_URL=<PostgreSQL connection URL for external employee database>
@@ -322,6 +331,8 @@ CLOUDINARY_API_KEY=<key>
 CLOUDINARY_API_SECRET=<secret>
 CALIDAD_WA_API_KEY=<shared secret with apiw service>
 EMPLEADOS_DB_URL=<external PostgreSQL URL for employee lookup>
+# Optional — enables RAG for agente app (silently disabled if absent):
+# PINECONE_API_KEY=<key>
 ```
 `DJANGO_ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` are auto-populated from `RAILWAY_PUBLIC_DOMAIN`, but can be overridden manually.
 
@@ -388,23 +399,35 @@ Helper APIs: `GET /facturacion/api/conteo-estudiantes-por-nivel/`, `GET /factura
 
 Grade transfer between sedes: `GET /facturacion/api/obtener-sedes-con-grados/`, `POST /facturacion/api/transferir-grados/`.
 
-### Agente: AI-Powered Preparation Generator (human-in-the-loop)
+### Agente: AI-Powered Preparation Generator (human-in-the-loop + pool)
 
-Generates preparations + ingredients for an **existing empty menu** using Gemini 2.5 Flash (temp=0.7). The user must review and approve the draft before anything is persisted to production tables.
+Generates preparations + ingredients using Gemini 2.5 Flash (`gemini-2.5-flash`, temp=0.7). The user must review and approve the draft before anything is persisted to production tables. Supports three flows: **pool** (instant from pre-generated stock), **live** (background thread), and **batch** (bulk background generation).
 
 ```
-POST /agente/api/generar/  {modalidad_id, ocasion_especial?}
-    → context_builder.obtener_contexto_modalidad():
-        - Random sample of 5 real menus as style examples
-        - Top-8 + 2 random ingredients per component (frequency-ranked)
-        - Support catalog: top-20 + random rotation by group (condiments, oils, etc.)
-    → llm_service.generar_borrador(): Gemini 2.5 Flash, JSON response
-    → validador.validar_preparaciones(): checks codes against TablaAlimentos2018Icbf
-    → Saves GeneracionIA (estado=pendiente_revision) + BorradorPreparacionIA + BorradorIngredienteIA
+POST /agente/api/generar/  {modalidad_id, ocasion_especial?, menu_id_destino?}
+    ① Pool check (only when no ocasion_especial and no menu_id_destino):
+        → SELECT FOR UPDATE SKIP LOCKED: takes first disponible_pool borrador for the modalidad
+        → estado → pendiente_revision, asigna usuario_solicitante
+        → returns {ok, generacion_id, fuente: 'pool'}  ← instant, no LLM call
+    ② Live generation (if pool empty or ocasion especial):
+        → Creates GeneracionIA (estado=procesando)
+        → Launches background thread _ejecutar_generacion():
+            - context_builder.obtener_contexto_modalidad(): 5 real menu examples,
+              top-8+2 random ingredients/component, support catalog
+            - rag_service.obtener_contexto_normativo(): fetches normative chunks from Pinecone
+              (silently skips if PINECONE_API_KEY not set)
+            - llm_service.generar_borrador(): Gemini 2.5 Flash, JSON response
+            - validador.validar_preparaciones(): checks codes against TablaAlimentos2018Icbf
+            - Saves BorradorPreparacionIA + BorradorIngredienteIA
+            - estado → pendiente_revision
+        → returns {ok, generacion_id, fuente: 'vivo'}  ← polling required
+
+GET /agente/api/generar/<generacion_id>/estado/   — poll until estado != 'procesando'
 
 GET /agente/borrador/<generacion_id>/   — review page
     → User can: correct invalid ingredients (autocomplete search), delete ingredients,
-      select destination menu (programa + modalidad + empty menu), approve or discard
+      select destination menu (programa + modalidad + empty menu), approve, discard or rechazar
+    POST /agente/api/rechazar/<generacion_id>/  → returns borrador to pool (estado → disponible_pool)
 
 POST /agente/api/aprobar/<generacion_id>/  {menu_id}
     → importador.importar_borrador(): atomic transaction
@@ -414,18 +437,66 @@ POST /agente/api/aprobar/<generacion_id>/  {menu_id}
             → Creates TablaAnalisisNutricionalMenu + TablaIngredientesPorNivel
               for all 5 educational levels using MinutaPatronMeta weights
         - GeneracionIA.estado = aprobado, records approver + timestamp
+
+POST /agente/api/descartar/<generacion_id>/  → estado = descartado
 ```
+
+**Batch / Pool replenishment** (`GET /agente/generar-lote/`, `POST /agente/api/lote/iniciar/`):
+```
+POST /agente/api/lote/iniciar/  {modalidad_id, cantidad (1–20), ocasion_especial?}
+    → Creates LoteGeneracion (estado=procesando)
+    → Launches background thread _hilo_lote():
+        - Loops N times: create GeneracionIA → LLM → validate → save borradores
+        - 1.5s pause between calls to avoid rate limits
+        - estado → disponible_pool per borrador
+        - Updates LoteGeneracion.cantidad_procesada/exitosa/fallida in real time
+    → returns {ok, lote_id}
+
+GET /agente/api/lote/<lote_id>/estado/   — poll lote progress
+GET /agente/api/lote/pool-disponible/?modalidad_id=X   — count pool borradores
+POST /agente/api/lote/tomar/  {modalidad_id, cantidad}   — take N borradores from pool
+GET /agente/api/lote/borradores/   — list user's pending borradores
+GET /agente/api/borrador/<generacion_id>/preview/   — lightweight card preview
+```
+
+**Pool management** (`pool_service.py`, `rellenar_pool` management command, `apps.py` scheduler):
+- Configured modalidades: `MODALIDADES_POOL = ['020511','020701','20501','20502','20503','20507','20510']`
+- `rellenar_pool(min_por_modalidad=20)` — for each modalidad, generates borradores until pool ≥ min
+- Called manually via `python manage.py rellenar_pool [--min N] [--modalidad <name>]`
+- Pool borradores have `usuario_solicitante=None`, `estado=disponible_pool`
+- **Auto-scheduler** (`AgenteConfig.ready()`): launches daemon thread `pool-scheduler` on startup; waits 60s then runs `rellenar_pool` every 24h. Skipped during: `migrate`, `collectstatic`, `test`, `rellenar_pool`, `ingestar_normativo`, and runserver's reloader process.
+
+**RAG system** (`rag_service.py`, `ingestar_normativo` management command):
+- Vector store: Pinecone (serverless, AWS us-east-1, cosine metric, 768 dims)
+- Embedding model: `gemini-embedding-001` via Google REST API v1beta
+- Corpus: normative PDFs/JSONs in `agente/data/normativos/` (Resolución 00335/2021, etc.)
+- `obtener_contexto_normativo(consulta)` — fetches top-5 chunks, inserts into Gemini prompt
+- Silently degrades (returns `''`) if `PINECONE_API_KEY` not set — LLM call proceeds without RAG
+- Ingestion: `python manage.py ingestar_normativo [--archivo path] [--dry-run] [--reimportar]`
+  - JSON format: DocParse/LlamaParse pre-chunked (with page grounding)
+  - PDF format: pypdf text extraction + sliding window chunking; fallback to Gemini multimodal for scanned PDFs
+- Env vars: `PINECONE_API_KEY` (required to enable RAG), `PINECONE_INDEX` (default: `minutas-index`), `PINECONE_NAMESPACE` (default: `minutas`)
+
+**Prompt rules** (enforced in `llm_service._construir_prompt()`):
+- Generates exactly N preparations, one per component (id_componente must match exactly)
+- Only uses ICBF codes from the provided catalog — no invented codes
+- Procedimiento: 5–10 numbered steps, industrial school kitchen appropriate
+- Inocuity (PAE Resolución 2674/2013 INVIMA): NO wooden utensils — only stainless steel, food-grade plastic, or tempered glass
 
 **Models** (`agente/models.py`):
 - `GeneracionIA` — one record per LLM call: modalidad, prompt, raw response, estado, audit fields
-- `BorradorPreparacionIA` — proposed preparation (estado_validacion: valida/con_duda/invalida)
+  - `modelo_llm` default: `'gemini-2.0-flash'` (field), actual model used: `gemini-2.5-flash` (code constant)
+- `BorradorPreparacionIA` — proposed preparation (estado_validacion: valida/con_duda/invalida; includes `procedimiento` field)
 - `BorradorIngredienteIA` — proposed ingredient (estado_validacion: valido/no_encontrado)
+- `LoteGeneracion` — tracks batch generation: cantidad_total/procesada/exitosa/fallida, resultados (JSON array), estado
 
-**States**: `procesando` → `pendiente_revision` → `aprobado` / `descartado` / `error`
+**States**:
+- `GeneracionIA`: `procesando` → `disponible_pool` (pool stock) OR `pendiente_revision` (assigned to user) → `aprobado` / `descartado` / `error`
+- `LoteGeneracion`: `procesando` → `completado` / `error`
 
 **Ocasión especial**: optional field that instructs Gemini to create thematic names (e.g. "Halloween" → "Poción de Lentejas Embrujada"). Ingredients and ICBF codes remain the same; only names change.
 
-Key files: `agente/views.py`, `agente/services/context_builder.py`, `agente/services/llm_service.py`, `agente/services/validador.py`, `agente/services/importador.py`, `agente/services/inicializador_niveles.py`.
+Key files: `agente/views.py`, `agente/services/context_builder.py`, `agente/services/llm_service.py`, `agente/services/validador.py`, `agente/services/importador.py`, `agente/services/inicializador_niveles.py`, `agente/services/pool_service.py`, `agente/services/rag_service.py`.
 
 ### Planeacion: Ration Planning from Focalization Lists
 Populates `PlanificacionRaciones` from existing `ListadosFocalizacion` data, grouped by sede + educational level:

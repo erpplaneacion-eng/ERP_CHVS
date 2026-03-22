@@ -1,225 +1,290 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Revisión de Borrador IA — {{ generacion.id_modalidad.modalidad }}{% endblock %}
+{% block title %}NIA — Revisión de Borrador{% endblock %}
 
 {% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/agente/borrador.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="bdr-studio">
 
-    <div class="d-flex justify-content-between align-items-start mb-4">
-        <div>
-            <h3 class="mb-1">Revisión de Borrador IA</h3>
-            <p class="text-muted mb-0">
-                <strong>Modalidad:</strong> {{ generacion.id_modalidad.modalidad }}
-                {% if generacion.ocasion_especial %}
-                — <span class="badge bg-warning text-dark fs-6">🎉 {{ generacion.ocasion_especial }}</span>
-                {% endif %}
-                {% if generacion.id_menu %}
-                — importado al <strong>Menú {{ generacion.id_menu.menu }}</strong>
-                ({{ generacion.id_menu.id_contrato.programa }})
-                {% endif %}
-            </p>
+    <!-- ── NIA Header ──────────────────────────────────────────────────────── -->
+    <div class="bdr-header">
+        <div class="bdr-avatar">
+            <i class="fa-solid fa-brain"></i>
         </div>
-        <a href="{% url 'agente:index' %}" class="btn btn-outline-secondary">← Volver</a>
+        <div class="bdr-agent-info">
+            <div class="bdr-agent-name">NIA</div>
+            <div class="bdr-agent-status">Asistente Nutricional IA &nbsp;·&nbsp; En línea</div>
+        </div>
+        <a href="{% url 'agente:index' %}" class="bdr-back-btn">
+            <i class="fa-solid fa-arrow-left"></i>
+            Volver
+        </a>
     </div>
 
+    <!-- ── Meta chips ─────────────────────────────────────────────────────── -->
+    <div class="bdr-meta">
+        <div class="bdr-meta-chip">
+            <i class="fa-solid fa-utensils"></i>
+            {{ generacion.id_modalidad.modalidad }}
+        </div>
+        {% if generacion.ocasion_especial %}
+        <div class="bdr-meta-chip bdr-meta-chip--warm">
+            <i class="fa-solid fa-star"></i>
+            {{ generacion.ocasion_especial }}
+        </div>
+        {% endif %}
+        {% if generacion.id_menu %}
+        <div class="bdr-meta-chip bdr-meta-chip--dim">
+            <i class="fa-solid fa-bookmark"></i>
+            Menú {{ generacion.id_menu.menu }}
+            {% if generacion.id_menu.id_contrato %}&nbsp;·&nbsp;{{ generacion.id_menu.id_contrato.programa }}{% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ── Estado: aprobado ────────────────────────────────────────────────── -->
     {% if generacion.estado == 'aprobado' %}
-    <div class="alert alert-success">
-        <strong>Borrador aprobado e importado.</strong>
-        Las preparaciones fueron guardadas en el
-        <strong>Menú {{ generacion.id_menu.menu }}</strong>
-        ({{ generacion.id_menu.id_contrato.programa }}).
+    <div class="bdr-status bdr-status--ok">
+        <div class="bdr-status-icon"><i class="fa-solid fa-circle-check"></i></div>
+        <div>
+            <div class="bdr-status-title">Borrador aprobado e importado</div>
+            <div class="bdr-status-sub">
+                Las preparaciones fueron guardadas en el
+                <strong>Menú {{ generacion.id_menu.menu }}</strong>
+                ({{ generacion.id_menu.id_contrato.programa }}).
+            </div>
+        </div>
     </div>
+
+    <!-- ── Estado: descartado ─────────────────────────────────────────────── -->
     {% elif generacion.estado == 'descartado' %}
-    <div class="alert alert-secondary">
-        Este borrador fue descartado.
+    <div class="bdr-status bdr-status--dim">
+        <div class="bdr-status-icon"><i class="fa-solid fa-trash-can"></i></div>
+        <div>
+            <div class="bdr-status-title">Borrador descartado</div>
+            <div class="bdr-status-sub">Este borrador fue descartado y no se importó al sistema.</div>
+        </div>
     </div>
+
+    <!-- ── Estado: error ──────────────────────────────────────────────────── -->
     {% elif generacion.estado == 'error' %}
-    <div class="alert alert-danger">
-        <strong>Error al generar el borrador:</strong>
-        <ul class="mb-0 mt-1">
-            {% for e in generacion.errores_validacion %}<li>{{ e }}</li>{% endfor %}
-        </ul>
+    <div class="bdr-status bdr-status--err">
+        <div class="bdr-status-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div>
+            <div class="bdr-status-title">Error al generar el borrador</div>
+            <ul class="bdr-status-list">
+                {% for e in generacion.errores_validacion %}<li>{{ e }}</li>{% endfor %}
+            </ul>
+        </div>
     </div>
+
+    <!-- ── Estado: pendiente de revisión ─────────────────────────────────── -->
     {% else %}
 
-    <div class="alert alert-warning d-flex align-items-center gap-2 mb-4">
-        <span style="font-size:1.3rem;">⚠️</span>
-        <div>
-            <strong>Borrador pendiente de revisión.</strong>
-            Revisa cada preparación. Los ingredientes marcados en rojo deben corregirse antes de aprobar.
+    <!-- NIA greeting bubble -->
+    <div class="bdr-greeting">
+        <div class="bdr-greeting-av"><i class="fa-solid fa-brain"></i></div>
+        <div class="bdr-greeting-bubble">
+            Aquí están las preparaciones que propuse. Revisa cada una —
+            los ingredientes marcados en <strong class="bdr-warn-text">rojo</strong>
+            no se encontraron en el catálogo ICBF y deben corregirse antes de aprobar.
             <strong>La IA no garantiza precisión nutricional.</strong>
         </div>
     </div>
 
+    <!-- ── Lista de preparaciones ─────────────────────────────────────────── -->
     <div id="lista-preparaciones">
         {% for prep in preparaciones %}
-        <div class="card mb-3 prep-card" id="prep-{{ prep.id }}"
+        <div class="bdr-card prep-card
+                {% if prep.estado_validacion == 'valida' %}bdr-card--ok
+                {% elif prep.estado_validacion == 'con_duda' %}bdr-card--warn
+                {% else %}bdr-card--err{% endif %}"
+             id="prep-{{ prep.id }}"
              data-estado="{{ prep.estado_validacion }}">
-            <div class="card-header d-flex justify-content-between align-items-center
-                {% if prep.estado_validacion == 'valida' %}bg-success text-white
-                {% elif prep.estado_validacion == 'con_duda' %}bg-warning
-                {% else %}bg-danger text-white{% endif %}">
-                <span>
-                    <strong>{{ prep.nombre_preparacion }}</strong>
+
+            <!-- Card header -->
+            <div class="bdr-card-header">
+                <div class="bdr-card-title-row">
+                    <span class="bdr-prep-name">{{ prep.nombre_preparacion }}</span>
                     {% if prep.componente_sugerido %}
-                        <span class="badge bg-light text-dark ms-2">{{ prep.componente_sugerido.componente }}</span>
+                    <span class="bdr-comp-badge">{{ prep.componente_sugerido.componente }}</span>
+                    {% endif %}
+                </div>
+                <span class="bdr-state-badge
+                    {% if prep.estado_validacion == 'valida' %}bdr-state--ok
+                    {% elif prep.estado_validacion == 'con_duda' %}bdr-state--warn
+                    {% else %}bdr-state--err{% endif %}">
+                    {% if prep.estado_validacion == 'valida' %}
+                        <i class="fa-solid fa-circle-check"></i> Válida
+                    {% elif prep.estado_validacion == 'con_duda' %}
+                        <i class="fa-solid fa-triangle-exclamation"></i> Con duda
+                    {% else %}
+                        <i class="fa-solid fa-circle-xmark"></i> Inválida
                     {% endif %}
                 </span>
-                <span class="badge bg-white text-dark">
-                    {% if prep.estado_validacion == 'valida' %}✅ Válida
-                    {% elif prep.estado_validacion == 'con_duda' %}⚠️ Con duda
-                    {% else %}❌ Inválida{% endif %}
-                </span>
             </div>
-            <div class="card-body p-0">
-                <table class="table table-sm mb-0">
-                    <thead class="table-light">
+
+            <!-- Ingredient table -->
+            <div class="bdr-table-wrap">
+                <table class="bdr-table">
+                    <thead>
                         <tr>
                             <th>Código ICBF</th>
-                            <th>Ingrediente (catálogo ICBF)</th>
-                            <th style="width:100px"></th>
+                            <th>Ingrediente</th>
+                            <th class="bdr-th-actions"></th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for ing in prep.ingredientes.all %}
                         <tr id="ing-row-{{ ing.id }}"
-                            class="{% if ing.estado_validacion == 'no_encontrado' %}table-danger{% endif %}">
-                            <td>
-                                <code>{{ ing.codigo_icbf_sugerido }}</code>
+                            class="{% if ing.estado_validacion == 'no_encontrado' %}bdr-ing--missing{% endif %}">
+                            <td class="bdr-td-code">
+                                <code class="bdr-code">{{ ing.codigo_icbf_sugerido }}</code>
                                 {% if ing.estado_validacion == 'no_encontrado' %}
-                                    <span class="badge bg-danger ms-1" title="{{ ing.observaciones }}">No encontrado</span>
+                                <span class="bdr-missing-badge" title="{{ ing.observaciones }}">No encontrado</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="bdr-td-name">
                                 {% if ing.alimento_icbf %}
                                     {{ ing.alimento_icbf.nombre_del_alimento }}
                                 {% else %}
-                                    <span class="text-danger fst-italic">{{ ing.nombre_sugerido }}</span>
+                                    <span class="bdr-missing-name">{{ ing.nombre_sugerido }}</span>
                                 {% endif %}
                             </td>
-                            <td class="text-end">
+                            <td class="bdr-td-actions">
                                 {% if ing.estado_validacion == 'no_encontrado' %}
-                                <button class="btn btn-warning btn-sm btn-corregir-ing me-1"
+                                <button class="bdr-btn-fix btn-corregir-ing"
                                         data-ing-id="{{ ing.id }}"
-                                        title="Buscar y corregir ingrediente">✏️</button>
+                                        title="Buscar y corregir ingrediente">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
                                 {% endif %}
-                                <button class="btn btn-link btn-sm text-danger p-0 btn-eliminar-ing"
+                                <button class="bdr-btn-del btn-eliminar-ing"
                                         data-ing-id="{{ ing.id }}"
-                                        title="Eliminar ingrediente">✕</button>
+                                        title="Eliminar ingrediente">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
                             </td>
                         </tr>
-                        <tr id="ing-busqueda-{{ ing.id }}" class="d-none bg-light">
-                            <td colspan="3" class="py-2 px-3">
-                                <div class="input-group input-group-sm">
+                        <!-- Search/correction row -->
+                        <tr id="ing-busqueda-{{ ing.id }}" class="d-none bdr-search-row">
+                            <td colspan="3" class="bdr-search-cell">
+                                <div class="bdr-search-wrap">
                                     <input type="text"
-                                           class="form-control inp-buscar-alimento"
+                                           class="bdr-search-input inp-buscar-alimento"
                                            data-ing-id="{{ ing.id }}"
                                            placeholder="Escribe nombre del alimento..."
                                            autocomplete="off">
-                                    <button class="btn btn-outline-secondary btn-cancelar-correccion"
+                                    <button class="bdr-btn-cancel btn-cancelar-correccion"
                                             data-ing-id="{{ ing.id }}">Cancelar</button>
                                 </div>
                                 <div id="ing-sugerencias-{{ ing.id }}"
-                                     class="list-group mt-1 ing-sugerencias-list"></div>
+                                     class="bdr-suggestions ing-sugerencias-list"></div>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+
                 {% if prep.observaciones %}
-                <div class="px-3 py-2 text-muted small border-top">{{ prep.observaciones }}</div>
+                <div class="bdr-obs">{{ prep.observaciones }}</div>
                 {% endif %}
+
                 {% if prep.procedimiento %}
-                <div class="border-top">
-                    <button class="btn btn-link btn-sm text-secondary px-3 py-2 w-100 text-start"
+                <div class="bdr-proc-wrap">
+                    <button class="bdr-proc-toggle"
                             type="button"
                             data-bs-toggle="collapse"
                             data-bs-target="#proc-{{ prep.id }}"
                             aria-expanded="false">
-                        📋 Ver procedimiento de preparación
+                        <i class="fa-solid fa-clipboard-list"></i>
+                        Ver procedimiento de preparación
+                        <i class="fa-solid fa-chevron-down bdr-proc-chevron"></i>
                     </button>
                     <div class="collapse" id="proc-{{ prep.id }}">
-                        <div class="px-3 pb-3 small procedimiento-texto">{{ prep.procedimiento }}</div>
+                        <div class="bdr-proc-body">{{ prep.procedimiento }}</div>
                     </div>
                 </div>
                 {% endif %}
             </div>
         </div>
         {% empty %}
-        <div class="alert alert-warning">El borrador no contiene preparaciones.</div>
+        <div class="bdr-empty">El borrador no contiene preparaciones.</div>
         {% endfor %}
     </div>
 
-    <!-- Selector de menú destino -->
+    <!-- ── Selector de menú destino ───────────────────────────────────────── -->
     {% if generacion.id_menu %}
-    {# Menú pre-asignado desde generación por lote — no necesita selector #}
-    <div class="card mt-4 border-success">
-        <div class="card-header bg-success text-white">
-            <strong>Menú destino (pre-asignado)</strong>
+    <div class="bdr-panel bdr-panel--assigned" id="panel-menu-selector">
+        <div class="bdr-panel-header">
+            <i class="fa-solid fa-bookmark"></i>
+            Menú destino (pre-asignado)
         </div>
-        <div class="card-body">
-            <p class="mb-1">
-                <strong>{{ generacion.id_menu.menu }}</strong>
-                {% if generacion.id_menu.id_contrato %}
-                — {{ generacion.id_menu.id_contrato.programa }}
-                {% endif %}
-            </p>
-            <div class="form-text">
+        <div class="bdr-panel-body">
+            <div class="bdr-panel-menu-name">{{ generacion.id_menu.menu }}</div>
+            {% if generacion.id_menu.id_contrato %}
+            <div class="bdr-panel-menu-sub">{{ generacion.id_menu.id_contrato.programa }}</div>
+            {% endif %}
+            <div class="bdr-panel-note">
                 Menú asignado automáticamente durante la generación en lote.
                 Puedes aprobarlo directamente o descartarlo.
             </div>
         </div>
     </div>
     {% else %}
-    {# Menú no asignado — flujo unitario normal #}
-    <div class="card mt-4 border-success">
-        <div class="card-header bg-success text-white">
-            <strong>¿A qué menú deseas importar estas preparaciones?</strong>
+    <div class="bdr-panel" id="panel-menu-selector">
+        <div class="bdr-panel-header">
+            <i class="fa-solid fa-bullseye"></i>
+            ¿A qué menú importar estas preparaciones?
         </div>
-        <div class="card-body">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-5">
-                    <label class="form-label fw-semibold">Programa / Contrato</label>
-                    <select id="sel-programa-destino" class="form-select">
-                        <option value="">Seleccione un programa...</option>
+        <div class="bdr-panel-body">
+            <div class="bdr-sel-row">
+                <div class="bdr-sel-col">
+                    <label class="bdr-label" for="sel-programa-destino">Programa / Contrato</label>
+                    <select id="sel-programa-destino" class="bdr-select">
+                        <option value="">Selecciona un programa...</option>
                         {% for p in programas %}
                             <option value="{{ p.id }}">{{ p.programa }} ({{ p.contrato }})</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-5">
-                    <label class="form-label fw-semibold">Menú destino</label>
-                    <select id="sel-menu-destino" class="form-select" disabled>
-                        <option value="">Primero seleccione un programa...</option>
+                <div class="bdr-sel-col">
+                    <label class="bdr-label" for="sel-menu-destino">Menú destino</label>
+                    <select id="sel-menu-destino" class="bdr-select" disabled>
+                        <option value="">Primero selecciona un programa...</option>
                     </select>
                 </div>
             </div>
-            <div class="form-text mt-2">
+            <div class="bdr-panel-note">
                 Solo se muestran menús de la modalidad <strong>{{ generacion.id_modalidad.modalidad }}</strong>.
             </div>
         </div>
     </div>
     {% endif %}
 
-    <div id="alert-resultado" class="alert d-none mt-3"></div>
+    <div id="alert-resultado" class="bdr-result-alert d-none"></div>
 
-    <div class="d-flex gap-3 mt-4 justify-content-end">
-        <button id="btn-descartar" class="btn btn-outline-danger">
-            🗑 Descartar borrador
+    <!-- ── Acciones ───────────────────────────────────────────────────────── -->
+    <div class="bdr-actions">
+        <button id="btn-descartar" class="bdr-btn-discard">
+            <i class="fa-solid fa-trash-can"></i>
+            Descartar borrador
         </button>
-        <button id="btn-aprobar" class="btn btn-success btn-lg"
+        <button id="btn-aprobar" class="bdr-btn-approve"
                 {% if not generacion.id_menu %}disabled{% endif %}>
-            ✅ Aprobar e importar al menú seleccionado
+            <i class="fa-solid fa-circle-check"></i>
+            Aprobar e importar al menú
         </button>
     </div>
 
     {% endif %}
-</div>
+</div><!-- /.bdr-studio -->
 {% endblock %}
 
 {% block extra_js %}

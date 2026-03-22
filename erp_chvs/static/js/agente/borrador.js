@@ -110,8 +110,8 @@
                 if (data.ok) {
                     const fila = document.getElementById('ing-row-' + ingId);
                     // Quitar rojo y badge "No encontrado"
-                    fila.classList.remove('table-danger');
-                    fila.querySelector('.badge.bg-danger')?.remove();
+                    fila.classList.remove('bdr-ing--missing');
+                    fila.querySelector('.bdr-missing-badge')?.remove();
                     fila.querySelector('.btn-corregir-ing')?.remove();
                     // Actualizar nombre del ingrediente
                     const tdNombre = fila.cells[1];
@@ -194,7 +194,7 @@
                 .then(data => {
                     const box = document.getElementById('alert-resultado');
                     if (data.ok) {
-                        box.className = 'alert alert-success mt-3';
+                        box.className = 'bdr-result-alert alert-success';
                         box.innerHTML = `<strong>✅ Importado correctamente.</strong> Se crearon <strong>${data.preparaciones_creadas}</strong> preparaciones en el menú.` +
                             (data.advertencias && data.advertencias.length
                                 ? '<ul class="mt-2 mb-0">' + data.advertencias.map(a => `<li>${a}</li>`).join('') + '</ul>'
@@ -202,13 +202,13 @@
                         box.classList.remove('d-none');
                         document.getElementById('btn-aprobar').classList.add('d-none');
                         document.getElementById('btn-descartar').classList.add('d-none');
-                        document.querySelector('.card.border-success').classList.add('d-none');
+                        document.getElementById('panel-menu-selector')?.classList.add('d-none');
                     } else {
-                        box.className = 'alert alert-danger mt-3';
+                        box.className = 'bdr-result-alert alert-danger';
                         box.textContent = 'Error: ' + data.error;
                         box.classList.remove('d-none');
                         btnAprobar.disabled = false;
-                        btnAprobar.textContent = '✅ Aprobar e importar al menú seleccionado';
+                        btnAprobar.innerHTML = '<i class="fa-solid fa-circle-check"></i> Aprobar e importar al menú';
                     }
                 });
         });
