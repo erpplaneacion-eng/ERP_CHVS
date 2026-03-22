@@ -16,7 +16,6 @@ import os
 import logging
 
 import requests
-from pinecone import Pinecone, ServerlessSpec
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +37,13 @@ _EMBED_URL = (
 def _get_pinecone_index():
     """
     Obtiene (o crea si no existe) el índice de Pinecone configurado.
-    Lanza excepción si PINECONE_API_KEY no está configurada.
+    Lanza excepción si PINECONE_API_KEY no está configurada o pinecone no está instalado.
     """
+    try:
+        from pinecone import Pinecone, ServerlessSpec
+    except ImportError:
+        raise ImportError('pinecone no está instalado. Ejecuta: pip install pinecone>=7.0.0')
+
     api_key = os.environ.get('PINECONE_API_KEY', '')
     if not api_key:
         raise ValueError('PINECONE_API_KEY no configurada en .env')
