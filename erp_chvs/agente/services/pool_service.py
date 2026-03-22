@@ -58,7 +58,7 @@ def _crear_registros_borrador(generacion, preparaciones_validadas):
 
 
 # Modalidades que participan en el pool automático
-MODALIDADES_POOL = ['020511', '020701', '20501', '20502', '20503', '20507', '20510']
+MODALIDADES_POOL = ['020511', '20501', '20502', '20503', '20507', '20510']
 
 
 def rellenar_pool(min_por_modalidad=20, pausa_entre_llamadas=1.5, ids_modalidad=None):

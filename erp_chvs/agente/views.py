@@ -175,7 +175,10 @@ def _hilo_lote(lote_id):
 
 @login_required
 def index(request):
-    modalidades = ModalidadesDeConsumo.objects.order_by('modalidad')
+    from .services.pool_service import MODALIDADES_POOL
+    modalidades = ModalidadesDeConsumo.objects.filter(
+        id_modalidades__in=MODALIDADES_POOL
+    ).order_by('modalidad')
     return render(request, 'agente/index.html', {'modalidades': modalidades})
 
 
@@ -221,7 +224,10 @@ def generar_lote_view(request):
     El nutricionista selecciona Modalidad + Cantidad y el servidor orquesta
     la generación en background (threading), permitiendo navegar libremente.
     """
-    modalidades = ModalidadesDeConsumo.objects.order_by('modalidad')
+    from .services.pool_service import MODALIDADES_POOL
+    modalidades = ModalidadesDeConsumo.objects.filter(
+        id_modalidades__in=MODALIDADES_POOL
+    ).order_by('modalidad')
 
     borradores_pendientes = (
         GeneracionIA.objects
