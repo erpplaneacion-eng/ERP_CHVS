@@ -1,180 +1,125 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Agente IA — Generador de Preparaciones{% endblock %}
+{% block title %}NOVA — Asistente Nutricional IA{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/agente/index.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h3 class="mb-1">Agente IA — Generador de Preparaciones</h3>
-            <p class="text-muted mb-0">Selecciona la modalidad y la IA generará un borrador de preparaciones. Luego podrás asignarlo al menú que desees.</p>
+<div class="nova-studio">
+<div class="nova-panel">
+
+    <!-- ── Agent header ──────────────────────────────────────────────────── -->
+    <div class="nova-header">
+        <div class="nova-avatar">
+            <i class="fa-solid fa-brain"></i>
         </div>
-        <a href="{% url 'agente:generar_lote' %}" class="btn btn-outline-primary">
-            ⚡ Generación en lote (20 / 10 menús)
+        <div>
+            <div class="nova-agent-name">NOVA</div>
+            <div class="nova-agent-status">Asistente Nutricional IA &nbsp;·&nbsp; En línea</div>
+        </div>
+        <a href="{% url 'agente:generar_lote' %}" class="nova-lote-btn">
+            <i class="fa-solid fa-layer-group"></i>
+            Generación en lote
         </a>
     </div>
 
-    <div class="row justify-content-center">
-        <div class="col-md-7">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <strong>Seleccionar modalidad</strong>
-                </div>
-                <div class="card-body">
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">Modalidad de consumo</label>
-                        <select id="sel-modalidad" class="form-select">
-                            <option value="">Seleccione una modalidad...</option>
-                            {% for m in modalidades %}
-                                <option value="{{ m.id_modalidades }}">{{ m.modalidad }}</option>
-                            {% endfor %}
-                        </select>
-                        <div class="form-text">La IA usará los menús existentes de esta modalidad como referencia (RAG).</div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">Ocasión especial <span class="text-muted fw-normal">(opcional)</span></label>
-                        <input type="text" id="inp-ocasion" class="form-control"
-                               placeholder="Ej: Halloween, Clausura, Día del Niño, Navidad..."
-                               maxlength="100">
-                        <div class="form-text">Si lo completas, la IA nombrará las preparaciones de forma temática manteniendo los mismos ingredientes.</div>
-                    </div>
-
-                    <div id="info-modalidad" class="alert alert-info d-none mb-3" role="alert">
-                        <i class="bi bi-info-circle me-2"></i>
-                        <span id="info-modalidad-texto"></span>
-                    </div>
-
-                    <div class="d-grid">
-                        <button id="btn-generar" class="btn btn-success btn-lg" disabled>
-                            <span id="btn-generar-texto">✨ Generar borrador con IA</span>
-                            <span id="btn-generar-spinner" class="d-none">
-                                <span class="spinner-border spinner-border-sm me-2"></span>Generando... puede tardar unos segundos
-                            </span>
-                        </button>
-                    </div>
-                </div>
+    <!-- ── Conversation ───────────────────────────────────────────────────── -->
+    <div class="nova-messages" id="nova-msgs">
+        <div class="nova-msg msg-1">
+            <div class="nova-mini-av"><i class="fa-solid fa-brain"></i></div>
+            <div class="nova-bubble">
+                ¡Hola, <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>! 👋
             </div>
-
-            <div id="error-box" class="alert alert-danger mt-3 d-none" role="alert"></div>
+        </div>
+        <div class="nova-msg msg-2">
+            <div class="nova-mini-av"><i class="fa-solid fa-brain"></i></div>
+            <div class="nova-bubble">
+                Soy <strong>NOVA</strong>, tu asistente de nutrición IA para el PAE.
+                Creo preparaciones culinarias basándome en la <em>Resolución 3803 de 2016</em>
+                y el historial de menús de cada modalidad.
+                ¿Para qué modalidad crearemos preparaciones hoy?
+            </div>
         </div>
     </div>
-</div>
 
+    <!-- typing indicator -->
+    <div class="nova-typing-row" id="typing-row">
+        <div class="nova-mini-av nova-mini-av--dim"><i class="fa-solid fa-brain"></i></div>
+        <div class="nova-typing-dots">
+            <div class="nova-typing-dot"></div>
+            <div class="nova-typing-dot"></div>
+            <div class="nova-typing-dot"></div>
+        </div>
+    </div>
+
+    <!-- ── Modalidad ─────────────────────────────────────────────────────── -->
+    <div class="nova-field nova-field--anim-late" id="field-modalidad">
+        <label class="nova-label" for="sel-modalidad">Modalidad de consumo</label>
+        <select id="sel-modalidad" class="nova-select">
+            <option value="">Selecciona una modalidad...</option>
+            {% for m in modalidades %}
+                <option value="{{ m.id_modalidades }}">{{ m.modalidad }}</option>
+            {% endfor %}
+        </select>
+        <div class="nova-chip" id="chip-modalidad">
+            <i class="fa-solid fa-check nova-chip-icon"></i>
+            <span id="chip-text"></span>
+        </div>
+    </div>
+
+    <!-- ── Ocasión especial (expands after modalidad selection) ───────────── -->
+    <div class="nova-ocasion-wrap" id="ocasion-wrap">
+        <div id="msg3-container"></div>
+        <div class="nova-field visible nova-field--ocasion">
+            <label class="nova-label" for="inp-ocasion">
+                Ocasión especial <span class="opt">(opcional)</span>
+            </label>
+            <input type="text" id="inp-ocasion" class="nova-input"
+                   placeholder="Ej: Halloween, Día del Niño, Navidad..."
+                   maxlength="100">
+        </div>
+    </div>
+
+    <!-- ── CTA ───────────────────────────────────────────────────────────── -->
+    <div class="nova-field nova-field--anim-latest" id="field-cta">
+        <button id="btn-generar" class="nova-cta" disabled>
+            <i class="fa-solid fa-wand-magic-sparkles nova-cta-icon"></i>
+            Crear preparaciones con IA
+        </button>
+    </div>
+
+    <!-- ── Generating overlay ─────────────────────────────────────────────── -->
+    <div class="nova-generating" id="nova-generating">
+        <div class="nova-gen-orb">
+            <i class="fa-solid fa-circle-notch fa-spin"></i>
+        </div>
+        <div class="nova-gen-label">NOVA está trabajando</div>
+        <div class="nova-gen-msg" id="gen-msg">Consultando base de conocimientos PAE...</div>
+        <div class="nova-gen-sub" id="gen-sub">Esto puede tomar unos segundos</div>
+        <div class="nova-gen-bar-wrap"><div class="nova-gen-bar"></div></div>
+    </div>
+
+    <!-- ── Error ──────────────────────────────────────────────────────────── -->
+    <div class="nova-error" id="error-box">
+        <i class="fa-solid fa-triangle-exclamation nova-error-icon"></i>
+        <span id="error-text"></span>
+    </div>
+
+</div><!-- /.nova-panel -->
+</div><!-- /.nova-studio -->
+{% endblock %}
+
+{% block extra_js %}
 <script>
-(function () {
-    const selModalidad = document.getElementById('sel-modalidad');
-    const inpOcasion = document.getElementById('inp-ocasion');
-    const btnGenerar = document.getElementById('btn-generar');
-    const infoModalidad = document.getElementById('info-modalidad');
-    const infoModalidadTexto = document.getElementById('info-modalidad-texto');
-    const errorBox = document.getElementById('error-box');
-
-    selModalidad.addEventListener('change', function () {
-        if (this.value) {
-            btnGenerar.disabled = false;
-            infoModalidad.classList.remove('d-none');
-            infoModalidadTexto.textContent = `Se generará un borrador de preparaciones para la modalidad "${this.options[this.selectedIndex].text}". Después podrás asignarlo al menú destino.`;
-        } else {
-            btnGenerar.disabled = true;
-            infoModalidad.classList.add('d-none');
-        }
-    });
-
-    const spinnerTexto = document.getElementById('btn-generar-spinner');
-    const btnTexto = document.getElementById('btn-generar-texto');
-
-    function _mostrarSpinner(msg) {
-        btnTexto.classList.add('d-none');
-        spinnerTexto.classList.remove('d-none');
-        spinnerTexto.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>' + msg;
-        btnGenerar.disabled = true;
-    }
-
-    function _mostrarError(msg) {
-        errorBox.textContent = 'Error: ' + msg;
-        errorBox.classList.remove('d-none');
-        btnTexto.classList.remove('d-none');
-        spinnerTexto.classList.add('d-none');
-        btnGenerar.disabled = false;
-    }
-
-    function _iniciarPollingGeneracion(generacionId) {
-        var intentos = 0;
-        var maxIntentos = 60; // 3 min máx (60 × 3s)
-        var timer = setInterval(function () {
-            intentos++;
-            fetch('{% url "agente:api_generar" %}'.replace('/generar/', '/generar/' + generacionId + '/estado/'))
-                .then(function (r) { return r.json(); })
-                .then(function (data) {
-                    if (data.estado === 'pendiente_revision') {
-                        clearInterval(timer);
-                        window.location.href = '/agente/borrador/' + generacionId + '/';
-                    } else if (data.estado === 'error') {
-                        clearInterval(timer);
-                        _mostrarError(data.error || 'El servidor no pudo generar el borrador.');
-                    } else if (intentos >= maxIntentos) {
-                        clearInterval(timer);
-                        _mostrarError('La generación tardó demasiado. Intenta de nuevo.');
-                    }
-                })
-                .catch(function () {
-                    if (intentos >= maxIntentos) {
-                        clearInterval(timer);
-                        _mostrarError('No se pudo contactar al servidor.');
-                    }
-                });
-        }, 3000);
-    }
-
-    btnGenerar.addEventListener('click', function () {
-        const modalidadId = selModalidad.value;
-        if (!modalidadId) return;
-
-        errorBox.classList.add('d-none');
-        _mostrarSpinner('Consultando disponibilidad...');
-
-        fetch('{% url "agente:api_generar" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}',
-            },
-            body: JSON.stringify({
-                modalidad_id: parseInt(modalidadId),
-                ocasion_especial: inpOcasion.value.trim(),
-            }),
-        })
-            .then(function (r) {
-                if (!r.ok) {
-                    return r.text().then(function (txt) {
-                        throw new Error('HTTP ' + r.status + ' — ' + txt.substring(0, 200));
-                    });
-                }
-                return r.json();
-            })
-            .then(function (data) {
-                if (!data.ok) {
-                    _mostrarError(data.error || 'Error desconocido');
-                    return;
-                }
-                if (data.fuente === 'pool') {
-                    // Borrador disponible de inmediato — animación corta
-                    _mostrarSpinner('Preparando borrador...');
-                    setTimeout(function () {
-                        window.location.href = '/agente/borrador/' + data.generacion_id + '/';
-                    }, 1800);
-                } else {
-                    // Generación en vivo — polling hasta que esté listo
-                    _mostrarSpinner('Generando con IA... puede tardar unos segundos');
-                    _iniciarPollingGeneracion(data.generacion_id);
-                }
-            })
-            .catch(function (err) {
-                _mostrarError(err.message);
-            });
-    });
-})();
+window.NOVA_CONFIG = {
+    csrf:       '{{ csrf_token }}',
+    urlGenerar: '{% url "agente:api_generar" %}',
+};
 </script>
+<script src="{% static 'js/agente/index.js' %}"></script>
 {% endblock %}

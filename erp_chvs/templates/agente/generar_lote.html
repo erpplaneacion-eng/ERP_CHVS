@@ -1,75 +1,93 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Generar Menús con IA{% endblock %}
+{% block title %}NOVA — Generación en Lote{% endblock %}
 
 {% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/agente/generar_lote.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="lote-studio">
 
-    <div class="d-flex justify-content-between align-items-start mb-4">
-        <div>
-            <h3 class="mb-1">Generar Menús con IA</h3>
-            <p class="text-muted mb-0">
-                Selecciona la modalidad y cuántos menús necesitas.
-            </p>
+    <!-- ── Agent header ──────────────────────────────────────────────────── -->
+    <div class="lote-header">
+        <div class="lote-avatar">
+            <i class="fa-solid fa-brain"></i>
         </div>
-        <a href="{% url 'agente:index' %}" class="btn btn-outline-secondary btn-sm">
-            ← Generación individual
+        <div class="lote-agent-info">
+            <div class="lote-agent-name">NOVA</div>
+            <div class="lote-agent-status">Asistente Nutricional IA &nbsp;·&nbsp; En línea</div>
+        </div>
+        <a href="{% url 'agente:index' %}" class="lote-back-btn">
+            <i class="fa-solid fa-arrow-left"></i>
+            Generación individual
         </a>
     </div>
 
-    <!-- ── Formulario ─────────────────────────────────────────────────────── -->
-    <div class="card shadow-sm mb-4" id="card-form">
-        <div class="card-body">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold">Modalidad de consumo</label>
-                    <select id="sel-modalidad" class="form-select">
-                        <option value="">Seleccione una modalidad...</option>
-                        {% for m in modalidades %}
-                        <option value="{{ m.id_modalidades }}">{{ m.modalidad }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold">
-                        Cantidad <span class="text-muted fw-normal">(1–20)</span>
-                    </label>
-                    <input type="number" id="inp-cantidad" class="form-control"
-                           min="1" max="20" value="20">
-                </div>
-                <div class="col-md-3">
-                    <button id="btn-generar" class="btn btn-primary btn-lg w-100" disabled>
-                        ✨ Generar menús
-                    </button>
-                </div>
-            </div>
-            <div id="alerta-form" class="alert mt-3 d-none" role="alert"></div>
+    <!-- ── NOVA greeting bubble ──────────────────────────────────────────── -->
+    <div class="lote-greeting">
+        <div class="lote-greeting-av">
+            <i class="fa-solid fa-brain"></i>
+        </div>
+        <div class="lote-greeting-bubble">
+            Selecciona una modalidad y cuántos menús necesitas.
+            Tomaré los borradores del <strong>pool pre-generado</strong> y te los
+            presentaré uno por uno para que revises y apruebes los que más te gusten.
+            Los que no quieras vuelven automáticamente al pool.
         </div>
     </div>
 
-    <!-- ── Grid de tarjetas ───────────────────────────────────────────────── -->
-    <div id="grid-menus" class="row g-3 d-none"></div>
+    <!-- ── Control panel ─────────────────────────────────────────────────── -->
+    <div class="lote-panel">
+        <div class="lote-form-row">
+            <div class="lote-form-col lote-col-wide">
+                <label class="lote-label" for="sel-modalidad">Modalidad de consumo</label>
+                <select id="sel-modalidad" class="lote-select">
+                    <option value="">Selecciona una modalidad...</option>
+                    {% for m in modalidades %}
+                        <option value="{{ m.id_modalidades }}">{{ m.modalidad }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="lote-form-col lote-col-narrow">
+                <label class="lote-label" for="inp-cantidad">
+                    Cantidad <span class="lote-label-hint">(1–20)</span>
+                </label>
+                <input type="number" id="inp-cantidad" class="lote-input"
+                       min="1" max="20" value="20">
+            </div>
+            <div class="lote-form-col lote-col-action">
+                <label class="lote-label" style="visibility:hidden">.</label>
+                <button id="btn-generar" class="lote-cta" disabled>
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    Generar menús
+                </button>
+            </div>
+        </div>
+        <div id="alerta-form" class="lote-alert mt-3 d-none" role="alert"></div>
+    </div>
 
-    <!-- ── Resumen final ──────────────────────────────────────────────────── -->
-    <div id="resumen-final" class="alert alert-success mt-4 d-none" role="alert"></div>
+    <!-- ── Cards grid ────────────────────────────────────────────────────── -->
+    <div id="grid-menus" class="row g-3 d-none" style="margin-top: 8px;"></div>
 
-</div>
+    <!-- ── Summary ───────────────────────────────────────────────────────── -->
+    <div id="resumen-final" class="lote-summary d-none" role="alert"></div>
+
+</div><!-- /.lote-studio -->
 {% endblock %}
 
 {% block extra_js %}
 <script>
 window.LOTE_CONFIG = {
-    csrf: '{{ csrf_token }}',
+    csrf:             '{{ csrf_token }}',
     urlTomarPool:     '{% url "agente:api_tomar_del_pool" %}',
     urlPoolDisponible:'{% url "agente:api_pool_disponible" %}',
-    urlPreview:       '/agente/api/borrador/',   // + id + '/preview/'
-    urlRechazar:      '/agente/api/rechazar/',   // + id + '/'
-    urlBorrador:      '/agente/borrador/',       // + id + '/'
+    urlPreview:       '/agente/api/borrador/',   /* + id + '/preview/' */
+    urlRechazar:      '/agente/api/rechazar/',   /* + id + '/' */
+    urlBorrador:      '/agente/borrador/',       /* + id + '/' */
 };
 </script>
 <script src="{% static 'js/agente/generar_lote.js' %}"></script>

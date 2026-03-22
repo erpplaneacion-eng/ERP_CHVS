@@ -35,7 +35,7 @@
 
         // Resetear estado visual
         btnGenerar.disabled = true;
-        btnGenerar.textContent = 'Generando...';
+        btnGenerar.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Generando...';
         alertaForm.classList.add('d-none');
         gridMenus.innerHTML = '';
         gridMenus.classList.remove('d-none');
@@ -205,7 +205,7 @@
     // ── Resumen final ─────────────────────────────────────────────────────────
 
     function _mostrarResumen(total) {
-        resumenFinal.className = 'alert alert-success mt-4';
+        resumenFinal.className = 'lote-summary mt-4';
         resumenFinal.innerHTML =
             `<strong>✅ ${total} menú${total !== 1 ? 's' : ''} generado${total !== 1 ? 's' : ''}.</strong> ` +
             'Revisa cada tarjeta y aprueba los que quieras importar a producción. ' +
@@ -216,14 +216,14 @@
     // ── Utilidades ────────────────────────────────────────────────────────────
 
     function _mostrarAlerta(msg, tipo) {
-        alertaForm.className = 'alert alert-' + tipo + ' mt-3';
+        alertaForm.className = 'lote-alert mt-3' + (tipo === 'danger' ? ' alert-danger' : '');
         alertaForm.textContent = msg;
         alertaForm.classList.remove('d-none');
     }
 
     function _resetBoton() {
         btnGenerar.disabled = false;
-        btnGenerar.textContent = '✨ Generar menús';
+        btnGenerar.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generar menús';
     }
 
     function _sleep(ms) {

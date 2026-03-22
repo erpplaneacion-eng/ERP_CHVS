@@ -1,102 +1,355 @@
-/* generar_lote.css */
+/* generar_lote.css — NOVA Neural Studio dark theme */
 
-/* ── Tarjeta en estado thinking ─────────────────────────────────────────── */
+:root {
+    --nova-bg:          #f2fdfb;
+    --nova-surface:     #e6f9f4;
+    --nova-card:        #ffffff;
+    --nova-input:       #f7fffe;
+    --nova-border:      rgba(0,137,123,0.16);
+    --nova-border-rev:  rgba(0,137,123,0.24);
+    --nova-accent:      #00897b;
+    --nova-accent-glow: rgba(0,137,123,0.12);
+    --nova-accent-dim:  rgba(0,137,123,0.06);
+    --nova-warm:        #d97706;
+    --nova-text:        #0d2426;
+    --nova-text-dim:    #4a7a78;
+    --nova-muted:       #5a8080;
+    --nova-success:     #00897b;
+}
 
+/* ── Studio shell ────────────────────────────────────────────────────────── */
+.lote-studio {
+    background: var(--nova-bg);
+    padding: 2.5rem 2rem;
+    min-height: calc(100vh - 60px);
+    margin: -1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.lote-studio::before {
+    content: '';
+    position: absolute; top: -100px; left: 40%;
+    transform: translateX(-50%);
+    width: 600px; height: 380px;
+    background: radial-gradient(ellipse, rgba(13,207,181,0.05) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.lote-header {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 28px; position: relative; z-index: 1;
+    animation: ltFadeUp 0.5s ease 0.1s both;
+}
+.lote-avatar {
+    width: 50px; height: 50px; border-radius: 14px;
+    background: linear-gradient(135deg, #0dcfb5 0%, #00897b 100%);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 18px rgba(0,137,123,0.22), 0 4px 12px rgba(0,137,123,0.1);
+    position: relative;
+}
+.lote-avatar i { color: white; font-size: 1.2rem; }
+.lote-avatar::after {
+    content: '';
+    position: absolute; bottom: 4px; right: 4px;
+    width: 9px; height: 9px;
+    background: #22c55e; border-radius: 50%;
+    border: 2px solid var(--nova-bg);
+    animation: ltPulse 2.5s infinite;
+}
+.lote-agent-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem; font-weight: 800;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--nova-accent); line-height: 1;
+}
+.lote-agent-status {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.7rem; color: #22c55e;
+    margin-top: 4px; display: flex; align-items: center; gap: 5px;
+}
+.lote-agent-status::before {
+    content: ''; display: inline-block;
+    width: 5px; height: 5px; background: #22c55e; border-radius: 50%;
+}
+.lote-back-btn {
+    margin-left: auto;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem; color: var(--nova-muted);
+    text-decoration: none;
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid var(--nova-border); border-radius: 10px;
+    background: var(--nova-accent-dim);
+    transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+    white-space: nowrap;
+}
+.lote-back-btn:hover {
+    color: var(--nova-accent);
+    border-color: var(--nova-accent);
+    background: var(--nova-accent-glow);
+}
+
+/* ── Greeting ────────────────────────────────────────────────────────────── */
+.lote-greeting {
+    display: flex; gap: 10px; align-items: flex-end;
+    margin-bottom: 28px; position: relative; z-index: 1;
+    animation: ltFadeUp 0.5s ease 0.25s both;
+}
+.lote-greeting-av {
+    width: 30px; height: 30px; border-radius: 9px;
+    background: linear-gradient(135deg, #0dcfb5 0%, #00897b 100%);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-bottom: 2px;
+}
+.lote-greeting-av i { color: white; font-size: 0.7rem; }
+.lote-greeting-bubble {
+    background: var(--nova-card);
+    border: 1px solid var(--nova-border);
+    border-radius: 18px; border-bottom-left-radius: 4px;
+    padding: 13px 17px;
+    color: var(--nova-text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem; line-height: 1.6;
+    max-width: 640px;
+    box-shadow: 0 2px 10px rgba(0,137,123,0.08);
+}
+.lote-greeting-bubble strong { color: var(--nova-accent); font-weight: 600; }
+
+/* ── Control panel ───────────────────────────────────────────────────────── */
+.lote-panel {
+    background: var(--nova-card);
+    border: 1px solid var(--nova-border);
+    border-radius: 16px;
+    padding: 24px 28px;
+    margin-bottom: 28px;
+    position: relative; z-index: 1;
+    animation: ltFadeUp 0.5s ease 0.4s both;
+    box-shadow: 0 4px 20px rgba(0,137,123,0.08), 0 1px 4px rgba(0,0,0,0.04);
+}
+.lote-form-row {
+    display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;
+}
+.lote-form-col { display: flex; flex-direction: column; }
+.lote-col-wide   { flex: 2; min-width: 200px; }
+.lote-col-narrow { flex: 0 0 130px; }
+.lote-col-action { flex: 0 0 165px; }
+
+.lote-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.66rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--nova-accent); margin-bottom: 8px;
+}
+.lote-label-hint {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.68rem; font-weight: 400;
+    text-transform: none; letter-spacing: 0; color: var(--nova-muted);
+}
+.lote-select, .lote-input {
+    background: var(--nova-input);
+    border: 1px solid var(--nova-border);
+    border-radius: 11px;
+    padding: 12px 16px;
+    color: var(--nova-text);
+    font-family: 'DM Sans', sans-serif; font-size: 0.875rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none; width: 100%;
+}
+.lote-select {
+    appearance: none; -webkit-appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%230dcfb5' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+    padding-right: 36px;
+}
+.lote-select option { background: #f2fdfb; color: var(--nova-text); }
+.lote-select:focus, .lote-input:focus {
+    border-color: var(--nova-accent);
+    box-shadow: 0 0 0 3px var(--nova-accent-glow);
+}
+.lote-cta {
+    width: 100%; padding: 13px 20px;
+    background: linear-gradient(135deg, #0dcfb5 0%, #00897b 100%);
+    border: none; border-radius: 11px;
+    color: #ffffff;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 0.875rem; letter-spacing: 0.04em;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s, background 0.2s;
+    box-shadow: 0 4px 18px rgba(13,207,181,0.26);
+    white-space: nowrap;
+}
+.lote-cta:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 26px rgba(13,207,181,0.38);
+}
+.lote-cta:active:not(:disabled) { transform: translateY(0); }
+.lote-cta:disabled {
+    opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none;
+    background: var(--nova-surface);
+    border: 1px solid var(--nova-border);
+    color: var(--nova-muted);
+}
+.lote-alert {
+    font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
+    border-radius: 10px; padding: 12px 16px;
+    background: rgba(245,158,11,0.09);
+    border: 1px solid rgba(245,158,11,0.22);
+    color: #fde68a;
+}
+.lote-alert.alert-danger {
+    background: rgba(248,113,113,0.08);
+    border-color: rgba(248,113,113,0.22);
+    color: #fca5a5;
+}
+.lote-summary {
+    font-family: 'DM Sans', sans-serif; font-size: 0.875rem;
+    border-radius: 12px; padding: 16px 20px; margin-top: 8px;
+    background: rgba(0,137,123,0.07);
+    border: 1px solid rgba(0,137,123,0.2);
+    color: #00695c;
+}
+
+/* ── Thinking card ───────────────────────────────────────────────────────── */
 .menu-card {
-    border-radius: 12px;
+    border-radius: 14px !important;
     transition: opacity 0.35s ease, transform 0.35s ease;
     min-height: 220px;
+    position: relative; overflow: hidden;
 }
-
 .card-thinking {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef !important;
+    background: #f7fffe !important;
+    border: 1px solid rgba(0,137,123,0.14) !important;
+    box-shadow: 0 2px 10px rgba(0,137,123,0.07) !important;
 }
-
-/* Líneas de skeleton que pulsan */
+.card-thinking::before {
+    content: '';
+    position: absolute; inset: 0; border-radius: 14px;
+    border: 1px solid rgba(13,207,181,0.08);
+    animation: ltBorderPulse 2.5s infinite;
+    pointer-events: none;
+}
+.thinking-area { padding: 4px 0; }
 .thinking-line {
-    height: 12px;
-    border-radius: 6px;
-    background: linear-gradient(90deg, #e9ecef 25%, #dee2e6 50%, #e9ecef 75%);
+    height: 11px; border-radius: 6px; margin-bottom: 8px;
+    background: linear-gradient(90deg, #e0f5f0 25%, #c5ede6 50%, #e0f5f0 75%);
     background-size: 200% 100%;
-    animation: skeleton-shimmer 1.6s infinite;
+    animation: ltShimmer 1.6s infinite;
 }
-
+.thinking-line:last-child { margin-bottom: 0; }
 .thinking-line.w-75  { width: 75%; }
 .thinking-line.w-50  { width: 50%; }
 .thinking-line.w-85  { width: 85%; }
 .thinking-line.w-60  { width: 60%; }
 .thinking-line.w-70  { width: 70%; }
 
-@keyframes skeleton-shimmer {
+@keyframes ltShimmer {
     0%   { background-position: 200% 0; }
     100% { background-position: -200% 0; }
 }
-
-/* Puntos de thinking */
-.thinking-dots {
-    display: flex;
-    gap: 5px;
-}
-
+.thinking-dots { display: flex; gap: 5px; margin-top: 14px; }
 .thinking-dots span {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #adb5bd;
-    display: inline-block;
-    animation: thinking-bounce 1.3s infinite ease-in-out;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--nova-accent); display: inline-block;
+    animation: ltBounce 1.3s infinite ease-in-out;
 }
-
-.thinking-dots span:nth-child(1) { animation-delay: -0.3s; }
-.thinking-dots span:nth-child(2) { animation-delay: -0.15s; }
+.thinking-dots span:nth-child(1) { animation-delay: -0.32s; }
+.thinking-dots span:nth-child(2) { animation-delay: -0.16s; }
 .thinking-dots span:nth-child(3) { animation-delay: 0s; }
-
-@keyframes thinking-bounce {
-    0%, 80%, 100% { transform: translateY(0);    opacity: 0.4; }
-    40%           { transform: translateY(-6px); opacity: 1;   }
+@keyframes ltBounce {
+    0%, 80%, 100% { transform: translateY(0);    opacity: 0.35; }
+    40%           { transform: translateY(-6px); opacity: 1; }
 }
 
-/* ── Tarjeta revelada ───────────────────────────────────────────────────── */
-
+/* ── Revealed card ───────────────────────────────────────────────────────── */
 .card-revealed {
-    background: #ffffff;
-    border: 1px solid #dee2e6 !important;
-    animation: card-appear 0.4s ease forwards;
+    background: #ffffff !important;
+    border: 1px solid rgba(0,137,123,0.2) !important;
+    border-left: 3px solid var(--nova-accent) !important;
+    box-shadow: 0 4px 16px rgba(0,137,123,0.08) !important;
+    animation: ltCardAppear 0.4s ease forwards;
 }
-
-@keyframes card-appear {
+@keyframes ltCardAppear {
     from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0);   }
+    to   { opacity: 1; transform: translateY(0); }
 }
-
-/* ── Lista de preparaciones ─────────────────────────────────────────────── */
-
-.prep-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
+.prep-list { list-style: none; padding: 0; margin: 0; }
 .prep-item {
-    padding: 4px 0;
-    border-bottom: 1px solid #f0f0f0;
-    font-size: 0.875rem;
-    line-height: 1.4;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(0,137,123,0.08);
+    font-size: 0.82rem; line-height: 1.4;
+    color: var(--nova-text);
+    font-family: 'DM Sans', sans-serif;
 }
-
-.prep-item:last-child {
-    border-bottom: none;
-}
-
+.prep-item:last-child { border-bottom: none; }
 .prep-nombre {
-    font-weight: 500;
+    font-weight: 600; color: var(--nova-accent);
+    font-family: 'DM Sans', sans-serif;
+}
+.prep-item .text-muted { color: var(--nova-muted) !important; }
+.card-revealed .badge.bg-success {
+    background: rgba(0,137,123,0.1) !important;
+    color: #00695c !important;
+    border: 1px solid rgba(0,137,123,0.2); font-size: 0.65rem;
+}
+.card-revealed .badge.bg-warning {
+    background: rgba(217,119,6,0.1) !important;
+    color: #b45309 !important;
+    border: 1px solid rgba(217,119,6,0.2); font-size: 0.65rem;
+}
+.card-revealed .text-muted.small {
+    color: var(--nova-text-dim) !important;
+    font-family: 'DM Sans', sans-serif; font-size: 0.75rem !important;
 }
 
-/* ── Tarjeta rechazada (fade out) ───────────────────────────────────────── */
+/* buttons inside card */
+.card-revealed .btn-success {
+    background: linear-gradient(135deg, #0dcfb5, #00897b) !important;
+    border: none !important; color: #ffffff !important;
+    font-family: 'Syne', sans-serif !important;
+    font-weight: 700 !important; font-size: 0.78rem !important;
+    letter-spacing: 0.02em; border-radius: 9px !important;
+    transition: transform 0.18s, box-shadow 0.18s !important;
+    box-shadow: 0 3px 12px rgba(13,207,181,0.22) !important;
+}
+.card-revealed .btn-success:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 5px 18px rgba(13,207,181,0.35) !important;
+}
+.card-revealed .btn-rechazar {
+    background: transparent !important;
+    border: 1px solid rgba(248,113,113,0.25) !important;
+    color: #f87171 !important;
+    font-size: 1rem !important; border-radius: 9px !important;
+    padding: 5px 10px !important;
+    transition: background 0.18s, border-color 0.18s !important;
+    line-height: 1;
+}
+.card-revealed .btn-rechazar:hover {
+    background: rgba(248,113,113,0.1) !important;
+    border-color: rgba(248,113,113,0.45) !important;
+}
 
+/* ── Rejected card ───────────────────────────────────────────────────────── */
 .card-rechazada {
-    opacity: 0;
-    transform: scale(0.95);
-    pointer-events: none;
+    opacity: 0 !important;
+    transform: scale(0.94) !important;
+    pointer-events: none !important;
+    transition: opacity 0.35s ease, transform 0.35s ease !important;
+}
+
+/* ── Keyframes ───────────────────────────────────────────────────────────── */
+@keyframes ltFadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes ltPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+    60%      { box-shadow: 0 0 0 5px rgba(34,197,94,0); }
+}
+@keyframes ltBorderPulse {
+    0%, 100% { opacity: 0.5; }
+    50%      { opacity: 1; }
 }
