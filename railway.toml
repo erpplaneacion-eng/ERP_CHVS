@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "pip install -r requirements.txt"
+buildCommand = "pip install gevent>=24.10.1 && pip install -r requirements.txt"
 
 [deploy]
 # Gunicorn: 1 worker sync + 2 threads = menos RAM, ideal para Railway free tier.
