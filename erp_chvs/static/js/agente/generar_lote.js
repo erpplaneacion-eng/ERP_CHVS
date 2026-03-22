@@ -208,8 +208,7 @@
         resumenFinal.className = 'lote-summary mt-4';
         resumenFinal.innerHTML =
             `<strong>✅ ${total} menú${total !== 1 ? 's' : ''} generado${total !== 1 ? 's' : ''}.</strong> ` +
-            'Revisa cada tarjeta y aprueba los que quieras importar a producción. ' +
-            'Los que rechaces vuelven al pool automáticamente.';
+            'Revisa cada tarjeta y aprueba los que quieras importar a producción. ';
         resumenFinal.classList.remove('d-none');
     }
 

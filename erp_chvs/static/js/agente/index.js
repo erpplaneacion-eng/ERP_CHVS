@@ -180,7 +180,7 @@
             if (!data.ok) { _restoreForm(data.error || 'Error desconocido'); return; }
 
             if (data.fuente === 'pool') {
-                _applyMsg(['¡Borrador encontrado en el pool!', 'Preparando para tu revisión...']);
+                _applyMsg(['¡Pensando!', 'Preparando para tu revisión...']);
                 setTimeout(function () {
                     window.location.href = '/agente/borrador/' + data.generacion_id + '/';
                 }, 1500);
