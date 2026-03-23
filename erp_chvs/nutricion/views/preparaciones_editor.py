@@ -237,13 +237,13 @@ def _obtener_referencias_por_nivel(modalidad, tp_id='pae'):
         for ref in qs:
             nivel_id = ref.id_nivel_escolar_uapa.id_grado_escolar_uapa
             referencias_por_nivel[nivel_id] = {
-                'calorias': float(ref.calorias_porc),
-                'proteina': float(ref.proteina_porc),
-                'grasa':    float(ref.grasa_porc),
-                'cho':      float(ref.cho_porc),
-                'calcio':   float(ref.calcio_porc),
-                'hierro':   float(ref.hierro_porc),
-                'sodio':    float(ref.sodio_porc),
+                'calorias': float(ref.calorias_porc) if ref.calorias_porc is not None else None,
+                'proteina': float(ref.proteina_porc) if ref.proteina_porc is not None else None,
+                'grasa':    float(ref.grasa_porc)    if ref.grasa_porc    is not None else None,
+                'cho':      float(ref.cho_porc)      if ref.cho_porc      is not None else None,
+                'calcio':   float(ref.calcio_porc)   if ref.calcio_porc   is not None else None,
+                'hierro':   float(ref.hierro_porc)   if ref.hierro_porc   is not None else None,
+                'sodio':    float(ref.sodio_porc)    if ref.sodio_porc    is not None else None,
             }
     except Exception:
         pass
