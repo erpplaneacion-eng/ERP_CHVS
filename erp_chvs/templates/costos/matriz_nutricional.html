@@ -187,16 +187,76 @@
 
 {% block scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    const URL_PROGRAMAS   = "{% url 'costos:api_programas' %}";
+    const URL_MODALIDADES = "{% url 'costos:api_modalidades' %}";
+    const SEL_MUNICIPIO   = '{{ selected_municipio|default:"" }}';
+    const SEL_PROGRAMA    = '{{ selected_programa|default:"" }}';
+    const SEL_MODALIDAD   = '{{ selected_modalidad|default:"" }}';
+
+    function poblarSelect(select, items, campoId, campoNombre, valorSeleccionado, textoVacio) {
+        const val = select.value;
+        select.innerHTML = `<option value="">${textoVacio}</option>`;
+        items.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item[campoId];
+            opt.textContent = item[campoNombre];
+            if (String(item[campoId]) === String(valorSeleccionado)) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+
+    async function cargarProgramas(municipioId, programaSeleccionado = '') {
+        const url = municipioId ? `${URL_PROGRAMAS}?municipio=${municipioId}` : URL_PROGRAMAS;
+        const res  = await fetch(url);
+        const data = await res.json();
+        poblarSelect(
+            document.getElementById('programa'),
+            data.programas, 'id', 'nombre',
+            programaSeleccionado,
+            'Todos los Programas'
+        );
+    }
+
+    async function cargarModalidades(programaId, modalidadSeleccionada = '') {
+        const url = programaId ? `${URL_MODALIDADES}?programa=${programaId}` : URL_MODALIDADES;
+        const res  = await fetch(url);
+        const data = await res.json();
+        poblarSelect(
+            document.getElementById('modalidad'),
+            data.modalidades, 'id', 'nombre',
+            modalidadSeleccionada,
+            'Todas las Modalidades'
+        );
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+
+        // --- Exportar Excel ---
         const btnExportar = document.getElementById('btn-exportar-excel');
         if (btnExportar) {
-            btnExportar.addEventListener('click', function() {
-                // Obtener los parámetros actuales de la URL
+            btnExportar.addEventListener('click', function () {
                 const urlParams = new URLSearchParams(window.location.search);
-                // Construir la URL de exportación con los mismos filtros
-                const exportUrl = "{% url 'costos:exportar_matriz_excel' %}?" + urlParams.toString();
-                // Redirigir para iniciar la descarga
-                window.location.href = exportUrl;
+                window.location.href = "{% url 'costos:exportar_matriz_excel' %}?" + urlParams.toString();
+            });
+        }
+
+        // --- Cascada municipio → programa → modalidad ---
+        const selMunicipio = document.getElementById('municipio');
+        const selPrograma  = document.getElementById('programa');
+
+        selMunicipio.addEventListener('change', async function () {
+            await cargarProgramas(this.value);
+            await cargarModalidades('');
+        });
+
+        selPrograma.addEventListener('change', async function () {
+            await cargarModalidades(this.value);
+        });
+
+        // Restaurar selecciones guardadas al recargar tras submit
+        if (SEL_MUNICIPIO) {
+            cargarProgramas(SEL_MUNICIPIO, SEL_PROGRAMA).then(() => {
+                if (SEL_PROGRAMA) cargarModalidades(SEL_PROGRAMA, SEL_MODALIDAD);
             });
         }
     });

@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from nutricion.models import (
     TablaMenus, TablaPreparaciones, TablaPreparacionIngredientes, 
     TablaIngredientesPorNivel, TablaAlimentos2018Icbf
@@ -11,6 +11,33 @@ from django.db.models import Q
 import io
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+
+@login_required
+def api_programas(request):
+    """Retorna programas filtrados por municipio (JSON para cascada dinámica)."""
+    municipio_id = request.GET.get('municipio')
+    qs = Programa.objects.all().order_by('programa')
+    if municipio_id:
+        qs = qs.filter(municipio_id=municipio_id)
+    return JsonResponse({'programas': [{'id': p.id, 'nombre': p.programa} for p in qs]})
+
+
+@login_required
+def api_modalidades(request):
+    """Retorna modalidades filtradas por programa vía ProgramaModalidades (JSON para cascada dinámica)."""
+    from planeacion.models import ProgramaModalidades
+    programa_id = request.GET.get('programa')
+    if programa_id:
+        qs = (ProgramaModalidades.objects
+              .filter(programa_id=programa_id)
+              .select_related('modalidad')
+              .order_by('modalidad__modalidad'))
+        data = [{'id': pm.modalidad.id_modalidades, 'nombre': pm.modalidad.modalidad} for pm in qs]
+    else:
+        data = [{'id': m.id_modalidades, 'nombre': m.modalidad}
+                for m in ModalidadesDeConsumo.objects.all().order_by('modalidad')]
+    return JsonResponse({'modalidades': data})
+
 
 @login_required
 def costos_index(request):
