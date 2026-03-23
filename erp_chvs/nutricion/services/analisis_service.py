@@ -757,8 +757,7 @@ class AnalisisNutricionalService:
             id_contrato=programa,
             id_modalidad=modalidad
         ).order_by('menu')
-        # Comedores Comunitarios / Adulto Mayor: máximo 10 menús
-        menus = menus_qs[:10] if not tiene_niveles else menus_qs
+        menus = menus_qs
 
         analisis_final_por_nivel = {}
 

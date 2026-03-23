@@ -2,10 +2,13 @@
 WSGI config for erp_chvs project.
 """
 
-from gevent import monkey
-monkey.patch_all()
-
 import os
+
+try:
+    from gevent import monkey
+    monkey.patch_all()
+except ImportError:
+    pass
 
 from django.core.wsgi import get_wsgi_application
 

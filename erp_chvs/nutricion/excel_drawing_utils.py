@@ -377,7 +377,7 @@ class ExcelReportDrawer:
             # Renderizar componentes y mergear si hay más de una fila
             for comp_str, start_r, end_r in componente_groups:
                 cell = ws.cell(row=start_r, column=layout.COL_COMPONENTE)
-                cell.value = comp_str
+                cell.value = comp_str.upper() if is_comedores else comp_str
                 cell.alignment = left_align
                 if end_r > start_r:
                     ws.merge_cells(
