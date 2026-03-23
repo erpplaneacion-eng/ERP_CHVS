@@ -49,7 +49,7 @@ COMPONENTES_PDF_COMEDORES = [
     (["com3"], "CEREAL (ARROZ)"),
     (["com8"], "TUBÉRCULOS, PLÁTANOS"),
     (["com9"], "HORTALIZAS Y VERDURAS"),
-    (["com12"], "FRUTA ENTERA O EN JUGO"),
+    (["com12", "com14"], "FRUTA ENTERA O EN JUGO"),
 ]
 
 # Mapeos para municipios genéricos (Yumbo, Buga, etc.)
@@ -807,6 +807,13 @@ class CicloMenusPdfService:
         }
         filas_datos.append(prom)
 
+        # Recomendaciones diarias promedio (valores estáticos Comedores Comunitarios)
+        rec = {'cal': 1830.0, 'prot': 59.5, 'grasa': 54.9, 'cho': 275.0}
+
+        # % Adecuación = PROMEDIO / RECOMENDACIONES * 100
+        def _adec(val, ref):
+            return (val / ref * 100) if ref else 0.0
+
         header = [
             self._p("MENÚ", self.style_header),
             self._p("ENERGÍA\n(Kcal)", self.style_header),
@@ -825,6 +832,24 @@ class CicloMenusPdfService:
             ]
             data.append(row)
 
+        # Fila RECOMENDACIONES DIARIAS PROMEDIO
+        data.append([
+            self._p("RECOMENDACIONES DIARIAS PROMEDIO", self.style_header),
+            self._p(f"{rec['cal']:.1f}", self.style_cell_center),
+            self._p(f"{rec['prot']:.1f}", self.style_cell_center),
+            self._p(f"{rec['grasa']:.1f}", self.style_cell_center),
+            self._p(f"{rec['cho']:.1f}", self.style_cell_center),
+        ])
+
+        # Fila % ADECUACIÓN
+        data.append([
+            self._p("% ADECUACIÓN", self.style_header),
+            self._p(f"{_adec(prom['cal'], rec['cal']):.1f}%", self.style_cell_center),
+            self._p(f"{_adec(prom['prot'], rec['prot']):.1f}%", self.style_cell_center),
+            self._p(f"{_adec(prom['grasa'], rec['grasa']):.1f}%", self.style_cell_center),
+            self._p(f"{_adec(prom['cho'], rec['cho']):.1f}%", self.style_cell_center),
+        ])
+
         col_widths = [36 * mm, 34 * mm, 34 * mm, 34 * mm, 34 * mm]
         table = Table(data, colWidths=col_widths, hAlign="LEFT")
 
@@ -837,8 +862,12 @@ class CicloMenusPdfService:
             ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
             # Header row
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#d9d9d9")),
-            # Promedio row (última fila)
-            ("BACKGROUND", (0, n_rows - 1), (-1, n_rows - 1), colors.HexColor("#bfbfbf")),
+            # Fila PROMEDIO
+            ("BACKGROUND", (0, n_rows - 3), (-1, n_rows - 3), colors.HexColor("#bfbfbf")),
+            # Fila RECOMENDACIONES
+            ("BACKGROUND", (0, n_rows - 2), (-1, n_rows - 2), colors.HexColor("#d9d9d9")),
+            # Fila % ADECUACIÓN
+            ("BACKGROUND", (0, n_rows - 1), (-1, n_rows - 1), colors.HexColor("#d9d9d9")),
         ]
         table.setStyle(TableStyle(style_cmds))
         return table
@@ -885,6 +914,8 @@ class CicloMenusPdfService:
         menu_g3_componentes: Dict[int, List[str]] = defaultdict(list)
         menu_g1_componentes: Dict[int, List[str]] = defaultdict(list)
         menu_g2_componentes: Dict[int, List[str]] = defaultdict(list)
+        # comp_ids de cereal que contienen arroz (por ID A010 o por nombre) — excluir del lookup G1 para com8
+        menu_cereal_con_arroz: Dict[int, set] = defaultdict(set)
 
         for prep in prep_rows:
             num = self._menu_number(prep.id_menu.menu)
@@ -908,6 +939,17 @@ class CicloMenusPdfService:
             menu_component_preps[num][comp_id].append(prep_name)
 
             ingredientes_lista = list(prep.ingredientes.all())
+
+            # Rastrear componentes de cereal que contienen arroz (por ID A010 o por nombre)
+            # para evitar que el arroz del cereal acompañante se interprete como tubérculo escondido
+            _CEREALES_COMP = {"com3", "com7"}
+            if comp_id in _CEREALES_COMP:
+                tiene_arroz = any(
+                    ing.id_ingrediente_siesa_id == "A010" or "ARROZ" in (ing.id_ingrediente_siesa.nombre_del_alimento or "").upper()
+                    for ing in list(prep.ingredientes.all())
+                )
+                if tiene_arroz:
+                    menu_cereal_con_arroz[num].add(comp_id)
 
             # Rastrear si la preparación tiene algún ingrediente del grupo 3 (g3) - Lácteos
             tiene_g3 = any(ing.id_grupo_alimentos_id == "g3" for ing in ingredientes_lista)
@@ -988,14 +1030,16 @@ class CicloMenusPdfService:
             componentes_proteico = {"com2", "com2_proteina", "com2_leguminosa"}
             componentes_ensalada = {"com9"}
             componentes_cereal = {"com3", "com7"}
+            componentes_sopa = {"com19"}
             for num in menus_by_number.keys():
                 com8_preps = menu_component_preps[num].get("com8", [])
                 if not com8_preps:
                     # No hay preparación propia de tubérculos; buscar G1 en otros componentes
-                    # Prioridad: proteico (COM2) > ensalada/verdura (COM9) > cereal (COM3/COM7)
+                    # Prioridad: proteico (COM2) > ensalada/verdura (COM9) > cereal (COM3/COM7) > sopa/principio (COM19)
                     g1_en_proteico = [c for c in menu_g1_componentes[num] if c in componentes_proteico]
                     g1_en_ensalada = [c for c in menu_g1_componentes[num] if c in componentes_ensalada]
-                    g1_en_cereal = [c for c in menu_g1_componentes[num] if c in componentes_cereal]
+                    g1_en_cereal = [c for c in menu_g1_componentes[num] if c in componentes_cereal and c not in menu_cereal_con_arroz[num]]
+                    g1_en_sopa = [c for c in menu_g1_componentes[num] if c in componentes_sopa]
                     if g1_en_proteico:
                         prefijo = "EL ALIMENTO PROTEICO"
                         menu_component_preps[num]["com8"].append(f"INCLUIDO EN {prefijo}")
@@ -1004,6 +1048,9 @@ class CicloMenusPdfService:
                         menu_component_preps[num]["com8"].append(f"INCLUIDO EN {prefijo}")
                     elif g1_en_cereal:
                         prefijo = "LOS CEREALES"
+                        menu_component_preps[num]["com8"].append(f"INCLUIDO EN {prefijo}")
+                    elif g1_en_sopa:
+                        prefijo = "EL PRINCIPIO O SOPA"
                         menu_component_preps[num]["com8"].append(f"INCLUIDO EN {prefijo}")
 
         # Lógica especial G2/FRUTAS (Frutas escondidas en otro componente)
