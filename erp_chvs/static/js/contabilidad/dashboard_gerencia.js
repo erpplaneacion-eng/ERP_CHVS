@@ -195,9 +195,9 @@ class DashboardLideresManager {
     _fmtH(h) {
         if (h === null || h === undefined) return '—';
         if (h < 1) return '< 1h';
-        if (h < 24) return `${Math.round(h)}h`;
-        const d = Math.floor(h / 24);
-        const hRest = Math.round(h % 24);
+        if (h < 8) return `${Math.round(h)}h`;
+        const d = Math.floor(h / 8);
+        const hRest = Math.round(h % 8);
         return hRest > 0 ? `${d}d ${hRest}h` : `${d}d`;
     }
 
