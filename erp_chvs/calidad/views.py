@@ -13,7 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 from principal.models import RegistroActividad
 from .models import CertificadoCalidad
 from .pdf_generator import generar_certificado_calidad_pdf
-from .services import buscar_empleado_por_cedula
+from .services import buscar_empleado_por_cedula, buscar_empleados_por_cedulas
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +159,81 @@ def generar_certificado(request):
         'pk': cert.pk,
         'numero': cert.numero_certificado,
         'url_descargar': f'/calidad/certificados/{cert.pk}/descargar/',
+    })
+
+
+@login_required
+@csrf_exempt
+def generar_certificados_lote(request):
+    """Genera múltiples certificados a partir de cédulas separadas por coma."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido.'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido.'}, status=400)
+
+    cedulas_raw = data.get('cedulas', '')
+    observaciones = data.get('observaciones', '').strip()
+
+    if isinstance(cedulas_raw, str):
+        cedulas = [c.strip() for c in cedulas_raw.split(',') if c.strip()]
+    elif isinstance(cedulas_raw, list):
+        cedulas = [str(c).strip() for c in cedulas_raw if str(c).strip()]
+    else:
+        cedulas = []
+
+    if not cedulas:
+        return JsonResponse({'error': 'Ingresa al menos una cédula.'}, status=400)
+    if len(cedulas) > 100:
+        return JsonResponse({'error': 'Máximo 100 cédulas por lote.'}, status=400)
+
+    # Deduplicar conservando orden
+    cedulas = list(dict.fromkeys(cedulas))
+
+    try:
+        empleados_map = buscar_empleados_por_cedulas(cedulas)
+    except Exception as e:
+        logger.error(f"Error buscando empleados en lote: {e}")
+        return JsonResponse({'error': 'Error al consultar la base de datos de empleados.'}, status=500)
+
+    resultados = []
+    for cedula in cedulas:
+        empleado = empleados_map.get(cedula)
+        if not empleado:
+            resultados.append({'cedula': cedula, 'ok': False, 'error': 'Empleado no encontrado.'})
+            continue
+
+        cert = CertificadoCalidad.objects.create(
+            cedula=empleado['cedula'],
+            nombre_completo=empleado.get('nombre_completo') or '',
+            cargo=empleado.get('cargo') or '',
+            programa_empresa=empleado.get('programa_empresa') or '',
+            eps=empleado.get('eps') or '',
+            tipo_empleado=empleado['tipo_empleado'],
+            observaciones=observaciones,
+            creado_por=request.user,
+        )
+        RegistroActividad.registrar(
+            request, 'calidad', 'generar_certificado_lote',
+            f"Certificado {cert.numero_certificado} — {cert.nombre_completo} (C.C. {cert.cedula})"
+        )
+        resultados.append({
+            'cedula': cedula,
+            'ok': True,
+            'numero': cert.numero_certificado,
+            'nombre': cert.nombre_completo,
+            'cargo': cert.cargo or '—',
+            'url_descargar': f'/calidad/certificados/{cert.pk}/descargar/',
+        })
+
+    exitosos = sum(1 for r in resultados if r['ok'])
+    return JsonResponse({
+        'resultados': resultados,
+        'total': len(resultados),
+        'exitosos': exitosos,
+        'fallidos': len(resultados) - exitosos,
     })
 
 

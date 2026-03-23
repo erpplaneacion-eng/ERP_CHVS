@@ -17,6 +17,46 @@ def _get_empleados_conn():
     return psycopg2.connect(url)
 
 
+def buscar_empleados_por_cedulas(cedulas: list) -> dict:
+    """
+    Busca múltiples empleados en una sola conexión usando IN.
+    Retorna dict {cedula: empleado_dict}. Si la misma cédula aparece
+    en varias tablas, prevalece la primera coincidencia (manipuladora > planta > aprendiz).
+    """
+    cedulas = [str(c).strip() for c in cedulas if str(c).strip()]
+    if not cedulas:
+        return {}
+
+    ph = ','.join(['%s'] * len(cedulas))
+    query = f"""
+        SELECT cedula, nombre_completo, cargo, eps,
+               programa_pertenece AS programa_empresa,
+               'manipuladora' AS tipo_empleado
+        FROM tabla_manipuladoras WHERE cedula IN ({ph})
+        UNION ALL
+        SELECT cedula, nombre_completo, cargo, eps,
+               empresa AS programa_empresa,
+               'planta' AS tipo_empleado
+        FROM tabla_planta WHERE cedula IN ({ph})
+        UNION ALL
+        SELECT cedula, nombre_completo, cargo, eps,
+               programa_pertenece AS programa_empresa,
+               'aprendiz' AS tipo_empleado
+        FROM tabla_aprendices WHERE cedula IN ({ph})
+    """
+    conn = _get_empleados_conn()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(query, cedulas * 3)
+            resultado = {}
+            for row in cur.fetchall():
+                if row['cedula'] not in resultado:
+                    resultado[row['cedula']] = dict(row)
+            return resultado
+    finally:
+        conn.close()
+
+
 def buscar_empleado_por_cedula(cedula: str) -> dict | None:
     """
     Busca un empleado en las tres tablas de la BD externa:

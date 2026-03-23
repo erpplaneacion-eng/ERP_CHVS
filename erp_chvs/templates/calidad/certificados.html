@@ -89,6 +89,53 @@
         </div>
     </div>
 
+    <!-- ── Panel de generación masiva ────────────────────────────────── -->
+    <div class="gen-panel" style="margin-top:20px;">
+        <div class="gen-panel-header">
+            <i class="fas fa-layer-group"></i>
+            <span>Generación Masiva</span>
+            <small style="margin-left:8px;opacity:.7;font-weight:400;">Ingresa varias cédulas separadas por coma</small>
+        </div>
+        <div class="gen-panel-body">
+            <div class="search-group">
+                <label for="cedulasLote">Cédulas (separadas por coma, máx. 100)</label>
+                <textarea id="cedulasLote" rows="3"
+                    placeholder="Ej: 1001234567, 1002345678, 1003456789"
+                    style="width:100%;resize:vertical;font-family:monospace;font-size:13px;padding:8px;border:1px solid #dee2e6;border-radius:6px;"></textarea>
+            </div>
+            <div class="obs-group" style="margin-top:12px;">
+                <label for="observacionesLote">Observaciones <span class="optional">(opcional, aplica a todos)</span></label>
+                <textarea id="observacionesLote" rows="2"
+                          placeholder="Ej: Aprobó capacitación BPM — Resolución 719 de 2015"></textarea>
+            </div>
+            <div class="gen-actions" style="margin-top:12px;">
+                <button id="generarLoteBtn" class="btn btn-success">
+                    <i class="fas fa-layer-group"></i> Generar Lote
+                </button>
+            </div>
+
+            <!-- Resultados del lote -->
+            <div id="loteResultados" style="display:none;margin-top:18px;">
+                <div id="loteResumen" style="margin-bottom:10px;font-weight:600;"></div>
+                <div class="table-responsive">
+                    <table class="data-table" style="font-size:13px;">
+                        <thead>
+                            <tr>
+                                <th>Cédula</th>
+                                <th>Nombre</th>
+                                <th>Cargo</th>
+                                <th>N° Certificado</th>
+                                <th>Estado</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="loteResultadosTbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ── Tabla de certificados emitidos ─────────────────────────────── -->
     <div class="table-panel">
         <div class="table-panel-header">
