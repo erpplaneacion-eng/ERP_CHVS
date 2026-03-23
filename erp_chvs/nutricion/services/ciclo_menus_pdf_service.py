@@ -850,7 +850,7 @@ class CicloMenusPdfService:
             self._p(f"{_adec(prom['cho'], rec['cho']):.1f}%", self.style_cell_center),
         ])
 
-        col_widths = [36 * mm, 34 * mm, 34 * mm, 34 * mm, 34 * mm]
+        col_widths = [46 * mm, 34 * mm, 34 * mm, 34 * mm, 34 * mm]
         table = Table(data, colWidths=col_widths, hAlign="LEFT")
 
         n_rows = len(data)
