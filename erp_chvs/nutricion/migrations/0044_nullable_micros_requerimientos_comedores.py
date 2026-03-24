@@ -11,6 +11,13 @@ from django.db import migrations, models
 def insertar_requerimientos_comedores(apps, schema_editor):
     TablaRequerimientosNutricionales = apps.get_model('nutricion', 'TablaRequerimientosNutricionales')
     AdecuacionTotalPorcentaje = apps.get_model('nutricion', 'AdecuacionTotalPorcentaje')
+    ModalidadesDeConsumo = apps.get_model('principal', 'ModalidadesDeConsumo')
+
+    # Garantizar que la modalidad '020701' exista (es dato maestro que puede no estar en BD de prueba)
+    ModalidadesDeConsumo.objects.get_or_create(
+        id_modalidades='020701',
+        defaults={'modalidad': 'RACIONES PARA PREPARAR'},
+    )
 
     for tipo_id in ['comedores_comunitarios', 'adulto_mayor']:
         TablaRequerimientosNutricionales.objects.get_or_create(

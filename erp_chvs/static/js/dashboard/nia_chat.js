@@ -48,6 +48,8 @@ class NiaChatManager {
                 this.renderDescarga(datos.url_descarga, datos.label_descarga);
             } else if (datos.tipo === 'error') {
                 this.renderMensaje('nia', datos.mensaje, 'error');
+            } else if (datos.tipo === 'info') {
+                this.renderMensaje('nia', datos.mensaje, 'info');
             } else {
                 this.renderMensaje('nia', datos.mensaje);
             }
@@ -64,7 +66,10 @@ class NiaChatManager {
     renderMensaje(autor, texto, tipo) {
         const burbuja = document.createElement('div');
         const esNia = autor === 'nia';
-        burbuja.className = `nia-bubble nia-bubble--${esNia ? 'nia' : 'usuario'}${tipo === 'error' ? ' nia-bubble--error' : ''}`;
+        let claseExtra = '';
+        if (tipo === 'error') claseExtra = ' nia-bubble--error';
+        else if (tipo === 'info') claseExtra = ' nia-bubble--info';
+        burbuja.className = `nia-bubble nia-bubble--${esNia ? 'nia' : 'usuario'}${claseExtra}`;
         burbuja.innerHTML = `<p>${this._escaparHtml(texto)}</p>`;
         this.mensajesEl.appendChild(burbuja);
         this._scrollAbajo();

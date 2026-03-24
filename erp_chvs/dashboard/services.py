@@ -1,11 +1,14 @@
 import json
 import os
 import logging
+from datetime import timedelta
 
 import google.generativeai as genai
+from django.utils import timezone
 
 from facturacion.models import ListadosFocalizacion
 from planeacion.models import SedesEducativas
+from principal.models import RegistroActividad
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +19,9 @@ MESES = [
 ]
 
 
+# ─── Datos maestros ───────────────────────────────────────────────────────────
+
 def obtener_programas_con_datos():
-    """Programas que tienen listados de focalización cargados."""
     return list(
         ListadosFocalizacion.objects
         .select_related('programa')
@@ -39,10 +43,7 @@ def obtener_focalizaciones(programa_id):
 
 
 def obtener_sedes_mapa(programa_id, focalizacion=None):
-    """
-    Retorna un dict {nombre_sede: cod_interprise} para un programa.
-    El cod_interprise se resuelve server-side; Gemini nunca lo maneja directamente.
-    """
+    """Retorna {nombre_sede: cod_interprise}. Gemini nunca maneja códigos directamente."""
     filtro = {'programa_id': programa_id}
     if focalizacion:
         filtro['focalizacion'] = focalizacion
@@ -61,11 +62,37 @@ def obtener_sedes_mapa(programa_id, focalizacion=None):
     return {s['nombre_sede_educativa']: s['cod_interprise'] for s in sedes_qs}
 
 
+# ─── Actividad del sistema ─────────────────────────────────────────────────────
+
+def obtener_actividad_para_contexto(horas=24):
+    """
+    Retorna las últimas N horas de RegistroActividad formateadas como texto
+    para inyectar en el prompt de NIA.
+    """
+    desde = timezone.now() - timedelta(hours=horas)
+    registros = (
+        RegistroActividad.objects
+        .select_related('usuario')
+        .filter(fecha__gte=desde)
+        .order_by('-fecha')[:60]
+    )
+
+    if not registros:
+        return f'Sin actividad registrada en las últimas {horas} horas.'
+
+    lineas = []
+    for r in registros:
+        usuario = (r.usuario.get_full_name() or r.usuario.username) if r.usuario else 'Sistema'
+        estado = '✓' if r.exitoso else '✗ ERROR'
+        hora = r.fecha.strftime('%d/%m %H:%M')
+        lineas.append(f"[{hora}] {estado} | {r.modulo} | {r.accion} | {usuario} | {r.descripcion[:80]}")
+
+    return '\n'.join(lineas)
+
+
+# ─── Procesamiento principal ───────────────────────────────────────────────────
+
 def procesar_mensaje_nia(request, mensaje_usuario):
-    """
-    Procesa un mensaje del usuario, actualiza el estado de la conversación
-    en la sesión y retorna la respuesta de NIA.
-    """
     estado = request.session.get('nia_chat_estado', {})
 
     programas = obtener_programas_con_datos()
@@ -76,11 +103,13 @@ def procesar_mensaje_nia(request, mensaje_usuario):
         focalizaciones = obtener_focalizaciones(estado['programa_id'])
     if estado.get('programa_id') and estado.get('focalizacion'):
         sedes_mapa = obtener_sedes_mapa(estado['programa_id'], estado.get('focalizacion'))
-        # Guardar el mapa en sesión para resolver cod_interprise server-side
         estado['sedes_mapa'] = sedes_mapa
 
+    actividad_ctx = obtener_actividad_para_contexto(horas=24)
+
     prompt = _construir_prompt_nia(
-        mensaje_usuario, estado, programas, focalizaciones, list(sedes_mapa.keys())
+        mensaje_usuario, estado, programas, focalizaciones,
+        list(sedes_mapa.keys()), actividad_ctx,
     )
 
     try:
@@ -101,7 +130,13 @@ def procesar_mensaje_nia(request, mensaje_usuario):
             'tipo': 'error',
         }
 
-    # Actualizar estado con parámetros extraídos
+    intent = datos.get('intent', 'planillas')
+
+    # ── Intent: consulta de actividad ─────────────────────────────────────────
+    if intent == 'actividad':
+        return {'mensaje': datos['respuesta'], 'tipo': 'info'}
+
+    # ── Intent: generación de planillas ───────────────────────────────────────
     params = datos.get('params_extraidos', {})
 
     if params.get('programa_id'):
@@ -116,7 +151,6 @@ def procesar_mensaje_nia(request, mensaje_usuario):
 
     if params.get('focalizacion'):
         estado['focalizacion'] = params['focalizacion']
-        # Resetear selección de sede al cambiar focalización
         estado.pop('todas_sedes', None)
         estado.pop('sede_nombre', None)
         estado.pop('sede_cod_interprise', None)
@@ -125,7 +159,6 @@ def procesar_mensaje_nia(request, mensaje_usuario):
     if params.get('todas_sedes') is not None:
         estado['todas_sedes'] = params['todas_sedes']
 
-    # Resolver sede_nombre → cod_interprise server-side (Gemini devuelve solo el nombre)
     sede_nombre_gemini = params.get('sede_nombre')
     if sede_nombre_gemini and not estado.get('todas_sedes'):
         mapa = estado.get('sedes_mapa', sedes_mapa)
@@ -134,16 +167,15 @@ def procesar_mensaje_nia(request, mensaje_usuario):
             estado['sede_nombre'] = sede_nombre_gemini
             estado['sede_cod_interprise'] = cod
         else:
-            logger.warning(f"NIA: sede '{sede_nombre_gemini}' no encontrada en mapa {list(mapa.keys())}")
+            logger.warning(f"NIA: sede '{sede_nombre_gemini}' no encontrada en {list(mapa.keys())}")
 
     request.session['nia_chat_estado'] = estado
     request.session.modified = True
 
     if datos.get('listo'):
-        # Validar que tenemos cod_interprise si es sede individual
         if not estado.get('todas_sedes') and not estado.get('sede_cod_interprise'):
             return {
-                'mensaje': 'No pude identificar esa sede en el sistema. ¿Puedes escribir el nombre exactamente como aparece en la lista?',
+                'mensaje': 'No pude identificar esa sede. ¿Puedes escribir el nombre exactamente como aparece en la lista?',
                 'tipo': 'pregunta',
             }
         url, label = _construir_url_descarga(estado)
@@ -157,43 +189,34 @@ def procesar_mensaje_nia(request, mensaje_usuario):
     return {'mensaje': datos['respuesta'], 'tipo': 'pregunta'}
 
 
+# ─── Helpers internos ──────────────────────────────────────────────────────────
+
 def _resolver_sede(nombre_buscado, mapa):
-    """
-    Busca el cod_interprise para un nombre de sede.
-    Primero intenta coincidencia exacta, luego parcial (case-insensitive).
-    """
     if not nombre_buscado or not mapa:
         return None
-
-    # Exacta
     if nombre_buscado in mapa:
         return mapa[nombre_buscado]
-
-    # Case-insensitive
     nombre_lower = nombre_buscado.lower().strip()
     for nombre, cod in mapa.items():
         if nombre.lower().strip() == nombre_lower:
             return cod
-
-    # Coincidencia parcial (el nombre buscado contiene o está contenido)
     for nombre, cod in mapa.items():
         if nombre_lower in nombre.lower() or nombre.lower() in nombre_lower:
             return cod
-
     return None
 
 
-def _construir_prompt_nia(mensaje, estado, programas, focalizaciones, nombres_sedes):
+def _construir_prompt_nia(mensaje, estado, programas, focalizaciones, nombres_sedes, actividad_ctx):
     ctx_programas = ', '.join(
         [f"{p['programa__programa']} (id={p['programa__id']})" for p in programas]
     ) or 'ninguno disponible'
 
     ctx_focos = ', '.join(focalizaciones) or 'pendiente de seleccionar programa'
 
-    if nombres_sedes:
-        ctx_sedes = '\n'.join([f"  - {nombre}" for nombre in nombres_sedes])
-    else:
-        ctx_sedes = 'pendiente de seleccionar focalización'
+    ctx_sedes = (
+        '\n'.join([f"  - {nombre}" for nombre in nombres_sedes])
+        if nombres_sedes else 'pendiente de seleccionar focalización'
+    )
 
     estado_actual = json.dumps({
         'programa': estado.get('programa_nombre'),
@@ -203,30 +226,50 @@ def _construir_prompt_nia(mensaje, estado, programas, focalizaciones, nombres_se
         'sede_seleccionada': estado.get('sede_nombre'),
     }, ensure_ascii=False)
 
-    return f"""Eres NIA, asistente del ERP PAE Colombia. Tu única función es ayudar a generar planillas de asistencia escolar.
+    return f"""Eres NIA, asistente inteligente del ERP PAE Colombia. Tienes dos capacidades:
+1. Generar planillas de asistencia escolar.
+2. Responder preguntas sobre la actividad reciente del sistema.
 
+══════════════════════════════════════════
+DATOS DEL SISTEMA — ACTIVIDAD ÚLTIMAS 24h
+══════════════════════════════════════════
+{actividad_ctx}
+
+══════════════════════════════════════════
+CONTEXTO PLANILLAS
+══════════════════════════════════════════
 PROGRAMAS DISPONIBLES: {ctx_programas}
 FOCALIZACIONES DEL PROGRAMA SELECCIONADO: {ctx_focos}
-SEDES DISPONIBLES (nombres exactos):
+SEDES DISPONIBLES:
 {ctx_sedes}
-ESTADO ACTUAL DE LA CONVERSACIÓN: {estado_actual}
+ESTADO CONVERSACIÓN PLANILLAS: {estado_actual}
+
+══════════════════════════════════════════
 MENSAJE DEL USUARIO: {mensaje}
+══════════════════════════════════════════
 
 INSTRUCCIONES:
-1. Extrae los parámetros que el usuario mencione: programa, mes (1-12), focalización, tipo de sede.
-2. Si el usuario menciona el nombre de un programa, identifica su id en PROGRAMAS DISPONIBLES (comparación flexible, sin importar mayúsculas/acentos).
-3. Para el mes: acepta nombres ("marzo" → 3) o números.
-4. Para la focalización: busca la coincidencia exacta en FOCALIZACIONES.
-5. Solicita solo los parámetros que faltan, en este orden: programa → mes → focalización → ¿todas las sedes o una específica?
-6. Si el usuario quiere todas las sedes → todas_sedes=true, sede_nombre=null.
-7. Si menciona una sede específica → todas_sedes=false, sede_nombre=<nombre EXACTO de SEDES DISPONIBLES que más se parezca>.
-8. IMPORTANTE: en sede_nombre devuelve SIEMPRE el nombre tal como aparece en SEDES DISPONIBLES, sin modificarlo.
-9. Cuando tengas TODOS los parámetros (programa_id, mes, focalizacion, todas_sedes definido; si todas_sedes=false también sede_nombre), pon listo=true.
-10. Si el usuario pregunta algo fuera de planillas de asistencia, responde que solo puedes ayudar con eso.
-11. Responde siempre en español, de forma breve y amable. Al listar sedes, muéstralas numeradas.
+A) Detecta el intent del mensaje:
+   - "actividad": el usuario pregunta sobre qué pasó, acciones realizadas, errores, usuarios activos, resumen del día, etc.
+   - "planillas": el usuario quiere generar planillas de asistencia.
 
-Responde ÚNICAMENTE en JSON con esta estructura:
+B) Si intent="actividad":
+   - Responde usando SOLO los datos de ACTIVIDAD ÚLTIMAS 24h proporcionados.
+   - Sé conciso y ejecutivo. Si pregunta por errores, menciona solo los que tengan ✗ ERROR.
+   - No inventes datos que no estén en la sección de actividad.
+   - Devuelve listo=false y params_extraidos con todo null.
+
+C) Si intent="planillas":
+   - Solicita los parámetros faltantes en orden: programa → mes → focalización → ¿todas las sedes o una específica?
+   - Si el usuario dice "todas" → todas_sedes=true. Si menciona una sede → todas_sedes=false, sede_nombre=<nombre exacto de SEDES DISPONIBLES>.
+   - IMPORTANTE: en sede_nombre devuelve el nombre TAL COMO APARECE en SEDES DISPONIBLES.
+   - Cuando tengas todos los parámetros pon listo=true.
+
+D) Responde siempre en español, de forma breve y amable.
+
+Responde ÚNICAMENTE en JSON:
 {{
+  "intent": "actividad" | "planillas",
   "respuesta": "<mensaje para el usuario>",
   "params_extraidos": {{
     "programa_id": null,
@@ -245,17 +288,10 @@ def _construir_url_descarga(estado):
     prog_nombre = estado.get('programa_nombre', f"Programa {estado['programa_id']}")
 
     if estado.get('todas_sedes'):
-        url = (
-            f"/facturacion/generar-zip-masivo/"
-            f"{estado['programa_id']}/{estado['mes']}/{foco}/"
-        )
+        url = f"/facturacion/generar-zip-masivo/{estado['programa_id']}/{estado['mes']}/{foco}/"
         label = f"Descargar ZIP — {prog_nombre} · {nombre_mes} · {foco}"
     else:
-        url = (
-            f"/facturacion/generar-asistencia/"
-            f"{estado['programa_id']}/{estado['sede_cod_interprise']}/{estado['mes']}/{foco}/"
-        )
-        sede_nombre = estado.get('sede_nombre', 'sede')
-        label = f"Descargar PDF — {sede_nombre} · {nombre_mes} · {foco}"
+        url = f"/facturacion/generar-asistencia/{estado['programa_id']}/{estado['sede_cod_interprise']}/{estado['mes']}/{foco}/"
+        label = f"Descargar PDF — {estado.get('sede_nombre', 'sede')} · {nombre_mes} · {foco}"
 
     return url, label

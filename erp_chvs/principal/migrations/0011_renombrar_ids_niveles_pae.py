@@ -64,6 +64,8 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('principal', '0010_poblar_tipos_programa_y_nivel_general'),
+        # Las tablas nutricion_* se crean/renombran antes de esta migración de datos
+        ('nutricion', '0027_recomendacion_diaria_grado_mod'),
     ]
 
     operations = [

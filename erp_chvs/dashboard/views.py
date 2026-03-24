@@ -1,4 +1,5 @@
 import json
+import logging
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -6,6 +7,8 @@ from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
 from . import services
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -23,7 +26,8 @@ def api_nia_chat(request):
             return JsonResponse({'error': 'Mensaje vacío'}, status=400)
         resultado = services.procesar_mensaje_nia(request, mensaje)
         return JsonResponse(resultado)
-    except Exception:
+    except Exception as e:
+        logger.exception(f"NIA chat error: {e}")
         return JsonResponse({'mensaje': 'Error interno. Intenta de nuevo.', 'tipo': 'error'})
 
 
