@@ -343,16 +343,18 @@ def _dibujar_contenido_izquierdo(c: canvas.Canvas, cert, x: float, y: float, w: 
         "trazabilidad y prevención de contaminación cruzada, conforme a la normativa sanitaria vigente, "
         "Decreto 1500 de 2007."
     )
-    c.setFont("Helvetica", 9.0)
-    y_text = _draw_justified_text(c, parrafo, x + pad, y_text - 0.9 * cm, w - 2 * pad, 12.2)
+    c.setFont("Helvetica", 10.5)
+    y_text = _draw_justified_text(c, parrafo, x + pad, y_text - 0.9 * cm, w - 2 * pad, 14.0)
 
     cierre_1 = "El curso se reforzara con las capacitaciones contempladas mensualmente, para la vigencia de 1 año."
     cierre_2 = f"Para constancia de lo anterior, la presente certificacion se firma en Yumbo el {_fecha_es(cert.fecha_emision)}."
-    c.setFont("Helvetica", 9.0)
-    y_text = _draw_justified_text(c, cierre_1, x + pad, y_text - 0.45 * cm, w - 2 * pad, 12.2)
-    _draw_justified_text(c, cierre_2, x + pad, y_text - 0.55 * cm, w - 2 * pad, 12.2)
+    c.setFont("Helvetica", 10.5)
+    y_text = _draw_justified_text(c, cierre_1, x + pad, y_text - 0.5 * cm, w - 2 * pad, 14.0)
+    y_text = _draw_justified_text(c, cierre_2, x + pad, y_text - 0.6 * cm, w - 2 * pad, 14.0)
 
-    firma_y = y + 1.95 * cm
+    # Firma 3 líneas más abajo del último párrafo.
+    # Mínimo 1.7 cm desde el borde inferior para que quepan las 4 líneas de texto.
+    firma_y = max(y + 1.7 * cm, y_text - 1.8 * cm)
     firma_path = _resolver_static_image(FIRMA_STATIC_REL)
     firma_ok = _dibujar_imagen_ajustada(
         c,
@@ -367,19 +369,19 @@ def _dibujar_contenido_izquierdo(c: canvas.Canvas, cert, x: float, y: float, w: 
     c.setLineWidth(0.7)
     c.line(x + w * 0.34, firma_y, x + w * 0.66, firma_y)
     c.setFillColor(NEGRO)
-    c.setFont("Helvetica", 8.3)
+    c.setFont("Helvetica", 10.0)
 
     if not firma_ok:
         c.setFont("Times-Italic", 12)
         c.setFillColor(colors.grey)
         c.drawCentredString(x + w * 0.5, firma_y + 0.25 * cm, _safe("Firma"))
         c.setFillColor(NEGRO)
-        c.setFont("Helvetica", 8.3)
+        c.setFont("Helvetica", 10.0)
 
-    c.drawCentredString(x + w * 0.5, firma_y - 0.35 * cm, _safe("ING. Msc. SANDRA HENAO TORO"))
-    c.drawCentredString(x + w * 0.5, firma_y - 0.75 * cm, _safe("JEFE DE ASEGURAMIENTO DE CALIDAD"))
-    c.drawCentredString(x + w * 0.5, firma_y - 1.15 * cm, _safe("INGENIERA DE ALIMENTOS / MP 26254-244061 VLL"))
-    c.drawCentredString(x + w * 0.5, firma_y - 1.55 * cm, _safe("CORPORACION HACIA UN VALLE SOLIDARIO"))
+    c.drawCentredString(x + w * 0.5, firma_y - 0.38 * cm, _safe("ING. Msc. SANDRA HENAO TORO"))
+    c.drawCentredString(x + w * 0.5, firma_y - 0.80 * cm, _safe("JEFE DE ASEGURAMIENTO DE CALIDAD"))
+    c.drawCentredString(x + w * 0.5, firma_y - 1.22 * cm, _safe("INGENIERA DE ALIMENTOS / MP 26254-244061 VLL"))
+    c.drawCentredString(x + w * 0.5, firma_y - 1.64 * cm, _safe("CORPORACION HACIA UN VALLE SOLIDARIO"))
 
     # Se elimina el pie de "Certificado N." por requerimiento.
 
@@ -405,168 +407,65 @@ def _dibujar_marca_agua_somos_q(c: canvas.Canvas, x: float, y: float, w: float, 
 
 def generar_carnets_lote_pdf(certificados: list) -> BytesIO:
     """
-    Genera un PDF A4 vertical con 3 carnets por hoja.
-    Cada carnet tiene líneas de corte y contiene los datos esenciales
-    para que el empleado lo lleve en la billetera.
+    Genera un PDF carta vertical con 3 certificados por hoja.
+    Usa el mismo diseño del certificado individual escalado para caber 3 por página.
+    Incluye líneas de corte punteadas entre cada certificado.
     """
-    from reportlab.lib.pagesizes import A4
-
     buffer = BytesIO()
-    ancho_a4, alto_a4 = A4  # 595.28 x 841.89 pts
+    # Carta vertical: 612 x 792 pts
+    ancho_carta, alto_carta = LETTER
 
-    c = canvas.Canvas(buffer, pagesize=A4)
+    c = canvas.Canvas(buffer, pagesize=LETTER)
 
-    margen_h = 1.0 * cm       # margen izquierdo/derecho
-    margen_v = 0.8 * cm       # margen superior/inferior
-    gap = 0.5 * cm            # espacio entre carnets (zona de corte)
+    # Dimensiones originales del certificado (landscape LETTER)
+    orig_w, orig_h = landscape(LETTER)  # 792 x 612 pts
 
-    card_w = ancho_a4 - 2 * margen_h
-    card_h = (alto_a4 - 2 * margen_v - 2 * gap) / 3
+    margen   = 0.2 * cm
+    gap      = 0.2 * cm   # espacio entre certificados (zona de corte)
 
-    logo_path = _resolver_static_image(LOGO_STATIC_REL)
-    firma_path = _resolver_static_image(FIRMA_STATIC_REL)
+    slot_w = ancho_carta - 2 * margen
+    slot_h = (alto_carta - 2 * margen - 2 * gap) / 3
+
+    # Escala uniforme para que el cert original quepa en el slot
+    escala = min(slot_w / orig_w, slot_h / orig_h)
+
+    cert_w = orig_w * escala
+    cert_h = orig_h * escala
 
     for i, cert in enumerate(certificados):
         slot = i % 3
         if i > 0 and slot == 0:
             c.showPage()
 
-        # Posición Y del carnet (de abajo hacia arriba en ReportLab)
-        card_y = alto_a4 - margen_v - (slot + 1) * card_h - slot * gap
-        card_x = margen_h
+        # Esquina inferior-izquierda del slot (ReportLab: y crece hacia arriba)
+        slot_y = alto_carta - margen - (slot + 1) * slot_h - slot * gap
 
-        _dibujar_carnet(c, cert, card_x, card_y, card_w, card_h, logo_path, firma_path)
+        # Centrar el cert escalado dentro del slot
+        offset_x = margen + (slot_w - cert_w) / 2
+        offset_y = slot_y + (slot_h - cert_h) / 2
 
-        # Línea de corte punteada debajo del carnet (excepto el último de la página)
-        if slot < 2 and i < len(certificados) - 1:
-            linea_y = card_y - gap / 2
+        c.saveState()
+        c.translate(offset_x, offset_y)
+        c.scale(escala, escala)
+        _dibujar_pagina(c, cert, orig_w, orig_h)
+        c.restoreState()
+
+        # Línea de corte punteada entre slots (no después del último de la página)
+        if slot < 2:
+            linea_y = slot_y - gap / 2
             c.saveState()
             c.setStrokeColor(colors.HexColor("#AAAAAA"))
             c.setLineWidth(0.5)
             c.setDash(4, 4)
-            c.line(margen_h - 0.3 * cm, linea_y, ancho_a4 - margen_h + 0.3 * cm, linea_y)
-            # Tijera
+            c.line(0.3 * cm, linea_y, ancho_carta - 0.3 * cm, linea_y)
             c.restoreState()
             c.setFont("Helvetica", 7)
             c.setFillColor(colors.HexColor("#AAAAAA"))
-            c.drawString(margen_h - 0.3 * cm, linea_y + 1, _safe("✂"))
+            c.drawString(0.3 * cm, linea_y + 1, _safe("- - - cortar - - -"))
 
     c.save()
     buffer.seek(0)
     return buffer
-
-
-def _dibujar_carnet(
-    c: canvas.Canvas,
-    cert,
-    x: float, y: float,
-    w: float, h: float,
-    logo_path, firma_path
-):
-    pad = 0.55 * cm
-
-    # Fondo blanco con borde
-    c.setFillColor(colors.white)
-    c.rect(x, y, w, h, fill=1, stroke=0)
-    c.setStrokeColor(colors.HexColor("#CCCCCC"))
-    c.setLineWidth(0.5)
-    c.rect(x, y, w, h, fill=0, stroke=1)
-
-    # ── Banda superior verde ────────────────────────────────────────────────
-    banda_h = 1.1 * cm
-    c.setFillColor(VERDE_BANDA)
-    c.rect(x, y + h - banda_h, w, banda_h, fill=1, stroke=0)
-
-    # Título en la banda
-    c.setFillColor(colors.white)
-    c.setFont("Helvetica-Bold", 9)
-    c.drawCentredString(x + w / 2, y + h - banda_h + 0.38 * cm, _safe("CERTIFICADO DE MANIPULACIÓN DE ALIMENTOS — BPM"))
-    c.setFont("Helvetica", 7.5)
-    c.drawCentredString(x + w / 2, y + h - banda_h + 0.12 * cm, _safe("Resolución 2674 de 2013 — Ministerio de Salud y Protección Social"))
-
-    # ── Zona de contenido ───────────────────────────────────────────────────
-    contenido_y_top = y + h - banda_h - pad
-    col_logo_w = 2.4 * cm
-    col_datos_x = x + pad + col_logo_w + 0.4 * cm
-    col_datos_w = w - col_logo_w - 2 * pad - 0.4 * cm
-
-    # Logo
-    logo_ok = _dibujar_imagen_ajustada(
-        c, logo_path,
-        x + pad, contenido_y_top - 2.0 * cm,
-        max_w=col_logo_w, max_h=1.7 * cm,
-        anchor_top=True,
-    )
-    if not logo_ok:
-        c.setFillColor(GRIS)
-        c.setFont("Helvetica", 6)
-        c.drawCentredString(x + pad + col_logo_w / 2, contenido_y_top - 1.0 * cm, _safe("LOGO"))
-
-    # Empresa
-    c.setFillColor(NEGRO)
-    c.setFont("Helvetica-Bold", 7.5)
-    c.drawString(col_datos_x, contenido_y_top, _safe("La Unión Temporal Alimentando Buga 2026"))
-
-    # Separador fino
-    c.setStrokeColor(VERDE_BANDA_SUAVE)
-    c.setLineWidth(0.8)
-    c.line(col_datos_x, contenido_y_top - 0.25 * cm, x + w - pad, contenido_y_top - 0.25 * cm)
-
-    # Nombre del empleado
-    cursor_y = contenido_y_top - 0.55 * cm
-    c.setFont("Helvetica-Bold", 9.5)
-    c.setFillColor(NEGRO)
-    nombre = _safe(cert.nombre_completo or '').upper()
-    # Si el nombre es muy largo, reducir fuente
-    if c.stringWidth(nombre, "Helvetica-Bold", 9.5) > col_datos_w:
-        c.setFont("Helvetica-Bold", 8)
-    c.drawString(col_datos_x, cursor_y, nombre)
-
-    cursor_y -= 0.42 * cm
-    c.setFont("Helvetica", 8)
-    c.setFillColor(GRIS)
-    c.drawString(col_datos_x, cursor_y, _safe(f"C.C. {cert.cedula}"))
-
-    cursor_y -= 0.38 * cm
-    tipo = TIPO_LABELS.get(cert.tipo_empleado, cert.tipo_empleado)
-    c.setFont("Helvetica", 7.8)
-    c.drawString(col_datos_x, cursor_y, _safe(f"Cargo: {cert.cargo or tipo}"))
-
-    cursor_y -= 0.36 * cm
-    c.setFont("Helvetica-Oblique", 7.5)
-    c.drawString(col_datos_x, cursor_y, _safe(tipo))
-
-    # ── Franja inferior — número de cert y fecha ───────────────────────────
-    franja_h = 1.55 * cm
-    franja_y = y
-    c.setFillColor(VERDE_DECORACION)
-    c.rect(x, franja_y, w, franja_h, fill=1, stroke=0)
-
-    # N° certificado
-    c.setFillColor(NEGRO)
-    c.setFont("Helvetica-Bold", 8)
-    c.drawString(x + pad, franja_y + franja_h - 0.45 * cm, _safe(f"N° {cert.numero_certificado}"))
-
-    # Fecha
-    c.setFont("Helvetica", 7.5)
-    c.drawString(x + pad, franja_y + franja_h - 0.78 * cm, _safe(f"Emitido: {_fecha_es(cert.fecha_emision)}"))
-    c.drawString(x + pad, franja_y + franja_h - 1.05 * cm, _safe("Vigencia: 1 año"))
-
-    # Firma (lado derecho de la franja)
-    firma_x = x + w * 0.52
-    firma_ancho = w * 0.44
-    firma_ok = _dibujar_imagen_ajustada(
-        c, firma_path,
-        firma_x, franja_y + 0.15 * cm,
-        max_w=firma_ancho, max_h=1.1 * cm,
-    )
-    c.setStrokeColor(colors.HexColor("#888888"))
-    c.setLineWidth(0.5)
-    linea_firma_y = franja_y + 0.32 * cm
-    c.line(firma_x, linea_firma_y, firma_x + firma_ancho, linea_firma_y)
-    c.setFont("Helvetica", 6.2)
-    c.setFillColor(GRIS)
-    c.drawCentredString(firma_x + firma_ancho / 2, franja_y + 0.16 * cm, _safe("ING. SANDRA HENAO TORO — JEFE DE CALIDAD"))
 
 
 def _dibujar_contenido_derecho(c: canvas.Canvas, cert, x: float, y: float, w: float, h: float):
