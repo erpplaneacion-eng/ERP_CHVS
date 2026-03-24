@@ -116,7 +116,12 @@
 
             <!-- Resultados del lote -->
             <div id="loteResultados" style="display:none;margin-top:18px;">
-                <div id="loteResumen" style="margin-bottom:10px;font-weight:600;"></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                    <div id="loteResumen" style="font-weight:600;"></div>
+                    <button id="imprimirCarnetesBtn" class="btn btn-primary btn-sm" style="display:none;">
+                        <i class="fas fa-id-card"></i> Imprimir Carnets (3 por hoja)
+                    </button>
+                </div>
                 <div class="table-responsive">
                     <table class="data-table" style="font-size:13px;">
                         <thead>

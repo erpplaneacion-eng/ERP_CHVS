@@ -403,6 +403,172 @@ def _dibujar_marca_agua_somos_q(c: canvas.Canvas, x: float, y: float, w: float, 
     c.restoreState()
 
 
+def generar_carnets_lote_pdf(certificados: list) -> BytesIO:
+    """
+    Genera un PDF A4 vertical con 3 carnets por hoja.
+    Cada carnet tiene líneas de corte y contiene los datos esenciales
+    para que el empleado lo lleve en la billetera.
+    """
+    from reportlab.lib.pagesizes import A4
+
+    buffer = BytesIO()
+    ancho_a4, alto_a4 = A4  # 595.28 x 841.89 pts
+
+    c = canvas.Canvas(buffer, pagesize=A4)
+
+    margen_h = 1.0 * cm       # margen izquierdo/derecho
+    margen_v = 0.8 * cm       # margen superior/inferior
+    gap = 0.5 * cm            # espacio entre carnets (zona de corte)
+
+    card_w = ancho_a4 - 2 * margen_h
+    card_h = (alto_a4 - 2 * margen_v - 2 * gap) / 3
+
+    logo_path = _resolver_static_image(LOGO_STATIC_REL)
+    firma_path = _resolver_static_image(FIRMA_STATIC_REL)
+
+    for i, cert in enumerate(certificados):
+        slot = i % 3
+        if i > 0 and slot == 0:
+            c.showPage()
+
+        # Posición Y del carnet (de abajo hacia arriba en ReportLab)
+        card_y = alto_a4 - margen_v - (slot + 1) * card_h - slot * gap
+        card_x = margen_h
+
+        _dibujar_carnet(c, cert, card_x, card_y, card_w, card_h, logo_path, firma_path)
+
+        # Línea de corte punteada debajo del carnet (excepto el último de la página)
+        if slot < 2 and i < len(certificados) - 1:
+            linea_y = card_y - gap / 2
+            c.saveState()
+            c.setStrokeColor(colors.HexColor("#AAAAAA"))
+            c.setLineWidth(0.5)
+            c.setDash(4, 4)
+            c.line(margen_h - 0.3 * cm, linea_y, ancho_a4 - margen_h + 0.3 * cm, linea_y)
+            # Tijera
+            c.restoreState()
+            c.setFont("Helvetica", 7)
+            c.setFillColor(colors.HexColor("#AAAAAA"))
+            c.drawString(margen_h - 0.3 * cm, linea_y + 1, _safe("✂"))
+
+    c.save()
+    buffer.seek(0)
+    return buffer
+
+
+def _dibujar_carnet(
+    c: canvas.Canvas,
+    cert,
+    x: float, y: float,
+    w: float, h: float,
+    logo_path, firma_path
+):
+    pad = 0.55 * cm
+
+    # Fondo blanco con borde
+    c.setFillColor(colors.white)
+    c.rect(x, y, w, h, fill=1, stroke=0)
+    c.setStrokeColor(colors.HexColor("#CCCCCC"))
+    c.setLineWidth(0.5)
+    c.rect(x, y, w, h, fill=0, stroke=1)
+
+    # ── Banda superior verde ────────────────────────────────────────────────
+    banda_h = 1.1 * cm
+    c.setFillColor(VERDE_BANDA)
+    c.rect(x, y + h - banda_h, w, banda_h, fill=1, stroke=0)
+
+    # Título en la banda
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 9)
+    c.drawCentredString(x + w / 2, y + h - banda_h + 0.38 * cm, _safe("CERTIFICADO DE MANIPULACIÓN DE ALIMENTOS — BPM"))
+    c.setFont("Helvetica", 7.5)
+    c.drawCentredString(x + w / 2, y + h - banda_h + 0.12 * cm, _safe("Resolución 2674 de 2013 — Ministerio de Salud y Protección Social"))
+
+    # ── Zona de contenido ───────────────────────────────────────────────────
+    contenido_y_top = y + h - banda_h - pad
+    col_logo_w = 2.4 * cm
+    col_datos_x = x + pad + col_logo_w + 0.4 * cm
+    col_datos_w = w - col_logo_w - 2 * pad - 0.4 * cm
+
+    # Logo
+    logo_ok = _dibujar_imagen_ajustada(
+        c, logo_path,
+        x + pad, contenido_y_top - 2.0 * cm,
+        max_w=col_logo_w, max_h=1.7 * cm,
+        anchor_top=True,
+    )
+    if not logo_ok:
+        c.setFillColor(GRIS)
+        c.setFont("Helvetica", 6)
+        c.drawCentredString(x + pad + col_logo_w / 2, contenido_y_top - 1.0 * cm, _safe("LOGO"))
+
+    # Empresa
+    c.setFillColor(NEGRO)
+    c.setFont("Helvetica-Bold", 7.5)
+    c.drawString(col_datos_x, contenido_y_top, _safe("La Unión Temporal Alimentando Buga 2026"))
+
+    # Separador fino
+    c.setStrokeColor(VERDE_BANDA_SUAVE)
+    c.setLineWidth(0.8)
+    c.line(col_datos_x, contenido_y_top - 0.25 * cm, x + w - pad, contenido_y_top - 0.25 * cm)
+
+    # Nombre del empleado
+    cursor_y = contenido_y_top - 0.55 * cm
+    c.setFont("Helvetica-Bold", 9.5)
+    c.setFillColor(NEGRO)
+    nombre = _safe(cert.nombre_completo or '').upper()
+    # Si el nombre es muy largo, reducir fuente
+    if c.stringWidth(nombre, "Helvetica-Bold", 9.5) > col_datos_w:
+        c.setFont("Helvetica-Bold", 8)
+    c.drawString(col_datos_x, cursor_y, nombre)
+
+    cursor_y -= 0.42 * cm
+    c.setFont("Helvetica", 8)
+    c.setFillColor(GRIS)
+    c.drawString(col_datos_x, cursor_y, _safe(f"C.C. {cert.cedula}"))
+
+    cursor_y -= 0.38 * cm
+    tipo = TIPO_LABELS.get(cert.tipo_empleado, cert.tipo_empleado)
+    c.setFont("Helvetica", 7.8)
+    c.drawString(col_datos_x, cursor_y, _safe(f"Cargo: {cert.cargo or tipo}"))
+
+    cursor_y -= 0.36 * cm
+    c.setFont("Helvetica-Oblique", 7.5)
+    c.drawString(col_datos_x, cursor_y, _safe(tipo))
+
+    # ── Franja inferior — número de cert y fecha ───────────────────────────
+    franja_h = 1.55 * cm
+    franja_y = y
+    c.setFillColor(VERDE_DECORACION)
+    c.rect(x, franja_y, w, franja_h, fill=1, stroke=0)
+
+    # N° certificado
+    c.setFillColor(NEGRO)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(x + pad, franja_y + franja_h - 0.45 * cm, _safe(f"N° {cert.numero_certificado}"))
+
+    # Fecha
+    c.setFont("Helvetica", 7.5)
+    c.drawString(x + pad, franja_y + franja_h - 0.78 * cm, _safe(f"Emitido: {_fecha_es(cert.fecha_emision)}"))
+    c.drawString(x + pad, franja_y + franja_h - 1.05 * cm, _safe("Vigencia: 1 año"))
+
+    # Firma (lado derecho de la franja)
+    firma_x = x + w * 0.52
+    firma_ancho = w * 0.44
+    firma_ok = _dibujar_imagen_ajustada(
+        c, firma_path,
+        firma_x, franja_y + 0.15 * cm,
+        max_w=firma_ancho, max_h=1.1 * cm,
+    )
+    c.setStrokeColor(colors.HexColor("#888888"))
+    c.setLineWidth(0.5)
+    linea_firma_y = franja_y + 0.32 * cm
+    c.line(firma_x, linea_firma_y, firma_x + firma_ancho, linea_firma_y)
+    c.setFont("Helvetica", 6.2)
+    c.setFillColor(GRIS)
+    c.drawCentredString(firma_x + firma_ancho / 2, franja_y + 0.16 * cm, _safe("ING. SANDRA HENAO TORO — JEFE DE CALIDAD"))
+
+
 def _dibujar_contenido_derecho(c: canvas.Canvas, cert, x: float, y: float, w: float, h: float):
     pad = 1.0 * cm
     top_y = y + h - 2.0 * cm

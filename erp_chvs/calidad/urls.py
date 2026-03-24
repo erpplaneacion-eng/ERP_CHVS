@@ -13,6 +13,7 @@ urlpatterns = [
     path('api/certificados/', views.api_certificados_list, name='api_certificados_list'),
     path('certificados/generar/', views.generar_certificado, name='generar_certificado'),
     path('certificados/generar-lote/', views.generar_certificados_lote, name='generar_certificados_lote'),
+    path('certificados/pdf-carnets/', views.pdf_carnets_lote, name='pdf_carnets_lote'),
     path('certificados/<int:pk>/descargar/', views.descargar_certificado, name='descargar_certificado'),
 
     # API WhatsApp (sin sesión, autenticada por API key)

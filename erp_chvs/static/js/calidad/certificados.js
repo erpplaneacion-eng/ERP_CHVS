@@ -26,6 +26,9 @@ class CertificadosManager {
         document.getElementById('generarLoteBtn')
             .addEventListener('click', () => this.generarLote());
 
+        document.getElementById('imprimirCarnetesBtn')
+            .addEventListener('click', () => this.imprimirCarnets());
+
         this.loadCertificados();
     }
 
@@ -177,26 +180,48 @@ class CertificadosManager {
         }
     }
 
+    imprimirCarnets() {
+        if (!this._loteExitososPks || !this._loteExitososPks.length) {
+            this.showAlert('No hay certificados generados para imprimir.', 'warning');
+            return;
+        }
+        const pks = this._loteExitososPks.join(',');
+        window.open(`/calidad/certificados/pdf-carnets/?pks=${pks}`, '_blank');
+    }
+
     mostrarResultadosLote(data) {
+        // Guardar PKs de exitosos para el botón de carnets
+        this._loteExitososPks = data.resultados
+            .filter(r => r.ok && r.pk)
+            .map(r => r.pk);
+
+        const btnCarnets = document.getElementById('imprimirCarnetesBtn');
+        btnCarnets.style.display = this._loteExitososPks.length ? 'inline-flex' : 'none';
+
+        const nuevos   = data.exitosos - (data.ya_existian || 0);
+        const existian = data.ya_existian || 0;
+
         const resumen = document.getElementById('loteResumen');
-        const color = data.fallidos > 0 ? (data.exitosos > 0 ? '#d97706' : '#dc2626') : '#16a34a';
-        resumen.innerHTML = `<span style="color:${color};">
-            ${data.exitosos} generado(s) correctamente
-            ${data.fallidos > 0 ? `· <span style="color:#dc2626;">${data.fallidos} no encontrado(s)</span>` : ''}
-            de ${data.total} cédula(s) procesada(s).
-        </span>`;
+        const partes = [];
+        if (nuevos > 0)    partes.push(`<span style="color:#16a34a;">${nuevos} creado(s)</span>`);
+        if (existian > 0)  partes.push(`<span style="color:#2563eb;">${existian} ya existía(n) — reutilizado(s)</span>`);
+        if (data.fallidos) partes.push(`<span style="color:#dc2626;">${data.fallidos} no encontrado(s)</span>`);
+        resumen.innerHTML = partes.join(' · ') + ` <span style="color:#6b7280;font-weight:400;">de ${data.total} cédula(s)</span>`;
 
         const tbody = document.getElementById('loteResultadosTbody');
         const frag = document.createDocumentFragment();
         for (const r of data.resultados) {
             const tr = document.createElement('tr');
             if (r.ok) {
+                const estadoHtml = r.ya_existia
+                    ? `<span style="color:#2563eb;font-weight:600;"><i class="fas fa-history"></i> Ya existía</span>`
+                    : `<span style="color:#16a34a;font-weight:600;"><i class="fas fa-check-circle"></i> Creado</span>`;
                 tr.innerHTML = `
                     <td>${r.cedula}</td>
                     <td>${r.nombre}</td>
                     <td>${r.cargo}</td>
                     <td><strong>${r.numero}</strong></td>
-                    <td><span style="color:#16a34a;font-weight:600;"><i class="fas fa-check-circle"></i> OK</span></td>
+                    <td>${estadoHtml}</td>
                     <td>
                         <a href="${r.url_descargar}" target="_blank" class="btn btn-sm btn-primary" title="Descargar PDF">
                             <i class="fas fa-download"></i>
@@ -206,7 +231,7 @@ class CertificadosManager {
                 tr.innerHTML = `
                     <td>${r.cedula}</td>
                     <td colspan="3" style="color:#6b7280;">${r.error}</td>
-                    <td><span style="color:#dc2626;font-weight:600;"><i class="fas fa-times-circle"></i> Error</span></td>
+                    <td><span style="color:#dc2626;font-weight:600;"><i class="fas fa-times-circle"></i> No encontrado</span></td>
                     <td>—</td>`;
             }
             frag.appendChild(tr);

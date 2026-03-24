@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from principal.models import RegistroActividad
 from .models import CertificadoCalidad
-from .pdf_generator import generar_certificado_calidad_pdf
+from .pdf_generator import generar_certificado_calidad_pdf, generar_carnets_lote_pdf
 from .services import buscar_empleado_por_cedula, buscar_empleados_por_cedulas
 
 logger = logging.getLogger(__name__)
@@ -165,7 +165,11 @@ def generar_certificado(request):
 @login_required
 @csrf_exempt
 def generar_certificados_lote(request):
-    """Genera múltiples certificados a partir de cédulas separadas por coma."""
+    """
+    Genera certificados en lote a partir de cédulas separadas por coma.
+    Si una cédula ya tiene certificado existente, lo reutiliza sin crear uno nuevo.
+    Solo crea certificados para cédulas que no existan aún en el sistema.
+    """
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido.'}, status=405)
 
@@ -189,22 +193,54 @@ def generar_certificados_lote(request):
     if len(cedulas) > 100:
         return JsonResponse({'error': 'Máximo 100 cédulas por lote.'}, status=400)
 
-    # Deduplicar conservando orden
-    cedulas = list(dict.fromkeys(cedulas))
+    cedulas = list(dict.fromkeys(cedulas))  # deduplicar conservando orden
 
-    try:
-        empleados_map = buscar_empleados_por_cedulas(cedulas)
-    except Exception as e:
-        logger.error(f"Error buscando empleados en lote: {e}")
-        return JsonResponse({'error': 'Error al consultar la base de datos de empleados.'}, status=500)
+    # 1. Detectar cuáles cédulas ya tienen certificado (el más reciente por cédula)
+    existentes_qs = (
+        CertificadoCalidad.objects
+        .filter(cedula__in=cedulas)
+        .order_by('cedula', '-fecha_emision', '-id')
+    )
+    existentes_map = {}
+    for cert in existentes_qs:
+        if cert.cedula not in existentes_map:
+            existentes_map[cert.cedula] = cert
 
+    # 2. Solo buscar en BD externa las cédulas que NO existen
+    cedulas_nuevas = [c for c in cedulas if c not in existentes_map]
+    empleados_map = {}
+    if cedulas_nuevas:
+        try:
+            empleados_map = buscar_empleados_por_cedulas(cedulas_nuevas)
+        except Exception as e:
+            logger.error(f"Error buscando empleados en lote: {e}")
+            return JsonResponse({'error': 'Error al consultar la base de datos de empleados.'}, status=500)
+
+    # 3. Construir resultados en el orden original de cédulas
     resultados = []
     for cedula in cedulas:
+        # ── Certificado ya existente ──────────────────────────────────────
+        if cedula in existentes_map:
+            cert = existentes_map[cedula]
+            resultados.append({
+                'cedula': cedula,
+                'ok': True,
+                'pk': cert.pk,
+                'numero': cert.numero_certificado,
+                'nombre': cert.nombre_completo,
+                'cargo': cert.cargo or '—',
+                'url_descargar': f'/calidad/certificados/{cert.pk}/descargar/',
+                'ya_existia': True,
+            })
+            continue
+
+        # ── Empleado no encontrado en BD externa ──────────────────────────
         empleado = empleados_map.get(cedula)
         if not empleado:
             resultados.append({'cedula': cedula, 'ok': False, 'error': 'Empleado no encontrado.'})
             continue
 
+        # ── Crear nuevo certificado ───────────────────────────────────────
         cert = CertificadoCalidad.objects.create(
             cedula=empleado['cedula'],
             nombre_completo=empleado.get('nombre_completo') or '',
@@ -222,18 +258,22 @@ def generar_certificados_lote(request):
         resultados.append({
             'cedula': cedula,
             'ok': True,
+            'pk': cert.pk,
             'numero': cert.numero_certificado,
             'nombre': cert.nombre_completo,
             'cargo': cert.cargo or '—',
             'url_descargar': f'/calidad/certificados/{cert.pk}/descargar/',
+            'ya_existia': False,
         })
 
     exitosos = sum(1 for r in resultados if r['ok'])
+    ya_existian = sum(1 for r in resultados if r.get('ya_existia'))
     return JsonResponse({
         'resultados': resultados,
         'total': len(resultados),
         'exitosos': exitosos,
         'fallidos': len(resultados) - exitosos,
+        'ya_existian': ya_existian,
     })
 
 
@@ -257,6 +297,33 @@ def descargar_certificado(request, pk):
     nombre = f"Certificado_{cert.numero_certificado}_{cert.cedula}.pdf"
     response = HttpResponse(pdf_buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{nombre}"'
+    return response
+
+
+@login_required
+def pdf_carnets_lote(request):
+    """
+    Genera un PDF A4 con 3 carnets por hoja para un lote de certificados.
+    Recibe los PKs como query string: ?pks=1,2,3
+    """
+    pks_raw = request.GET.get('pks', '')
+    try:
+        pks = [int(pk.strip()) for pk in pks_raw.split(',') if pk.strip()]
+    except ValueError:
+        return HttpResponse('PKs inválidos.', status=400)
+
+    if not pks:
+        return HttpResponse('Indica al menos un certificado.', status=400)
+    if len(pks) > 100:
+        return HttpResponse('Máximo 100 certificados por lote.', status=400)
+
+    certificados = list(CertificadoCalidad.objects.filter(pk__in=pks).order_by('nombre_completo'))
+    if not certificados:
+        return HttpResponse('No se encontraron certificados.', status=404)
+
+    pdf_buffer = generar_carnets_lote_pdf(certificados)
+    response = HttpResponse(pdf_buffer, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="carnets_lote.pdf"'
     return response
 
 
