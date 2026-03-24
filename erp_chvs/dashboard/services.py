@@ -18,6 +18,27 @@ MESES = [
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ]
 
+_MESES_LOWER = {m.lower(): i + 1 for i, m in enumerate(MESES)}
+
+
+def _parsear_mes(valor):
+    """
+    Convierte cualquier representación de mes a entero 1-12.
+    Acepta: int (3), string numérico ("3"), nombre ("marzo", "Marzo").
+    Retorna None si no puede parsear.
+    """
+    if valor is None:
+        return None
+    if isinstance(valor, int) and 1 <= valor <= 12:
+        return valor
+    try:
+        n = int(valor)
+        return n if 1 <= n <= 12 else None
+    except (ValueError, TypeError):
+        pass
+    nombre = str(valor).strip().lower()
+    return _MESES_LOWER.get(nombre)
+
 
 # ─── Datos maestros ───────────────────────────────────────────────────────────
 
@@ -137,34 +158,46 @@ def procesar_mensaje_nia(request, mensaje_usuario):
         return {'mensaje': datos['respuesta'], 'tipo': 'info'}
 
     # ── Intent: generación de planillas ───────────────────────────────────────
-    params = datos.get('params_extraidos', {})
+    # Gemini puede devolver números como strings ("3" en vez de 3) → siempre sanitizar
+    params = datos.get('params_extraidos', {}) or {}
 
-    if params.get('programa_id'):
-        estado['programa_id'] = params['programa_id']
-        for p in programas:
-            if p['programa__id'] == params['programa_id']:
-                estado['programa_nombre'] = p['programa__programa']
-                break
+    programa_id_raw = params.get('programa_id')
+    if programa_id_raw is not None:
+        try:
+            programa_id_int = int(programa_id_raw)
+            estado['programa_id'] = programa_id_int
+            for p in programas:
+                if p['programa__id'] == programa_id_int:
+                    estado['programa_nombre'] = p['programa__programa']
+                    break
+        except (ValueError, TypeError):
+            logger.warning(f"NIA: programa_id inválido: {programa_id_raw!r}")
 
-    if params.get('mes'):
-        estado['mes'] = params['mes']
+    mes_raw = params.get('mes')
+    if mes_raw is not None:
+        mes_int = _parsear_mes(mes_raw)
+        if mes_int:
+            estado['mes'] = mes_int
+        else:
+            logger.warning(f"NIA: mes inválido: {mes_raw!r}")
 
     if params.get('focalizacion'):
-        estado['focalizacion'] = params['focalizacion']
+        estado['focalizacion'] = str(params['focalizacion'])
         estado.pop('todas_sedes', None)
         estado.pop('sede_nombre', None)
         estado.pop('sede_cod_interprise', None)
         estado.pop('sedes_mapa', None)
 
-    if params.get('todas_sedes') is not None:
-        estado['todas_sedes'] = params['todas_sedes']
+    todas_sedes_raw = params.get('todas_sedes')
+    if todas_sedes_raw is not None:
+        estado['todas_sedes'] = bool(todas_sedes_raw)
 
     sede_nombre_gemini = params.get('sede_nombre')
     if sede_nombre_gemini and not estado.get('todas_sedes'):
         mapa = estado.get('sedes_mapa', sedes_mapa)
-        cod = _resolver_sede(sede_nombre_gemini, mapa)
+        cod = _resolver_sede(str(sede_nombre_gemini), mapa)
         if cod:
-            estado['sede_nombre'] = sede_nombre_gemini
+            estado['sede_nombre'] = str(sede_nombre_gemini)
             estado['sede_cod_interprise'] = cod
         else:
             logger.warning(f"NIA: sede '{sede_nombre_gemini}' no encontrada en {list(mapa.keys())}")
@@ -220,7 +253,7 @@ def _construir_prompt_nia(mensaje, estado, programas, focalizaciones, nombres_se
 
     estado_actual = json.dumps({
         'programa': estado.get('programa_nombre'),
-        'mes': MESES[estado['mes'] - 1] if estado.get('mes') else None,
+        'mes': MESES[_parsear_mes(estado['mes']) - 1] if estado.get('mes') and _parsear_mes(estado['mes']) else None,
         'focalizacion': estado.get('focalizacion'),
         'todas_sedes': estado.get('todas_sedes'),
         'sede_seleccionada': estado.get('sede_nombre'),
@@ -283,7 +316,9 @@ Responde ÚNICAMENTE en JSON:
 
 
 def _construir_url_descarga(estado):
-    nombre_mes = MESES[estado['mes'] - 1]
+    mes_int = _parsear_mes(estado['mes'])
+    nombre_mes = MESES[mes_int - 1]
+    estado['mes'] = mes_int  # normalizar a int por si venía como string
     foco = estado['focalizacion']
     prog_nombre = estado.get('programa_nombre', f"Programa {estado['programa_id']}")
 
