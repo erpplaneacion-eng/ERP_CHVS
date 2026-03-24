@@ -1,9 +1,84 @@
 {% extends 'base.html' %}
+{% load static %}
+{% load group_tags %}
 
 {% block title %}Dashboard - ERP CHVS{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard/nia_chat.css' %}">
+{% endblock %}
+
 {% block content %}
-    <h1>¡Bienvenido al Dashboard!</h1>
-    <p>Hola, {{ user.first_name|default:user.username }}.</p>
-    <p>Desde la barra lateral a la derecha puedes seleccionar el módulo con el que deseas trabajar.</p>
+<div class="dashboard-wrapper">
+
+    <!-- Saludo -->
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">¡Bienvenido, {{ user.first_name|default:user.username }}!</h1>
+        <p class="dashboard-subtitle">Desde la barra lateral puedes acceder a cada módulo del sistema.</p>
+    </div>
+
+    <div class="dashboard-grid">
+
+        {% if user|has_group:"FACTURACION,ADMINISTRACION" %}
+        <!-- Panel NIA Chat -->
+        <div class="nia-panel">
+            <div class="nia-panel-header">
+                <div class="nia-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="nia-header-text">
+                    <span class="nia-name">NIA</span>
+                    <span class="nia-status">Asistente PAE · En línea</span>
+                </div>
+                <button class="nia-reset-btn" id="niaBtnReset" title="Nueva conversación">
+                    <i class="fas fa-redo-alt"></i>
+                </button>
+            </div>
+
+            <div class="nia-messages" id="niaMensajes">
+                <!-- Mensaje inicial de NIA (no requiere Gemini) -->
+                <div class="nia-bubble nia-bubble--nia">
+                    <p>¡Hola! Soy <strong>NIA</strong>, tu asistente del PAE. 👋</p>
+                    <p>Puedo generarte <strong>planillas de asistencia</strong> al instante. Solo dime, por ejemplo:</p>
+                    <p class="nia-example">"Genera las planillas del programa Buga para marzo"</p>
+                </div>
+            </div>
+
+            <form class="nia-input-area" id="niaChatForm" autocomplete="off">
+                {% csrf_token %}
+                <input
+                    type="text"
+                    id="niaMensajeInput"
+                    class="nia-input"
+                    placeholder="Escribe tu solicitud..."
+                    maxlength="400"
+                >
+                <button type="submit" class="nia-send-btn" id="niaBtnEnviar">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Espacio para futuros widgets -->
+        <div class="dashboard-info-panel">
+            <div class="info-card">
+                <i class="fas fa-info-circle"></i>
+                <p>Selecciona un módulo desde el menú lateral para comenzar a trabajar.</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if user|has_group:"FACTURACION,ADMINISTRACION" %}
+<script>
+    const NIA_CHAT_URL = "{% url 'dashboard:nia_chat' %}";
+    const NIA_RESET_URL = "{% url 'dashboard:nia_reset' %}";
+    const CSRF_TOKEN = "{{ csrf_token }}";
+</script>
+<script src="{% static 'js/dashboard/nia_chat.js' %}"></script>
+{% endif %}
 {% endblock %}
