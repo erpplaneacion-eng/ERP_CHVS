@@ -5,7 +5,7 @@ buildCommand = "pip install -r requirements.txt && cd erp_chvs && python manage.
 [deploy]
 # Gunicorn: gevent con 4 workers + 50 worker-connections por worker.
 # `migrate` y `collectstatic` se ejecutan fuera del arranque para acelerar reinicios y reducir riesgo operacional.
-startCommand = "cd erp_chvs && gunicorn erp_chvs.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --worker-class gevent --worker-connections 100 --max-requests 5000 --max-requests-jitter 500 --timeout 120 --keep-alive 5 --log-level info --access-logfile - --error-logfile -"
+startCommand = "cd erp_chvs && mkdir -p staticfiles && gunicorn erp_chvs.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --worker-class gevent --worker-connections 100 --max-requests 5000 --max-requests-jitter 500 --timeout 120 --keep-alive 5 --log-level info --access-logfile - --error-logfile -"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
 
