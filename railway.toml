@@ -3,9 +3,9 @@ builder = "nixpacks"
 buildCommand = "pip install gevent>=24.10.1 && pip install -r requirements.txt"
 
 [deploy]
-# Gunicorn: 1 worker sync + 2 threads = menos RAM, ideal para Railway free tier.
-# --max-requests evita fugas de memoria; --worker-tmp-dir /dev/shm requerido en contenedores.
-startCommand = "cd erp_chvs && mkdir -p staticfiles && python manage.py migrate --noinput && python manage.py collectstatic --noinput --clear && gunicorn erp_chvs.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --worker-class gevent --worker-connections 30 --timeout 600 --max-requests 100 --max-requests-jitter 10 --worker-tmp-dir /dev/shm"
+# Gunicorn: gevent con 3 workers + 50 worker-connections por worker.
+# `migrate` y `collectstatic` se ejecutan fuera del arranque para acelerar reinicios y reducir riesgo operacional.
+startCommand = "cd erp_chvs && gunicorn erp_chvs.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --worker-class gevent --worker-connections 50 --timeout 120 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100 --worker-tmp-dir /dev/shm"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
 
