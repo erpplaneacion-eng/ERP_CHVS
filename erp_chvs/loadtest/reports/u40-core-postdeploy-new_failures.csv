@@ -1,0 +1,21 @@
+Method,Name,Error,Occurrences
+GET,core:api_focalizaciones_existentes,HTTPError('500 Server Error:  for url: core:api_focalizaciones_existentes'),726
+GET,core:contabilidad_api_registros,HTTPError('500 Server Error:  for url: core:contabilidad_api_registros'),927
+GET,core:contabilidad_api_dashboard_unificado,HTTPError('500 Server Error:  for url: core:contabilidad_api_dashboard_unificado'),937
+GET,ctx:agente_programas,HTTPError('500 Server Error:  for url: ctx:agente_programas'),3
+GET,core:api_focalizaciones_programa,HTTPError('500 Server Error:  for url: core:api_focalizaciones_programa'),740
+GET,ctx:modalidad_pool_probe,HTTPError('500 Server Error:  for url: ctx:modalidad_pool_probe'),1
+GET,core:dashboard,HTTPError('500 Server Error:  for url: core:dashboard'),1096
+GET,ctx:sedes_completas,HTTPError('500 Server Error:  for url: ctx:sedes_completas'),20
+GET,core:agente_home,HTTPError('500 Server Error:  for url: core:agente_home'),742
+GET,core:contabilidad_mis_registros,HTTPError('500 Server Error:  for url: core:contabilidad_mis_registros'),896
+GET,core:api_sedes_completas,HTTPError('500 Server Error:  for url: core:api_sedes_completas'),757
+GET,core:api_conteo_estudiantes,HTTPError('500 Server Error:  for url: core:api_conteo_estudiantes'),335
+GET,core:agente_api_programas,HTTPError('500 Server Error:  for url: core:agente_api_programas'),751
+GET,core:agente_api_pool_disponible,HTTPError('500 Server Error:  for url: core:agente_api_pool_disponible'),513
+GET,ctx:focalizaciones,HTTPError('500 Server Error:  for url: ctx:focalizaciones'),15
+GET,core:agente_generar_lote,HTTPError('500 Server Error:  for url: core:agente_generar_lote'),729
+GET,auth:logout,HTTPError('500 Server Error:  for url: auth:logout'),20
+GET,core:facturacion_reportes,HTTPError('500 Server Error:  for url: core:facturacion_reportes'),846
+GET,core:contabilidad_home,HTTPError('500 Server Error:  for url: core:contabilidad_home'),898
+GET,core:facturacion_home,HTTPError('500 Server Error:  for url: core:facturacion_home'),820
