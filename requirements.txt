@@ -4,6 +4,7 @@ django-extensions==4.1
 
 # Production Server
 gunicorn==24.1.1
+gevent>=24.10.1
 whitenoise==6.11.0
 dj-database-url==3.1.0
 
