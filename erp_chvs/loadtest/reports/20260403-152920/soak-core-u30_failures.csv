@@ -1,1 +1,17 @@
 Method,Name,Error,Occurrences
+GET,core:api_focalizaciones_existentes,HTTPError('500 Server Error:  for url: core:api_focalizaciones_existentes'),5
+GET,core:contabilidad_api_registros,HTTPError('500 Server Error:  for url: core:contabilidad_api_registros'),10
+GET,core:contabilidad_api_dashboard_unificado,HTTPError('500 Server Error:  for url: core:contabilidad_api_dashboard_unificado'),10
+GET,core:api_focalizaciones_programa,HTTPError('500 Server Error:  for url: core:api_focalizaciones_programa'),4
+GET,core:dashboard,HTTPError('500 Server Error:  for url: core:dashboard'),8
+GET,core:agente_home,HTTPError('500 Server Error:  for url: core:agente_home'),6
+GET,core:contabilidad_mis_registros,HTTPError('500 Server Error:  for url: core:contabilidad_mis_registros'),9
+GET,core:api_sedes_completas,HTTPError('500 Server Error:  for url: core:api_sedes_completas'),9
+GET,core:api_conteo_estudiantes,HTTPError('500 Server Error:  for url: core:api_conteo_estudiantes'),5
+GET,core:agente_api_programas,HTTPError('500 Server Error:  for url: core:agente_api_programas'),4
+GET,core:agente_api_pool_disponible,HTTPError('500 Server Error:  for url: core:agente_api_pool_disponible'),2
+GET,core:agente_generar_lote,HTTPError('500 Server Error:  for url: core:agente_generar_lote'),1
+GET,auth:logout,HTTPError('500 Server Error:  for url: auth:logout'),9
+GET,core:facturacion_reportes,HTTPError('500 Server Error:  for url: core:facturacion_reportes'),7
+GET,core:contabilidad_home,HTTPError('500 Server Error:  for url: core:contabilidad_home'),8
+GET,core:facturacion_home,HTTPError('500 Server Error:  for url: core:facturacion_home'),8
