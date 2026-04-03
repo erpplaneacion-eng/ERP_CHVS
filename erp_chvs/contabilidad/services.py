@@ -529,6 +529,186 @@ class ContabilidadService:
 
     @staticmethod
     @transaction.atomic
+    def aprobar_factura_contabilidad(factura, usuario):
+        """
+        Contabilidad aprueba una factura individual.
+        Solo permitido cuando el registro está en APROBADO_COMPRAS.
+        """
+        if factura.registro.estado != 'APROBADO_COMPRAS':
+            raise ValueError("Solo se puede aprobar facturas en estado APROBADO_COMPRAS.")
+        if factura.estado_contabilidad != 'PENDIENTE':
+            raise ValueError("Esta factura ya fue decidida por Contabilidad.")
+        factura.estado_contabilidad = 'APROBADA'
+        factura.comentario_devolucion_contabilidad = ''
+        factura.save(update_fields=['estado_contabilidad', 'comentario_devolucion_contabilidad'])
+
+    @staticmethod
+    @transaction.atomic
+    def devolver_factura_contabilidad(factura, usuario, comentario):
+        """
+        Contabilidad devuelve una factura individual a Compras con un motivo.
+        Solo permitido cuando el registro está en APROBADO_COMPRAS.
+        """
+        if factura.registro.estado != 'APROBADO_COMPRAS':
+            raise ValueError("Solo se puede devolver facturas en estado APROBADO_COMPRAS.")
+        if factura.estado_contabilidad != 'PENDIENTE':
+            raise ValueError("Esta factura ya fue decidida por Contabilidad.")
+        if not comentario or not comentario.strip():
+            raise ValueError("El motivo de devolución es obligatorio.")
+        factura.estado_contabilidad = 'DEVUELTA'
+        factura.comentario_devolucion_contabilidad = comentario.strip()
+        factura.save(update_fields=['estado_contabilidad', 'comentario_devolucion_contabilidad'])
+
+    @staticmethod
+    @transaction.atomic
+    def finalizar_revision_contabilidad(registro, usuario, justificacion=''):
+        """
+        Finaliza la revisión de Contabilidad cuando todas las facturas han sido decididas.
+        - Todas APROBADA → CERRADO (aprobación y cierre directos)
+        - Todas DEVUELTA → OBSERVADO_CONTABILIDAD (sin split, vuelve a Compras)
+        - Mixtas           → SPLIT:
+            · Nuevo registro con APROBADAS → CERRADO
+            · Registro original con DEVUELTAS → OBSERVADO_CONTABILIDAD (Compras corrige)
+        - No puede haber facturas en PENDIENTE.
+        Retorna (registro_original, registro_nuevo_o_None).
+        """
+        if registro.estado != 'APROBADO_COMPRAS':
+            raise ValueError(
+                f"Solo se puede finalizar desde APROBADO_COMPRAS. Estado actual: '{registro.estado}'"
+            )
+        facturas = list(registro.facturas.all())
+        if not facturas:
+            raise ValueError("El registro no tiene facturas.")
+
+        # Validar tiempo — timer de Contabilidad: fecha_aprobacion_compras → ahora
+        horas = horas_laborales_entre(registro.fecha_aprobacion_compras, timezone.now())
+        if horas > _MAX_HORAS_LABORALES and not justificacion:
+            raise ValueError(
+                f"Han transcurrido {horas:.1f} horas laborales desde la aprobación de Compras "
+                f"(máximo: {_MAX_HORAS_LABORALES}h). Debe ingresar una justificación de la demora."
+            )
+        if justificacion:
+            registro.justificacion_demora_contabilidad = justificacion.strip()
+            registro.save(update_fields=['justificacion_demora_contabilidad'])
+
+        pendientes = [f for f in facturas if f.estado_contabilidad == 'PENDIENTE']
+        if pendientes:
+            raise ValueError(
+                f"Hay {len(pendientes)} factura(s) sin decidir. "
+                "Aprueba o devuelve cada factura antes de finalizar."
+            )
+
+        devueltas = [f for f in facturas if f.estado_contabilidad == 'DEVUELTA']
+        aprobadas = [f for f in facturas if f.estado_contabilidad == 'APROBADA']
+
+        now = timezone.now()
+
+        if not devueltas:
+            # Todas aprobadas — cerrar directamente
+            registro.fecha_inicio_revision_contabilidad = registro.fecha_inicio_revision_contabilidad or now
+            registro.fecha_aprobacion_contabilidad = now
+            registro.fecha_cierre = now
+            registro.estado = 'CERRADO'
+            registro.save()
+            HistorialEstado.objects.create(
+                registro=registro,
+                accion='APROBACION_CONTABILIDAD',
+                estado_anterior='APROBADO_COMPRAS',
+                estado_nuevo='APROBADO_CONTABILIDAD',
+                comentario=f"Contabilidad aprobó las {len(aprobadas)} factura(s).",
+                usuario=usuario,
+            )
+            HistorialEstado.objects.create(
+                registro=registro,
+                accion='CIERRE',
+                estado_anterior='APROBADO_CONTABILIDAD',
+                estado_nuevo='CERRADO',
+                comentario='Registro cerrado definitivamente. Proceso contable completado.',
+                usuario=usuario,
+            )
+            return registro, None
+
+        if not aprobadas:
+            # Todas devueltas — sin split, observar completo
+            registro.fecha_inicio_revision_contabilidad = registro.fecha_inicio_revision_contabilidad or now
+            registro.fecha_observacion_contabilidad = now
+            registro.estado = 'OBSERVADO_CONTABILIDAD'
+            registro.save()
+            HistorialEstado.objects.create(
+                registro=registro,
+                accion='DEVOLUCION_CONTABILIDAD',
+                estado_anterior='APROBADO_COMPRAS',
+                estado_nuevo='OBSERVADO_CONTABILIDAD',
+                comentario=(
+                    f"Contabilidad devolvió las {len(devueltas)} factura(s) a Compras para corrección."
+                ),
+                usuario=usuario,
+            )
+            return registro, None
+
+        # --- SPLIT: hay aprobadas Y devueltas ---
+
+        # 1. Crear nuevo registro para las facturas aprobadas → CERRADO
+        nuevo = RegistroContable.objects.create(
+            lider=registro.lider,
+            tipo=registro.tipo,
+            periodo_mes=registro.periodo_mes,
+            periodo_ano=registro.periodo_ano,
+            descripcion=registro.descripcion,
+            estado='CERRADO',
+            registro_origen=registro,
+            fecha_envio=registro.fecha_envio,
+            fecha_entrega_fisica=registro.fecha_entrega_fisica,
+            fecha_inicio_revision_compras=registro.fecha_inicio_revision_compras,
+            fecha_aprobacion_compras=registro.fecha_aprobacion_compras,
+            fecha_inicio_revision_contabilidad=registro.fecha_inicio_revision_contabilidad or now,
+            fecha_aprobacion_contabilidad=now,
+            fecha_cierre=now,
+        )
+        HistorialEstado.objects.create(
+            registro=nuevo,
+            accion='CREACION',
+            estado_anterior='',
+            estado_nuevo='CERRADO',
+            comentario=(
+                f"Registro derivado de RC-{registro.pk} por split de Contabilidad. "
+                f"{len(aprobadas)} factura(s) aprobada(s) cerradas."
+            ),
+            usuario=usuario,
+        )
+        HistorialEstado.objects.create(
+            registro=nuevo,
+            accion='CIERRE',
+            estado_anterior='APROBADO_CONTABILIDAD',
+            estado_nuevo='CERRADO',
+            comentario='Registro cerrado definitivamente. Proceso contable completado.',
+            usuario=usuario,
+        )
+
+        # 2. Mover facturas aprobadas al nuevo registro
+        Factura.objects.filter(pk__in=[f.pk for f in aprobadas]).update(registro=nuevo)
+
+        # 3. Registro original: queda con las devueltas → OBSERVADO_CONTABILIDAD
+        registro.fecha_inicio_revision_contabilidad = registro.fecha_inicio_revision_contabilidad or now
+        registro.fecha_observacion_contabilidad = now
+        registro.estado = 'OBSERVADO_CONTABILIDAD'
+        registro.save()
+        HistorialEstado.objects.create(
+            registro=registro,
+            accion='DEVOLUCION_CONTABILIDAD',
+            estado_anterior='APROBADO_COMPRAS',
+            estado_nuevo='OBSERVADO_CONTABILIDAD',
+            comentario=(
+                f"Split de facturas desde Revisión de Contabilidad: "
+                f"{len(devueltas)} factura(s) devuelta(s) a Compras para corrección — "
+                f"{len(aprobadas)} factura(s) aprobada(s) trasladadas al registro RC-{nuevo.pk} y cerradas."
+            ),
+            usuario=usuario,
+        )
+        return registro, nuevo
+
+    @staticmethod
+    @transaction.atomic
     def observar_contabilidad(registro, usuario, comentario, justificacion=''):
         """
         Transición APROBADO_COMPRAS → OBSERVADO_CONTABILIDAD.
@@ -628,6 +808,13 @@ class ContabilidadService:
             )
         if not comentario or not comentario.strip():
             raise ValueError("El comentario es obligatorio para responder la observación.")
+
+        # Resetear estado_contabilidad de facturas devueltas para que Contabilidad
+        # pueda revisar nuevamente cuando el registro vuelva a APROBADO_COMPRAS.
+        registro.facturas.filter(estado_contabilidad='DEVUELTA').update(
+            estado_contabilidad='PENDIENTE',
+            comentario_devolucion_contabilidad='',
+        )
 
         ContabilidadService._transicion(
             registro=registro,

@@ -112,6 +112,11 @@ class Factura(models.Model):
         ('APROBADA', 'Aprobada por Compras'),
         ('DEVUELTA', 'Devuelta al Líder'),
     ]
+    ESTADO_CONTABILIDAD_CHOICES = [
+        ('PENDIENTE', 'Pendiente'),
+        ('APROBADA', 'Aprobada por Contabilidad'),
+        ('DEVUELTA', 'Devuelta a Compras'),
+    ]
 
     numero_factura = models.CharField(max_length=100, verbose_name="Número de Factura")
     proveedor = models.CharField(max_length=200, verbose_name="Proveedor")
@@ -131,6 +136,15 @@ class Factura(models.Model):
         verbose_name="Estado Compras",
     )
     comentario_devolucion = models.TextField(blank=True, verbose_name="Motivo de Devolución")
+    estado_contabilidad = models.CharField(
+        max_length=10,
+        choices=ESTADO_CONTABILIDAD_CHOICES,
+        default='PENDIENTE',
+        verbose_name="Estado Contabilidad",
+    )
+    comentario_devolucion_contabilidad = models.TextField(
+        blank=True, verbose_name="Motivo de Devolución Contabilidad"
+    )
     observacion_retraso = models.TextField(
         blank=True,
         verbose_name="Observación de Retraso",
@@ -236,6 +250,7 @@ class HistorialEstado(models.Model):
         ('RESPUESTA_COMPRAS', 'Respuesta de Compras a Observación'),
         ('APROBACION_CONTABILIDAD', 'Aprobación por Contabilidad'),
         ('CIERRE', 'Cierre'),
+        ('DEVOLUCION_CONTABILIDAD', 'Devolución por Contabilidad'),
     ]
 
     registro = models.ForeignKey(

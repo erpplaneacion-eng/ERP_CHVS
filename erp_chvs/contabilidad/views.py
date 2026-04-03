@@ -202,6 +202,8 @@ def api_detalle_registro(request, pk):
             'fecha_carga': f.fecha_carga.isoformat() if f.fecha_carga else None,
             'estado_compras': f.estado_compras,
             'comentario_devolucion': f.comentario_devolucion,
+            'estado_contabilidad': f.estado_contabilidad,
+            'comentario_devolucion_contabilidad': f.comentario_devolucion_contabilidad,
             'observacion_retraso': f.observacion_retraso,
         })
 
@@ -558,6 +560,82 @@ def api_guardar_checklist(request, pk):
             f"Registro: {pk} | Ítems: {len(items_data)}"
         )
         return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})
+
+
+@login_required
+@csrf_exempt
+def api_aprobar_factura_contabilidad(request, pk):
+    """POST — Contabilidad aprueba una factura individual."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    if not _tiene_rol(request.user, 'CONTABILIDAD'):
+        return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
+    factura = get_object_or_404(Factura, pk=pk)
+    try:
+        ContabilidadService.aprobar_factura_contabilidad(factura, request.user)
+        RegistroActividad.registrar(
+            request, 'contabilidad', 'aprobar_factura_contabilidad',
+            f"Factura: {factura.numero_factura} | Registro: {factura.registro_id}"
+        )
+        return JsonResponse({'success': True})
+    except ValueError as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})
+
+
+@login_required
+@csrf_exempt
+def api_devolver_factura_contabilidad(request, pk):
+    """POST — Contabilidad devuelve una factura individual a Compras."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    if not _tiene_rol(request.user, 'CONTABILIDAD'):
+        return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
+    factura = get_object_or_404(Factura, pk=pk)
+    try:
+        data = json.loads(request.body)
+        comentario = data.get('comentario', '').strip()
+        ContabilidadService.devolver_factura_contabilidad(factura, request.user, comentario)
+        RegistroActividad.registrar(
+            request, 'contabilidad', 'devolver_factura_contabilidad',
+            f"Factura: {factura.numero_factura} | Registro: {factura.registro_id} | Motivo: {comentario[:80]}"
+        )
+        return JsonResponse({'success': True})
+    except ValueError as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})
+
+
+@login_required
+@csrf_exempt
+def api_finalizar_revision_contabilidad(request, pk):
+    """POST — Contabilidad finaliza la revisión (con posible split parcial)."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    if not _tiene_rol(request.user, 'CONTABILIDAD'):
+        return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
+    registro = get_object_or_404(RegistroContable, pk=pk)
+    try:
+        data = json.loads(request.body) if request.body else {}
+        justificacion = data.get('justificacion_demora', '')
+        registro_original, registro_nuevo = ContabilidadService.finalizar_revision_contabilidad(
+            registro, request.user, justificacion=justificacion
+        )
+        RegistroActividad.registrar(
+            request, 'contabilidad', 'finalizar_revision_contabilidad',
+            f"Registro: {pk}" + (f" | Nuevo RC: {registro_nuevo.pk}" if registro_nuevo else "")
+        )
+        return JsonResponse({
+            'success': True,
+            'estado': registro_original.estado,
+            'nuevo_registro_id': registro_nuevo.pk if registro_nuevo else None,
+        })
+    except ValueError as e:
+        return JsonResponse({'success': False, 'error': str(e)})
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})
 

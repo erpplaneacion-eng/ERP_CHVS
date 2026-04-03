@@ -605,3 +605,31 @@
     font-weight: 600;
     font-size: 12px;
 }
+
+/* ===================================== */
+/* BADGES ESTADO CONTABILIDAD            */
+/* ===================================== */
+
+.badge-estado {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-aprobada {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #86efac;
+}
+
+.badge-devuelta {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    cursor: help;
+}

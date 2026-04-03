@@ -1,4 +1,6 @@
-# CLAUDE.md — Maestro
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ERP Django 5.2.5 para el **Programa de Alimentación Escolar (PAE)** de Colombia. Maneja listas de focalización, planificación nutricional, gestión institucional y generación de menús con IA.
 
@@ -83,7 +85,7 @@ ERP_CHVS/
 │   ├── costos/            # Matriz de costos
 │   ├── logistica/         # Rutas de entrega
 │   ├── calidad/           # Certificados BPM + WhatsApp
-│   ├── agente/            # Generador IA (Gemini)
+│   ├── agente/            # Generador IA (Gemini) + NIA chat
 │   ├── contabilidad/      # Flujo contable de facturas
 │   ├── dashboard/         # Entrada post-login
 │   ├── Api/               # [Planificado] Integración SIESA — stub vacío
@@ -109,11 +111,47 @@ PrincipalDepartamento → PrincipalMunicipio → InstitucionesEducativas → Sed
                             Programa → PlanificacionRaciones → ListadosFocalizacion
 ```
 
+> **Gotcha de modelos duplicados**: `planeacion` define sus propios `InstitucionesEducativas` (`db_table='instituciones_educativas'`) y `SedesEducativas` (`db_table='sedes_educativas'`) que apuntan a las mismas tablas que `principal`. Al hacer queries cross-app, importar desde la app correcta según el contexto para evitar conflictos de migraciones.
+
 ## Autenticación y autorización
 
 - Login → `/dashboard/`, logout → `/`
 - RBAC via Django Groups (`principal.middleware.RoleAccessMiddleware`)
+- Template tag: `{% if user|has_group:"NUTRICION,ADMINISTRACION" %}` (acepta coma-separated, case-insensitive, True para superusuarios)
 - Ver tabla completa de grupos y accesos en [principal/CLAUDE.md](erp_chvs/principal/CLAUDE.md)
+
+## Audit Logging — regla global
+
+`RegistroActividad` es el modelo de audit log global (tabla `principal_registro_actividad`):
+
+```python
+from principal.models import RegistroActividad
+RegistroActividad.registrar(request, 'modulo', 'accion', f"Descripción: {obj}")
+```
+
+**Reglas**:
+- Llamar **después** de una escritura exitosa (POST/PUT/DELETE)
+- **Nunca** dentro de handlers GET ni bloques `except`
+- Silencia errores internamente — no interrumpe el flujo
+
+## Patrón JS de managers (frontend)
+
+Todas las apps usan el mismo patrón class-based iniciado en `principal/departamentos.js` (`DepartamentosManager`):
+
+- Cache local (`this.allItems`) — filtros en cliente, sin re-fetch
+- `applyFilters()` para búsqueda/filtrado en el DOM
+- Guard anti-double-submit (`this.saving = true/false`)
+- Modales con `modal.style.display = 'block'` — **sin Bootstrap Modal API**
+- Modales de eliminación usan `.modal-header-danger` (rojo `#c0392b`) vs edición (azul `#1e3a8a`)
+
+## NIA — Chat asistente IA
+
+`agente` incluye un chat conversacional ("NIA") integrado en el panel de menús de nutrición:
+
+- Contexto de actividad inyectado desde el servidor (programa, modalidad, menú activo)
+- Tipos de mensaje: consulta nutricional, generación de preparación, análisis de menú
+- Endpoint: `POST /agente/api/nia/chat/`
+- Frontend: widget flotante en `static/js/agente/nia_chat.js`
 
 ## Configuración (`.env` en `erp_chvs/`)
 

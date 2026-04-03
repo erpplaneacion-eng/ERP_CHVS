@@ -1,6 +1,8 @@
-from django.contrib.auth.models import User
+import json
+
+from django.contrib.auth.models import Group, User
 from django.db.models import Q
-from django.test import TestCase
+from django.test import Client, TestCase
 
 from .models import (
     Factura, HistorialEstado, ItemChecklist,
@@ -329,3 +331,475 @@ class ContabilidadServiceTests(TestCase):
         # ENVIADO sí aparece
         ContabilidadService.enviar(registro, self.lider)
         self.assertIn(registro, ContabilidadService.get_bandeja_compras())
+
+
+# =========================================================================== #
+# Tests: devolución parcial de Contabilidad (nuevos métodos)                  #
+# =========================================================================== #
+
+class ContabilidadDevolucionParcialServiceTests(TestCase):
+    """
+    Cubre los tres métodos nuevos del servicio:
+      - aprobar_factura_contabilidad
+      - devolver_factura_contabilidad
+      - finalizar_revision_contabilidad
+    y la modificación en responder_observacion que resetea estados.
+    """
+
+    def setUp(self):
+        self.lider = User.objects.create_user(username='lider2', password='test1234')
+        self.compras = User.objects.create_user(username='compras2', password='test1234')
+        self.contabilidad_user = User.objects.create_user(username='contabilidad2', password='test1234')
+
+        # Aislar ítems de checklist de la migración
+        ItemChecklist.objects.all().update(activo=False)
+        self.item = ItemChecklist.objects.create(
+            nombre='Ítem test contabilidad',
+            tipo_proceso='AMBOS',
+            obligatorio=True,
+            activo=True,
+            orden=1,
+        )
+
+    # ------------------------------------------------------------------ #
+    # Helpers internos                                                     #
+    # ------------------------------------------------------------------ #
+
+    def _llevar_a_aprobado_compras(self, num_facturas=1):
+        """
+        Crea un registro con N facturas y lo lleva hasta APROBADO_COMPRAS.
+        Retorna (registro, lista_de_facturas).
+        """
+        registro = ContabilidadService.crear_registro(
+            lider=self.lider,
+            tipo='SERVICIOS',
+            periodo_mes=4,
+            periodo_ano=2025,
+        )
+        for i in range(num_facturas):
+            ContabilidadService.agregar_factura(registro, {
+                'numero_factura': f'FC-{i + 1:03d}',
+                'proveedor': f'Proveedor {i + 1}',
+                'concepto': 'Servicio test contabilidad',
+                'valor': 1000000,
+                'fecha_factura': '2025-04-01',
+            })
+
+        ContabilidadService.enviar(registro, self.lider)
+        ContabilidadService.confirmar_recepcion(registro, self.compras)
+
+        facturas = list(registro.facturas.order_by('numero_factura'))
+        for factura in facturas:
+            verificacion = VerificacionChecklist.objects.filter(
+                factura=factura, item__obligatorio=True
+            ).first()
+            ContabilidadService.guardar_checklist(
+                registro,
+                [{'verificacion_id': verificacion.pk, 'estado': 'OK', 'observacion': ''}],
+                self.compras,
+            )
+            ContabilidadService.aprobar_factura(factura, self.compras)
+
+        ContabilidadService.finalizar_revision_compras(registro, self.compras)
+        registro.refresh_from_db()
+        self.assertEqual(registro.estado, 'APROBADO_COMPRAS')
+        return registro, facturas
+
+    # ------------------------------------------------------------------ #
+    # aprobar_factura_contabilidad                                         #
+    # ------------------------------------------------------------------ #
+
+    def test_aprobar_factura_contabilidad_ok(self):
+        registro, facturas = self._llevar_a_aprobado_compras()
+        factura = facturas[0]
+
+        ContabilidadService.aprobar_factura_contabilidad(factura, self.contabilidad_user)
+        factura.refresh_from_db()
+
+        self.assertEqual(factura.estado_contabilidad, 'APROBADA')
+        self.assertEqual(factura.comentario_devolucion_contabilidad, '')
+
+    def test_aprobar_factura_contabilidad_estado_incorrecto(self):
+        """Registro en BORRADOR — debe lanzar ValueError."""
+        registro = ContabilidadService.crear_registro(
+            lider=self.lider, tipo='SERVICIOS', periodo_mes=4, periodo_ano=2025
+        )
+        ContabilidadService.agregar_factura(registro, {
+            'numero_factura': 'FC-999',
+            'proveedor': 'P',
+            'concepto': 'C',
+            'valor': 500000,
+            'fecha_factura': '2025-04-01',
+        })
+        factura = registro.facturas.first()
+
+        with self.assertRaises(ValueError):
+            ContabilidadService.aprobar_factura_contabilidad(factura, self.contabilidad_user)
+
+    def test_aprobar_factura_contabilidad_ya_decidida(self):
+        """Factura ya aprobada por Contabilidad — no se puede decidir de nuevo."""
+        registro, facturas = self._llevar_a_aprobado_compras()
+        factura = facturas[0]
+        ContabilidadService.aprobar_factura_contabilidad(factura, self.contabilidad_user)
+
+        with self.assertRaises(ValueError):
+            ContabilidadService.aprobar_factura_contabilidad(factura, self.contabilidad_user)
+
+    # ------------------------------------------------------------------ #
+    # devolver_factura_contabilidad                                        #
+    # ------------------------------------------------------------------ #
+
+    def test_devolver_factura_contabilidad_ok(self):
+        registro, facturas = self._llevar_a_aprobado_compras()
+        factura = facturas[0]
+
+        ContabilidadService.devolver_factura_contabilidad(
+            factura, self.contabilidad_user, 'Falta soporte contable'
+        )
+        factura.refresh_from_db()
+
+        self.assertEqual(factura.estado_contabilidad, 'DEVUELTA')
+        self.assertEqual(factura.comentario_devolucion_contabilidad, 'Falta soporte contable')
+
+    def test_devolver_factura_contabilidad_sin_comentario(self):
+        registro, facturas = self._llevar_a_aprobado_compras()
+        factura = facturas[0]
+
+        with self.assertRaises(ValueError):
+            ContabilidadService.devolver_factura_contabilidad(
+                factura, self.contabilidad_user, ''
+            )
+
+    # ------------------------------------------------------------------ #
+    # finalizar_revision_contabilidad                                      #
+    # ------------------------------------------------------------------ #
+
+    def test_finalizar_revision_todas_aprobadas(self):
+        """Todas las facturas aprobadas → estado CERRADO, retorna (registro, None)."""
+        registro, facturas = self._llevar_a_aprobado_compras(num_facturas=2)
+        for f in facturas:
+            ContabilidadService.aprobar_factura_contabilidad(f, self.contabilidad_user)
+
+        resultado, nuevo = ContabilidadService.finalizar_revision_contabilidad(
+            registro, self.contabilidad_user
+        )
+        resultado.refresh_from_db()
+
+        self.assertEqual(resultado.estado, 'CERRADO')
+        self.assertIsNone(nuevo)
+        self.assertIsNotNone(resultado.fecha_cierre)
+
+    def test_finalizar_revision_todas_devueltas(self):
+        """Todas devueltas → estado OBSERVADO_CONTABILIDAD, retorna (registro, None)."""
+        registro, facturas = self._llevar_a_aprobado_compras(num_facturas=2)
+        for f in facturas:
+            ContabilidadService.devolver_factura_contabilidad(
+                f, self.contabilidad_user, 'Documentación incompleta'
+            )
+
+        resultado, nuevo = ContabilidadService.finalizar_revision_contabilidad(
+            registro, self.contabilidad_user
+        )
+        resultado.refresh_from_db()
+
+        self.assertEqual(resultado.estado, 'OBSERVADO_CONTABILIDAD')
+        self.assertIsNone(nuevo)
+
+    def test_finalizar_revision_split(self):
+        """
+        Una aprobada + una devuelta → SPLIT.
+        Nuevo registro queda CERRADO con la factura aprobada.
+        Original queda OBSERVADO_CONTABILIDAD con la devuelta.
+        """
+        registro, facturas = self._llevar_a_aprobado_compras(num_facturas=2)
+        fc_aprobada, fc_devuelta = facturas[0], facturas[1]
+
+        ContabilidadService.aprobar_factura_contabilidad(fc_aprobada, self.contabilidad_user)
+        ContabilidadService.devolver_factura_contabilidad(
+            fc_devuelta, self.contabilidad_user, 'Falta firma del proveedor'
+        )
+
+        registro_orig, nuevo = ContabilidadService.finalizar_revision_contabilidad(
+            registro, self.contabilidad_user
+        )
+        registro_orig.refresh_from_db()
+
+        # Original: OBSERVADO_CONTABILIDAD con la factura devuelta
+        self.assertEqual(registro_orig.estado, 'OBSERVADO_CONTABILIDAD')
+        self.assertEqual(registro_orig.facturas.count(), 1)
+        self.assertEqual(registro_orig.facturas.first().numero_factura, fc_devuelta.numero_factura)
+
+        # Nuevo: CERRADO con la factura aprobada
+        self.assertIsNotNone(nuevo)
+        nuevo.refresh_from_db()
+        self.assertEqual(nuevo.estado, 'CERRADO')
+        self.assertEqual(nuevo.facturas.count(), 1)
+        self.assertEqual(nuevo.facturas.first().numero_factura, fc_aprobada.numero_factura)
+
+        # Trazabilidad de split
+        self.assertEqual(nuevo.registro_origen_id, registro_orig.pk)
+
+    def test_finalizar_revision_con_pendientes(self):
+        """Hay facturas sin decidir → ValueError antes de poder finalizar."""
+        registro, facturas = self._llevar_a_aprobado_compras(num_facturas=2)
+        # Solo aprobamos una; la otra queda PENDIENTE
+        ContabilidadService.aprobar_factura_contabilidad(facturas[0], self.contabilidad_user)
+
+        with self.assertRaises(ValueError):
+            ContabilidadService.finalizar_revision_contabilidad(
+                registro, self.contabilidad_user
+            )
+
+    # ------------------------------------------------------------------ #
+    # responder_observacion resetea estado_contabilidad                    #
+    # ------------------------------------------------------------------ #
+
+    def test_responder_observacion_resetea_estado_contabilidad(self):
+        """
+        Tras responder_observacion (OBSERVADO_CONTABILIDAD → APROBADO_COMPRAS),
+        las facturas que estaban DEVUELTA deben quedar en PENDIENTE con comentario vacío.
+        """
+        registro, facturas = self._llevar_a_aprobado_compras(num_facturas=2)
+        fc1, fc2 = facturas[0], facturas[1]
+
+        # Contabilidad devuelve ambas → todas DEVUELTA
+        ContabilidadService.devolver_factura_contabilidad(
+            fc1, self.contabilidad_user, 'Error en fecha'
+        )
+        ContabilidadService.devolver_factura_contabilidad(
+            fc2, self.contabilidad_user, 'Proveedor incorrecto'
+        )
+
+        # Finalizar → OBSERVADO_CONTABILIDAD (todas devueltas, sin split)
+        ContabilidadService.finalizar_revision_contabilidad(registro, self.contabilidad_user)
+        registro.refresh_from_db()
+        self.assertEqual(registro.estado, 'OBSERVADO_CONTABILIDAD')
+
+        # Compras responde la observación
+        ContabilidadService.responder_observacion(
+            registro, self.compras, 'Documentos corregidos y adjuntados'
+        )
+        registro.refresh_from_db()
+        self.assertEqual(registro.estado, 'APROBADO_COMPRAS')
+
+        # Las facturas deben tener estado_contabilidad=PENDIENTE y comentario vacío
+        for f in [fc1, fc2]:
+            f.refresh_from_db()
+            self.assertEqual(f.estado_contabilidad, 'PENDIENTE')
+            self.assertEqual(f.comentario_devolucion_contabilidad, '')
+
+
+# =========================================================================== #
+# Tests: endpoints API de devolución parcial Contabilidad                     #
+# =========================================================================== #
+
+class ContabilidadDevolucionParcialAPITests(TestCase):
+
+    def setUp(self):
+        self.client = Client()
+
+        self.lider = User.objects.create_user(username='api_lider', password='test1234')
+        self.compras_user = User.objects.create_user(username='api_compras', password='test1234')
+        self.contabilidad_user = User.objects.create_user(username='api_contabilidad', password='test1234')
+        self.otro_user = User.objects.create_user(username='api_otro', password='test1234')
+
+        # Grupos de rol
+        grupo_contabilidad, _ = Group.objects.get_or_create(name='CONTABILIDAD')
+        grupo_compras, _ = Group.objects.get_or_create(name='COMPRAS_CONTABLE')
+        self.contabilidad_user.groups.add(grupo_contabilidad)
+        self.compras_user.groups.add(grupo_compras)
+
+        # Aislar checklist
+        ItemChecklist.objects.all().update(activo=False)
+        self.item = ItemChecklist.objects.create(
+            nombre='Ítem API test',
+            tipo_proceso='AMBOS',
+            obligatorio=True,
+            activo=True,
+            orden=1,
+        )
+
+    def _llevar_a_aprobado_compras(self, num_facturas=1):
+        registro = ContabilidadService.crear_registro(
+            lider=self.lider,
+            tipo='SERVICIOS',
+            periodo_mes=5,
+            periodo_ano=2025,
+        )
+        for i in range(num_facturas):
+            ContabilidadService.agregar_factura(registro, {
+                'numero_factura': f'FP-{i + 1:03d}',
+                'proveedor': 'Proveedor API',
+                'concepto': 'Test API',
+                'valor': 2000000,
+                'fecha_factura': '2025-05-01',
+            })
+
+        ContabilidadService.enviar(registro, self.lider)
+        ContabilidadService.confirmar_recepcion(registro, self.compras_user)
+
+        facturas = list(registro.facturas.order_by('numero_factura'))
+        for factura in facturas:
+            verificacion = VerificacionChecklist.objects.filter(
+                factura=factura, item__obligatorio=True
+            ).first()
+            ContabilidadService.guardar_checklist(
+                registro,
+                [{'verificacion_id': verificacion.pk, 'estado': 'OK', 'observacion': ''}],
+                self.compras_user,
+            )
+            ContabilidadService.aprobar_factura(factura, self.compras_user)
+
+        ContabilidadService.finalizar_revision_compras(registro, self.compras_user)
+        registro.refresh_from_db()
+        return registro, facturas
+
+    # ------------------------------------------------------------------ #
+    # POST /api/facturas/<pk>/aprobar-contabilidad/                        #
+    # ------------------------------------------------------------------ #
+
+    def test_api_aprobar_factura_contabilidad(self):
+        registro, facturas = self._llevar_a_aprobado_compras()
+        self.client.login(username='api_contabilidad', password='test1234')
+
+        response = self.client.post(
+            f'/contabilidad/api/facturas/{facturas[0].pk}/aprobar-contabilidad/',
+            content_type='application/json',
+            data=json.dumps({}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertTrue(data['success'])
+
+        facturas[0].refresh_from_db()
+        self.assertEqual(facturas[0].estado_contabilidad, 'APROBADA')
+
+    def test_api_aprobar_factura_contabilidad_sin_permiso(self):
+        """Usuario sin grupo CONTABILIDAD debe recibir 403."""
+        registro, facturas = self._llevar_a_aprobado_compras()
+        self.client.login(username='api_otro', password='test1234')
+
+        response = self.client.post(
+            f'/contabilidad/api/facturas/{facturas[0].pk}/aprobar-contabilidad/',
+            content_type='application/json',
+            data=json.dumps({}),
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    # ------------------------------------------------------------------ #
+    # POST /api/facturas/<pk>/devolver-contabilidad/                       #
+    # ------------------------------------------------------------------ #
+
+    def test_api_devolver_factura_contabilidad(self):
+        registro, facturas = self._llevar_a_aprobado_compras()
+        self.client.login(username='api_contabilidad', password='test1234')
+
+        response = self.client.post(
+            f'/contabilidad/api/facturas/{facturas[0].pk}/devolver-contabilidad/',
+            content_type='application/json',
+            data=json.dumps({'comentario': 'Falta soporte de pago'}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertTrue(data['success'])
+
+        facturas[0].refresh_from_db()
+        self.assertEqual(facturas[0].estado_contabilidad, 'DEVUELTA')
+        self.assertEqual(facturas[0].comentario_devolucion_contabilidad, 'Falta soporte de pago')
+
+    def test_api_devolver_factura_contabilidad_sin_comentario(self):
+        """Comentario vacío debe retornar success=False con el error del servicio."""
+        registro, facturas = self._llevar_a_aprobado_compras()
+        self.client.login(username='api_contabilidad', password='test1234')
+
+        response = self.client.post(
+            f'/contabilidad/api/facturas/{facturas[0].pk}/devolver-contabilidad/',
+            content_type='application/json',
+            data=json.dumps({'comentario': ''}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertFalse(data['success'])
+        self.assertIn('error', data)
+
+    # ------------------------------------------------------------------ #
+    # POST /api/registros/<pk>/finalizar-revision-contabilidad/            #
+    # ------------------------------------------------------------------ #
+
+    def test_api_finalizar_revision_contabilidad_todas_aprobadas(self):
+        registro, facturas = self._llevar_a_aprobado_compras(num_facturas=2)
+        # Aprobar todas las facturas por servicio
+        for f in facturas:
+            ContabilidadService.aprobar_factura_contabilidad(f, self.contabilidad_user)
+
+        self.client.login(username='api_contabilidad', password='test1234')
+        response = self.client.post(
+            f'/contabilidad/api/registros/{registro.pk}/finalizar-revision-contabilidad/',
+            content_type='application/json',
+            data=json.dumps({}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertTrue(data['success'])
+        self.assertEqual(data['estado'], 'CERRADO')
+        self.assertIsNone(data['nuevo_registro_id'])
+
+    def test_api_finalizar_revision_contabilidad_split(self):
+        """Una aprobada + una devuelta → split, nuevo_registro_id no nulo."""
+        registro, facturas = self._llevar_a_aprobado_compras(num_facturas=2)
+        ContabilidadService.aprobar_factura_contabilidad(facturas[0], self.contabilidad_user)
+        ContabilidadService.devolver_factura_contabilidad(
+            facturas[1], self.contabilidad_user, 'Error de concepto'
+        )
+
+        self.client.login(username='api_contabilidad', password='test1234')
+        response = self.client.post(
+            f'/contabilidad/api/registros/{registro.pk}/finalizar-revision-contabilidad/',
+            content_type='application/json',
+            data=json.dumps({}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertTrue(data['success'])
+        self.assertIsNotNone(data['nuevo_registro_id'])
+        self.assertGreater(data['nuevo_registro_id'], 0)
+
+        # Verificar que el nuevo registro existe y está CERRADO
+        nuevo = RegistroContable.objects.get(pk=data['nuevo_registro_id'])
+        self.assertEqual(nuevo.estado, 'CERRADO')
+
+        # Verificar que el original quedó OBSERVADO_CONTABILIDAD
+        registro.refresh_from_db()
+        self.assertEqual(registro.estado, 'OBSERVADO_CONTABILIDAD')
+
+    def test_api_finalizar_sin_permiso(self):
+        """Sin rol CONTABILIDAD → 403."""
+        registro, facturas = self._llevar_a_aprobado_compras()
+        ContabilidadService.aprobar_factura_contabilidad(facturas[0], self.contabilidad_user)
+
+        self.client.login(username='api_otro', password='test1234')
+        response = self.client.post(
+            f'/contabilidad/api/registros/{registro.pk}/finalizar-revision-contabilidad/',
+            content_type='application/json',
+            data=json.dumps({}),
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_api_finalizar_sin_autenticar(self):
+        """Sin sesión → redirige a login (302)."""
+        registro, facturas = self._llevar_a_aprobado_compras()
+
+        response = self.client.post(
+            f'/contabilidad/api/registros/{registro.pk}/finalizar-revision-contabilidad/',
+            content_type='application/json',
+            data=json.dumps({}),
+        )
+
+        self.assertEqual(response.status_code, 302)
