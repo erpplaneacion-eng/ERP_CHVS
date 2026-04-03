@@ -1,1 +1,1 @@
-web: cd erp_chvs && gunicorn erp_chvs.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --worker-class gevent --worker-connections 50 --timeout 120 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100 --worker-tmp-dir /dev/shm
+web: cd erp_chvs && gunicorn erp_chvs.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --worker-class gevent --worker-connections 50 --timeout 120 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100 --worker-tmp-dir /dev/shm

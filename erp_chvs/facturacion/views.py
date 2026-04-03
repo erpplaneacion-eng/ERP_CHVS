@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.cache import cache_page
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 import base64
@@ -15,6 +16,8 @@ import pandas as pd
 from io import StringIO, BytesIO
 import json
 from datetime import datetime
+import os
+from threading import BoundedSemaphore
 
 from .models import ListadosFocalizacion
 from principal.models import PrincipalDepartamento, PrincipalMunicipio, RegistroActividad
@@ -33,6 +36,10 @@ import zipfile
 procesamiento_service = ProcesamientoService()
 validacion_service = ValidacionService()
 estadisticas_service = EstadisticasService()
+
+# Límite por proceso para generación pesada (PDF/ZIP) dentro de requests HTTP.
+_HEAVY_REQUESTS_MAX = int(os.environ.get('FACTURACION_HEAVY_MAX_CONCURRENCY', '2'))
+_heavy_request_semaphore = BoundedSemaphore(_HEAVY_REQUESTS_MAX)
 
 @login_required
 def facturacion_index(request):
@@ -433,6 +440,7 @@ def obtener_estadisticas_sedes(request):
 
 @login_required
 @require_http_methods(["GET"])
+@cache_page(60)
 def api_focalizaciones_existentes(request):
     """
     API para obtener las focalizaciones que ya existen en la BD
@@ -757,6 +765,7 @@ def descargar_estadisticas_sedes_excel(request):
 # 3. Cargar nuevamente el archivo Excel con los datos corregidos
 
 @login_required
+@cache_page(60)
 def api_obtener_sedes_con_grados(request):
     """
     API para obtener sedes disponibles con sus grados para transferencia.
@@ -1017,11 +1026,27 @@ def generar_pdf_asistencia(request, programa_id, sede_cod_interprise, mes, focal
         except (ValueError, TypeError):
             return HttpResponse("Formato de días inválido. Deben ser números separados por comas.", status=400)
 
-    RegistroActividad.registrar(
-        request, 'facturacion', 'generar_pdf',
-        f"Programa: {programa_id} | Sede: {sede_cod_interprise} | Mes: {mes} | Focalización: {focalizacion}"
-    )
-    return PDFAsistenciaService.generar_pdf_asistencia(programa_id, sede_cod_interprise, mes, focalizacion, dias_personalizados=dias_personalizados)
+    acquired = _heavy_request_semaphore.acquire(blocking=False)
+    if not acquired:
+        return HttpResponse(
+            "Servicio temporalmente ocupado. Intenta de nuevo en unos segundos.",
+            status=429,
+        )
+
+    try:
+        RegistroActividad.registrar(
+            request, 'facturacion', 'generar_pdf',
+            f"Programa: {programa_id} | Sede: {sede_cod_interprise} | Mes: {mes} | Focalización: {focalizacion}"
+        )
+        return PDFAsistenciaService.generar_pdf_asistencia(
+            programa_id,
+            sede_cod_interprise,
+            mes,
+            focalizacion,
+            dias_personalizados=dias_personalizados,
+        )
+    finally:
+        _heavy_request_semaphore.release()
 
 @login_required
 def generar_zip_masivo_programa(request, programa_id, mes, focalizacion):
@@ -1037,11 +1062,26 @@ def generar_zip_masivo_programa(request, programa_id, mes, focalizacion):
         except (ValueError, TypeError):
             return HttpResponse("Formato de días inválido. Deben ser números separados por comas.", status=400)
             
-    RegistroActividad.registrar(
-        request, 'facturacion', 'generar_zip_masivo',
-        f"Programa: {programa_id} | Mes: {mes} | Focalización: {focalizacion}"
-    )
-    return PDFAsistenciaService.generar_zip_masivo_por_programa(programa_id, mes, focalizacion, dias_personalizados=dias_personalizados)
+    acquired = _heavy_request_semaphore.acquire(blocking=False)
+    if not acquired:
+        return HttpResponse(
+            "Servicio temporalmente ocupado. Intenta de nuevo en unos segundos.",
+            status=429,
+        )
+
+    try:
+        RegistroActividad.registrar(
+            request, 'facturacion', 'generar_zip_masivo',
+            f"Programa: {programa_id} | Mes: {mes} | Focalización: {focalizacion}"
+        )
+        return PDFAsistenciaService.generar_zip_masivo_por_programa(
+            programa_id,
+            mes,
+            focalizacion,
+            dias_personalizados=dias_personalizados,
+        )
+    finally:
+        _heavy_request_semaphore.release()
 
 @login_required
 def get_municipio_for_programa(request):
@@ -1063,6 +1103,7 @@ def get_municipio_for_programa(request):
         return JsonResponse({'error': 'Programa no encontrado'}, status=404)
 
 @login_required
+@cache_page(60)
 def get_focalizaciones_for_programa(request):
     """
     Vista AJAX para obtener las focalizaciones de un programa.
@@ -1080,6 +1121,7 @@ def get_focalizaciones_for_programa(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 @login_required
+@cache_page(60)
 def get_sedes_for_programa_focalizacion(request):
     """
     Vista AJAX para obtener las sedes de un programa y focalización.
@@ -1169,6 +1211,7 @@ def reemplazar_focalizacion_sedes(request):
 
 @login_required
 @require_http_methods(["GET"])
+@cache_page(60)
 def api_get_sedes_completas(request):
     """
     API para obtener las sedes completas con su cod_interprise y nombre
@@ -1229,6 +1272,7 @@ def api_get_sedes_completas(request):
 
 @login_required
 @require_http_methods(["GET"])
+@cache_page(60)
 def api_conteo_estudiantes_por_nivel(request):
     """
     API para obtener el conteo de estudiantes agrupados por nivel educativo

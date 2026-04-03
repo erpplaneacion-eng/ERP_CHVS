@@ -166,6 +166,9 @@ class ListadosFocalizacion(models.Model):
             models.Index(fields=['sede'], name='listados_fo_sede_1c7c6d_idx'),
             models.Index(fields=['doc'], name='listados_fo_doc_2f8909_idx'),
             models.Index(fields=['fecha_creacion'], name='listados_fo_fecha_c_ef0e38_idx'),
+            models.Index(fields=['programa', 'focalizacion'], name='listados_prog_focal_idx'),
+            models.Index(fields=['programa', 'focalizacion', 'sede'], name='listados_prog_focal_sede_idx'),
+            models.Index(fields=['programa', 'sede'], name='listados_prog_sede_idx'),
         ]
         # constraints = [
         #     models.UniqueConstraint(
