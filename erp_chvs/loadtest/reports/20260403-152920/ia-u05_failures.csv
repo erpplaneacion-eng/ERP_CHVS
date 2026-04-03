@@ -1,5 +1,0 @@
-Method,Name,Error,Occurrences
-POST,ia:dashboard_nia_chat,HTTPError('403 Client Error:  for url: ia:dashboard_nia_chat'),394
-POST,ia:dashboard_nia_reset,HTTPError('502 Server Error:  for url: ia:dashboard_nia_reset'),3
-POST,ia:dashboard_nia_reset,HTTPError('403 Client Error:  for url: ia:dashboard_nia_reset'),221
-POST,ia:dashboard_nia_chat,HTTPError('502 Server Error:  for url: ia:dashboard_nia_chat'),3
