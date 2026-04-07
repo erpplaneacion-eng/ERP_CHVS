@@ -29,10 +29,16 @@
                 <option value="ENVIADO">Enviado</option>
                 <option value="EN_REVISION_COMPRAS">En Revisión</option>
                 <option value="OBSERVADO_CONTABILIDAD">Observado Contabilidad</option>
+                <option value="DEVUELTO_COMPRAS" class="opt-historial" style="display:none;">Devuelto al Líder</option>
+                <option value="APROBADO_COMPRAS" class="opt-historial" style="display:none;">Aprobado por Compras</option>
+                <option value="CERRADO" class="opt-historial" style="display:none;">Cerrado</option>
             </select>
         </div>
         <button class="btn btn-outline-secondary" id="btn-limpiar-filtros">
             <i class="fas fa-times"></i> Limpiar
+        </button>
+        <button class="btn btn-outline-secondary" id="btn-toggle-historial" style="margin-left:auto;">
+            <i class="fas fa-history"></i> Ver historial
         </button>
     </div>
 
@@ -65,6 +71,3 @@
 </script>
 {% endblock %}
 
-{% block extra_js %}
-<script src="{% static 'js/contabilidad/bandeja_compras.js' %}"></script>
-{% endblock %}

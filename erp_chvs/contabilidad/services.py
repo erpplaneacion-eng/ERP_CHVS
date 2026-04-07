@@ -830,26 +830,44 @@ class ContabilidadService:
     # Bandejas                                                             #
     # ------------------------------------------------------------------ #
 
+    ESTADOS_ACTIVOS_COMPRAS = ('ENVIADO', 'EN_REVISION_COMPRAS', 'OBSERVADO_CONTABILIDAD')
+    ESTADOS_ACTIVOS_CONTABILIDAD = ('APROBADO_COMPRAS',)
+
     @staticmethod
-    def get_bandeja_compras():
+    def get_bandeja_compras(solo_activos=True):
         """
-        Registros visibles para el área de Compras:
-        - ENVIADO: para confirmar recepción de documentos físicos
-        - EN_REVISION_COMPRAS: para hacer la revisión y checklist
-        - OBSERVADO_CONTABILIDAD: para responder la observación de contabilidad
+        Registros visibles para el área de Compras.
+        solo_activos=True  → solo los que requieren acción inmediata.
+        solo_activos=False → historial completo (todo lo que ha pasado por Compras).
         """
+        if solo_activos:
+            estados = ContabilidadService.ESTADOS_ACTIVOS_COMPRAS
+        else:
+            estados = (
+                'ENVIADO', 'EN_REVISION_COMPRAS', 'DEVUELTO_COMPRAS',
+                'APROBADO_COMPRAS', 'OBSERVADO_CONTABILIDAD',
+                'APROBADO_CONTABILIDAD', 'CERRADO',
+            )
         return RegistroContable.objects.filter(
-            estado__in=('ENVIADO', 'EN_REVISION_COMPRAS', 'OBSERVADO_CONTABILIDAD')
+            estado__in=estados
         ).select_related('lider').order_by('-fecha_creacion')
 
     @staticmethod
-    def get_bandeja_contabilidad():
+    def get_bandeja_contabilidad(solo_activos=True):
         """
-        Registros visibles para el área de Contabilidad:
-        - APROBADO_COMPRAS: para segunda revisión y aprobación/observación
+        Registros visibles para el área de Contabilidad.
+        solo_activos=True  → solo APROBADO_COMPRAS (pendientes de revisión).
+        solo_activos=False → historial completo (todo lo que ha pasado por Contabilidad).
         """
+        if solo_activos:
+            estados = ContabilidadService.ESTADOS_ACTIVOS_CONTABILIDAD
+        else:
+            estados = (
+                'APROBADO_COMPRAS', 'OBSERVADO_CONTABILIDAD',
+                'APROBADO_CONTABILIDAD', 'CERRADO',
+            )
         return RegistroContable.objects.filter(
-            estado='APROBADO_COMPRAS'
+            estado__in=estados
         ).select_related('lider').order_by('-fecha_creacion')
 
     @staticmethod

@@ -22,8 +22,20 @@
                 <option value="MATERIAS_PRIMAS">Materias Primas</option>
             </select>
         </div>
+        <div class="filter-group">
+            <label for="filtro-estado">Estado:</label>
+            <select id="filtro-estado">
+                <option value="">Todos</option>
+                <option value="APROBADO_COMPRAS">Aprobado por Compras</option>
+                <option value="OBSERVADO_CONTABILIDAD">Observado</option>
+                <option value="CERRADO">Cerrado</option>
+            </select>
+        </div>
         <button class="btn btn-outline-secondary" id="btn-limpiar-filtros">
             <i class="fas fa-times"></i> Limpiar
+        </button>
+        <button class="btn btn-outline-secondary" id="btn-toggle-historial" style="margin-left:auto;">
+            <i class="fas fa-history"></i> Ver historial
         </button>
     </div>
 
@@ -55,6 +67,3 @@
 </script>
 {% endblock %}
 
-{% block extra_js %}
-<script src="{% static 'js/contabilidad/bandeja_contabilidad.js' %}"></script>
-{% endblock %}

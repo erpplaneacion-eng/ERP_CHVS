@@ -147,12 +147,14 @@ def api_listar_registros(request):
 
     user = request.user
 
+    solo_activos = request.GET.get('todos') != '1'
+
     if _tiene_rol(user, 'GERENCIA'):
         qs = RegistroContable.objects.select_related('lider').all()
     elif _tiene_rol(user, 'COMPRAS_CONTABLE'):
-        qs = ContabilidadService.get_bandeja_compras()
+        qs = ContabilidadService.get_bandeja_compras(solo_activos=solo_activos)
     elif _tiene_rol(user, 'CONTABILIDAD'):
-        qs = ContabilidadService.get_bandeja_contabilidad()
+        qs = ContabilidadService.get_bandeja_contabilidad(solo_activos=solo_activos)
     else:
         # Líder: solo sus propios registros
         qs = RegistroContable.objects.filter(lider=user).select_related('lider')
