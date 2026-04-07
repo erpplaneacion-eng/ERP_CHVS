@@ -123,6 +123,8 @@
     const REGISTRO_ID = {{ registro.pk }};
     const REGISTRO_ESTADO = '{{ registro.estado }}';
     const FECHA_APROBACION_COMPRAS = '{{ registro.fecha_aprobacion_compras|date:"c" }}' || null;
+    const FECHA_OBSERVACION_CONTABILIDAD = '{{ registro.fecha_observacion_contabilidad|date:"c" }}' || null;
+    const FECHA_RESPUESTA_COMPRAS = '{{ registro.fecha_respuesta_compras|date:"c" }}' || null;
     const DETALLE_URL = '{% url "contabilidad:api_detalle_registro" registro.pk %}';
     const CHECKLIST_URL = '{% url "contabilidad:api_checklist" registro.pk %}';
     const HISTORIAL_URL = '{% url "contabilidad:api_historial" registro.pk %}';

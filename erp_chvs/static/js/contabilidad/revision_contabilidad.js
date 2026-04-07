@@ -302,10 +302,23 @@ class RevisionContabilidadManager {
     async finalizarRevision() {
         if (this.saving) return;
 
-        const horas = horasLaboralesEntre(
-            typeof FECHA_APROBACION_COMPRAS !== 'undefined' ? FECHA_APROBACION_COMPRAS : null,
-            new Date().toISOString()
-        );
+        // Replicar la lógica de services.py: si hubo ciclo de observación,
+        // el tiempo de Compras respondiendo (observacion → respuesta) no se carga a Contabilidad.
+        // T1 = aprobacion_compras → observacion  (o → ahora si no hubo observación)
+        // T2 = respuesta_compras → ahora          (solo si hubo observación y ya respondieron)
+        const ahora = new Date().toISOString();
+        const fechaAprobComp = typeof FECHA_APROBACION_COMPRAS !== 'undefined' ? FECHA_APROBACION_COMPRAS : null;
+        const fechaObsConta = typeof FECHA_OBSERVACION_CONTABILIDAD !== 'undefined' ? FECHA_OBSERVACION_CONTABILIDAD : null;
+        const fechaRespComp = typeof FECHA_RESPUESTA_COMPRAS !== 'undefined' ? FECHA_RESPUESTA_COMPRAS : null;
+
+        let horas;
+        if (fechaObsConta && fechaRespComp) {
+            const t1 = horasLaboralesEntre(fechaAprobComp, fechaObsConta);
+            const t2 = horasLaboralesEntre(fechaRespComp, ahora);
+            horas = Math.round((t1 + t2) * 10) / 10;
+        } else {
+            horas = horasLaboralesEntre(fechaAprobComp, ahora);
+        }
         const superaLimite = horas > 5;
 
         const swalConfig = {
@@ -319,13 +332,15 @@ class RevisionContabilidadManager {
 
         if (superaLimite) {
             swalConfig.html = `Las facturas aprobadas se cerrarán y las devueltas regresarán a Compras.<br><br>
-                <strong style="color:#c0392b;">&#9888; Ha superado las 5 horas laborales (${horas}h transcurridas).<br>
+                <strong>&#9888;&#65039; Asegúrese de haber cargado la información de forma correcta en SIESA antes de continuar.</strong><br><br>
+                <strong style="color:#c0392b;">&#9888;&#65039; Ha superado las 5 horas laborales (${horas}h transcurridas).<br>
                 Debe justificar el motivo de la demora.</strong>`;
             swalConfig.input = 'textarea';
             swalConfig.inputPlaceholder = 'Explique el motivo de la demora...';
             swalConfig.inputValidator = (v) => { if (!v || !v.trim()) return 'La justificación es obligatoria.'; };
         } else {
-            swalConfig.text = 'Las facturas aprobadas se cerrarán. Las devueltas regresarán a Compras para corrección.';
+            swalConfig.html = `Las facturas aprobadas se cerrarán. Las devueltas regresarán a Compras para corrección.<br><br>
+                <strong>&#9888;&#65039; Asegúrese de haber cargado la información de forma correcta en SIESA antes de continuar.</strong>`;
         }
 
         const result = await Swal.fire(swalConfig);
