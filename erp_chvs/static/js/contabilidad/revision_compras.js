@@ -141,11 +141,23 @@ class RevisionComprasManager {
 
     renderFacturas(facturas, valorTotal) {
         const tbody = document.getElementById('facturas-tbody');
+        const thead = document.querySelector('#facturasTable thead tr');
         if (!tbody) return;
         tbody.innerHTML = '';
 
+        const esObservado = REGISTRO_ESTADO === 'OBSERVADO_CONTABILIDAD';
+
+        // Agregar columna de observación de Contabilidad si aplica
+        if (esObservado && thead && !thead.querySelector('th[data-col="obs-conta"]')) {
+            const th = document.createElement('th');
+            th.dataset.col = 'obs-conta';
+            th.textContent = 'Obs. Contabilidad';
+            th.style.minWidth = '160px';
+            thead.appendChild(th);
+        }
+
         if (!facturas.length) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Sin facturas.</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="${esObservado ? 8 : 7}" class="text-center text-muted">Sin facturas.</td></tr>`;
         } else {
             const fragment = document.createDocumentFragment();
             facturas.forEach((f, idx) => {
@@ -170,6 +182,22 @@ class RevisionComprasManager {
                     }
                 }
 
+                let obsContaHtml = '';
+                if (esObservado) {
+                    if (f.estado_contabilidad === 'DEVUELTA' && f.comentario_devolucion_contabilidad) {
+                        obsContaHtml = `<td>
+                            <div style="padding:6px 8px;background:#fee2e2;border-left:3px solid #c0392b;border-radius:4px;font-size:12px;color:#7f1d1d;">
+                                <i class="fas fa-exclamation-circle" style="color:#c0392b;"></i>
+                                <em>${f.comentario_devolucion_contabilidad}</em>
+                            </div>
+                        </td>`;
+                    } else if (f.estado_contabilidad === 'DEVUELTA') {
+                        obsContaHtml = `<td><span class="badge-estado badge-devuelta" style="font-size:11px;"><i class="fas fa-undo-alt"></i> Devuelta</span></td>`;
+                    } else {
+                        obsContaHtml = `<td class="text-muted" style="font-size:12px;">—</td>`;
+                    }
+                }
+
                 tr.innerHTML = `
                     <td>${idx + 1}</td>
                     <td>${f.numero_factura}</td>
@@ -178,6 +206,7 @@ class RevisionComprasManager {
                     <td>${valor}</td>
                     <td>${fecha}</td>
                     <td style="text-align:center;">${indicadorEmision}</td>
+                    ${obsContaHtml}
                 `;
                 fragment.appendChild(tr);
             });

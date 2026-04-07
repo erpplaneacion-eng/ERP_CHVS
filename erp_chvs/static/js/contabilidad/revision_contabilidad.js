@@ -136,10 +136,19 @@ class RevisionContabilidadManager {
                         accionHtml = `<span class="badge-estado badge-aprobada"><i class="fas fa-check"></i> Aprobada</span>`;
                     } else if (est === 'DEVUELTA') {
                         decididas++;
+                        const motivoCont = f.comentario_devolucion_contabilidad
+                            ? `<div style="margin-top:6px;padding:6px 8px;background:#fee2e2;border-left:3px solid #c0392b;border-radius:4px;font-size:12px;color:#7f1d1d;text-align:left;max-width:220px;">
+                                   <i class="fas fa-exclamation-circle" style="color:#c0392b;"></i>
+                                   <em>${f.comentario_devolucion_contabilidad}</em>
+                               </div>`
+                            : '';
                         accionHtml = `
-                            <span class="badge-estado badge-devuelta" title="${f.comentario_devolucion_contabilidad || ''}">
-                                <i class="fas fa-undo-alt"></i> Devuelta
-                            </span>`;
+                            <div>
+                                <span class="badge-estado badge-devuelta">
+                                    <i class="fas fa-undo-alt"></i> Devuelta a Compras
+                                </span>
+                                ${motivoCont}
+                            </div>`;
                     } else {
                         accionHtml = `
                             <div style="display:flex; gap:6px; flex-wrap:wrap;">
@@ -152,9 +161,6 @@ class RevisionContabilidadManager {
                             </div>`;
                     }
 
-                    if (est === 'DEVUELTA' && f.comentario_devolucion_contabilidad) {
-                        tr.title = `Motivo: ${f.comentario_devolucion_contabilidad}`;
-                    }
                 }
 
                 tr.innerHTML = `

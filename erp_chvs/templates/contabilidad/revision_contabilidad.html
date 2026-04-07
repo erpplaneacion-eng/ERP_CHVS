@@ -76,10 +76,10 @@
     <!-- Modal: Motivo de devolución por Contabilidad -->
     {% if registro.estado == 'APROBADO_COMPRAS' %}
     <div id="modal-devolver-contabilidad" class="modal-overlay" style="display:none;">
-        <div class="modal-box" style="max-width:480px;">
+        <div class="modal-content" style="max-width:480px;">
             <div class="modal-header modal-header-danger">
                 <h3><i class="fas fa-undo-alt"></i> Devolver Factura a Compras</h3>
-                <button class="modal-close" id="btn-cerrar-modal-devolver-cont">×</button>
+                <span class="close" id="btn-cerrar-modal-devolver-cont">&times;</span>
             </div>
             <div class="modal-body">
                 <p id="modal-devolver-cont-desc" style="color:#6b7280; margin-bottom:12px;"></p>
