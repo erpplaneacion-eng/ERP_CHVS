@@ -394,7 +394,7 @@ class DataTransformer:
                         count_nivel = len(df_sede[df_sede['nivel_grados'] == nivel])
                         estadisticas_nivel[nivel] = count_nivel
                     
-                    # Contar por cada complemento alimentario
+                    # Contar por cada complemento alimentario y por cruce modalidad × nivel
                     estadisticas_complementos = {}
                     columnas_complementos = {
                         'COMPLEMENTO ALIMENTARIO PREPARADO AM': 'cap_am',
@@ -403,9 +403,13 @@ class DataTransformer:
                         'REFUERZO COMPLEMENTO AM/PM': 'refuerzo'
                     }
                     for col_nombre, col_key in columnas_complementos.items():
-                        if col_nombre in df_sede.columns:
-                            count_comp = (df_sede[col_nombre] == 'x').sum()
-                            estadisticas_complementos[col_key] = int(count_comp)
+                        mascara_modalidad = (df_sede[col_nombre] == 'x') if col_nombre in df_sede.columns else pd.Series(False, index=df_sede.index)
+                        estadisticas_complementos[col_key] = int(mascara_modalidad.sum())
+                        # Cruce modalidad × nivel
+                        for nivel in ProcesamientoConfig.NIVELES_ESCOLARES:
+                            estadisticas_complementos[f"{col_key}__{nivel}"] = int(
+                                (mascara_modalidad & (df_sede['nivel_grados'] == nivel)).sum()
+                            )
 
                     agrupacion_sedes.append({
                         'sede_bd': sede_bd,
@@ -417,15 +421,17 @@ class DataTransformer:
                 else:
                     # Si no hay mapeos, mostrar con 0 registros
                     estadisticas_nivel = {nivel: 0 for nivel in ProcesamientoConfig.NIVELES_ESCOLARES}
+                    estadisticas_complementos = {}
+                    for col_key in ['cap_am', 'cap_pm', 'almuerzo_ju', 'refuerzo']:
+                        estadisticas_complementos[col_key] = 0
+                        for nivel in ProcesamientoConfig.NIVELES_ESCOLARES:
+                            estadisticas_complementos[f"{col_key}__{nivel}"] = 0
                     agrupacion_sedes.append({
                         'sede_bd': sede_bd,
                         'sede_excel': 'Sin coincidencias',
                         'cantidad': 0,
                         **estadisticas_nivel,
-                        'cap_am': 0,
-                        'cap_pm': 0,
-                        'almuerzo_ju': 0,
-                        'refuerzo': 0
+                        **estadisticas_complementos
                     })
             
             # Ordenar por cantidad descendente

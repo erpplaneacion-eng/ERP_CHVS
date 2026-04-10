@@ -655,97 +655,163 @@ def lista_listados(request):
 
 @login_required
 def descargar_estadisticas_sedes_excel(request):
-    """Descarga las estadísticas por sede del último procesamiento como Excel."""
+    """Descarga raciones por sede×modalidad×nivel en formato ancho (pivot)."""
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
 
     datos = request.session.get('datos_etapa_1')
     if not datos or not datos.get('agrupacion_sedes'):
         return HttpResponse("No hay estadísticas disponibles. Procese un archivo primero.", status=400)
 
-    agrupacion = datos['agrupacion_sedes']
+    agrupacion  = datos['agrupacion_sedes']
     archivo_name = datos.get('archivo_name', 'archivo')
     focalizacion = datos.get('focalizacion', '')
-    fecha = datos.get('fecha_procesamiento', '')
+    fecha        = datos.get('fecha_procesamiento', '')
+
+    MODALIDADES = [
+        ('cap_am',      'CAP AM'),
+        ('cap_pm',      'CAP PM'),
+        ('almuerzo_ju', 'Almuerzo JU'),
+        ('refuerzo',    'Refuerzo'),
+    ]
+    NIVELES = [
+        ('prescolar',                  'Preescolar',       12),
+        ('primaria_1_2_3',             'Primaria 1°-3°',   14),
+        ('primaria_4_5',               'Primaria 4°-5°',   14),
+        ('secundaria',                 'Secundaria',        12),
+        ('media_ciclo_complementario', 'Media / Ciclo Comp.', 18),
+    ]
+
+    # Columnas fijas + una columna por nivel
+    # Layout: Sede BD | Sede Excel | Modalidad | niv1 | niv2 | niv3 | niv4 | niv5
+    COL_SEDE_BD    = 1
+    COL_SEDE_EXCEL = 2
+    COL_MODALIDAD  = 3
+    COL_NIVEL_INI  = 4   # columnas 4-8 son los niveles
 
     wb = Workbook()
     ws = wb.active
-    ws.title = "Estadísticas por Sede"
+    ws.title = "Raciones por Sede"
 
-    # Estilos
-    header_fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True, size=11)
-    center = Alignment(horizontal="center", vertical="center")
-    thin = Side(style='thin', color="CCCCCC")
+    center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    left   = Alignment(horizontal="left",   vertical="center", wrap_text=True)
+    thin   = Side(style='thin', color="CCCCCC")
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
-    # Título
-    ws.merge_cells('A1:J1')
-    titulo = ws['A1']
-    titulo.value = f"Estadísticas por Sede — {archivo_name} | Focalización: {focalizacion} | Procesado: {fecha}"
-    titulo.font = Font(bold=True, size=12)
-    titulo.alignment = center
+    def make_fill(hex_color):
+        return PatternFill(start_color=hex_color, end_color=hex_color, fill_type="solid")
+
+    def hcell(row, col, value, bg, fg="FFFFFF", bold=True, sz=10):
+        c = ws.cell(row=row, column=col, value=value)
+        c.fill = make_fill(bg)
+        c.font = Font(color=fg, bold=bold, size=sz)
+        c.alignment = center
+        c.border = border
+        return c
+
+    total_cols = COL_NIVEL_INI + len(NIVELES) - 1  # 3 fijas + 5 niveles = 8
+
+    # ── Fila 1: Título ──────────────────────────────────────────────────────────
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=total_cols)
+    t = ws.cell(row=1, column=1,
+        value=f"Raciones por Sede, Modalidad y Nivel — {archivo_name} | Focalización: {focalizacion} | Procesado: {fecha}")
+    t.fill = make_fill("1F4E79")
+    t.font = Font(color="FFFFFF", bold=True, size=12)
+    t.alignment = center
     ws.row_dimensions[1].height = 22
 
-    # Encabezados
-    columnas = [
-        ('#', 5),
-        ('Sede Oficial (BD)', 40),
-        ('Sede en Archivo', 35),
-        ('Total', 9),
-        ('Preescolar', 12),
-        ('Primaria 1-2-3', 14),
-        ('Primaria 4-5', 12),
-        ('Secundaria', 12),
-        ('Media / Ciclo Comp.', 18),
-        ('CAP AM / CAP PM / Alm JU / Ref', 30),
-    ]
-    for col_idx, (nombre, ancho) in enumerate(columnas, start=1):
-        cell = ws.cell(row=2, column=col_idx, value=nombre)
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = center
-        cell.border = border
-        ws.column_dimensions[cell.column_letter].width = ancho
+    # ── Fila 2: Encabezados principales ─────────────────────────────────────────
+    # Columnas fijas — se fusionan filas 2-3
+    for col, label, ancho in [
+        (COL_SEDE_BD,    'Sede Oficial (BD)', 42),
+        (COL_SEDE_EXCEL, 'Sede en Archivo',   36),
+        (COL_MODALIDAD,  'Modalidad',         16),
+    ]:
+        ws.merge_cells(start_row=2, start_column=col, end_row=3, end_column=col)
+        hcell(2, col, label, "1F4E79", sz=10)
+        ws.column_dimensions[get_column_letter(col)].width = ancho
 
-    # Datos
-    nivel_keys = ['prescolar', 'primaria_1_2_3', 'primaria_4_5', 'secundaria', 'media_ciclo_complementario']
-    alt_fill = PatternFill(start_color="EEF4FB", end_color="EEF4FB", fill_type="solid")
+    # "Nivel Educativo" fusionado sobre las columnas de niveles
+    ws.merge_cells(start_row=2, start_column=COL_NIVEL_INI,
+                   end_row=2,   end_column=COL_NIVEL_INI + len(NIVELES) - 1)
+    hcell(2, COL_NIVEL_INI, 'Nivel Educativo', "2E75B6", sz=11)
 
-    for row_idx, item in enumerate(agrupacion, start=1):
-        excel_row = row_idx + 2
-        fill = alt_fill if row_idx % 2 == 0 else None
-        complementos = (
-            f"{item.get('cap_am', 0)} / {item.get('cap_pm', 0)} / "
-            f"{item.get('almuerzo_ju', 0)} / {item.get('refuerzo', 0)}"
+    ws.row_dimensions[2].height = 18
+
+    # ── Fila 3: Sub-encabezados de nivel ────────────────────────────────────────
+    for i, (niv_key, niv_label, niv_ancho) in enumerate(NIVELES):
+        col = COL_NIVEL_INI + i
+        hcell(3, col, niv_label, "5B9BD5", sz=10)
+        ws.column_dimensions[get_column_letter(col)].width = niv_ancho
+
+    ws.row_dimensions[3].height = 28
+
+    # Colores por modalidad y alternancia de sede
+    COLOR_MOD = {
+        'cap_am':      'DDEEFF',
+        'cap_pm':      'DFFFD6',
+        'almuerzo_ju': 'FFF0DE',
+        'refuerzo':    'F0E8FF',
+    }
+    COLORES_SEDE = ["FFFFFF", "F5F5F5"]
+
+    # ── Filas de datos ──────────────────────────────────────────────────────────
+    excel_row = 4
+    for sede_idx, item in enumerate(agrupacion):
+        sede_bd    = item.get('sede_bd', '')
+        sede_excel = item.get('sede_excel', '')
+        fill_sede  = make_fill(COLORES_SEDE[sede_idx % 2])
+
+        for mod_key, mod_label in MODALIDADES:
+            # Omitir modalidad si no tiene ninguna ración en ningún nivel
+            totales_niv = [item.get(f"{mod_key}__{niv_key}", 0) for niv_key, _, _ in NIVELES]
+            if sum(totales_niv) == 0:
+                continue
+
+            fill_mod = make_fill(COLOR_MOD[mod_key])
+
+            def wcell(col, value, fill, alin=center):
+                c = ws.cell(row=excel_row, column=col, value=value)
+                c.fill = fill
+                c.alignment = alin
+                c.border = border
+                return c
+
+            wcell(COL_SEDE_BD,    sede_bd,    fill_sede, left)
+            wcell(COL_SEDE_EXCEL, sede_excel, fill_sede, left)
+            wcell(COL_MODALIDAD,  mod_label,  fill_mod)
+
+            for i, (niv_key, _, _) in enumerate(NIVELES):
+                wcell(COL_NIVEL_INI + i, item.get(f"{mod_key}__{niv_key}", 0), fill_mod)
+
+            excel_row += 1
+
+    # ── Fila de totales ─────────────────────────────────────────────────────────
+    ws.merge_cells(start_row=excel_row, start_column=1, end_row=excel_row, end_column=COL_MODALIDAD)
+    c = ws.cell(row=excel_row, column=1, value="TOTAL GENERAL")
+    c.fill = make_fill("1F4E79")
+    c.font = Font(color="FFFFFF", bold=True)
+    c.alignment = center
+    c.border = border
+
+    for i, (niv_key, _, _) in enumerate(NIVELES):
+        col = COL_NIVEL_INI + i
+        total = sum(
+            sum(item.get(f"{mod_key}__{niv_key}", 0) for mod_key, _ in MODALIDADES)
+            for item in agrupacion
         )
-        valores = [
-            row_idx,
-            item.get('sede_bd', ''),
-            item.get('sede_excel', ''),
-            item.get('cantidad', 0),
-            *[item.get(k, 0) for k in nivel_keys],
-            complementos,
-        ]
-        for col_idx, valor in enumerate(valores, start=1):
-            cell = ws.cell(row=excel_row, column=col_idx, value=valor)
-            cell.border = border
-            cell.alignment = center if col_idx not in (2, 3) else Alignment(vertical="center")
-            if fill:
-                cell.fill = fill
-
-    # Total final
-    total_row = len(agrupacion) + 3
-    ws.cell(row=total_row, column=1, value="TOTAL").font = Font(bold=True)
-    total_cell = ws.cell(row=total_row, column=4, value=sum(i.get('cantidad', 0) for i in agrupacion))
-    total_cell.font = Font(bold=True)
-    total_cell.alignment = center
+        c = ws.cell(row=excel_row, column=col, value=total)
+        c.fill = make_fill("1F4E79")
+        c.font = Font(color="FFFFFF", bold=True)
+        c.alignment = center
+        c.border = border
 
     output = BytesIO()
     wb.save(output)
     output.seek(0)
 
-    nombre_archivo = f"estadisticas_sedes_{focalizacion}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    nombre_archivo = f"raciones_sede_modalidad_{focalizacion}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
     response = HttpResponse(
         output.getvalue(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
