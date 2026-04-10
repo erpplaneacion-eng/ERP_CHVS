@@ -2,6 +2,7 @@
 Módulo para procesamiento y transformación de datos.
 """
 
+import datetime
 import pandas as pd
 from typing import Dict, List, Any
 from principal.models import TipoDocumento, TipoGenero, NivelGradoEscolar
@@ -255,15 +256,22 @@ class DataTransformer:
             niveles_grado = NivelGradoEscolar.objects.select_related('nivel_escolar_uapa').all()
             mapeo_niveles = {n.grados_sedes: n.nivel_escolar_uapa.nivel_escolar_uapa for n in niveles_grado}
             
-            # Convertir GRADO a entero primero, luego a string para el mapeo
-            df[f'{columna_grado}_clean'] = df[columna_grado].fillna(0).astype(int).astype(str)
+            # Convertir GRADO a entero primero, luego a string para el mapeo.
+            # Algunas celdas de Excel vienen como datetime (ej. "1/1" interpretado como fecha) — se reemplazan por 0.
+            grado_col = df[columna_grado].apply(
+                lambda x: None if isinstance(x, (datetime.datetime, datetime.date)) else x
+            )
+            df[f'{columna_grado}_clean'] = grado_col.fillna(0).astype(int).astype(str)
             df['nivel_grados'] = df[f'{columna_grado}_clean'].map(mapeo_niveles)
             
             # Combinar GRADO y GRUPO para consistencia
             if 'GRUPO' in df.columns:
                 # Convertir GRUPO a entero para eliminar decimales (ej. 202.0 -> 202)
-                # y luego a string para la concatenación.
-                grupo_str = df['GRUPO'].fillna(0).astype(int).astype(str)
+                # y luego a string para la concatenación. Misma protección contra datetime.
+                grupo_col = df['GRUPO'].apply(
+                    lambda x: None if isinstance(x, (datetime.datetime, datetime.date)) else x
+                )
+                grupo_str = grupo_col.fillna(0).astype(int).astype(str)
                 
                 df['grado_grupos'] = df[f'{columna_grado}_clean'] + '-' + grupo_str
             
