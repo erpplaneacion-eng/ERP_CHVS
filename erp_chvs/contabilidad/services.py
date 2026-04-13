@@ -964,12 +964,12 @@ class ContabilidadService:
                     dias_reentrega = round(horas_laborales_entre(r.fecha_devolucion_compras, r.fecha_reenvio), 1)
                     dias_reentrega_list.append(dias_reentrega)
 
-                # Retraso de carga: fecha_carga − fecha_factura (máximo entre facturas del registro)
+                # Retraso de carga: fecha_recepcion_lider − fecha_factura (máximo entre facturas del registro)
                 max_retraso_carga = None
                 retrasos = []
                 for fac in r.facturas.all():
-                    if fac.fecha_factura and fac.fecha_carga:
-                        retraso = max(0, (fac.fecha_carga.date() - fac.fecha_factura).days)
+                    if fac.fecha_factura and fac.fecha_recepcion_lider:
+                        retraso = max(0, (fac.fecha_recepcion_lider - fac.fecha_factura).days)
                         retrasos.append(retraso)
                 if retrasos:
                     max_retraso_carga = max(retrasos)

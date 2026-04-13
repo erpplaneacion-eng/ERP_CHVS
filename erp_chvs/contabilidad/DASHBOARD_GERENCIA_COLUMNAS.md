@@ -23,9 +23,8 @@ La vista muestra una **tabla principal** con una fila por cada líder. Al hacer 
 | **Máx. Reentrega** | La corrección que más tardó. **Naranja si > 5 días** | `fecha_reenvio − fecha_devolucion_compras` (valor máximo) |
 | **Prom. Retención** | Promedio de días entre que el líder recibió físicamente la factura y la envió a Compras | `fecha_envio − fecha_recepcion_lider` (máximo entre facturas del RC) |
 | **Máx. Retención** | La mayor retención registrada. **Rojo si > 2 días** | `fecha_envio − fecha_recepcion_lider` (valor máximo global) |
-| **Prom. Retraso Carga** | Promedio de días entre la fecha de la factura y cuando fue subida al sistema | `fecha_carga − fecha_recepcion_lider` (o `fecha_factura` si no hay recepción) |
-| **Máx. Retraso Carga** | El mayor retraso de carga registrado. **Rojo si > 2 días** | `fecha_carga − fecha_recepcion_lider` (valor máximo global) 
-|
+| **Prom. Retraso Carga** | Promedio de días entre la fecha de la factura y la fecha de recepción física del líder | `fecha_recepcion_lider − fecha_factura` (promedio del máximo por RC) |
+| **Máx. Retraso Carga** | El mayor retraso de carga registrado. **Rojo si > 2 días** | `fecha_recepcion_lider − fecha_factura` (valor máximo global) |
 ---
 
 ## Sub-tabla Desplegable (una fila por RC)
@@ -45,7 +44,7 @@ Se abre al hacer clic en la fila del líder. Muestra cada RC con su detalle.
 | **T. Contab.** | Tiempo total que el RC estuvo en manos de Contabilidad. Si hubo observación, suma los dos períodos. **Rojo si > 48h** | Sin observación: `fecha_cierre − fecha_aprobacion_compras`. Con observación: `T1 + T2` |
 | **Distribución** | Barra proporcional de los tres tiempos anteriores. Solo aparece cuando el RC está completamente cerrado (los 3 tiempos disponibles) | Azul = T. Líder · Naranja = T. Compras · Verde = T. Contabilidad |
 | **Retención** | Días entre que el líder recibió físicamente la factura más tardía y el envío a Compras | `fecha_envio − max(fecha_recepcion_lider)` entre facturas |
-| **Ret. carga** | Días entre la fecha de la factura y cuando fue subida al sistema | `fecha_carga − fecha_recepcion_lider` (o `fecha_factura` si no hay recepción) |
+| **Ret. carga** | Días entre la fecha de la factura y la fecha de recepción física del líder | `fecha_recepcion_lider − fecha_factura` |
 | **Docs** | Número de facturas incluidas en el RC | Conteo de `Factura` del RC |
 | **Valor** | Valor total de las facturas del RC | Suma de `valor` de cada `Factura` |
 

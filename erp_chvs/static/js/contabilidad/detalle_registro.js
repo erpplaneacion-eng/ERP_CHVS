@@ -189,23 +189,21 @@ class DetalleRegistroManager {
                 const valor = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(f.valor);
                 const fecha = f.fecha_factura ? new Date(f.fecha_factura + 'T00:00:00').toLocaleDateString('es-CO') : '—';
 
-                // Indicador: días entre recepción del líder (o fecha_factura si no hay) y fecha_carga
+                // Indicador: días entre fecha_factura y fecha_recepcion_lider
                 let indicadorEmision = '<span class="text-muted" style="font-size:11px;">—</span>';
-                const fechaRef = f.fecha_recepcion_lider || f.fecha_factura;
-                const tooltipRef = f.fecha_recepcion_lider ? 'Días entre recepción física y carga al sistema' : 'Días entre fecha de factura y carga al sistema (sin fecha de recepción)';
-                if (fechaRef && f.fecha_carga) {
-                    const refDate = new Date(fechaRef + 'T00:00:00');
-                    const carga = new Date(f.fecha_carga);
-                    const diasRetraso = Math.max(0, Math.floor((carga - refDate) / 86400000));
+                if (f.fecha_factura && f.fecha_recepcion_lider) {
+                    const facturaDate = new Date(f.fecha_factura + 'T00:00:00');
+                    const recepcionDate = new Date(f.fecha_recepcion_lider + 'T00:00:00');
+                    const diasRetraso = Math.max(0, Math.floor((recepcionDate - facturaDate) / 86400000));
                     const obs = f.observacion_retraso
                         ? `<br><small style="color:#6b7280;font-style:italic;">"${f.observacion_retraso}"</small>`
                         : '';
                     if (diasRetraso === 0) {
-                        indicadorEmision = `<span style="font-size:11px;color:#16a34a;font-weight:600;" title="${tooltipRef}">0d</span>`;
+                        indicadorEmision = `<span style="font-size:11px;color:#16a34a;font-weight:600;" title="Días entre fecha de factura y recepción física">0d</span>`;
                     } else if (diasRetraso <= 2) {
-                        indicadorEmision = `<span style="font-size:11px;color:#d97706;font-weight:600;" title="${tooltipRef}">${diasRetraso}d ⚠️</span>${obs}`;
+                        indicadorEmision = `<span style="font-size:11px;color:#d97706;font-weight:600;" title="Días entre fecha de factura y recepción física">${diasRetraso}d ⚠️</span>${obs}`;
                     } else {
-                        indicadorEmision = `<span style="font-size:11px;color:#dc2626;font-weight:700;" title="${tooltipRef}">${diasRetraso}d 🔴</span>${obs}`;
+                        indicadorEmision = `<span style="font-size:11px;color:#dc2626;font-weight:700;" title="Días entre fecha de factura y recepción física">${diasRetraso}d 🔴</span>${obs}`;
                     }
                 }
 
