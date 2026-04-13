@@ -2,7 +2,7 @@
 
 **Documento:** Proyecto de Integración Modalidad SAAS del Desarrollo de Planeación Interna al Sistema ERP SIESA
 **Fecha:** 20 de febrero de 2026
-**Destinatario:** Corporación para un Valle Solidario (Dra. Cielo Muñoz)
+**Destinatario:** Corporación para un Valle Solidario 
 **Proveedor:** Alianza y Gestión Estratégica S.A.S.
 
 ---
