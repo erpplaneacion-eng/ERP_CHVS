@@ -19,7 +19,7 @@ from datetime import datetime
 import os
 from threading import BoundedSemaphore
 
-from .models import ListadosFocalizacion
+from .models import ListadosFocalizacion, RectorInstitucion
 from principal.models import PrincipalDepartamento, PrincipalMunicipio, RegistroActividad
 from .services import ProcesamientoService, ValidacionService, EstadisticasService
 from .config import ProcesamientoConfig, FOCALIZACIONES_DISPONIBLES, MESES_ATENCION
@@ -1706,3 +1706,105 @@ def api_obtener_sedes_con_grado_especifico(request):
             'success': False,
             'error': f'Error al obtener sedes: {str(e)}'
         })
+
+
+# ---------------------------------------------------------------------------
+# Rectores de instituciones educativas
+# ---------------------------------------------------------------------------
+
+@login_required
+def gestionar_rectores(request):
+    """
+    Muestra la tarjeta de gestión de rectores por IE.
+    Carga todas las IE agrupadas por municipio con su rector actual (si existe).
+    """
+    from planeacion.models import InstitucionesEducativas
+
+    municipio_id = request.GET.get('municipio')
+
+    municipios = PrincipalMunicipio.objects.filter(
+        institucioneseducativas__isnull=False
+    ).distinct().order_by('nombre_municipio')
+
+    ies = InstitucionesEducativas.objects.select_related(
+        'id_municipios', 'rector'
+    ).order_by('id_municipios__nombre_municipio', 'nombre_institucion')
+
+    if municipio_id:
+        ies = ies.filter(id_municipios_id=municipio_id)
+
+    return render(request, 'facturacion/gestionar_rectores.html', {
+        'ies': ies,
+        'municipios': municipios,
+        'municipio_seleccionado': municipio_id,
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_guardar_rector(request):
+    """
+    Crea o actualiza el rector de una IE.
+    Body JSON: { "codigo_ie": "...", "nombre_rector": "..." }
+    """
+    from planeacion.models import InstitucionesEducativas
+
+    try:
+        data = json.loads(request.body)
+        codigo_ie = data.get('codigo_ie', '').strip()
+        nombre_rector = data.get('nombre_rector', '').strip()
+
+        if not codigo_ie or not nombre_rector:
+            return JsonResponse({'success': False, 'error': 'Faltan datos requeridos.'}, status=400)
+
+        ie = get_object_or_404(InstitucionesEducativas, pk=codigo_ie)
+
+        rector, creado = RectorInstitucion.objects.update_or_create(
+            institucion=ie,
+            defaults={'nombre_rector': nombre_rector}
+        )
+
+        RegistroActividad.registrar(
+            request, 'facturacion', 'guardar_rector',
+            f"{'Creado' if creado else 'Actualizado'} rector de IE {ie.nombre_institucion}: {nombre_rector}"
+        )
+
+        return JsonResponse({
+            'success': True,
+            'creado': creado,
+            'nombre_rector': rector.nombre_rector,
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_eliminar_rector(request):
+    """
+    Elimina el rector registrado para una IE.
+    Body JSON: { "codigo_ie": "..." }
+    """
+    from planeacion.models import InstitucionesEducativas
+
+    try:
+        data = json.loads(request.body)
+        codigo_ie = data.get('codigo_ie', '').strip()
+
+        if not codigo_ie:
+            return JsonResponse({'success': False, 'error': 'Falta el código de la IE.'}, status=400)
+
+        ie = get_object_or_404(InstitucionesEducativas, pk=codigo_ie)
+        eliminados, _ = RectorInstitucion.objects.filter(institucion=ie).delete()
+
+        if eliminados:
+            RegistroActividad.registrar(
+                request, 'facturacion', 'eliminar_rector',
+                f"Eliminado rector de IE {ie.nombre_institucion}"
+            )
+
+        return JsonResponse({'success': True, 'eliminados': eliminados})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

@@ -558,6 +558,8 @@ class AsistenciaPDFGenerator:
         c.drawString(self.margen + 5, y_actual, "NOMBRE DEL RESPONSABLE DEL OPERADOR:")
         c.line(self.margen + 125, y_actual - 2, self.width/2 - 10, y_actual - 2)
         c.drawString(self.width/2 + 10, y_actual, "NOMBRE RECTOR ESTABLECIMIENTO EDUCATIVO:")
+        nombre_rector = _safe_pdf_text(self.datos_encabezado.get('nombre_rector', ''))
+        c.drawString(self.width/2 + 135, y_actual, nombre_rector)
         c.line(self.width/2 + 135, y_actual - 2, self.width - self.margen - 5, y_actual - 2)
 
         y_actual -= 5

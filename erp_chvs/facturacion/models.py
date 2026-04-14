@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
+from planeacion.models import InstitucionesEducativas
 
 
 class ListadosFocalizacion(models.Model):
@@ -213,3 +214,33 @@ class ListadosFocalizacion(models.Model):
         if self.refuerzo_complemento_am_pm:
             complementos.append("Refuerzo")
         return complementos
+
+
+class RectorInstitucion(models.Model):
+    """
+    Almacena el nombre del rector para cada Institución Educativa.
+    Se usa para pre-diligenciar el campo de rector en los PDFs de asistencia.
+    """
+    institucion = models.OneToOneField(
+        InstitucionesEducativas,
+        on_delete=models.CASCADE,
+        related_name='rector',
+        verbose_name="Institución Educativa"
+    )
+    nombre_rector = models.CharField(
+        max_length=255,
+        verbose_name="Nombre del Rector"
+    )
+    fecha_actualizacion = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Última Actualización"
+    )
+
+    class Meta:
+        db_table = 'facturacion_rector_institucion'
+        verbose_name = "Rector de Institución"
+        verbose_name_plural = "Rectores de Instituciones"
+        ordering = ['institucion__nombre_institucion']
+
+    def __str__(self):
+        return f"{self.institucion.nombre_institucion} — {self.nombre_rector}"

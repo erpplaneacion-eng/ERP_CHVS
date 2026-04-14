@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 
-from .models import ListadosFocalizacion
+from .models import ListadosFocalizacion, RectorInstitucion
 from principal.models import PrincipalDepartamento, PrincipalMunicipio
 from planeacion.models import SedesEducativas, Programa
 from .pdf_generator import crear_formato_asistencia
@@ -506,7 +506,13 @@ class PDFAsistenciaService:
                 item_str = f"{item_sede} " if item_sede is not None else ""
                 institucion_con_focalizacion = f"{focalizacion} {item_str}{nombre_sede_focalizacion}"
 
-
+                # Rector de la IE (puede no existir)
+                try:
+                    nombre_rector = sede_obj.codigo_ie.rector.nombre_rector
+                except RectorInstitucion.DoesNotExist:
+                    nombre_rector = ''
+                except Exception:
+                    nombre_rector = ''
 
                 datos_encabezado = {
 
@@ -534,7 +540,9 @@ class PDFAsistenciaService:
 
                     'ruta_logo': ruta_logo_final,
 
-                    'dias_personalizados': dias_personalizados
+                    'dias_personalizados': dias_personalizados,
+
+                    'nombre_rector': nombre_rector,
 
                 }
 
