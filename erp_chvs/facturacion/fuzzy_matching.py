@@ -19,28 +19,29 @@ class FuzzyMatcher:
         """
         Normaliza un texto para comparación difusa:
         - Convierte a minúsculas
-        - Elimina espacios extra
-        - Elimina caracteres especiales comunes
+        - Elimina el prefijo numérico XX/YY que usan las sedes de Cali en BD
+        - Expande la abreviación 'IE' a 'institucion educativa'
+        - Elimina prefijos genéricos 'sede'
+        - Elimina espacios extra y caracteres especiales
         - Normaliza acentos
-        
-        Args:
-            texto: Texto a normalizar
-        
-        Returns:
-            str: Texto normalizado
         """
         if pd.isna(texto) or texto is None:
             return ""
-        
-        # Convertir a string y minúsculas
+
         texto = str(texto).lower().strip()
-        
-        # Eliminar espacios múltiples y reemplazar por uno solo
-        texto = re.sub(r'\s+', ' ', texto)
-        
-        # Eliminar caracteres especiales comunes que pueden causar problemas
+
+        # Eliminar prefijo numérico tipo "08/01 " o "26/04 " (formato Cali en BD)
+        texto = re.sub(r'^\d+/\d+\s+', '', texto)
+
+        # Expandir abreviación "ie " al inicio → "institucion educativa "
+        texto = re.sub(r'^ie\s+', 'institucion educativa ', texto)
+
+        # Eliminar prefijo genérico "sede " al inicio
+        texto = re.sub(r'^sede\s+', '', texto)
+
+        # Eliminar caracteres especiales
         texto = re.sub(r'[^\w\s]', '', texto)
-        
+
         # Normalizar acentos básicos
         replacements = {
             'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
@@ -48,7 +49,10 @@ class FuzzyMatcher:
         }
         for old, new in replacements.items():
             texto = texto.replace(old, new)
-        
+
+        # Colapsar espacios múltiples
+        texto = re.sub(r'\s+', ' ', texto)
+
         return texto.strip()
     
     @staticmethod
@@ -77,11 +81,12 @@ class FuzzyMatcher:
         if not sede_normalizada:
             return None, 0
         
-        # Usar fuzzywuzzy para encontrar la mejor coincidencia
+        # token_set_ratio ignora tokens extra y el orden — ideal para nombres
+        # con prefijos numéricos (Cali) o variaciones como "IE" vs "INSTITUCION EDUCATIVA"
         resultado = process.extractOne(
-            sede_normalizada, 
-            sedes_bd, 
-            scorer=fuzz.ratio,
+            sede_normalizada,
+            sedes_bd,
+            scorer=fuzz.token_set_ratio,
             score_cutoff=umbral
         )
         
