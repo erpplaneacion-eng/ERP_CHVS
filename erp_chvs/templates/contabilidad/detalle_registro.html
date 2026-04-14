@@ -22,11 +22,18 @@
         </div>
     </div>
 
-    <!-- Banner de devolución -->
+    <!-- Banner de devolución por Compras (SERVICIOS) -->
     <div id="banner-devolucion" class="banner-devolucion" style="display:none;">
         <i class="fas fa-exclamation-triangle"></i>
         <strong>Registro devuelto por Compras:</strong>
         <span id="texto-devolucion"></span>
+    </div>
+
+    <!-- Banner de observación de Contabilidad (MATERIAS_PRIMAS) -->
+    <div id="banner-observacion-conta" class="banner-devolucion" style="display:none;">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>Observado por Contabilidad — debe responder para continuar:</strong>
+        <span id="texto-observacion-conta"></span>
     </div>
 
     <!-- Info del registro -->
@@ -84,7 +91,21 @@
     <!-- Botón enviar -->
     <div id="seccion-enviar" style="margin-top: 16px; display:none;">
         <button class="btn btn-primary" id="btn-enviar">
-            <i class="fas fa-paper-plane"></i> Enviar a Compras
+            <i class="fas fa-paper-plane"></i>
+            {% if registro.tipo == 'MATERIAS_PRIMAS' %}Enviar a Contabilidad{% else %}Enviar a Compras{% endif %}
+        </button>
+    </div>
+
+    <!-- Responder observación de Contabilidad (solo MATERIAS_PRIMAS en OBSERVADO_CONTABILIDAD) -->
+    <div id="seccion-responder-conta" style="margin-top: 16px; display:none;">
+        <h4 style="color:#c0392b;"><i class="fas fa-reply"></i> Responder observación de Contabilidad</h4>
+        <div class="form-group" style="max-width:600px;">
+            <label for="respuesta-conta-comentario">Respuesta / corrección realizada *</label>
+            <textarea id="respuesta-conta-comentario" rows="3"
+                placeholder="Explique qué corrigió o su respuesta a la observación de Contabilidad..."></textarea>
+        </div>
+        <button class="btn btn-primary" id="btn-responder-conta">
+            <i class="fas fa-paper-plane"></i> Enviar respuesta a Contabilidad
         </button>
     </div>
 
@@ -171,11 +192,13 @@
 <script>
     const REGISTRO_ID = {{ registro.pk }};
     const REGISTRO_ESTADO = '{{ registro.estado }}';
+    const REGISTRO_TIPO = '{{ registro.tipo }}';
     const FECHA_ENVIO = '{{ registro.fecha_envio|date:"Y-m-d" }}' || null;
     const FECHA_CREACION = '{{ registro.fecha_creacion|date:"c" }}';
     const DETALLE_URL = '{% url "contabilidad:api_detalle_registro" registro.pk %}';
     const FACTURAS_URL = '{% url "contabilidad:api_agregar_factura" registro.pk %}';
     const ENVIAR_URL = '{% url "contabilidad:api_enviar" registro.pk %}';
     const HISTORIAL_URL = '{% url "contabilidad:api_historial" registro.pk %}';
+    const RESPONDER_OBSERVACION_URL = '{% url "contabilidad:api_responder_observacion" registro.pk %}';
 </script>
 {% endblock %}

@@ -211,6 +211,24 @@ class ContabilidadService:
                 estado_compras='PENDIENTE', comentario_devolucion=''
             )
 
+        # MATERIAS_PRIMAS salta Compras completamente → APROBADO_COMPRAS directo
+        if registro.tipo == 'MATERIAS_PRIMAS':
+            now = timezone.now()
+            registro.fecha_envio = now
+            registro.fecha_aprobacion_compras = now
+            registro.estado = 'APROBADO_COMPRAS'
+            registro.save()
+            HistorialEstado.objects.create(
+                registro=registro,
+                accion='ENVIO',
+                estado_anterior='BORRADOR',
+                estado_nuevo='APROBADO_COMPRAS',
+                comentario='Registro de Materias Primas enviado directamente a Contabilidad (sin revisión de Compras).',
+                usuario=usuario,
+            )
+            return registro
+
+        # SERVICIOS: flujo normal con Compras
         comentario_envio = (
             "Registro reenviado a Compras tras corrección de facturas devueltas."
             if es_reenvio else
@@ -580,8 +598,11 @@ class ContabilidadService:
         if not facturas:
             raise ValueError("El registro no tiene facturas.")
 
-        # Validar tiempo — timer de Contabilidad: fecha_aprobacion_compras → ahora
-        horas = horas_laborales_entre(registro.fecha_aprobacion_compras, timezone.now())
+        # Validar tiempo — timer de Contabilidad.
+        # Si hubo ciclo de observación, el timer arranca desde fecha_respuesta_compras
+        # (excluye el tiempo que el área respondiente tardó en responder).
+        fecha_inicio_conta = registro.fecha_respuesta_compras or registro.fecha_aprobacion_compras
+        horas = horas_laborales_entre(fecha_inicio_conta, timezone.now())
         if horas > _MAX_HORAS_LABORALES and not justificacion:
             raise ValueError(
                 f"Han transcurrido {horas:.1f} horas laborales desde la aprobación de Compras "
@@ -722,8 +743,10 @@ class ContabilidadService:
         if not comentario or not comentario.strip():
             raise ValueError("El comentario es obligatorio para observar el registro.")
 
-        # Validar tiempo — timer de Contabilidad: fecha_aprobacion_compras → ahora
-        horas = horas_laborales_entre(registro.fecha_aprobacion_compras, timezone.now())
+        # Validar tiempo — timer de Contabilidad.
+        # Si hubo ciclo de observación, el timer arranca desde fecha_respuesta_compras.
+        fecha_inicio_conta = registro.fecha_respuesta_compras or registro.fecha_aprobacion_compras
+        horas = horas_laborales_entre(fecha_inicio_conta, timezone.now())
         if horas > _MAX_HORAS_LABORALES and not justificacion:
             raise ValueError(
                 f"Han transcurrido {horas:.1f} horas laborales desde la aprobación de Compras "
@@ -760,8 +783,10 @@ class ContabilidadService:
                 f"Solo se puede aprobar y cerrar desde APROBADO_COMPRAS. Estado actual: '{registro.estado}'"
             )
 
-        # Validar tiempo — timer de Contabilidad: fecha_aprobacion_compras → ahora
-        horas = horas_laborales_entre(registro.fecha_aprobacion_compras, timezone.now())
+        # Validar tiempo — timer de Contabilidad.
+        # Si hubo ciclo de observación, el timer arranca desde fecha_respuesta_compras.
+        fecha_inicio_conta = registro.fecha_respuesta_compras or registro.fecha_aprobacion_compras
+        horas = horas_laborales_entre(fecha_inicio_conta, timezone.now())
         if horas > _MAX_HORAS_LABORALES and not justificacion:
             raise ValueError(
                 f"Han transcurrido {horas:.1f} horas laborales desde la aprobación de Compras "
@@ -848,8 +873,11 @@ class ContabilidadService:
                 'APROBADO_COMPRAS', 'OBSERVADO_CONTABILIDAD',
                 'APROBADO_CONTABILIDAD', 'CERRADO',
             )
+        # MATERIAS_PRIMAS nunca pasa por Compras — excluir siempre
         return RegistroContable.objects.filter(
             estado__in=estados
+        ).exclude(
+            tipo='MATERIAS_PRIMAS'
         ).select_related('lider').order_by('-fecha_creacion')
 
     @staticmethod
@@ -996,7 +1024,12 @@ class ContabilidadService:
                 if r.fecha_envio and r.fecha_creacion:
                     tiempo_lider_t1_h = round(horas_laborales_entre(r.fecha_creacion, r.fecha_envio), 1)
                     if r.fecha_reenvio and r.fecha_devolucion_compras:
+                        # SERVICIOS: T2 = tiempo que el líder tardó en corregir tras devolución de Compras
                         tiempo_lider_t2_h = round(horas_laborales_entre(r.fecha_devolucion_compras, r.fecha_reenvio), 1)
+                        tiempo_lider_h = round(tiempo_lider_t1_h + tiempo_lider_t2_h, 1)
+                    elif r.tipo == 'MATERIAS_PRIMAS' and r.fecha_observacion_contabilidad and r.fecha_respuesta_compras:
+                        # MATERIAS_PRIMAS: T2 = tiempo que el líder tardó en responder observación de Contabilidad
+                        tiempo_lider_t2_h = round(horas_laborales_entre(r.fecha_observacion_contabilidad, r.fecha_respuesta_compras), 1)
                         tiempo_lider_h = round(tiempo_lider_t1_h + tiempo_lider_t2_h, 1)
                     else:
                         tiempo_lider_h = tiempo_lider_t1_h
@@ -1005,7 +1038,8 @@ class ContabilidadService:
                 tiempo_compras_t1_h = None
                 tiempo_compras_t2_h = None
                 tiempo_compras_t3_h = None
-                if r.fecha_aprobacion_compras and r.fecha_envio:
+                # MATERIAS_PRIMAS nunca pasa por Compras → tiempo siempre None
+                if r.tipo == 'SERVICIOS' and r.fecha_aprobacion_compras and r.fecha_envio:
                     if r.fecha_devolucion_compras and r.fecha_reenvio:
                         # Con devolución: T1 = envío líder → devolución, T2 = reenvío → aprobación
                         tiempo_compras_t1_h = round(horas_laborales_entre(r.fecha_envio, r.fecha_devolucion_compras), 1)
@@ -1014,7 +1048,7 @@ class ContabilidadService:
                     else:
                         # Sin devolución: desde que el líder envió hasta que Compras aprobó
                         tiempo_compras_h = round(horas_laborales_entre(r.fecha_envio, r.fecha_aprobacion_compras), 1)
-                    # T3: respuesta a observación de Contabilidad (Compras asume ese tiempo)
+                    # T3: tiempo que Compras tardó en responder observación de Contabilidad
                     if r.fecha_observacion_contabilidad and r.fecha_respuesta_compras:
                         tiempo_compras_t3_h = round(horas_laborales_entre(r.fecha_observacion_contabilidad, r.fecha_respuesta_compras), 1)
                         tiempo_compras_h = round((tiempo_compras_h or 0) + tiempo_compras_t3_h, 1)

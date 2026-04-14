@@ -701,14 +701,21 @@ def api_aprobar_contabilidad(request, pk):
 @login_required
 @csrf_exempt
 def api_responder_observacion(request, pk):
-    """POST — Compras responde la observación de Contabilidad."""
+    """POST — Responde la observación de Contabilidad.
+    SERVICIOS: solo COMPRAS_CONTABLE.
+    MATERIAS_PRIMAS: el líder dueño (Compras no participa en este tipo).
+    """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
 
-    if not _tiene_rol(request.user, 'COMPRAS_CONTABLE'):
-        return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
-
     registro = get_object_or_404(RegistroContable, pk=pk)
+
+    puede_responder = (
+        _tiene_rol(request.user, 'COMPRAS_CONTABLE') or
+        (registro.tipo == 'MATERIAS_PRIMAS' and registro.lider == request.user)
+    )
+    if not puede_responder:
+        return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
 
     try:
         data = json.loads(request.body)

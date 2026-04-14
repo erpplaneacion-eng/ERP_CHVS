@@ -103,14 +103,24 @@ class DetalleRegistroManager {
         const wrapAgregar = document.getElementById('btn-agregar-factura-wrap');
         if (wrapAgregar) wrapAgregar.style.display = esEditable ? '' : 'none';
 
-        // Botón enviar
+        // Botón enviar: BORRADOR siempre, DEVUELTO_COMPRAS solo para SERVICIOS
+        const puedeEnviar = REGISTRO_ESTADO === 'BORRADOR' ||
+            (REGISTRO_ESTADO === 'DEVUELTO_COMPRAS' && REGISTRO_TIPO === 'SERVICIOS');
         const seccionEnviar = document.getElementById('seccion-enviar');
-        if (seccionEnviar) {
-            seccionEnviar.style.display = (REGISTRO_ESTADO === 'BORRADOR' || REGISTRO_ESTADO === 'DEVUELTO_COMPRAS') ? '' : 'none';
-        }
+        if (seccionEnviar) seccionEnviar.style.display = puedeEnviar ? '' : 'none';
 
         const btnEnviar = document.getElementById('btn-enviar');
         if (btnEnviar) btnEnviar.addEventListener('click', () => this.enviar());
+
+        // Sección de respuesta a Contabilidad: solo MATERIAS_PRIMAS en OBSERVADO_CONTABILIDAD
+        const seccionResponder = document.getElementById('seccion-responder-conta');
+        if (seccionResponder) {
+            const visible = REGISTRO_TIPO === 'MATERIAS_PRIMAS' && REGISTRO_ESTADO === 'OBSERVADO_CONTABILIDAD';
+            seccionResponder.style.display = visible ? '' : 'none';
+        }
+
+        const btnResponder = document.getElementById('btn-responder-conta');
+        if (btnResponder) btnResponder.addEventListener('click', () => this.responderObservacion());
     }
 
     abrirModalFactura() {
@@ -141,9 +151,12 @@ class DetalleRegistroManager {
             const data = await response.json();
             if (data.success) {
                 this.renderFacturas(data.data.facturas, data.data.valor_total);
-                // Mostrar banner de devolución si aplica
                 if (REGISTRO_ESTADO === 'DEVUELTO_COMPRAS') {
                     this.cargarUltimaDevolucion();
+                }
+                // MATERIAS_PRIMAS observado por Contabilidad → mostrar banner de observación
+                if (REGISTRO_TIPO === 'MATERIAS_PRIMAS' && REGISTRO_ESTADO === 'OBSERVADO_CONTABILIDAD') {
+                    this.cargarObservacionContabilidad();
                 }
             }
         } catch (error) {
@@ -169,6 +182,30 @@ class DetalleRegistroManager {
             }
         } catch (error) {
             console.error('Error al cargar historial:', error);
+        }
+    }
+
+    async cargarObservacionContabilidad() {
+        try {
+            const response = await fetch(HISTORIAL_URL);
+            const data = await response.json();
+            if (data.success) {
+                // Buscar la última observación/devolución de Contabilidad
+                const observaciones = data.data.filter(h =>
+                    h.accion === 'OBSERVACION_CONTABILIDAD' || h.accion === 'DEVOLUCION_CONTABILIDAD'
+                );
+                if (observaciones.length) {
+                    const ultima = observaciones[observaciones.length - 1];
+                    const banner = document.getElementById('banner-observacion-conta');
+                    const texto = document.getElementById('texto-observacion-conta');
+                    if (banner && texto) {
+                        texto.textContent = ultima.comentario;
+                        banner.style.display = 'flex';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error al cargar observación de Contabilidad:', error);
         }
     }
 
@@ -347,8 +384,9 @@ class DetalleRegistroManager {
         const horas = horasLaboralesEntre(FECHA_CREACION, new Date().toISOString());
         const superaLimite = horas > 5;
 
+        const destino = REGISTRO_TIPO === 'MATERIAS_PRIMAS' ? 'Contabilidad' : 'Compras';
         const swalConfig = {
-            title: '¿Enviar registro a Compras?',
+            title: `¿Enviar registro a ${destino}?`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Sí, enviar',
@@ -357,14 +395,14 @@ class DetalleRegistroManager {
         };
 
         if (superaLimite) {
-            swalConfig.html = `El registro será enviado a Compras para revisión.<br><br>
+            swalConfig.html = `El registro será enviado a ${destino} para revisión.<br><br>
                 <strong style="color:#c0392b;">&#9888;&#65039; Ha superado las 5 horas laborales (${horas}h transcurridas).<br>
                 Debe justificar el motivo de la demora.</strong>`;
             swalConfig.input = 'textarea';
             swalConfig.inputPlaceholder = 'Explique el motivo de la demora...';
             swalConfig.inputValidator = (v) => { if (!v || !v.trim()) return 'La justificación es obligatoria.'; };
         } else {
-            swalConfig.text = `El registro será enviado a Compras para revisión. (${horas}h laborales transcurridas)`;
+            swalConfig.text = `El registro será enviado a ${destino} para revisión. (${horas}h laborales transcurridas)`;
         }
 
         const result = await Swal.fire(swalConfig);
@@ -387,7 +425,8 @@ class DetalleRegistroManager {
             });
             const data = await response.json();
             if (data.success) {
-                this.mostrarAlerta('Registro enviado a Compras exitosamente.', 'success');
+                const destino = REGISTRO_TIPO === 'MATERIAS_PRIMAS' ? 'Contabilidad' : 'Compras';
+                this.mostrarAlerta(`Registro enviado a ${destino} exitosamente.`, 'success');
                 setTimeout(() => window.location.reload(), 1500);
             } else {
                 this.mostrarAlerta(data.error || 'Error al enviar.', 'error');
@@ -397,6 +436,54 @@ class DetalleRegistroManager {
         } finally {
             this.saving = false;
             if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar a Compras'; }
+        }
+    }
+
+    async responderObservacion() {
+        if (this.saving) return;
+
+        const comentario = document.getElementById('respuesta-conta-comentario')?.value?.trim();
+        if (!comentario) {
+            this.mostrarAlerta('Debe ingresar una respuesta antes de enviar.', 'warning');
+            return;
+        }
+
+        const result = await Swal.fire({
+            title: '¿Enviar respuesta a Contabilidad?',
+            text: 'El registro volverá a la bandeja de Contabilidad para revisión.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, enviar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#1e3a8a',
+        });
+        if (!result.isConfirmed) return;
+
+        this.saving = true;
+        const btn = document.getElementById('btn-responder-conta');
+        if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+
+        try {
+            const response = await fetch(RESPONDER_OBSERVACION_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCookie('csrftoken'),
+                },
+                body: JSON.stringify({ comentario }),
+            });
+            const data = await response.json();
+            if (data.success) {
+                this.mostrarAlerta('Respuesta enviada. El registro volvió a Contabilidad.', 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                this.mostrarAlerta(data.error || 'Error al enviar respuesta.', 'error');
+            }
+        } catch (error) {
+            this.mostrarAlerta('Error de conexión.', 'error');
+        } finally {
+            this.saving = false;
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar respuesta a Contabilidad'; }
         }
     }
 
