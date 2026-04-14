@@ -871,7 +871,6 @@ class ContabilidadService:
         ).select_related('lider').order_by('-fecha_creacion')
 
     @staticmethod
-    @staticmethod
     def get_dashboard_unificado(filtros=None):
         """
         Vista unificada: KPIs globales + métricas históricas por líder.
