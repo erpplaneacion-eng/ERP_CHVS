@@ -758,11 +758,12 @@ def descargar_estadisticas_sedes_excel(request):
 
     ws.row_dimensions[2].height = 18
 
-    # ── Fila 3: Sub-encabezados de nivel ────────────────────────────────────────
+    # ── Fila 3: Sub-encabezados de nivel (prefijados con la focalización) ────────
     for i, (niv_key, niv_label, niv_ancho) in enumerate(NIVELES):
         col = COL_NIVEL_INI + i
-        hcell(3, col, niv_label, "5B9BD5", sz=10)
-        ws.column_dimensions[get_column_letter(col)].width = niv_ancho
+        label_con_focal = f"{focalizacion}-{niv_label}"
+        hcell(3, col, label_con_focal, "5B9BD5", sz=10)
+        ws.column_dimensions[get_column_letter(col)].width = niv_ancho + len(focalizacion) + 1
 
     ws.row_dimensions[3].height = 28
 
