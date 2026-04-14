@@ -25,12 +25,28 @@ class DataTransformer:
         'NUMERO_DOCUMENTO': 'NRO_DOCUMENTO',
         'INSTITUCION EDUCATIVA': 'NOMBRE INSTITUCION',
         'COLEGIO': 'NOMBRE INSTITUCION',
-        'ESTUDIANTE': 'NOMBRE1', # A veces viene consolidado, pero es mejor tener alias
+        'ESTUDIANTE': 'NOMBRE1',
         'PRIMER APELLIDO': 'APELLIDO1',
         'SEGUNDO APELLIDO': 'APELLIDO2',
         'PRIMER NOMBRE': 'NOMBRE1',
         'SEGUNDO NOMBRE': 'NOMBRE2',
         'GRADO_COD': 'GRADO',
+        # Variaciones de TIPO_JORNADA (Cali)
+        'TIPO JORNADA': 'TIPO_JORNADA',
+        'TIPOJORNADA': 'TIPO_JORNADA',
+        'JORNADA': 'TIPO_JORNADA',
+        # Variaciones de NRO_DOCUMENTO
+        'NRO DOCUMENTO': 'NRO_DOCUMENTO',
+        'NUMERO_DOCUMENTO': 'NRO_DOCUMENTO',
+        # Variaciones de TIPO_DOCUMENTO
+        'TIPO DOCUMENTO': 'TIPO_DOCUMENTO',
+        'TIPODOCUMENTO': 'TIPO_DOCUMENTO',
+        # Variaciones de NOMBRE INSTITUCION
+        'NOMBRE_INSTITUCION': 'NOMBRE INSTITUCION',
+        'NOMBREINSTITUCION': 'NOMBRE INSTITUCION',
+        # Variaciones de NOMBRE SEDE
+        'NOMBRE_SEDE': 'NOMBRE SEDE',
+        'NOMBRESEDE': 'NOMBRE SEDE',
     }
 
     @staticmethod
