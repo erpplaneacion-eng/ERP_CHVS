@@ -29,7 +29,7 @@ La integración se implementa en el módulo `Api/` (app Django ya creada para es
       │
       ├─► Descarga inicial (una sola vez)
       │     Endpoint Siesa → tabla local PostgreSQL
-      │     - Plan de Cuentas/Artículos  → Api/models.py (SiesaArticulo)
+      │     - Plan de Cuentas/Artículos  → Api/models.py (SiesaArticulo)(qui iria tambien el tema de unidades de medida)
       │     - Proyectos (sedes DANE)     → Api/models.py (SiesaProyecto)
       │     - Bodegas                    → Api/models.py (SiesaBodega)
       │     - Centros de Costo           → Api/models.py (SiesaCentroCosto)
