@@ -669,11 +669,30 @@ def descargar_estadisticas_sedes_excel(request):
     focalizacion = datos.get('focalizacion', '')
     fecha        = datos.get('fecha_procesamiento', '')
 
+    # Pre-cargar flag industrializado por nombre de sede (para etiquetas de modalidad)
+    from planeacion.models import SedesEducativas as _Sedes
+    _sedes_bd = _Sedes.objects.values('nombre_sede_educativa', 'industrializado')
+    _industrializado_map = {
+        s['nombre_sede_educativa']: (s['industrializado'] == 'VERDADERO')
+        for s in _sedes_bd
+        if s['nombre_sede_educativa']
+    }
+
+    def _etiquetas_modalidad(sede_bd):
+        """Retorna el dict key→label ajustado según si la sede es industrializada."""
+        es_ind = _industrializado_map.get(sede_bd, False)
+        return {
+            'cap_am':      'COMPLEMENTO AM/PM INDUSTRIALIZADO' if es_ind else 'COMPLEMENTO AM/PM PREPARADO',
+            'cap_pm':      'COMPLEMENTO PM INDUSTRIALIZADO'    if es_ind else 'COMPLEMENTO PM PREPARADO',
+            'almuerzo_ju': 'ALMUERZO JORNADA UNICA',
+            'refuerzo':    'REFUERZO COMPLEMENTO INDUSTRIALIZADO AM/PM' if es_ind else 'REFUERZO COMPLEMENTO PREPARADO AM/PM',
+        }
+
     MODALIDADES = [
-        ('cap_am',      'CAP AM'),
-        ('cap_pm',      'CAP PM'),
-        ('almuerzo_ju', 'Almuerzo JU'),
-        ('refuerzo',    'Refuerzo'),
+        ('cap_am',      None),
+        ('cap_pm',      None),
+        ('almuerzo_ju', None),
+        ('refuerzo',    None),
     ]
     NIVELES = [
         ('prescolar',                  'Preescolar',       12),
@@ -763,13 +782,16 @@ def descargar_estadisticas_sedes_excel(request):
         sede_excel = item.get('sede_excel', '')
         fill_sede  = make_fill(COLORES_SEDE[sede_idx % 2])
 
-        for mod_key, mod_label in MODALIDADES:
+        etiquetas = _etiquetas_modalidad(sede_bd)
+
+        for mod_key, _ in MODALIDADES:
             # Omitir modalidad si no tiene ninguna ración en ningún nivel
             totales_niv = [item.get(f"{mod_key}__{niv_key}", 0) for niv_key, _, _ in NIVELES]
             if sum(totales_niv) == 0:
                 continue
 
-            fill_mod = make_fill(COLOR_MOD[mod_key])
+            mod_label = etiquetas[mod_key]
+            fill_mod  = make_fill(COLOR_MOD[mod_key])
 
             def wcell(col, value, fill, alin=center):
                 c = ws.cell(row=excel_row, column=col, value=value)
