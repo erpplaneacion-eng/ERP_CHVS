@@ -500,25 +500,74 @@ class ContabilidadService:
         Para cada factura PENDIENTE del registro, crea filas de VerificacionChecklist.
         Las facturas APROBADA mantienen su checklist anterior intacto.
         Usa ignore_conflicts=True para ser idempotente.
+        Para MATERIAS_PRIMAS, los ítems de formato devolución solo se asignan
+        a facturas que tengan tiene_formato_devolucion=True.
         """
-        items = list(ItemChecklist.objects.filter(
+        # Ítems base: solo los del tipo exacto del registro.
+        # SERVICIOS → ítems SERVICIOS | MATERIAS_PRIMAS → ítems MATERIAS_PRIMAS
+        items_base = list(ItemChecklist.objects.filter(
             activo=True,
-        ).filter(
-            models.Q(tipo_proceso='AMBOS') | models.Q(tipo_proceso=registro.tipo)
+            es_formato_devolucion=False,
+            tipo_proceso=registro.tipo,
+        ))
+
+        # Ítems condicionales de formato devolución (solo para MATERIAS_PRIMAS)
+        items_devolucion = list(ItemChecklist.objects.filter(
+            activo=True,
+            es_formato_devolucion=True,
+            tipo_proceso=registro.tipo,
         ))
 
         # Solo facturas que están siendo revisadas en esta ronda
         facturas = list(registro.facturas.filter(estado_compras='PENDIENTE'))
-        verificaciones = [
-            VerificacionChecklist(
-                factura=factura,
-                item=item,
-                estado='PENDIENTE',
+        verificaciones = []
+        for factura in facturas:
+            items_aplicables = items_base + (
+                items_devolucion if factura.tiene_formato_devolucion else []
             )
-            for factura in facturas
-            for item in items
-        ]
+            for item in items_aplicables:
+                verificaciones.append(VerificacionChecklist(
+                    factura=factura,
+                    item=item,
+                    estado='PENDIENTE',
+                ))
         VerificacionChecklist.objects.bulk_create(verificaciones, ignore_conflicts=True)
+
+    @staticmethod
+    @transaction.atomic
+    def toggle_formato_devolucion(factura, usuario):
+        """
+        Activa/desactiva el flag tiene_formato_devolucion en una factura.
+        Si se activa, inicializa los ítems de formato devolución para esa factura.
+        Si se desactiva, elimina las verificaciones de ítems de formato devolución.
+        Solo válido cuando el registro está en APROBADO_COMPRAS y la factura está PENDIENTE.
+        """
+        if factura.registro.estado != 'APROBADO_COMPRAS':
+            raise ValueError("Solo se puede modificar facturas en estado APROBADO_COMPRAS.")
+        if factura.estado_contabilidad != 'PENDIENTE':
+            raise ValueError("Esta factura ya fue decidida.")
+
+        factura.tiene_formato_devolucion = not factura.tiene_formato_devolucion
+        factura.save(update_fields=['tiene_formato_devolucion'])
+
+        if factura.tiene_formato_devolucion:
+            items_dev = list(ItemChecklist.objects.filter(
+                activo=True,
+                es_formato_devolucion=True,
+                tipo_proceso=factura.registro.tipo,
+            ))
+            verificaciones = [
+                VerificacionChecklist(factura=factura, item=item, estado='PENDIENTE')
+                for item in items_dev
+            ]
+            VerificacionChecklist.objects.bulk_create(verificaciones, ignore_conflicts=True)
+        else:
+            VerificacionChecklist.objects.filter(
+                factura=factura,
+                item__es_formato_devolucion=True,
+            ).delete()
+
+        return factura
 
     @staticmethod
     @transaction.atomic
@@ -551,11 +600,23 @@ class ContabilidadService:
         """
         Contabilidad aprueba una factura individual.
         Solo permitido cuando el registro está en APROBADO_COMPRAS.
+        Para MATERIAS_PRIMAS, valida que el checklist obligatorio esté completo.
         """
         if factura.registro.estado != 'APROBADO_COMPRAS':
             raise ValueError("Solo se puede aprobar facturas en estado APROBADO_COMPRAS.")
         if factura.estado_contabilidad != 'PENDIENTE':
             raise ValueError("Esta factura ya fue decidida por Contabilidad.")
+        if factura.registro.tipo == 'MATERIAS_PRIMAS':
+            pendientes = VerificacionChecklist.objects.filter(
+                factura=factura,
+                estado='PENDIENTE',
+                item__obligatorio=True,
+                item__tipo_proceso='MATERIAS_PRIMAS',
+            ).count()
+            if pendientes > 0:
+                raise ValueError(
+                    f"Hay {pendientes} ítem(s) obligatorio(s) del checklist sin verificar en esta factura."
+                )
         factura.estado_contabilidad = 'APROBADA'
         factura.comentario_devolucion_contabilidad = ''
         factura.save(update_fields=['estado_contabilidad', 'comentario_devolucion_contabilidad'])
@@ -655,13 +716,17 @@ class ContabilidadService:
             registro.fecha_observacion_contabilidad = now
             registro.estado = 'OBSERVADO_CONTABILIDAD'
             registro.save()
+            detalle_devueltas = '\n'.join(
+                f"• {f.numero_factura} ({f.proveedor}): {f.comentario_devolucion_contabilidad or 'Sin motivo especificado'}"
+                for f in devueltas
+            )
             HistorialEstado.objects.create(
                 registro=registro,
                 accion='DEVOLUCION_CONTABILIDAD',
                 estado_anterior='APROBADO_COMPRAS',
                 estado_nuevo='OBSERVADO_CONTABILIDAD',
                 comentario=(
-                    f"Contabilidad devolvió las {len(devueltas)} factura(s) a Compras para corrección."
+                    f"Contabilidad devolvió {len(devueltas)} factura(s):\n{detalle_devueltas}"
                 ),
                 usuario=usuario,
             )
@@ -714,15 +779,18 @@ class ContabilidadService:
         registro.fecha_observacion_contabilidad = now
         registro.estado = 'OBSERVADO_CONTABILIDAD'
         registro.save()
+        detalle_devueltas_split = '\n'.join(
+            f"• {f.numero_factura} ({f.proveedor}): {f.comentario_devolucion_contabilidad or 'Sin motivo especificado'}"
+            for f in devueltas
+        )
         HistorialEstado.objects.create(
             registro=registro,
             accion='DEVOLUCION_CONTABILIDAD',
             estado_anterior='APROBADO_COMPRAS',
             estado_nuevo='OBSERVADO_CONTABILIDAD',
             comentario=(
-                f"Split de facturas desde Revisión de Contabilidad: "
-                f"{len(devueltas)} factura(s) devuelta(s) a Compras para corrección — "
-                f"{len(aprobadas)} factura(s) aprobada(s) trasladadas al registro RC-{nuevo.pk} y cerradas."
+                f"Split: {len(aprobadas)} factura(s) aprobada(s) trasladadas al RC-{nuevo.pk}. "
+                f"Facturas devueltas ({len(devueltas)}):\n{detalle_devueltas_split}"
             ),
             usuario=usuario,
         )

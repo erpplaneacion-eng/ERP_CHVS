@@ -22,6 +22,15 @@ def _tiene_rol(user, *roles):
     return user.groups.filter(name__in=list(roles) + ['ADMINISTRACION']).exists()
 
 
+def _estado_display_efectivo(registro):
+    """Retorna el display del estado considerando el tipo de registro.
+    Para MATERIAS_PRIMAS en estado APROBADO_COMPRAS, muestra 'Enviado a Contabilidad'
+    porque Compras no intervino en ese proceso."""
+    if registro.tipo == 'MATERIAS_PRIMAS' and registro.estado == 'APROBADO_COMPRAS':
+        return 'Enviado a Contabilidad'
+    return registro.get_estado_display()
+
+
 # --------------------------------------------------------------------------- #
 # Vistas de página                                                             #
 # --------------------------------------------------------------------------- #
@@ -169,7 +178,7 @@ def api_listar_registros(request):
             'periodo_ano': r.periodo_ano,
             'descripcion': r.descripcion,
             'estado': r.estado,
-            'estado_display': r.get_estado_display(),
+            'estado_display': _estado_display_efectivo(r),
             'lider': r.lider.get_full_name() or r.lider.username,
             'lider_id': r.lider_id,
             'fecha_creacion': r.fecha_creacion.isoformat() if r.fecha_creacion else None,
@@ -207,6 +216,7 @@ def api_detalle_registro(request, pk):
             'estado_contabilidad': f.estado_contabilidad,
             'comentario_devolucion_contabilidad': f.comentario_devolucion_contabilidad,
             'observacion_retraso': f.observacion_retraso,
+            'tiene_formato_devolucion': f.tiene_formato_devolucion,
         })
 
     data = {
@@ -217,7 +227,7 @@ def api_detalle_registro(request, pk):
         'periodo_ano': registro.periodo_ano,
         'descripcion': registro.descripcion,
         'estado': registro.estado,
-        'estado_display': registro.get_estado_display(),
+        'estado_display': _estado_display_efectivo(registro),
         'lider': registro.lider.get_full_name() or registro.lider.username,
         'lider_id': registro.lider_id,
         'fecha_creacion': registro.fecha_creacion.isoformat() if registro.fecha_creacion else None,
@@ -510,9 +520,10 @@ def api_checklist(request, pk):
 
     data = []
     for factura in facturas:
+        # Solo mostrar verificaciones cuyo ítem corresponde al tipo del registro
         verificaciones = sorted(
-            factura.verificaciones.all(),
-            key=lambda v: v.item.orden
+            [v for v in factura.verificaciones.all() if v.item.tipo_proceso == registro.tipo],
+            key=lambda v: v.item.orden,
         )
         data.append({
             'factura_id': factura.pk,
@@ -521,6 +532,7 @@ def api_checklist(request, pk):
             'concepto': factura.concepto,
             'estado_compras': factura.estado_compras,
             'comentario_devolucion': factura.comentario_devolucion,
+            'tiene_formato_devolucion': factura.tiene_formato_devolucion,
             'verificaciones': [
                 {
                     'id': v.pk,
@@ -544,14 +556,17 @@ def api_checklist(request, pk):
 @login_required
 @csrf_exempt
 def api_guardar_checklist(request, pk):
-    """POST — Guarda el checklist verificado por Compras."""
+    """POST — Guarda el checklist verificado por Compras (o Contabilidad para MATERIAS_PRIMAS)."""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
 
-    if not _tiene_rol(request.user, 'COMPRAS_CONTABLE'):
-        return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
-
     registro = get_object_or_404(RegistroContable, pk=pk)
+    puede_guardar = (
+        _tiene_rol(request.user, 'COMPRAS_CONTABLE') or
+        (registro.tipo == 'MATERIAS_PRIMAS' and _tiene_rol(request.user, 'CONTABILIDAD'))
+    )
+    if not puede_guardar:
+        return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
 
     try:
         data = json.loads(request.body)
@@ -606,6 +621,26 @@ def api_devolver_factura_contabilidad(request, pk):
             f"Factura: {factura.numero_factura} | Registro: {factura.registro_id} | Motivo: {comentario[:80]}"
         )
         return JsonResponse({'success': True})
+    except ValueError as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})
+
+
+@login_required
+@csrf_exempt
+def api_toggle_formato_devolucion(request, pk):
+    """POST — Contabilidad activa/desactiva el formato de devolución en una factura (solo MATERIAS_PRIMAS)."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    if not _tiene_rol(request.user, 'CONTABILIDAD'):
+        return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
+    factura = get_object_or_404(Factura, pk=pk)
+    if factura.registro.tipo != 'MATERIAS_PRIMAS':
+        return JsonResponse({'success': False, 'error': 'Solo aplica a Materias Primas.'})
+    try:
+        ContabilidadService.toggle_formato_devolucion(factura, request.user)
+        return JsonResponse({'success': True, 'tiene_formato_devolucion': factura.tiene_formato_devolucion})
     except ValueError as e:
         return JsonResponse({'success': False, 'error': str(e)})
     except Exception as e:

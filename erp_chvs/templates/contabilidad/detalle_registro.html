@@ -17,7 +17,11 @@
         </div>
         <div class="header-actions">
             <span class="estado-badge estado-badge-{{ registro.estado|lower|cut:'_' }}">
-                {{ registro.get_estado_display }}
+                {% if registro.tipo == 'MATERIAS_PRIMAS' and registro.estado == 'APROBADO_COMPRAS' %}
+                    Enviado a Contabilidad
+                {% else %}
+                    {{ registro.get_estado_display }}
+                {% endif %}
             </span>
         </div>
     </div>

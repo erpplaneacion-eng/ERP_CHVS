@@ -1,6 +1,13 @@
 // JavaScript para la bandeja de contabilidad
 const ESTADOS_ACTIVOS_CONTA = ['APROBADO_COMPRAS'];
 
+function estadoDisplayEfectivo(r) {
+    if (r.tipo === 'MATERIAS_PRIMAS' && r.estado === 'APROBADO_COMPRAS') {
+        return 'Enviado a Contabilidad';
+    }
+    return r.estado_display;
+}
+
 class BandejaContabilidadManager {
     constructor() {
         this.allRegistros = [];
@@ -118,7 +125,7 @@ class BandejaContabilidadManager {
                 <td>${r.tipo_display}</td>
                 <td>${r.total_documentos}</td>
                 <td>${valorFmt}</td>
-                <td><span class="estado-badge estado-badge-${r.estado.toLowerCase().replace(/_/g, '')}">${r.estado_display}</span></td>
+                <td><span class="estado-badge estado-badge-${r.estado.toLowerCase().replace(/_/g, '')}">${estadoDisplayEfectivo(r)}</span></td>
                 <td>${fechaEnvio}</td>
                 <td>
                     ${puedeRevisar

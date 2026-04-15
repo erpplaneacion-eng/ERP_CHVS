@@ -1,5 +1,12 @@
 // mis_registros.js — Gestión de registros contables del líder
 
+function estadoDisplayEfectivo(r) {
+    if (r.tipo === 'MATERIAS_PRIMAS' && r.estado === 'APROBADO_COMPRAS') {
+        return 'Enviado a Contabilidad';
+    }
+    return r.estado_display;
+}
+
 class MisRegistrosManager {
     constructor() {
         this.saving = false;
@@ -122,7 +129,7 @@ class MisRegistrosManager {
                 <td>${r.descripcion || '<span class="text-muted">—</span>'}</td>
                 <td>${r.total_documentos}</td>
                 <td>${valorFormateado}</td>
-                <td><span class="estado-badge estado-badge-${r.estado.toLowerCase().replace(/_/g, '')}">${r.estado_display}</span></td>
+                <td><span class="estado-badge estado-badge-${r.estado.toLowerCase().replace(/_/g, '')}">${estadoDisplayEfectivo(r)}</span></td>
                 <td>${fechaEnvio}</td>
                 <td>
                     <a href="/contabilidad/registro/${r.id}/" class="btn btn-sm btn-primary">

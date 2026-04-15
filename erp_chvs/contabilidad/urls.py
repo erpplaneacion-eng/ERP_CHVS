@@ -32,6 +32,7 @@ urlpatterns = [
     path('api/registros/<int:pk>/guardar-checklist/', views.api_guardar_checklist, name='api_guardar_checklist'),
     path('api/facturas/<int:pk>/aprobar-contabilidad/', views.api_aprobar_factura_contabilidad, name='api_aprobar_factura_contabilidad'),
     path('api/facturas/<int:pk>/devolver-contabilidad/', views.api_devolver_factura_contabilidad, name='api_devolver_factura_contabilidad'),
+    path('api/facturas/<int:pk>/toggle-formato-devolucion/', views.api_toggle_formato_devolucion, name='api_toggle_formato_devolucion'),
     path('api/registros/<int:pk>/finalizar-revision-contabilidad/', views.api_finalizar_revision_contabilidad, name='api_finalizar_revision_contabilidad'),
     path('api/registros/<int:pk>/observar/', views.api_observar_contabilidad, name='api_observar_contabilidad'),
     path('api/registros/<int:pk>/aprobar-contabilidad/', views.api_aprobar_contabilidad, name='api_aprobar_contabilidad'),

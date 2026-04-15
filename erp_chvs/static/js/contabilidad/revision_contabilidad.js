@@ -226,6 +226,12 @@ class RevisionContabilidadManager {
         });
         if (!result.isConfirmed) return;
 
+        // Para MATERIAS_PRIMAS: guardar checklist antes de aprobar
+        if (typeof REGISTRO_TIPO !== 'undefined' && REGISTRO_TIPO === 'MATERIAS_PRIMAS') {
+            const bloque = document.querySelector(`.checklist-factura-bloque[data-factura-id="${facturaId}"]`);
+            if (bloque) await this.guardarChecklistFactura(facturaId, bloque);
+        }
+
         this.saving = true;
         try {
             const response = await fetch(`${APROBAR_FACTURA_CONT_BASE}${facturaId}/aprobar-contabilidad/`, {
@@ -273,6 +279,12 @@ class RevisionContabilidadManager {
             return;
         }
         if (this.saving || !this.facturasPendienteDev) return;
+
+        // Para MATERIAS_PRIMAS: guardar checklist antes de devolver
+        if (typeof REGISTRO_TIPO !== 'undefined' && REGISTRO_TIPO === 'MATERIAS_PRIMAS') {
+            const bloque = document.querySelector(`.checklist-factura-bloque[data-factura-id="${this.facturasPendienteDev}"]`);
+            if (bloque) await this.guardarChecklistFactura(this.facturasPendienteDev, bloque);
+        }
 
         this.saving = true;
         try {
@@ -378,7 +390,7 @@ class RevisionContabilidadManager {
     }
 
     // ------------------------------------------------------------------ //
-    // Checklist (solo lectura)                                            //
+    // Checklist (read-only para SERVICIOS, editable para MATERIAS_PRIMAS)//
     // ------------------------------------------------------------------ //
 
     renderChecklistPorFactura(facturas) {
@@ -391,6 +403,8 @@ class RevisionContabilidadManager {
             return;
         }
 
+        const esEditable = typeof REGISTRO_TIPO !== 'undefined' && REGISTRO_TIPO === 'MATERIAS_PRIMAS'
+            && REGISTRO_ESTADO === 'APROBADO_COMPRAS';
         const coloresEstado = { OK: '#d1fae5', NO_OK: '#fee2e2', NA: '#f3f4f6', PENDIENTE: '#fef3c7' };
         const etiquetasEstado = { OK: 'OK', NO_OK: 'No OK', NA: 'N/A', PENDIENTE: 'Pendiente' };
 
@@ -404,63 +418,213 @@ class RevisionContabilidadManager {
 
             const bloque = document.createElement('div');
             bloque.className = 'checklist-factura-bloque';
+            bloque.dataset.facturaId = factura.factura_id;
+
+            // Botón toggle formato devolución (solo MATERIAS_PRIMAS editable)
+            let toggleFormatoHtml = '';
+            if (esEditable) {
+                const activo = factura.tiene_formato_devolucion;
+                toggleFormatoHtml = `
+                    <button class="btn btn-sm ${activo ? 'btn-warning' : 'btn-outline-secondary'} btn-toggle-formato"
+                        data-id="${factura.factura_id}"
+                        style="margin-left:auto; font-size:12px;"
+                        title="${activo ? 'Quitar formato de devolución' : 'Marcar: tiene formato de devolución'}">
+                        <i class="fas fa-file-alt"></i>
+                        ${activo ? 'Formato devolución: Sí' : 'Formato devolución: No'}
+                    </button>`;
+            }
 
             const encabezado = document.createElement('div');
             encabezado.className = 'checklist-factura-header';
+            encabezado.style.cssText = 'display:flex; align-items:center; gap:8px; flex-wrap:wrap;';
             encabezado.innerHTML = `
                 <i class="fas fa-file-invoice"></i>
                 <strong>${factura.numero_factura}</strong>
                 <span class="text-muted" style="font-size:13px;">${factura.proveedor}</span>
                 <span class="text-muted" style="font-size:12px;">${factura.concepto}</span>
                 ${badge}
-                <i class="fas fa-chevron-down chevron"></i>
+                ${toggleFormatoHtml}
+                <i class="fas fa-chevron-down chevron" style="margin-left:${esEditable ? '0' : 'auto'};"></i>
             `;
-            encabezado.addEventListener('click', () => bloque.classList.toggle('abierto'));
+            // El chevron abre/cierra; el botón toggle NO debe hacer toggle del bloque
+            encabezado.addEventListener('click', (e) => {
+                if (e.target.closest('.btn-toggle-formato')) return;
+                bloque.classList.toggle('abierto');
+            });
             bloque.appendChild(encabezado);
 
             const body = document.createElement('div');
             body.className = 'checklist-factura-body';
-            const tabla = document.createElement('table');
-            tabla.className = 'data-table checklist-table';
-            tabla.innerHTML = `
-                <thead>
-                    <tr>
-                        <th style="width:36px;">#</th>
-                        <th>Ítem</th>
-                        <th style="width:90px;">Obligatorio</th>
-                        <th style="width:100px;">Estado</th>
-                        <th>Observación</th>
-                        <th style="width:130px;">Verificado Por</th>
-                    </tr>
-                </thead>
-            `;
-            const tbody = document.createElement('tbody');
 
-            if (!factura.verificaciones.length) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Sin ítems.</td></tr>';
-            } else {
-                const frag = document.createDocumentFragment();
-                factura.verificaciones.forEach((v, i) => {
-                    const tr = document.createElement('tr');
-                    tr.style.background = coloresEstado[v.estado] || '';
-                    tr.innerHTML = `
-                        <td>${i + 1}</td>
-                        <td><strong>${v.item_nombre}</strong>${v.item_descripcion ? '<br><small class="text-muted">' + v.item_descripcion + '</small>' : ''}</td>
-                        <td>${v.item_obligatorio ? 'Sí' : 'No'}</td>
-                        <td><strong>${etiquetasEstado[v.estado] || v.estado}</strong></td>
-                        <td>${v.observacion || '—'}</td>
-                        <td>${v.verificado_por || '—'}</td>
+            if (esEditable) {
+                // Modo editable: selects por ítem + textarea para observación + botón guardar
+                const form = document.createElement('div');
+                form.style.cssText = 'padding: 12px;';
+
+                if (!factura.verificaciones.length) {
+                    form.innerHTML = '<p class="text-center text-muted" style="padding:12px;">Sin ítems de checklist. Inicialice el checklist desde la bandeja.</p>';
+                } else {
+                    const tabla = document.createElement('table');
+                    tabla.className = 'data-table checklist-table';
+                    tabla.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th style="width:36px;">#</th>
+                                <th>Ítem</th>
+                                <th style="width:80px;">Oblig.</th>
+                                <th style="width:130px;">Estado</th>
+                                <th>Observación</th>
+                            </tr>
+                        </thead>
                     `;
-                    frag.appendChild(tr);
-                });
-                tbody.appendChild(frag);
+                    const tbody = document.createElement('tbody');
+                    const frag = document.createDocumentFragment();
+                    factura.verificaciones.forEach((v, i) => {
+                        const tr = document.createElement('tr');
+                        tr.style.background = coloresEstado[v.estado] || '';
+                        tr.innerHTML = `
+                            <td>${i + 1}</td>
+                            <td><strong>${v.item_nombre}</strong>${v.item_descripcion ? '<br><small class="text-muted">' + v.item_descripcion + '</small>' : ''}</td>
+                            <td>${v.item_obligatorio ? 'Sí' : 'No'}</td>
+                            <td>
+                                <select class="checklist-select" data-verificacion-id="${v.id}" style="width:100%; padding:4px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:13px;">
+                                    <option value="PENDIENTE" ${v.estado === 'PENDIENTE' ? 'selected' : ''}>Pendiente</option>
+                                    <option value="OK" ${v.estado === 'OK' ? 'selected' : ''}>OK</option>
+                                    <option value="NO_OK" ${v.estado === 'NO_OK' ? 'selected' : ''}>No OK</option>
+                                    <option value="NA" ${v.estado === 'NA' ? 'selected' : ''}>N/A</option>
+                                </select>
+                            </td>
+                            <td>
+                                <input type="text" class="checklist-obs" data-verificacion-id="${v.id}"
+                                    value="${v.observacion || ''}"
+                                    placeholder="Observación opcional..."
+                                    style="width:100%; padding:4px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:13px;">
+                            </td>
+                        `;
+                        // Actualizar color de fila al cambiar el select
+                        tr.querySelector('.checklist-select').addEventListener('change', (e) => {
+                            tr.style.background = coloresEstado[e.target.value] || '';
+                        });
+                        frag.appendChild(tr);
+                    });
+                    tbody.appendChild(frag);
+                    tabla.appendChild(tbody);
+                    form.appendChild(tabla);
+
+                    // Botón guardar checklist de esta factura
+                    const btnGuardar = document.createElement('button');
+                    btnGuardar.className = 'btn btn-sm btn-primary';
+                    btnGuardar.style.cssText = 'margin-top:10px;';
+                    btnGuardar.dataset.facturaId = factura.factura_id;
+                    btnGuardar.innerHTML = '<i class="fas fa-save"></i> Guardar checklist';
+                    btnGuardar.addEventListener('click', () => this.guardarChecklistFactura(factura.factura_id, bloque));
+                    form.appendChild(btnGuardar);
+                }
+                body.appendChild(form);
+            } else {
+                // Modo read-only (SERVICIOS o registro no en APROBADO_COMPRAS)
+                const tabla = document.createElement('table');
+                tabla.className = 'data-table checklist-table';
+                tabla.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th style="width:36px;">#</th>
+                            <th>Ítem</th>
+                            <th style="width:90px;">Obligatorio</th>
+                            <th style="width:100px;">Estado</th>
+                            <th>Observación</th>
+                            <th style="width:130px;">Verificado Por</th>
+                        </tr>
+                    </thead>
+                `;
+                const tbody = document.createElement('tbody');
+                if (!factura.verificaciones.length) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Sin ítems.</td></tr>';
+                } else {
+                    const frag = document.createDocumentFragment();
+                    factura.verificaciones.forEach((v, i) => {
+                        const tr = document.createElement('tr');
+                        tr.style.background = coloresEstado[v.estado] || '';
+                        tr.innerHTML = `
+                            <td>${i + 1}</td>
+                            <td><strong>${v.item_nombre}</strong>${v.item_descripcion ? '<br><small class="text-muted">' + v.item_descripcion + '</small>' : ''}</td>
+                            <td>${v.item_obligatorio ? 'Sí' : 'No'}</td>
+                            <td><strong>${etiquetasEstado[v.estado] || v.estado}</strong></td>
+                            <td>${v.observacion || '—'}</td>
+                            <td>${v.verificado_por || '—'}</td>
+                        `;
+                        frag.appendChild(tr);
+                    });
+                    tbody.appendChild(frag);
+                }
+                tabla.appendChild(tbody);
+                body.appendChild(tabla);
             }
-            tabla.appendChild(tbody);
-            body.appendChild(tabla);
+
             bloque.appendChild(body);
             fragment.appendChild(bloque);
         });
         container.appendChild(fragment);
+
+        // Wiring: botones toggle formato devolución
+        if (esEditable) {
+            container.querySelectorAll('.btn-toggle-formato').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.toggleFormatoDev(parseInt(btn.dataset.id));
+                });
+            });
+        }
+    }
+
+    // Guarda el checklist de una factura específica (MATERIAS_PRIMAS editable)
+    async guardarChecklistFactura(facturaId, bloque) {
+        if (typeof GUARDAR_CHECKLIST_URL === 'undefined') return;
+        const selects = bloque.querySelectorAll('.checklist-select');
+        const inputs = bloque.querySelectorAll('.checklist-obs');
+        const items = [];
+        selects.forEach(sel => {
+            const verificacionId = parseInt(sel.dataset.verificacionId);
+            const obsEl = bloque.querySelector(`.checklist-obs[data-verificacion-id="${verificacionId}"]`);
+            items.push({
+                verificacion_id: verificacionId,
+                estado: sel.value,
+                observacion: obsEl ? obsEl.value.trim() : '',
+            });
+        });
+
+        try {
+            const response = await fetch(GUARDAR_CHECKLIST_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.getCookie('csrftoken') },
+                body: JSON.stringify({ items }),
+            });
+            const data = await response.json();
+            if (!data.success) {
+                this.mostrarAlerta(data.error || 'Error al guardar checklist.', 'error');
+            }
+        } catch {
+            this.mostrarAlerta('Error de conexión al guardar checklist.', 'error');
+        }
+    }
+
+    // Activa/desactiva el formato de devolución en una factura
+    async toggleFormatoDev(facturaId) {
+        if (typeof TOGGLE_FORMATO_DEV_BASE === 'undefined') return;
+        try {
+            const response = await fetch(`${TOGGLE_FORMATO_DEV_BASE}${facturaId}/toggle-formato-devolucion/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': this.getCookie('csrftoken') },
+            });
+            const data = await response.json();
+            if (data.success) {
+                await this.cargarChecklist();
+            } else {
+                this.mostrarAlerta(data.error || 'Error al cambiar formato de devolución.', 'error');
+            }
+        } catch {
+            this.mostrarAlerta('Error de conexión.', 'error');
+        }
     }
 
     // ------------------------------------------------------------------ //
@@ -483,7 +647,7 @@ class RevisionContabilidadManager {
                 <div class="historial-fecha">${fecha}</div>
                 <div class="historial-usuario"><strong>${h.usuario}</strong></div>
                 <div class="historial-accion">${h.accion_display}</div>
-                ${h.comentario ? `<div class="historial-comentario">${h.comentario}</div>` : ''}
+                ${h.comentario ? `<div class="historial-comentario">${h.comentario.replace(/\n/g, '<br>')}</div>` : ''}
             `;
             fragment.appendChild(item);
         });

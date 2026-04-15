@@ -637,7 +637,7 @@ class RevisionComprasManager {
                 <div class="historial-fecha">${fecha}</div>
                 <div class="historial-usuario"><strong>${h.usuario}</strong></div>
                 <div class="historial-accion">${h.accion_display}</div>
-                ${h.comentario ? `<div class="historial-comentario">${h.comentario}</div>` : ''}
+                ${h.comentario ? `<div class="historial-comentario">${h.comentario.replace(/\n/g, '<br>')}</div>` : ''}
             `;
             fragment.appendChild(item);
         });

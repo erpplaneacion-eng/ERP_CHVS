@@ -150,6 +150,11 @@ class Factura(models.Model):
         verbose_name="Observación de Retraso",
         help_text="Explicación opcional del líder sobre el retraso entre la fecha de la factura y su carga al sistema."
     )
+    tiene_formato_devolucion = models.BooleanField(
+        default=False,
+        verbose_name="Tiene Formato de Devolución",
+        help_text="Indica si esta factura acompaña un formato físico de devolución de mercancía."
+    )
 
     class Meta:
         db_table = 'contabilidad_facturas'
@@ -179,6 +184,11 @@ class ItemChecklist(models.Model):
     obligatorio = models.BooleanField(default=True, verbose_name="Obligatorio")
     activo = models.BooleanField(default=True, verbose_name="Activo")
     orden = models.PositiveSmallIntegerField(default=0, verbose_name="Orden")
+    es_formato_devolucion = models.BooleanField(
+        default=False,
+        verbose_name="Es ítem de Formato Devolución",
+        help_text="Si True, este ítem solo aplica a facturas con formato de devolución."
+    )
 
     class Meta:
         db_table = 'contabilidad_items_checklist'

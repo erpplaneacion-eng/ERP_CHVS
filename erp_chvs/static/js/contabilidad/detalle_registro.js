@@ -257,15 +257,25 @@ class DetalleRegistroManager {
                     diasRetencionCell = `<span style="font-weight:600; color:${color};">${dias}d</span>`;
                 }
 
-                // Badge de estado por factura (solo en DEVUELTO_COMPRAS)
+                // Badge de estado por factura
                 let estadoBadge = '';
                 if (esDevuelto) {
+                    // DEVUELTO_COMPRAS: estado de revisión de Compras
                     if (f.estado_compras === 'APROBADA') {
                         estadoBadge = '<span class="checklist-badge-ok" style="font-size:11px;"><i class="fas fa-check"></i> Aprobada</span>';
                         tr.style.background = '#f0fdf4';
                     } else if (f.estado_compras === 'DEVUELTA') {
                         estadoBadge = '<span class="checklist-badge-pendientes" style="font-size:11px;"><i class="fas fa-undo"></i> Devuelta</span>';
                         tr.style.background = '#fff7ed';
+                    }
+                } else if (REGISTRO_ESTADO === 'OBSERVADO_CONTABILIDAD') {
+                    // OBSERVADO_CONTABILIDAD: estado de revisión de Contabilidad por factura
+                    if (f.estado_contabilidad === 'DEVUELTA') {
+                        estadoBadge = '<span class="checklist-badge-pendientes" style="font-size:11px;"><i class="fas fa-undo"></i> Devuelta por Contabilidad</span>';
+                        tr.style.background = '#fff7ed';
+                    } else if (f.estado_contabilidad === 'APROBADA') {
+                        estadoBadge = '<span class="checklist-badge-ok" style="font-size:11px;"><i class="fas fa-check"></i> Aprobada</span>';
+                        tr.style.background = '#f0fdf4';
                     }
                 }
 
@@ -279,6 +289,7 @@ class DetalleRegistroManager {
                     <td>
                         ${f.concepto}
                         ${f.comentario_devolucion ? `<br><small style="color:#c0392b;"><i class="fas fa-exclamation-circle"></i> ${f.comentario_devolucion}</small>` : ''}
+                        ${f.comentario_devolucion_contabilidad && REGISTRO_ESTADO === 'OBSERVADO_CONTABILIDAD' ? `<br><small style="color:#7c3aed;"><i class="fas fa-exclamation-circle"></i> <strong>Contabilidad:</strong> ${f.comentario_devolucion_contabilidad}</small>` : ''}
                     </td>
                     <td>${valor}</td>
                     <td>${fecha}</td>
@@ -517,7 +528,7 @@ class DetalleRegistroManager {
                 <div class="historial-fecha">${fecha}</div>
                 <div class="historial-usuario"><strong>${h.usuario}</strong></div>
                 <div class="historial-accion">${h.accion_display}</div>
-                ${h.comentario ? `<div class="historial-comentario">${h.comentario}</div>` : ''}
+                ${h.comentario ? `<div class="historial-comentario">${h.comentario.replace(/\n/g, '<br>')}</div>` : ''}
             `;
             fragment.appendChild(item);
         });
