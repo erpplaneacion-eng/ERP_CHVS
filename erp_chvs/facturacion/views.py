@@ -1831,3 +1831,86 @@ def api_eliminar_rector(request):
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ===== GESTIÓN DE LISTADOS =====
+
+@login_required
+@require_http_methods(["GET"])
+def gestion_listados(request):
+    """Vista para ver y eliminar cargas de listados agrupadas por programa + focalización."""
+    from django.db.models import Count
+
+    programa_filter_id = request.GET.get('programa', '').strip()
+    focalizacion_filter = request.GET.get('focalizacion', '').strip()
+
+    cargas = (
+        ListadosFocalizacion.objects
+        .values('programa_id', 'programa__programa', 'programa__municipio__nombre_municipio', 'focalizacion')
+        .annotate(
+            total_registros=Count('id_listados'),
+            total_sedes=Count('sede', distinct=True),
+        )
+        .order_by('programa__municipio__nombre_municipio', 'programa__programa', 'focalizacion')
+    )
+
+    if programa_filter_id:
+        cargas = cargas.filter(programa_id=programa_filter_id)
+    if focalizacion_filter:
+        cargas = cargas.filter(focalizacion=focalizacion_filter)
+
+    cargas_list = list(cargas)
+
+    programas = Programa.objects.select_related('municipio').order_by('municipio__nombre_municipio', 'programa')
+    focalizaciones_existentes = (
+        ListadosFocalizacion.objects
+        .values_list('focalizacion', flat=True)
+        .distinct()
+        .order_by('focalizacion')
+    )
+
+    context = {
+        'cargas': cargas_list,
+        'programas': programas,
+        'focalizaciones_existentes': focalizaciones_existentes,
+        'filtros': {
+            'programa': programa_filter_id,
+            'focalizacion': focalizacion_filter,
+        },
+        'total_cargas': len(cargas_list),
+    }
+    return render(request, 'facturacion/gestion_listados.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_eliminar_carga_listados(request):
+    """Elimina todos los registros de un programa + focalización específico."""
+    try:
+        data = json.loads(request.body)
+        programa_id = data.get('programa_id')
+        focalizacion = data.get('focalizacion', '').strip()
+
+        if not programa_id or not focalizacion:
+            return JsonResponse({'success': False, 'error': 'Parámetros incompletos'}, status=400)
+
+        programa = get_object_or_404(Programa, id=programa_id)
+
+        eliminados, _ = ListadosFocalizacion.objects.filter(
+            programa_id=programa_id,
+            focalizacion=focalizacion
+        ).delete()
+
+        RegistroActividad.registrar(
+            request, 'facturacion', 'eliminar_carga',
+            f"Programa: {programa.programa} | Focalización: {focalizacion} | Registros eliminados: {eliminados}"
+        )
+
+        return JsonResponse({
+            'success': True,
+            'eliminados': eliminados,
+            'message': f"Se eliminaron {eliminados} registros de {focalizacion}."
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

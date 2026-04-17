@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestión de Listados - Facturación{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modules/facturacion.css' %}">
+<link rel="stylesheet" href="{% static 'facturacion/gestion_listados.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="sedes-container">
+
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-left">
+            <h2><i class="fas fa-database"></i> Gestión de Listados Cargados</h2>
+            <p>Consulta y elimina cargas de focalización por programa.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'facturacion:procesar_listados' %}" class="btn btn-primary">
+                <i class="fas fa-upload"></i> Cargar Excel
+            </a>
+            <a href="{% url 'facturacion:facturacion_index' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="stats-box">
+        <strong><i class="fas fa-info-circle"></i> Cargas encontradas:</strong>
+        <strong id="totalCargas">{{ total_cargas }}</strong>
+        {% if filtros.programa or filtros.focalizacion %}
+        <span class="filtros-activos-badge">
+            <i class="fas fa-filter"></i> Filtros activos
+        </span>
+        {% endif %}
+    </div>
+
+    <!-- Filtros -->
+    <div class="filters-section">
+        <h4><i class="fas fa-filter"></i> Filtros</h4>
+        <form method="get" id="filterForm">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="programa">Programa:</label>
+                    <select name="programa" id="programa" class="form-control">
+                        <option value="">Todos los programas</option>
+                        {% for prog in programas %}
+                        <option value="{{ prog.id }}"
+                            {% if filtros.programa == prog.id|stringformat:"s" %}selected{% endif %}>
+                            {{ prog.programa }} — {{ prog.municipio.nombre_municipio }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="focalizacion">Focalización:</label>
+                    <select name="focalizacion" id="focalizacion" class="form-control">
+                        <option value="">Todas</option>
+                        {% for foc in focalizaciones_existentes %}
+                        <option value="{{ foc }}"
+                            {% if filtros.focalizacion == foc %}selected{% endif %}>
+                            {{ foc }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group filter-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                    <a href="{% url 'facturacion:gestion_listados' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabla de cargas -->
+    <div class="table-container">
+        {% if cargas %}
+        <table class="table table-hover" id="tablaCargas">
+            <thead>
+                <tr>
+                    <th>Programa</th>
+                    <th>Municipio</th>
+                    <th>Focalización</th>
+                    <th class="text-center">Registros</th>
+                    <th class="text-center">Sedes</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for carga in cargas %}
+                <tr id="fila-{{ carga.programa_id }}-{{ carga.focalizacion }}">
+                    <td>
+                        <strong>{{ carga.programa__programa }}</strong>
+                    </td>
+                    <td>{{ carga.programa__municipio__nombre_municipio }}</td>
+                    <td>
+                        <span class="badge-focalizacion">{{ carga.focalizacion }}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge-count">{{ carga.total_registros }}</span>
+                    </td>
+                    <td class="text-center">{{ carga.total_sedes }}</td>
+                    <td class="text-center acciones-col">
+                        <a href="{% url 'facturacion:lista_listados' %}?programa={{ carga.programa_id }}&focalizacion={{ carga.focalizacion }}"
+                           class="btn btn-sm btn-info" title="Ver detalle">
+                            <i class="fas fa-eye"></i> Ver
+                        </a>
+                        <button class="btn btn-sm btn-danger btn-eliminar"
+                                data-programa-id="{{ carga.programa_id }}"
+                                data-programa-nombre="{{ carga.programa__programa }}"
+                                data-focalizacion="{{ carga.focalizacion }}"
+                                data-registros="{{ carga.total_registros }}"
+                                title="Eliminar carga">
+                            <i class="fas fa-trash-alt"></i> Eliminar
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-inbox fa-3x"></i>
+            <p>No se encontraron cargas con los filtros aplicados.</p>
+            {% if filtros.programa or filtros.focalizacion %}
+            <a href="{% url 'facturacion:gestion_listados' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-times"></i> Limpiar filtros
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Modal de confirmación de eliminación -->
+<div id="modalEliminar" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+        <div class="modal-header modal-header-danger">
+            <h3><i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación</h3>
+        </div>
+        <div class="modal-body">
+            <p>Estás a punto de eliminar <strong id="modalRegistros"></strong> registros de:</p>
+            <ul>
+                <li><strong>Programa:</strong> <span id="modalPrograma"></span></li>
+                <li><strong>Focalización:</strong> <span id="modalFocalizacion"></span></li>
+            </ul>
+            <p class="text-danger"><strong>Esta acción no se puede deshacer.</strong></p>
+        </div>
+        <div class="modal-footer">
+            <button id="btnCancelarEliminar" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button id="btnConfirmarEliminar" class="btn btn-danger">
+                <i class="fas fa-trash-alt"></i> Eliminar
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'facturacion/gestion_listados.js' %}"></script>
+{% endblock %}

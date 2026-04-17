@@ -30,6 +30,10 @@ urlpatterns = [
     path('api/obtener-sedes-con-grado-especifico/', views.api_obtener_sedes_con_grado_especifico, name='api_obtener_sedes_con_grado_especifico'),
     path('api/transferir-grados/', views.api_transferir_grados, name='api_transferir_grados'),
 
+    # Gestión de listados: ver y eliminar cargas por programa + focalización
+    path('gestion-listados/', views.gestion_listados, name='gestion_listados'),
+    path('api/eliminar-carga-listados/', views.api_eliminar_carga_listados, name='api_eliminar_carga_listados'),
+
     # Gestión de rectores por IE
     path('rectores/', views.gestionar_rectores, name='gestionar_rectores'),
     path('api/guardar-rector/', views.api_guardar_rector, name='api_guardar_rector'),
