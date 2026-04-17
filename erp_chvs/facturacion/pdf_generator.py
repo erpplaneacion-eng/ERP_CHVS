@@ -556,6 +556,9 @@ class AsistenciaPDFGenerator:
 
         y_actual -= 10
         c.drawString(self.margen + 5, y_actual, "NOMBRE DEL RESPONSABLE DEL OPERADOR:")
+        municipio_pie = self.datos_encabezado.get('municipio', '').upper()
+        nombre_operador = 'RAUL ALBERTO BRAVO AGUILAR' if 'BUGA' in municipio_pie else ''
+        c.drawString(self.margen + 127, y_actual, _safe_pdf_text(nombre_operador))
         c.line(self.margen + 125, y_actual - 2, self.width/2 - 10, y_actual - 2)
         c.drawString(self.width/2 + 10, y_actual, "NOMBRE RECTOR ESTABLECIMIENTO EDUCATIVO:")
         nombre_rector = _safe_pdf_text(self.datos_encabezado.get('nombre_rector', ''))
