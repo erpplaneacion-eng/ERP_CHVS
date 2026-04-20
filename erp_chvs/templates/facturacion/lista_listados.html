@@ -171,11 +171,16 @@
                     <td style="text-align: center;">
                         <span class="badge badge-success" style="font-size: 14px;">{{ item.total_raciones }}</span>
                     </td>
-                    <td>
+                    <td style="white-space: nowrap;">
                         <button onclick="transferirGradoEspecifico('{{ item.sede }}', '{{ item.grado_base }}', '{{ item.focalizacion }}', '{{ filtros_aplicados.programa }}', {{ item.total_raciones }})"
                                 class="btn btn-sm btn-primary"
-                                title="Transferir estudiantes de este grado específico">
+                                title="Transferir estudiantes de este grado a otra sede">
                             <i class="fas fa-exchange-alt"></i> Transferir
+                        </button>
+                        <button onclick="abrirCambioComplemento('{{ item.sede }}', '{{ item.grado_base }}', '{{ item.focalizacion }}', '{{ filtros_aplicados.programa }}')"
+                                class="btn btn-sm btn-warning"
+                                title="Cambiar tipo de complemento alimentario">
+                            <i class="fas fa-utensils"></i> Complemento
                         </button>
                     </td>
                 </tr>
@@ -362,6 +367,69 @@
                 </button>
                 <button type="button" class="btn btn-primary" id="transferEspecificoBtn" onclick="confirmarTransferenciaEspecifica()" disabled style="padding: 10px 25px; font-size: 15px;">
                     <i class="fas fa-exchange-alt"></i> Transferir Estudiantes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Cambiar Tipo de Complemento -->
+<div class="modal-overlay" id="cambiarComplementoModal" style="display: none;">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #d35400;">
+                <h3 style="color: #fff;">
+                    <i class="fas fa-utensils"></i> Cambiar Tipo de Complemento
+                </h3>
+                <span class="modal-close" onclick="closeCambiarComplementoModal()" style="color: #fff;">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info" style="margin-bottom: 20px;">
+                    <h5 style="margin-top: 0;"><i class="fas fa-info-circle"></i> Información</h5>
+                    <p style="margin-bottom: 5px;"><strong>Sede:</strong> <span id="ccInfoSede"></span></p>
+                    <p style="margin-bottom: 5px;"><strong>Grado:</strong> <span id="ccInfoGrado"></span></p>
+                    <p style="margin-bottom: 0;"><strong>Focalización:</strong> <span id="ccInfoFocalizacion"></span></p>
+                </div>
+
+                <!-- Selección de subgrupos -->
+                <div id="ccSeccionSubgrupos" style="display: none; margin-bottom: 20px;">
+                    <label style="font-size: 15px; font-weight: 600; color: #2c3e50; margin-bottom: 10px; display: block;">
+                        <i class="fas fa-layer-group"></i> Selecciona los grupos a modificar
+                    </label>
+                    <div id="ccListaSubgrupos" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 6px;"></div>
+                    <small class="text-muted"><i class="fas fa-info-circle"></i> Sin selección = se modifican todos los subgrupos del grado</small>
+                </div>
+
+                <!-- Complemento actual (cargado dinámicamente) -->
+                <div id="ccComplementoActual" style="display: none; margin-bottom: 20px;" class="alert alert-secondary">
+                    <strong><i class="fas fa-tag"></i> Complemento actual:</strong> <span id="ccComplementoActualTexto"></span>
+                </div>
+
+                <!-- Selector nuevo complemento -->
+                <div style="margin-bottom: 10px;">
+                    <label style="font-size: 15px; font-weight: 600; color: #2c3e50; margin-bottom: 12px; display: block;">
+                        <i class="fas fa-arrow-right"></i> Nuevo tipo de complemento
+                    </label>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        {% for valor, etiqueta in complemento_opciones %}
+                        <label style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 2px solid #dee2e6; border-radius: 8px; cursor: pointer; font-size: 15px;">
+                            <input type="radio" name="ccComplementoNuevo" value="{{ valor }}" style="width: 18px; height: 18px;" onchange="actualizarBotonComplemento()">
+                            {{ etiqueta }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div id="ccResumen" style="display: none; margin-top: 14px;" class="alert alert-warning">
+                    <strong>Estudiantes a modificar:</strong> <span id="ccTotalEstudiantes">0</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCambiarComplementoModal()" style="padding: 10px 20px; font-size: 15px;">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-warning" id="ccConfirmarBtn" onclick="confirmarCambioComplemento()" disabled style="padding: 10px 25px; font-size: 15px;">
+                    <i class="fas fa-check"></i> Aplicar Cambio
                 </button>
             </div>
         </div>

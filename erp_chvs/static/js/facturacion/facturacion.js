@@ -671,6 +671,182 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// ===== CAMBIO DE TIPO DE COMPLEMENTO (desde tabla) =====
+
+const COMPLEMENTO_LABELS = {
+    am: 'Complemento AM (mañana)',
+    pm: 'Complemento PM (tarde)',
+    almuerzo_ju: 'Almuerzo Jornada Única',
+    refuerzo: 'Refuerzo Complemento AM/PM'
+};
+
+let cambioComplementoData = {
+    sede: '', grado: '', focalizacion: '', programaId: '',
+    subgruposDisponibles: [],
+    subgruposSeleccionados: []
+};
+
+async function abrirCambioComplemento(sede, grado, focalizacion, programaId) {
+    cambioComplementoData = { sede, grado, focalizacion, programaId, subgruposDisponibles: [], subgruposSeleccionados: [] };
+
+    document.getElementById('ccInfoSede').textContent = sede;
+    document.getElementById('ccInfoGrado').textContent = grado;
+    document.getElementById('ccInfoFocalizacion').textContent = focalizacion;
+    document.getElementById('ccSeccionSubgrupos').style.display = 'none';
+    document.getElementById('ccListaSubgrupos').innerHTML = '';
+    document.getElementById('ccComplementoActual').style.display = 'none';
+    document.getElementById('ccResumen').style.display = 'none';
+    document.getElementById('ccConfirmarBtn').disabled = true;
+    document.querySelectorAll('input[name="ccComplementoNuevo"]').forEach(r => r.checked = false);
+
+    document.getElementById('cambiarComplementoModal').style.display = 'flex';
+
+    try {
+        const url = `/facturacion/api/obtener-grupos-para-sede-grado/?programa_id=${programaId}&sede=${encodeURIComponent(sede)}&grado=${encodeURIComponent(grado)}&focalizacion=${encodeURIComponent(focalizacion)}`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+
+        if (data.success && data.grupos.length > 0) {
+            cambioComplementoData.subgruposDisponibles = data.grupos;
+
+            if (data.grupos.length > 1) {
+                renderizarSubgruposComplemento(data.grupos);
+                document.getElementById('ccSeccionSubgrupos').style.display = 'block';
+            } else {
+                // Un solo subgrupo: seleccionarlo automáticamente
+                cambioComplementoData.subgruposSeleccionados = [data.grupos[0].grado_grupos];
+                mostrarComplementoActual(data.grupos);
+                actualizarResumenComplemento();
+            }
+        }
+    } catch (e) {
+        console.error('Error al cargar subgrupos:', e);
+    }
+}
+
+function renderizarSubgruposComplemento(grupos) {
+    const contenedor = document.getElementById('ccListaSubgrupos');
+    contenedor.innerHTML = '';
+
+    grupos.forEach(g => {
+        const label = document.createElement('label');
+        label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 14px;border:2px solid #dee2e6;border-radius:8px;cursor:pointer;font-size:14px;';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = g.grado_grupos;
+        checkbox.dataset.total = g.total;
+        checkbox.dataset.complemento = g.complemento_actual || '';
+        checkbox.style.cssText = 'width:17px;height:17px;cursor:pointer;';
+        checkbox.addEventListener('change', actualizarSeleccionSubgruposComplemento);
+
+        const complementoText = g.complemento_actual ? ` · ${COMPLEMENTO_LABELS[g.complemento_actual] || g.complemento_actual}` : '';
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(`${g.grado_grupos} — ${g.total} est.${complementoText}`));
+        contenedor.appendChild(label);
+    });
+}
+
+function actualizarSeleccionSubgruposComplemento() {
+    const checks = document.querySelectorAll('#ccListaSubgrupos input[type=checkbox]:checked');
+    cambioComplementoData.subgruposSeleccionados = Array.from(checks).map(c => c.value);
+    mostrarComplementoActual(cambioComplementoData.subgruposDisponibles.filter(g =>
+        cambioComplementoData.subgruposSeleccionados.includes(g.grado_grupos)
+    ));
+    actualizarResumenComplemento();
+}
+
+function mostrarComplementoActual(grupos) {
+    const divActual = document.getElementById('ccComplementoActual');
+    const spanTexto = document.getElementById('ccComplementoActualTexto');
+    if (!grupos || grupos.length === 0) { divActual.style.display = 'none'; return; }
+
+    const complementos = [...new Set(grupos.map(g => g.complemento_actual).filter(Boolean))];
+    if (complementos.length === 0) { divActual.style.display = 'none'; return; }
+
+    spanTexto.textContent = complementos.map(c => COMPLEMENTO_LABELS[c] || c).join(' / ');
+    divActual.style.display = 'block';
+}
+
+function actualizarResumenComplemento() {
+    const grupos = cambioComplementoData.subgruposSeleccionados.length > 0
+        ? cambioComplementoData.subgruposDisponibles.filter(g => cambioComplementoData.subgruposSeleccionados.includes(g.grado_grupos))
+        : cambioComplementoData.subgruposDisponibles;
+
+    const total = grupos.reduce((s, g) => s + g.total, 0);
+    document.getElementById('ccTotalEstudiantes').textContent = total;
+    document.getElementById('ccResumen').style.display = total > 0 ? 'block' : 'none';
+    actualizarBotonComplemento();
+}
+
+function actualizarBotonComplemento() {
+    const radioSeleccionado = document.querySelector('input[name="ccComplementoNuevo"]:checked');
+    const haySubgrupos = cambioComplementoData.subgruposSeleccionados.length > 0 || cambioComplementoData.subgruposDisponibles.length > 0;
+    document.getElementById('ccConfirmarBtn').disabled = !(radioSeleccionado && haySubgrupos);
+}
+
+function closeCambiarComplementoModal() {
+    document.getElementById('cambiarComplementoModal').style.display = 'none';
+    cambioComplementoData = { sede: '', grado: '', focalizacion: '', programaId: '', subgruposDisponibles: [], subgruposSeleccionados: [] };
+}
+
+async function confirmarCambioComplemento() {
+    const radioSeleccionado = document.querySelector('input[name="ccComplementoNuevo"]:checked');
+    if (!radioSeleccionado) { alert('Selecciona el nuevo tipo de complemento'); return; }
+
+    const complementoNuevo = radioSeleccionado.value;
+    const grupos = cambioComplementoData.subgruposSeleccionados.length > 0
+        ? cambioComplementoData.subgruposSeleccionados
+        : [];
+
+    const totalEstudiantes = document.getElementById('ccTotalEstudiantes').textContent;
+    const detalleGrupos = grupos.length > 0 ? grupos.join(', ') : `Grado ${cambioComplementoData.grado} (todos)`;
+    const mensaje = `¿Confirmas cambiar el complemento a "${COMPLEMENTO_LABELS[complementoNuevo]}"?\n\nSede: ${cambioComplementoData.sede}\nGrupos: ${detalleGrupos}\nEstudiantes afectados: ${totalEstudiantes}`;
+
+    if (!confirm(mensaje)) return;
+
+    const btn = document.getElementById('ccConfirmarBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aplicando...';
+
+    try {
+        const resp = await fetch('/facturacion/api/cambiar-complemento/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+            body: JSON.stringify({
+                programa_id: cambioComplementoData.programaId,
+                sede: cambioComplementoData.sede,
+                grado: cambioComplementoData.grado,
+                focalizacion: cambioComplementoData.focalizacion,
+                complemento_nuevo: complementoNuevo,
+                grupos_exactos: grupos
+            })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            alert(`✅ ${data.mensaje}`);
+            closeCambiarComplementoModal();
+            location.reload();
+        } else {
+            alert('❌ Error: ' + data.error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> Aplicar Cambio';
+        }
+    } catch (e) {
+        alert('❌ Error de conexión: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Aplicar Cambio';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('cambiarComplementoModal');
+    if (modal) {
+        modal.addEventListener('click', e => { if (e.target.id === 'cambiarComplementoModal') closeCambiarComplementoModal(); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.style.display === 'flex') closeCambiarComplementoModal(); });
+    }
+});
+
 // ===== TRANSFERENCIA ESPECÍFICA DE GRADO (desde tabla) =====
 
 // Variables para transferencia específica

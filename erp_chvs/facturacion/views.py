@@ -648,6 +648,12 @@ def lista_listados(request):
         'sedes_faltantes': sedes_faltantes,
         'total_sedes_faltantes': total_sedes_faltantes,
         'grados_disponibles': grados_disponibles,
+        'complemento_opciones': [
+            ('am', 'Complemento AM (mañana)'),
+            ('pm', 'Complemento PM (tarde)'),
+            ('almuerzo_ju', 'Almuerzo Jornada Única'),
+            ('refuerzo', 'Refuerzo Complemento AM/PM'),
+        ],
     }
 
     return render(request, 'facturacion/lista_listados.html', context)
@@ -1130,9 +1136,115 @@ def api_obtener_grupos_para_sede_grado(request):
             .order_by('grado_grupos')
         )
 
+        def _detectar_complemento(registro):
+            if registro and (registro.complemento_alimentario_preparado_am or '').strip().lower() == 'x':
+                return 'am'
+            if registro and (registro.complemento_alimentario_preparado_pm or '').strip().lower() == 'x':
+                return 'pm'
+            if registro and (registro.almuerzo_jornada_unica or '').strip().lower() == 'x':
+                return 'almuerzo_ju'
+            if registro and (registro.refuerzo_complemento_am_pm or '').strip().lower() == 'x':
+                return 'refuerzo'
+            return None
+
+        resultado = []
+        for g in grupos:
+            primer_reg = ListadosFocalizacion.objects.filter(
+                programa_id=programa_id, focalizacion=focalizacion,
+                sede=sede, grado_grupos=g['grado_grupos']
+            ).first()
+            resultado.append({
+                'grado_grupos': g['grado_grupos'],
+                'total': g['total'],
+                'complemento_actual': _detectar_complemento(primer_reg)
+            })
+
+        return JsonResponse({'success': True, 'grupos': resultado})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@csrf_exempt
+def api_cambiar_complemento(request):
+    """
+    Cambia el tipo de complemento alimentario de los registros de un grado/subgrupo.
+    Limpia los 4 campos de complemento y activa solo el nuevo seleccionado.
+    Body JSON: {programa_id, sede, grado, focalizacion, complemento_nuevo, grupos_exactos[]}
+    grupos_exactos vacío = todos los subgrupos del grado base.
+    """
+    from django.db.models import Func, CharField
+
+    COMPLEMENTO_MAP = {
+        'am': 'complemento_alimentario_preparado_am',
+        'pm': 'complemento_alimentario_preparado_pm',
+        'almuerzo_ju': 'almuerzo_jornada_unica',
+        'refuerzo': 'refuerzo_complemento_am_pm',
+    }
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+    try:
+        data = json.loads(request.body)
+        programa_id = data.get('programa_id')
+        sede = data.get('sede')
+        grado = data.get('grado')
+        focalizacion = data.get('focalizacion')
+        complemento_nuevo = data.get('complemento_nuevo')
+        grupos_exactos = data.get('grupos_exactos', [])
+
+        if not all([programa_id, sede, grado, focalizacion, complemento_nuevo]):
+            return JsonResponse({'success': False, 'error': 'Parámetros incompletos'})
+
+        if complemento_nuevo not in COMPLEMENTO_MAP:
+            return JsonResponse({'success': False, 'error': f'Complemento inválido. Opciones: {list(COMPLEMENTO_MAP.keys())}'})
+
+        class ExtractGradoBase(Func):
+            function = 'REGEXP_REPLACE'
+            template = "%(function)s(%(expressions)s, '-[^-]*$', '', 'g')"
+            def __init__(self, expression, **extra):
+                super().__init__(expression, output_field=CharField(), **extra)
+
+        base_qs = ListadosFocalizacion.objects.filter(
+            programa_id=programa_id, sede=sede, focalizacion=focalizacion
+        )
+
+        if grupos_exactos:
+            ids = list(base_qs.filter(grado_grupos__in=grupos_exactos).values_list('id_listados', flat=True))
+        else:
+            ids = list(
+                base_qs.annotate(grado_base=ExtractGradoBase('grado_grupos'))
+                .filter(grado_base=grado)
+                .values_list('id_listados', flat=True)
+            )
+
+        if not ids:
+            return JsonResponse({'success': False, 'error': 'No se encontraron registros para actualizar'})
+
+        update_values = {
+            'complemento_alimentario_preparado_am': None,
+            'complemento_alimentario_preparado_pm': None,
+            'almuerzo_jornada_unica': None,
+            'refuerzo_complemento_am_pm': None,
+            COMPLEMENTO_MAP[complemento_nuevo]: 'x',
+        }
+
+        with transaction.atomic():
+            total_actualizados = ListadosFocalizacion.objects.filter(id_listados__in=ids).update(**update_values)
+
+        detalle = ', '.join(grupos_exactos) if grupos_exactos else f'Grado {grado} (todos)'
+        RegistroActividad.registrar(
+            request, 'facturacion', 'cambiar_complemento',
+            f"Sede: {sede} | Grupos: {detalle} | Focalización: {focalizacion} | "
+            f"Complemento nuevo: {complemento_nuevo} | Registros actualizados: {total_actualizados}"
+        )
+
         return JsonResponse({
             'success': True,
-            'grupos': [{'grado_grupos': g['grado_grupos'], 'total': g['total']} for g in grupos]
+            'total_actualizados': total_actualizados,
+            'mensaje': f'Se actualizó el complemento de {total_actualizados} estudiantes a {complemento_nuevo.upper()}'
         })
 
     except Exception as e:

@@ -32,6 +32,7 @@ urlpatterns = [
     path('api/obtener-sedes-con-grados/', views.api_obtener_sedes_con_grados, name='api_obtener_sedes_con_grados'),
     path('api/obtener-sedes-con-grado-especifico/', views.api_obtener_sedes_con_grado_especifico, name='api_obtener_sedes_con_grado_especifico'),
     path('api/obtener-grupos-para-sede-grado/', views.api_obtener_grupos_para_sede_grado, name='api_obtener_grupos_para_sede_grado'),
+    path('api/cambiar-complemento/', views.api_cambiar_complemento, name='api_cambiar_complemento'),
     path('api/transferir-grados/', views.api_transferir_grados, name='api_transferir_grados'),
 
     # Gestión de listados: ver y eliminar cargas por programa + focalización
