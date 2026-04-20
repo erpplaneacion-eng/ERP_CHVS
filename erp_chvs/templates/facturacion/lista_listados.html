@@ -341,7 +341,19 @@
                 <!-- Información de sede origen seleccionada -->
                 <div id="infoSedeOrigenSeleccionada" style="display: none;" class="alert alert-success">
                     <h6><i class="fas fa-check-circle"></i> Sede de origen seleccionada</h6>
-                    <p style="margin-bottom: 0;"><strong>Estudiantes a transferir:</strong> <span id="cantidadEstudiantes"></span></p>
+                    <p style="margin-bottom: 0;"><strong>Estudiantes disponibles:</strong> <span id="cantidadEstudiantes"></span></p>
+                </div>
+
+                <!-- Selección de subgrupos -->
+                <div id="seccionSubgrupos" style="display: none; margin-top: 20px;">
+                    <label style="font-size: 16px; font-weight: 600; color: #2c3e50; margin-bottom: 10px; display: block;">
+                        <i class="fas fa-layer-group"></i> Selecciona los grupos a transferir
+                    </label>
+                    <div id="listaSubgrupos" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px;"></div>
+                    <small class="text-muted"><i class="fas fa-info-circle"></i> Selecciona uno o más grupos. El total a transferir se actualizará.</small>
+                    <div id="resumenSubgrupos" style="display: none; margin-top: 12px;" class="alert alert-warning">
+                        <strong>Total a transferir:</strong> <span id="totalATransferir">0</span> estudiantes
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">

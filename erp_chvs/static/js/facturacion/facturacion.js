@@ -681,7 +681,9 @@ let transferEspecificoData = {
     programaId: '',
     racionesActuales: 0,
     sedeOrigen: '',
-    sedesDisponibles: []
+    sedesDisponibles: [],
+    subgruposDisponibles: [],
+    subgruposSeleccionados: []
 };
 
 // Función para transferir grado específico (llamada desde la tabla)
@@ -771,37 +773,100 @@ function cargarSedesOrigenEspecificas(sedesDisponibles) {
     }
 }
 
-// Función para validar la sede origen seleccionada
-function validarSedeOrigenEspecifica() {
+// Función para validar la sede origen seleccionada y cargar sus subgrupos
+async function validarSedeOrigenEspecifica() {
     const input = document.getElementById('sedeOrigenEspecifica');
     const valorIngresado = input.value.trim();
     const infoDiv = document.getElementById('infoSedeOrigenSeleccionada');
     const transferBtn = document.getElementById('transferEspecificoBtn');
+    const seccionSubgrupos = document.getElementById('seccionSubgrupos');
 
-    if (valorIngresado) {
-        // Verificar si la sede existe en las disponibles
-        const sedeEncontrada = transferEspecificoData.sedesDisponibles.find(s => s.sede === valorIngresado);
+    // Limpiar subgrupos previos
+    transferEspecificoData.subgruposSeleccionados = [];
+    seccionSubgrupos.style.display = 'none';
+    document.getElementById('listaSubgrupos').innerHTML = '';
+    document.getElementById('resumenSubgrupos').style.display = 'none';
+    transferBtn.disabled = true;
 
-        if (sedeEncontrada) {
-            transferEspecificoData.sedeOrigen = valorIngresado;
-            input.classList.remove('is-invalid');
-            input.classList.add('is-valid');
-
-            // Mostrar información de la sede seleccionada
-            document.getElementById('cantidadEstudiantes').textContent = sedeEncontrada.total_estudiantes;
-            infoDiv.style.display = 'block';
-            transferBtn.disabled = false;
-        } else {
-            transferEspecificoData.sedeOrigen = '';
-            input.classList.remove('is-valid');
-            input.classList.add('is-invalid');
-            infoDiv.style.display = 'none';
-            transferBtn.disabled = true;
-        }
-    } else {
+    if (!valorIngresado) {
         transferEspecificoData.sedeOrigen = '';
         input.classList.remove('is-valid', 'is-invalid');
         infoDiv.style.display = 'none';
+        return;
+    }
+
+    const sedeEncontrada = transferEspecificoData.sedesDisponibles.find(s => s.sede === valorIngresado);
+
+    if (!sedeEncontrada) {
+        transferEspecificoData.sedeOrigen = '';
+        input.classList.remove('is-valid');
+        input.classList.add('is-invalid');
+        infoDiv.style.display = 'none';
+        return;
+    }
+
+    transferEspecificoData.sedeOrigen = valorIngresado;
+    input.classList.remove('is-invalid');
+    input.classList.add('is-valid');
+    document.getElementById('cantidadEstudiantes').textContent = sedeEncontrada.total_estudiantes;
+    infoDiv.style.display = 'block';
+
+    // Cargar subgrupos disponibles en esa sede
+    try {
+        const url = `/facturacion/api/obtener-grupos-para-sede-grado/?programa_id=${transferEspecificoData.programaId}&sede=${encodeURIComponent(valorIngresado)}&grado=${encodeURIComponent(transferEspecificoData.grado)}&focalizacion=${encodeURIComponent(transferEspecificoData.focalizacion)}`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+
+        if (data.success && data.grupos.length > 0) {
+            transferEspecificoData.subgruposDisponibles = data.grupos;
+            renderizarSubgrupos(data.grupos);
+            seccionSubgrupos.style.display = 'block';
+        } else {
+            // Sin subgrupos distinguibles: transferir todo el grado directamente
+            transferEspecificoData.subgruposDisponibles = [];
+            transferBtn.disabled = false;
+        }
+    } catch (e) {
+        console.error('Error al cargar subgrupos:', e);
+        transferBtn.disabled = false;
+    }
+}
+
+function renderizarSubgrupos(grupos) {
+    const contenedor = document.getElementById('listaSubgrupos');
+    contenedor.innerHTML = '';
+
+    grupos.forEach(g => {
+        const label = document.createElement('label');
+        label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 14px;border:2px solid #dee2e6;border-radius:8px;cursor:pointer;font-size:15px;';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = g.grado_grupos;
+        checkbox.dataset.total = g.total;
+        checkbox.style.cssText = 'width:18px;height:18px;cursor:pointer;';
+        checkbox.addEventListener('change', actualizarSeleccionSubgrupos);
+
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(`${g.grado_grupos} — ${g.total} est.`));
+        contenedor.appendChild(label);
+    });
+}
+
+function actualizarSeleccionSubgrupos() {
+    const checkboxes = document.querySelectorAll('#listaSubgrupos input[type=checkbox]:checked');
+    transferEspecificoData.subgruposSeleccionados = Array.from(checkboxes).map(c => c.value);
+    const total = Array.from(checkboxes).reduce((s, c) => s + parseInt(c.dataset.total), 0);
+
+    const resumen = document.getElementById('resumenSubgrupos');
+    const transferBtn = document.getElementById('transferEspecificoBtn');
+
+    if (transferEspecificoData.subgruposSeleccionados.length > 0) {
+        document.getElementById('totalATransferir').textContent = total;
+        resumen.style.display = 'block';
+        transferBtn.disabled = false;
+    } else {
+        resumen.style.display = 'none';
         transferBtn.disabled = true;
     }
 }
@@ -818,8 +883,13 @@ function closeTransferEspecificoModal() {
             programaId: '',
             racionesActuales: 0,
             sedeOrigen: '',
-            sedesDisponibles: []
+            sedesDisponibles: [],
+            subgruposDisponibles: [],
+            subgruposSeleccionados: []
         };
+        document.getElementById('seccionSubgrupos').style.display = 'none';
+        document.getElementById('listaSubgrupos').innerHTML = '';
+        document.getElementById('resumenSubgrupos').style.display = 'none';
     }
 }
 
@@ -848,30 +918,43 @@ function confirmarTransferenciaEspecifica() {
         return;
     }
 
-    const mensaje = `¿Confirmas transferir los estudiantes de Grado ${transferEspecificoData.grado} (Focalización ${transferEspecificoData.focalizacion})?
+    const usaSubgrupos = transferEspecificoData.subgruposDisponibles.length > 0;
+    if (usaSubgrupos && transferEspecificoData.subgruposSeleccionados.length === 0) {
+        alert('Selecciona al menos un grupo a transferir');
+        return;
+    }
 
-Desde: ${transferEspecificoData.sedeOrigen}
-Hacia: ${transferEspecificoData.sedeDestino}`;
+    const detalleGrupos = usaSubgrupos
+        ? transferEspecificoData.subgruposSeleccionados.join(', ')
+        : `Grado ${transferEspecificoData.grado} (todos los grupos)`;
+
+    const mensaje = `¿Confirmas transferir los estudiantes?\n\nGrupos: ${detalleGrupos}\nFocalización: ${transferEspecificoData.focalizacion}\n\nDesde: ${transferEspecificoData.sedeOrigen}\nHacia: ${transferEspecificoData.sedeDestino}`;
 
     if (confirm(mensaje)) {
-        // Deshabilitar botón mientras procesa
         const btn = document.getElementById('transferEspecificoBtn');
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
 
-        // Enviar petición usando el endpoint existente
+        const body = {
+            sede_destino: transferEspecificoData.sedeDestino,
+            sede_origen: transferEspecificoData.sedeOrigen,
+            focalizacion: transferEspecificoData.focalizacion
+        };
+
+        if (usaSubgrupos) {
+            body.grupos_exactos = transferEspecificoData.subgruposSeleccionados;
+            body.grados_seleccionados = [];
+        } else {
+            body.grados_seleccionados = [transferEspecificoData.grado];
+        }
+
         fetch('/facturacion/api/transferir-grados/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
             },
-            body: JSON.stringify({
-                sede_destino: transferEspecificoData.sedeDestino,
-                sede_origen: transferEspecificoData.sedeOrigen,
-                grados_seleccionados: [transferEspecificoData.grado], // Array con un solo grado
-                focalizacion: transferEspecificoData.focalizacion
-            })
+            body: JSON.stringify(body)
         })
         .then(response => response.json())
         .then(data => {

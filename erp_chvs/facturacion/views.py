@@ -1051,29 +1051,26 @@ def api_transferir_grados(request):
             grados_seleccionados = data.get('grados_seleccionados', [])
             focalizacion = data.get('focalizacion')  # Focalización activa
 
-            if not sede_destino or not sede_origen or not grados_seleccionados:
-                return JsonResponse({'success': False, 'error': 'Parámetros incompletos: sede_destino, sede_origen y grados_seleccionados son requeridos'})
+            grupos_exactos = data.get('grupos_exactos', [])  # grado_grupos exactos (ej: ["1A","1B"])
 
-            # Obtener registros fuente (de la sede origen específica con esos grados)
-            # IMPORTANTE: Filtrar también por focalización para evitar mezclar focalizaciones
-            query_fuente = ListadosFocalizacion.objects.filter(
-                sede=sede_origen
-            )
+            if not sede_destino or not sede_origen or (not grados_seleccionados and not grupos_exactos):
+                return JsonResponse({'success': False, 'error': 'Parámetros incompletos: sede_destino, sede_origen y grados_seleccionados o grupos_exactos son requeridos'})
 
-            # Si se especifica focalización, filtrar solo por esa focalización
-            # RECOMENDADO: Siempre especificar focalización para evitar mezclar datos
+            query_fuente = ListadosFocalizacion.objects.filter(sede=sede_origen)
+
             if focalizacion:
                 query_fuente = query_fuente.filter(focalizacion=focalizacion)
 
-            registros_fuente = query_fuente
-
-            # Filtrar por grados seleccionados
-            registros_a_copiar = []
-            for registro in registros_fuente:
-                if registro.grado_grupos:
-                    grado_base = _extraer_grado_base(str(registro.grado_grupos))
-                    if grado_base and grado_base in grados_seleccionados:
-                        registros_a_copiar.append(registro)
+            # Filtrar por grupos exactos (subgrupos como "1A", "1B") o por grado base
+            if grupos_exactos:
+                registros_a_copiar = list(query_fuente.filter(grado_grupos__in=grupos_exactos))
+            else:
+                registros_a_copiar = []
+                for registro in query_fuente:
+                    if registro.grado_grupos:
+                        grado_base = _extraer_grado_base(str(registro.grado_grupos))
+                        if grado_base and grado_base in grados_seleccionados:
+                            registros_a_copiar.append(registro)
 
             # MOVER registros a la sede destino (no copiar)
             registros_movidos = 0
@@ -1083,10 +1080,11 @@ def api_transferir_grados(request):
                     registro.save()
                     registros_movidos += 1
 
+            detalle_grados = ', '.join(grupos_exactos) if grupos_exactos else ', '.join(grados_seleccionados)
             RegistroActividad.registrar(
                 request, 'facturacion', 'transferir_grados',
                 f"Origen: {sede_origen} → Destino: {sede_destino} | "
-                f"Grados: {', '.join(grados_seleccionados)} | Focalización: {focalizacion} | "
+                f"Grupos: {detalle_grados} | Focalización: {focalizacion} | "
                 f"Registros movidos: {registros_movidos}"
             )
             return JsonResponse({
@@ -1097,6 +1095,49 @@ def api_transferir_grados(request):
 
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Error en transferencia: {str(e)}'})
+
+@login_required
+def api_obtener_grupos_para_sede_grado(request):
+    """
+    Devuelve los subgrupos exactos (grado_grupos) disponibles en una sede para un grado base,
+    programa y focalización dados. Ej: grado "1" → ["1A", "1B"] con conteos.
+    """
+    from django.db.models import Count, Func, CharField
+
+    try:
+        programa_id = request.GET.get('programa_id')
+        sede = request.GET.get('sede')
+        grado = request.GET.get('grado')
+        focalizacion = request.GET.get('focalizacion')
+
+        if not all([programa_id, sede, grado, focalizacion]):
+            return JsonResponse({'success': False, 'error': 'Parámetros incompletos: programa_id, sede, grado y focalizacion son requeridos'})
+
+        class ExtractGradoBase(Func):
+            function = 'REGEXP_REPLACE'
+            template = "%(function)s(%(expressions)s, '-[^-]*$', '', 'g')"
+            def __init__(self, expression, **extra):
+                super().__init__(expression, output_field=CharField(), **extra)
+
+        grupos = (
+            ListadosFocalizacion.objects
+            .filter(programa_id=programa_id, focalizacion=focalizacion, sede=sede)
+            .exclude(grado_grupos__isnull=True).exclude(grado_grupos='')
+            .annotate(grado_base=ExtractGradoBase('grado_grupos'))
+            .filter(grado_base=grado)
+            .values('grado_grupos')
+            .annotate(total=Count('id_listados'))
+            .order_by('grado_grupos')
+        )
+
+        return JsonResponse({
+            'success': True,
+            'grupos': [{'grado_grupos': g['grado_grupos'], 'total': g['total']} for g in grupos]
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
 
 # Vista procesar_y_guardar_view eliminada - consolidada en procesar_listados_view
 
