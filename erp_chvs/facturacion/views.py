@@ -653,23 +653,12 @@ def lista_listados(request):
     return render(request, 'facturacion/lista_listados.html', context)
 
 
-@login_required
-def descargar_estadisticas_sedes_excel(request):
-    """Descarga raciones por sede×modalidad×nivel en formato ancho (pivot)."""
+def _build_workbook_estadisticas(agrupacion, focalizacion, titulo):
+    """Genera el Workbook openpyxl de raciones por sede×modalidad×nivel."""
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
 
-    datos = request.session.get('datos_etapa_1')
-    if not datos or not datos.get('agrupacion_sedes'):
-        return HttpResponse("No hay estadísticas disponibles. Procese un archivo primero.", status=400)
-
-    agrupacion  = datos['agrupacion_sedes']
-    archivo_name = datos.get('archivo_name', 'archivo')
-    focalizacion = datos.get('focalizacion', '')
-    fecha        = datos.get('fecha_procesamiento', '')
-
-    # Pre-cargar flag industrializado por nombre de sede (para etiquetas de modalidad)
     from planeacion.models import SedesEducativas as _Sedes
     _sedes_bd = _Sedes.objects.values('nombre_sede_educativa', 'industrializado')
     _industrializado_map = {
@@ -679,7 +668,6 @@ def descargar_estadisticas_sedes_excel(request):
     }
 
     def _etiquetas_modalidad(sede_bd):
-        """Retorna el dict key→label ajustado según si la sede es industrializada."""
         es_ind = _industrializado_map.get(sede_bd, False)
         return {
             'cap_am':      'COMPLEMENTO AM/PM INDUSTRIALIZADO' if es_ind else 'COMPLEMENTO AM/PM PREPARADO',
@@ -688,26 +676,20 @@ def descargar_estadisticas_sedes_excel(request):
             'refuerzo':    'REFUERZO COMPLEMENTO INDUSTRIALIZADO AM/PM' if es_ind else 'REFUERZO COMPLEMENTO PREPARADO AM/PM',
         }
 
-    MODALIDADES = [
-        ('cap_am',      None),
-        ('cap_pm',      None),
-        ('almuerzo_ju', None),
-        ('refuerzo',    None),
-    ]
+    MODALIDADES = [('cap_am', None), ('cap_pm', None), ('almuerzo_ju', None), ('refuerzo', None)]
     NIVELES = [
-        ('prescolar',                  'Preescolar',       12),
-        ('primaria_1_2_3',             'Primaria 1°-3°',   14),
-        ('primaria_4_5',               'Primaria 4°-5°',   14),
-        ('secundaria',                 'Secundaria',        12),
-        ('media_ciclo_complementario', 'Media / Ciclo Comp.', 18),
+        ('prescolar',                  'Preescolar',            12),
+        ('primaria_1_2_3',             'Primaria 1°-3°',        14),
+        ('primaria_4_5',               'Primaria 4°-5°',        14),
+        ('secundaria',                 'Secundaria',            12),
+        ('media_ciclo_complementario', 'Media / Ciclo Comp.',   18),
     ]
 
-    # Columnas fijas + una columna por nivel
-    # Layout: Sede BD | Sede Excel | Modalidad | niv1 | niv2 | niv3 | niv4 | niv5
     COL_SEDE_BD    = 1
     COL_SEDE_EXCEL = 2
     COL_MODALIDAD  = 3
-    COL_NIVEL_INI  = 4   # columnas 4-8 son los niveles
+    COL_NIVEL_INI  = 4
+    total_cols = COL_NIVEL_INI + len(NIVELES) - 1
 
     wb = Workbook()
     ws = wb.active
@@ -729,19 +711,13 @@ def descargar_estadisticas_sedes_excel(request):
         c.border = border
         return c
 
-    total_cols = COL_NIVEL_INI + len(NIVELES) - 1  # 3 fijas + 5 niveles = 8
-
-    # ── Fila 1: Título ──────────────────────────────────────────────────────────
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=total_cols)
-    t = ws.cell(row=1, column=1,
-        value=f"Raciones por Sede, Modalidad y Nivel — {archivo_name} | Focalización: {focalizacion} | Procesado: {fecha}")
+    t = ws.cell(row=1, column=1, value=titulo)
     t.fill = make_fill("1F4E79")
     t.font = Font(color="FFFFFF", bold=True, size=12)
     t.alignment = center
     ws.row_dimensions[1].height = 22
 
-    # ── Fila 2: Encabezados principales ─────────────────────────────────────────
-    # Columnas fijas — se fusionan filas 2-3
     for col, label, ancho in [
         (COL_SEDE_BD,    'Sede Oficial (BD)', 42),
         (COL_SEDE_EXCEL, 'Sede en Archivo',   36),
@@ -751,42 +727,29 @@ def descargar_estadisticas_sedes_excel(request):
         hcell(2, col, label, "1F4E79", sz=10)
         ws.column_dimensions[get_column_letter(col)].width = ancho
 
-    # "Nivel Educativo" fusionado sobre las columnas de niveles
     ws.merge_cells(start_row=2, start_column=COL_NIVEL_INI,
                    end_row=2,   end_column=COL_NIVEL_INI + len(NIVELES) - 1)
     hcell(2, COL_NIVEL_INI, 'Nivel Educativo', "2E75B6", sz=11)
-
     ws.row_dimensions[2].height = 18
 
-    # ── Fila 3: Sub-encabezados de nivel (prefijados con la focalización) ────────
     for i, (niv_key, niv_label, niv_ancho) in enumerate(NIVELES):
         col = COL_NIVEL_INI + i
         label_con_focal = f"{focalizacion}-{niv_label}"
         hcell(3, col, label_con_focal, "5B9BD5", sz=10)
         ws.column_dimensions[get_column_letter(col)].width = niv_ancho + len(focalizacion) + 1
-
     ws.row_dimensions[3].height = 28
 
-    # Colores por modalidad y alternancia de sede
-    COLOR_MOD = {
-        'cap_am':      'DDEEFF',
-        'cap_pm':      'DFFFD6',
-        'almuerzo_ju': 'FFF0DE',
-        'refuerzo':    'F0E8FF',
-    }
+    COLOR_MOD  = {'cap_am': 'DDEEFF', 'cap_pm': 'DFFFD6', 'almuerzo_ju': 'FFF0DE', 'refuerzo': 'F0E8FF'}
     COLORES_SEDE = ["FFFFFF", "F5F5F5"]
 
-    # ── Filas de datos ──────────────────────────────────────────────────────────
     excel_row = 4
     for sede_idx, item in enumerate(agrupacion):
         sede_bd    = item.get('sede_bd', '')
         sede_excel = item.get('sede_excel', '')
         fill_sede  = make_fill(COLORES_SEDE[sede_idx % 2])
-
-        etiquetas = _etiquetas_modalidad(sede_bd)
+        etiquetas  = _etiquetas_modalidad(sede_bd)
 
         for mod_key, _ in MODALIDADES:
-            # Omitir modalidad si no tiene ninguna ración en ningún nivel
             totales_niv = [item.get(f"{mod_key}__{niv_key}", 0) for niv_key, _, _ in NIVELES]
             if sum(totales_niv) == 0:
                 continue
@@ -794,8 +757,8 @@ def descargar_estadisticas_sedes_excel(request):
             mod_label = etiquetas[mod_key]
             fill_mod  = make_fill(COLOR_MOD[mod_key])
 
-            def wcell(col, value, fill, alin=center):
-                c = ws.cell(row=excel_row, column=col, value=value)
+            def wcell(col, value, fill, alin=center, _row=excel_row):
+                c = ws.cell(row=_row, column=col, value=value)
                 c.fill = fill
                 c.alignment = alin
                 c.border = border
@@ -804,13 +767,10 @@ def descargar_estadisticas_sedes_excel(request):
             wcell(COL_SEDE_BD,    sede_bd,    fill_sede, left)
             wcell(COL_SEDE_EXCEL, sede_excel, fill_sede, left)
             wcell(COL_MODALIDAD,  mod_label,  fill_mod)
-
             for i, (niv_key, _, _) in enumerate(NIVELES):
                 wcell(COL_NIVEL_INI + i, item.get(f"{mod_key}__{niv_key}", 0), fill_mod)
-
             excel_row += 1
 
-    # ── Fila de totales ─────────────────────────────────────────────────────────
     ws.merge_cells(start_row=excel_row, start_column=1, end_row=excel_row, end_column=COL_MODALIDAD)
     c = ws.cell(row=excel_row, column=1, value="TOTAL GENERAL")
     c.fill = make_fill("1F4E79")
@@ -830,6 +790,24 @@ def descargar_estadisticas_sedes_excel(request):
         c.alignment = center
         c.border = border
 
+    return wb
+
+
+@login_required
+def descargar_estadisticas_sedes_excel(request):
+    """Descarga raciones por sede×modalidad×nivel desde la sesión (post-procesamiento Excel)."""
+    datos = request.session.get('datos_etapa_1')
+    if not datos or not datos.get('agrupacion_sedes'):
+        return HttpResponse("No hay estadísticas disponibles. Procese un archivo primero.", status=400)
+
+    agrupacion   = datos['agrupacion_sedes']
+    archivo_name = datos.get('archivo_name', 'archivo')
+    focalizacion = datos.get('focalizacion', '')
+    fecha        = datos.get('fecha_procesamiento', '')
+
+    titulo = f"Raciones por Sede, Modalidad y Nivel — {archivo_name} | Focalización: {focalizacion} | Procesado: {fecha}"
+    wb = _build_workbook_estadisticas(agrupacion, focalizacion, titulo)
+
     output = BytesIO()
     wb.save(output)
     output.seek(0)
@@ -840,6 +818,104 @@ def descargar_estadisticas_sedes_excel(request):
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
+    return response
+
+
+@login_required
+def descargar_estadisticas_bd_excel(request):
+    """Descarga raciones por sede×modalidad×nivel calculadas desde la BD (refleja traslados y ajustes)."""
+    from collections import defaultdict
+
+    programa_id  = request.GET.get('programa', '').strip()
+    focalizacion = request.GET.get('focalizacion', '').strip()
+
+    if not programa_id or not focalizacion:
+        return HttpResponse("Debe seleccionar programa y focalización para descargar.", status=400)
+
+    NIVEL_MAP = {
+        'preescolar':  'prescolar',
+        'primaria_1_3': 'primaria_1_2_3',
+        'primaria_4_5': 'primaria_4_5',
+        'secundaria':   'secundaria',
+        'media':        'media_ciclo_complementario',
+    }
+    MODAL_KEYS = ['cap_am', 'cap_pm', 'almuerzo_ju', 'refuerzo']
+    NIVEL_KEYS = list(NIVEL_MAP.values())
+
+    def _zero_item():
+        d = {k: 0 for k in MODAL_KEYS + NIVEL_KEYS}
+        d.update({f"{m}__{n}": 0 for m in MODAL_KEYS for n in NIVEL_KEYS})
+        return d
+
+    sedes_data = defaultdict(_zero_item)
+
+    registros = ListadosFocalizacion.objects.filter(
+        programa_id=programa_id,
+        focalizacion=focalizacion,
+    ).values(
+        'sede',
+        'grado_grupos',
+        'complemento_alimentario_preparado_am',
+        'complemento_alimentario_preparado_pm',
+        'almuerzo_jornada_unica',
+        'refuerzo_complemento_am_pm',
+    )
+
+    for r in registros:
+        sede  = r['sede'] or ''
+        nivel = NIVEL_MAP.get(_determinar_nivel_educativo(r['grado_grupos'] or ''))
+
+        modalidades = []
+        if (r['complemento_alimentario_preparado_am'] or '').strip().lower() == 'x':
+            modalidades.append('cap_am')
+        if (r['complemento_alimentario_preparado_pm'] or '').strip().lower() == 'x':
+            modalidades.append('cap_pm')
+        if (r['almuerzo_jornada_unica'] or '').strip().lower() == 'x':
+            modalidades.append('almuerzo_ju')
+        if (r['refuerzo_complemento_am_pm'] or '').strip().lower() == 'x':
+            modalidades.append('refuerzo')
+
+        for mod in modalidades:
+            sedes_data[sede][mod] += 1
+            if nivel:
+                sedes_data[sede][nivel] += 1
+                sedes_data[sede][f"{mod}__{nivel}"] += 1
+
+    agrupacion = []
+    for sede, datos_sede in sorted(sedes_data.items()):
+        item = {'sede_bd': sede, 'sede_excel': sede}
+        item.update(datos_sede)
+        agrupacion.append(item)
+
+    if not agrupacion:
+        return HttpResponse("No hay registros para el programa y focalización seleccionados.", status=404)
+
+    try:
+        programa_obj  = Programa.objects.get(id=programa_id)
+        programa_nombre = programa_obj.programa
+    except Programa.DoesNotExist:
+        programa_nombre = f'Programa {programa_id}'
+
+    fecha  = datetime.now().strftime('%d/%m/%Y %H:%M')
+    titulo = f"Raciones por Sede — {programa_nombre} | Focalización: {focalizacion} | Generado: {fecha}"
+
+    wb = _build_workbook_estadisticas(agrupacion, focalizacion, titulo)
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    nombre_archivo = f"raciones_ajustadas_{focalizacion}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    response = HttpResponse(
+        output.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
+
+    RegistroActividad.registrar(
+        request, 'facturacion', 'descargar_estadisticas_bd',
+        f"Excel ajustes descargado: programa={programa_nombre}, focal={focalizacion}, sedes={len(agrupacion)}"
+    )
     return response
 
 

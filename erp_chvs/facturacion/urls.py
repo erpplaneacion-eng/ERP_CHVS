@@ -11,8 +11,11 @@ urlpatterns = [
     # Vista para gestión de listados focalización
     path('lista-listados/', views.lista_listados, name='lista_listados'),
 
-    # Descarga de estadísticas por sede del último procesamiento
+    # Descarga de estadísticas por sede del último procesamiento (sesión)
     path('descargar-estadisticas-sedes/', views.descargar_estadisticas_sedes_excel, name='descargar_estadisticas_sedes'),
+
+    # Descarga de estadísticas desde BD (refleja traslados y ajustes post-carga)
+    path('descargar-estadisticas-bd/', views.descargar_estadisticas_bd_excel, name='descargar_estadisticas_bd'),
 
     # Nueva vista para la interfaz de generación de reportes de asistencia
     path('reportes-asistencia/', views.reportes_asistencia_view, name='reportes_asistencia'),
