@@ -1222,7 +1222,7 @@ def get_sedes_for_programa_focalizacion(request):
         return JsonResponse({'error': 'Parámetros incompletos'}, status=400)
 
     try:
-        sedes = ListadosFocalizacion.objects.filter(programa_id=programa_id, focalizacion=focalizacion).values_list('sede', flat=True).distinct()
+        sedes = ListadosFocalizacion.objects.filter(programa_id=programa_id, focalizacion=focalizacion).values_list('sede', flat=True).distinct().order_by('sede')
         return JsonResponse({'sedes': list(sedes)})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
