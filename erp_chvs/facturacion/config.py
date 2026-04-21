@@ -15,6 +15,7 @@ class ProcesamientoConfig:
     TIPO_PROCESAMIENTO_ORIGINAL = 'original'
     TIPO_PROCESAMIENTO_YUMBO = 'yumbo'
     TIPO_PROCESAMIENTO_BUGA = 'buga'
+    TIPO_PROCESAMIENTO_SIMAT_6A = 'simat_6a'
     
     # Municipios soportados
     MUNICIPIOS_SOPORTADOS = ['CALI', 'YUMBO', 'GUADALAJARA DE BUGA']
@@ -54,6 +55,46 @@ class ProcesamientoConfig:
     # Lógica de jornadas para otros municipios (formato original)
     JORNADA_UNICA_OTROS = 'ÚNICA'
     JORNADAS_DOBLES_OTROS = ['TARDE', 'MAÑANA']
+
+    # --- SIMAT Anexo 6A ---
+    # Firma de columnas que identifican el formato Anexo 6A de SIMAT
+    COLUMNAS_FIRMA_SIMAT_6A = {'ANO_INF', 'MUN_CODIGO', 'CODIGO_DANE', 'CONS_SEDE'}
+
+    # Columnas mínimas requeridas para procesar el Anexo 6A
+    COLUMNAS_SIMAT_6A = [
+        'ANO_INF', 'MUN_CODIGO', 'CODIGO_DANE', 'DANE_ANTERIOR', 'CONS_SEDE', 'ZONA',
+        'TIPO_DOCUMENTO', 'NRO_DOCUMENTO', 'APELLIDO1', 'NOMBRE1',
+        'FECHA_NACIMIENTO', 'GENERO', 'GRADO', 'TIPO_JORNADA',
+    ]
+
+    # Mapeo MUN_CODIGO (entero SIMAT) → nombre ETC interno del sistema
+    MAPEO_MUNICIPIO_CODIGO = {
+        892: 'YUMBO',
+        # 111 sería BUGA con código DANE oficial — confirmar cuando se tenga archivo de BUGA
+    }
+
+    # Mapeo TIPO_JORNADA numérico SIMAT → texto usado por _aplicar_logica_jornadas
+    MAPEO_TIPO_JORNADA_SIMAT = {
+        2: 'MAÑANA',
+        3: 'TARDE',
+        6: 'ÚNICA',
+        # 4 y 5 → no pertenecen al PAE; se excluyen antes de llegar aquí
+    }
+    JORNADAS_PAE_SIMAT = {2, 3, 6}
+
+    # Fallback de nivel educativo para códigos SIMAT no presentes en NivelGradoEscolar
+    FALLBACK_NIVEL_GRADO_SIMAT = {
+        '-2': 'prescolar',
+        '-1': 'prescolar',
+        '0':  'prescolar',
+        '21': 'media_ciclo_complementario',
+        '22': 'media_ciclo_complementario',
+        '23': 'media_ciclo_complementario',
+        '24': 'media_ciclo_complementario',
+        '25': 'media_ciclo_complementario',
+        '26': 'media_ciclo_complementario',
+        '99': 'prescolar',
+    }
     
     # Niveles escolares para estadísticas
     NIVELES_ESCOLARES = [

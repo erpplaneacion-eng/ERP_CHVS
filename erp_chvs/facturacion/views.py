@@ -153,18 +153,29 @@ def procesar_listados_view(request):
                     contexto['error'] = "Focalización inválida. Seleccione una focalización válida."
                     return render(request, 'facturacion/procesar_listados.html', contexto)
 
-                FacturacionLogger.log_procesamiento_inicio(archivo.name, f"etapa_1_{tipo_procesamiento}", focalizacion)
-
                 # Leer el contenido del archivo primero
                 archivo.seek(0)  # Asegurar que estamos al inicio
                 archivo_contenido = archivo.read()
                 archivo.seek(0)  # Resetear para el procesamiento
 
-                # Procesar archivo según formato elegido
+                # Auto-detectar formato SIMAT Anexo 6A a partir de la firma de columnas
+                try:
+                    df_peek = pd.read_excel(archivo, nrows=0)
+                    cols_peek = set(df_peek.columns.str.strip().str.upper())
+                    if ProcesamientoConfig.COLUMNAS_FIRMA_SIMAT_6A.issubset(cols_peek):
+                        tipo_procesamiento = ProcesamientoConfig.TIPO_PROCESAMIENTO_SIMAT_6A
+                    archivo.seek(0)
+                except Exception:
+                    archivo.seek(0)
+
+                FacturacionLogger.log_procesamiento_inicio(archivo.name, f"etapa_1_{tipo_procesamiento}", focalizacion)
+
+                # Procesar archivo según formato detectado/derivado
                 if tipo_procesamiento == ProcesamientoConfig.TIPO_PROCESAMIENTO_NUEVO:
                     resultado = procesamiento_service.procesar_excel_nuevo_formato(archivo, focalizacion)
+                elif tipo_procesamiento == ProcesamientoConfig.TIPO_PROCESAMIENTO_SIMAT_6A:
+                    resultado = procesamiento_service.procesar_excel_simat_6a(archivo, focalizacion, municipio)
                 elif tipo_procesamiento in [ProcesamientoConfig.TIPO_PROCESAMIENTO_YUMBO, ProcesamientoConfig.TIPO_PROCESAMIENTO_BUGA, ProcesamientoConfig.TIPO_PROCESAMIENTO_ORIGINAL]:
-                    # Todos estos usan el formato original
                     resultado = procesamiento_service.procesar_excel_original(archivo, focalizacion)
                 else:
                     # Fallback al formato original

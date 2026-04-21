@@ -174,6 +174,26 @@ class ExcelProcessor:
         return es_valido, errores
     
     @staticmethod
+    def validar_estructura_simat_6a(df: pd.DataFrame) -> Tuple[bool, List[str]]:
+        """
+        Valida la estructura del formato Anexo 6A exportado de SIMAT.
+
+        Returns:
+            Tuple[bool, List[str]]: (es_valido, errores)
+        """
+        errores = []
+        cols = set(df.columns.str.strip().str.upper())
+
+        faltantes = [c for c in ProcesamientoConfig.COLUMNAS_SIMAT_6A if c not in cols]
+        if faltantes:
+            errores.append(f"Columnas requeridas faltantes: {', '.join(sorted(faltantes))}")
+
+        if 'NRO_DOCUMENTO' in cols and df['NRO_DOCUMENTO'].dropna().empty:
+            errores.append("La columna NRO_DOCUMENTO está completamente vacía")
+
+        return len(errores) == 0, errores
+
+    @staticmethod
     def obtener_informacion_archivo(df: pd.DataFrame) -> dict:
         """
         Obtiene información básica del archivo procesado.

@@ -176,6 +176,65 @@ class ProcesamientoService:
         except Exception as e:
             return self._preparar_resultado_error(str(e))
     
+    def procesar_excel_simat_6a(
+        self,
+        archivo: UploadedFile,
+        focalizacion: str,
+        municipio: str = '',
+    ) -> Dict[str, Any]:
+        """
+        Procesa el formato Anexo 6A exportado de SIMAT (BUGA / YUMBO).
+
+        El matching de sedes es exacto por cod_dane (CONS_SEDE), sin fuzzy matching.
+        La lógica de complementos se aplica igual que el formato original.
+        """
+        try:
+            # 1. Validar archivo
+            if not self.excel_processor.validar_archivo_excel(archivo):
+                raise ArchivoInvalidoException(MensajesConfig.ARCHIVO_INVALIDO)
+
+            # 2. Leer archivo Excel
+            df = self.excel_processor.leer_excel(archivo)
+
+            # 3. Validar estructura SIMAT
+            es_valido, errores = self.excel_processor.validar_estructura_simat_6a(df)
+            if not es_valido:
+                raise ColumnasFaltantesException(errores)
+
+            # 4. Procesar: transforma, hace el matching por cod_dane y aplica complementos
+            df_procesado, sedes_invalidas, mapeo_sedes = (
+                self.data_transformer.procesar_formato_simat_6a(df, focalizacion)
+            )
+
+            # 5. Municipios del DataFrame procesado (para estadísticas)
+            municipios = df_procesado['ETC'].dropna().unique().tolist()
+
+            # 6. Generar estadísticas por sede
+            estadisticas = self.data_transformer.generar_estadisticas_por_sede(
+                df_procesado,
+                mapeo_sedes,
+                municipios,
+            )
+
+            # 7. Construir resultado_validacion compatible con _preparar_resultado_exitoso
+            resultado_validacion = {
+                'sedes_invalidas': sedes_invalidas,
+                'coincidencias_parciales': [],
+                'coincidencias_genericas': [],
+                'mapeo_sedes': mapeo_sedes,
+                'sedes_validas': list(mapeo_sedes.keys()),
+            }
+
+            return self._preparar_resultado_exitoso(
+                df_procesado,
+                resultado_validacion,
+                estadisticas,
+                ProcesamientoConfig.TIPO_PROCESAMIENTO_SIMAT_6A,
+            )
+
+        except Exception as e:
+            return self._preparar_resultado_error(str(e))
+
     def _preparar_resultado_exitoso(
         self,
         df: pd.DataFrame,

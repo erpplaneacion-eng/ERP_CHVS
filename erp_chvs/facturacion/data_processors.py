@@ -278,7 +278,13 @@ class DataTransformer:
                 lambda x: None if isinstance(x, (datetime.datetime, datetime.date)) else x
             )
             df[f'{columna_grado}_clean'] = grado_col.fillna(0).astype(int).astype(str)
+            # Aplicar mapeo BD; para códigos SIMAT no presentes usar fallback manual
             df['nivel_grados'] = df[f'{columna_grado}_clean'].map(mapeo_niveles)
+            mask_sin_nivel = df['nivel_grados'].isna()
+            if mask_sin_nivel.any():
+                df.loc[mask_sin_nivel, 'nivel_grados'] = df.loc[mask_sin_nivel, f'{columna_grado}_clean'].map(
+                    ProcesamientoConfig.FALLBACK_NIVEL_GRADO_SIMAT
+                )
             
             # Combinar GRADO y GRUPO para consistencia
             if 'GRUPO' in df.columns:
@@ -296,6 +302,122 @@ class DataTransformer:
         except Exception as e:
             raise ProcesamientoException(f"Error al procesar grados escolares: {str(e)}")
     
+    @staticmethod
+    def procesar_formato_simat_6a(df: pd.DataFrame, focalizacion: str) -> tuple:
+        """
+        Procesa el formato Anexo 6A exportado directamente de SIMAT.
+
+        Diferencias clave con el formato original:
+        - Sedes identificadas por CONS_SEDE (cod_dane numérico), no por nombre.
+        - TIPO_JORNADA como entero (2=Mañana, 3=Tarde, 6=Única). Jornadas 4 y 5 se excluyen.
+        - GRADO en códigos SIMAT (puede ser -2, -1, 0, 1-11, 21-26, 99).
+        - Sin columnas de complemento alimentario; se derivan de la jornada.
+
+        Returns:
+            Tuple (df_procesado, sedes_invalidas_list, mapeo_sedes_dict)
+        """
+        try:
+            from planeacion.models import SedesEducativas
+
+            # --- PASO 1: Normalizar nombres de columna (strip + mayúsculas) ---
+            df.columns = df.columns.str.strip().str.upper()
+
+            # --- PASO 2: Filtrar solo jornadas PAE ---
+            df['TIPO_JORNADA'] = pd.to_numeric(df['TIPO_JORNADA'], errors='coerce')
+            df = df[df['TIPO_JORNADA'].isin(ProcesamientoConfig.JORNADAS_PAE_SIMAT)].copy()
+            if df.empty:
+                raise DatosInvalidosException(
+                    "No se encontraron filas con jornadas PAE (2=Mañana, 3=Tarde, 6=Única)"
+                )
+
+            # --- PASO 3: Derivar ETC desde MUN_CODIGO ---
+            df['MUN_CODIGO'] = pd.to_numeric(df['MUN_CODIGO'], errors='coerce').astype('Int64')
+            df['ETC'] = df['MUN_CODIGO'].map(ProcesamientoConfig.MAPEO_MUNICIPIO_CODIGO)
+
+            # --- PASO 4: Matching de sedes por DANE_ANTERIOR (código sede física en BD) ---
+            # DANE_ANTERIOR contiene el código de sede física (12-14 dígitos) que coincide con
+            # SedesEducativas.cod_dane. Cada CONS_SEDE tiene su propio DANE_ANTERIOR, por lo que
+            # este matching resuelve a nivel de sede física (43 sedes) en lugar de IE (13 IEs).
+            df['DANE_ANTERIOR_INT'] = pd.to_numeric(df['DANE_ANTERIOR'], errors='coerce').astype('Int64')
+            codigos_dane_ant = df['DANE_ANTERIOR_INT'].dropna().astype(int).unique().tolist()
+
+            sedes_qs = SedesEducativas.objects.filter(
+                cod_dane__in=codigos_dane_ant
+            ).select_related('codigo_ie').values(
+                'cod_dane', 'nombre_sede_educativa', 'codigo_ie__nombre_institucion'
+            )
+            # Si hay varias filas BD para el mismo cod_dane, usar la primera
+            mapeo_por_cod = {}
+            for s in sedes_qs:
+                if s['cod_dane'] not in mapeo_por_cod:
+                    mapeo_por_cod[s['cod_dane']] = s
+
+            df['SEDE'] = df['DANE_ANTERIOR_INT'].map(
+                lambda x: mapeo_por_cod.get(x, {}).get('nombre_sede_educativa') if pd.notna(x) else None
+            )
+            df['INSTITUCION'] = df['DANE_ANTERIOR_INT'].map(
+                lambda x: mapeo_por_cod.get(x, {}).get('codigo_ie__nombre_institucion') if pd.notna(x) else None
+            )
+
+            # Sedes no encontradas en BD (por DANE_ANTERIOR)
+            sedes_invalidas = (
+                df[df['SEDE'].isna()]['DANE_ANTERIOR'].astype(str).unique().tolist()
+            )
+            df = df[df['SEDE'].notna()].copy()
+
+            if df.empty:
+                raise DatosInvalidosException(
+                    "Ningún DANE_ANTERIOR del archivo fue encontrado en la base de datos"
+                )
+
+            # mapeo_sedes para generar_estadisticas_por_sede (identidad: nombre BD → nombre BD)
+            mapeo_sedes = {row: row for row in df['SEDE'].unique()}
+
+            # --- PASO 5: Renombrar columnas al esquema interno ---
+            df.rename(columns={
+                'ANO_INF': 'ANO',
+                'NRO_DOCUMENTO': 'DOC',
+                'TIPO_DOCUMENTO': 'TIPODOC',
+                'TIPO_JORNADA': 'JORNADA',
+                'ZONA': 'ZONA_SEDE',
+            }, inplace=True)
+
+            # --- PASO 6: Mapear JORNADA numérica → texto para _aplicar_logica_jornadas ---
+            df['JORNADA'] = df['JORNADA'].map(ProcesamientoConfig.MAPEO_TIPO_JORNADA_SIMAT)
+
+            # --- PASO 7: Columnas fijas ---
+            df['ESTADO'] = ProcesamientoConfig.ESTADO_MATRICULADO
+            df['SECTOR'] = ProcesamientoConfig.SECTOR_OFICIAL
+            df['focalizacion'] = focalizacion
+
+            # --- PASO 8: TIPODOC como string (código numérico SIMAT) ---
+            df['TIPODOC'] = df['TIPODOC'].astype('Int64').astype(str).replace('<NA>', None)
+
+            # --- PASO 9: ETNIA como string nullable (0 = sin etnia → None) ---
+            df['ETNIA'] = pd.to_numeric(df['ETNIA'], errors='coerce').astype('Int64').astype(str)
+            df['ETNIA'] = df['ETNIA'].replace({'0': None, '<NA>': None})
+
+            # --- PASO 10: GENERO — mantener F/M del archivo ---
+            df['GENERO'] = df['GENERO'].astype(str).str.strip().str.upper()
+
+            # --- PASO 11: Procesar grados (soporta códigos SIMAT negativos y >11) ---
+            df = DataTransformer._procesar_grados_escolares(df)
+
+            # --- PASO 12: Aplicar lógica de complementos ---
+            df = DataTransformer._aplicar_logica_jornadas(df)
+
+            # Limpiar columnas auxiliares
+            for col_aux in ['DANE_ANTERIOR_INT']:
+                if col_aux in df.columns:
+                    df.drop(columns=[col_aux], inplace=True)
+
+            return df, sedes_invalidas, mapeo_sedes
+
+        except (DatosInvalidosException, ProcesamientoException):
+            raise
+        except Exception as e:
+            raise ProcesamientoException(f"Error al procesar formato SIMAT Anexo 6A: {str(e)}")
+
     @staticmethod
     def _aplicar_logica_jornadas(df: pd.DataFrame) -> pd.DataFrame:
         """
