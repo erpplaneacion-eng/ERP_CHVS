@@ -220,6 +220,8 @@ def api_detalle_registro(request, pk):
             'estado_contable': f.estado_contable,
             'referencia_appd': f.referencia_appd,
             'numero_orden_compra': f.numero_orden_compra,
+            'metodo_pago': f.metodo_pago,
+            'metodo_pago_display': f.get_metodo_pago_display() if f.metodo_pago else '',
         })
 
     data = {

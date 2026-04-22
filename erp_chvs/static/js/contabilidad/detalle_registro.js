@@ -140,6 +140,8 @@ class DetalleRegistroManager {
         const grupoObs = document.getElementById('grupo-observacion-retraso');
         if (obsRetraso) obsRetraso.value = '';
         if (grupoObs) grupoObs.style.display = 'none';
+        const metodoPago = document.getElementById('factura-metodo-pago');
+        if (metodoPago) metodoPago.value = '';
 
         if (modal) modal.style.display = 'block';
     }
@@ -222,7 +224,7 @@ class DetalleRegistroManager {
         const esEditable = this.estadosEditables.includes(REGISTRO_ESTADO);
         const esDevuelto = REGISTRO_ESTADO === 'DEVUELTO_COMPRAS';
 
-        const totalColumnas = REGISTRO_TIPO === 'MATERIAS_PRIMAS' ? 13 : 10;
+        const totalColumnas = REGISTRO_TIPO === 'MATERIAS_PRIMAS' ? 13 : REGISTRO_TIPO === 'SERVICIOS' ? 11 : 10;
 
         if (!facturas.length) {
             tbody.innerHTML = `<tr><td colspan="${totalColumnas}" class="text-center text-muted">Sin facturas agregadas aún.</td></tr>`;
@@ -289,6 +291,10 @@ class DetalleRegistroManager {
                 // Solo las facturas DEVUELTA pueden eliminarse en estado DEVUELTO_COMPRAS
                 const puedeEliminar = esEditable && (REGISTRO_ESTADO === 'BORRADOR' || f.estado_compras === 'DEVUELTA');
 
+                const celdaMetodoPago = REGISTRO_TIPO === 'SERVICIOS'
+                    ? `<td>${f.metodo_pago_display || '<span class="text-muted">—</span>'}</td>`
+                    : '';
+
                 const celdasMateriasPrimas = REGISTRO_TIPO === 'MATERIAS_PRIMAS' ? `
                     <td style="font-size:12px;">${f.estado_contable || '—'}</td>
                     <td style="font-size:12px;">${f.referencia_appd || '—'}</td>
@@ -309,6 +315,7 @@ class DetalleRegistroManager {
                     <td style="text-align:center;">${indicadorEmision}</td>
                     <td>${fechaRecepcion}</td>
                     <td>${diasRetencionCell}</td>
+                    ${celdaMetodoPago}
                     ${celdasMateriasPrimas}
                     <td>
                         ${puedeEliminar ? `<button class="btn btn-sm btn-danger btn-eliminar-factura" data-id="${f.id}"><i class="fas fa-trash"></i></button>` : '—'}
@@ -403,6 +410,7 @@ class DetalleRegistroManager {
         const fecha_factura = document.getElementById('factura-fecha')?.value;
         const fecha_recepcion_lider = document.getElementById('factura-recepcion')?.value || null;
         const observacion_retraso = document.getElementById('factura-observacion-retraso')?.value?.trim() || '';
+        const metodo_pago = document.getElementById('factura-metodo-pago')?.value || '';
 
         if (!numero_factura || !proveedor || !concepto || !valor || !fecha_factura) {
             this.saving = false;
@@ -418,7 +426,7 @@ class DetalleRegistroManager {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCookie('csrftoken'),
                 },
-                body: JSON.stringify({ numero_factura, proveedor, concepto, valor: parseFloat(valor), fecha_factura, fecha_recepcion_lider, observacion_retraso }),
+                body: JSON.stringify({ numero_factura, proveedor, concepto, valor: parseFloat(valor), fecha_factura, fecha_recepcion_lider, observacion_retraso, metodo_pago }),
             });
             const data = await response.json();
             if (data.success) {

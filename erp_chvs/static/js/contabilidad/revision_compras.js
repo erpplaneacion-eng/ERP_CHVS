@@ -157,7 +157,7 @@ class RevisionComprasManager {
         }
 
         if (!facturas.length) {
-            tbody.innerHTML = `<tr><td colspan="${esObservado ? 8 : 7}" class="text-center text-muted">Sin facturas.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${esObservado ? 9 : 8}" class="text-center text-muted">Sin facturas.</td></tr>`;
         } else {
             const fragment = document.createDocumentFragment();
             facturas.forEach((f, idx) => {
@@ -206,6 +206,7 @@ class RevisionComprasManager {
                     <td>${valor}</td>
                     <td>${fecha}</td>
                     <td style="text-align:center;">${indicadorEmision}</td>
+                    <td style="font-size:12px;">${f.metodo_pago_display || '<span class="text-muted">—</span>'}</td>
                     ${obsContaHtml}
                 `;
                 fragment.appendChild(tr);

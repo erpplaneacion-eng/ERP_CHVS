@@ -84,6 +84,9 @@
                     <th title="Días entre fecha de la factura y cuándo fue cargada al sistema">Retraso Carga</th>
                     <th>Recepción Líder</th>
                     <th>Días Retención</th>
+                    {% if registro.tipo == 'SERVICIOS' %}
+                    <th>Método de Pago</th>
+                    {% endif %}
                     {% if registro.tipo == 'MATERIAS_PRIMAS' %}
                     <th>Estado Contable</th>
                     <th>Ref. APPD</th>
@@ -99,7 +102,7 @@
                 <tr>
                     <td colspan="4" style="text-align:right; font-weight:600; padding: 12px 16px;">Total:</td>
                     <td id="valor-total" style="font-weight:700; padding: 12px 16px;">$0</td>
-                    <td colspan="{% if registro.tipo == 'MATERIAS_PRIMAS' %}8{% else %}5{% endif %}"></td>
+                    <td colspan="{% if registro.tipo == 'MATERIAS_PRIMAS' %}8{% elif registro.tipo == 'SERVICIOS' %}6{% else %}5{% endif %}"></td>
                 </tr>
             </tfoot>
         </table>
@@ -168,6 +171,16 @@
                 <input type="date" id="factura-recepcion">
                 <small class="form-hint">¿Cuándo recibió físicamente este documento?</small>
             </div>
+            {% if registro.tipo == 'SERVICIOS' %}
+            <div class="form-group">
+                <label for="factura-metodo-pago">Método de Pago</label>
+                <select id="factura-metodo-pago">
+                    <option value="">— Seleccione —</option>
+                    <option value="CREDITO">Crédito</option>
+                    <option value="CONTADO">Contado</option>
+                </select>
+            </div>
+            {% endif %}
             <div class="form-group" id="grupo-observacion-retraso" style="display:none;">
                 <label for="factura-observacion-retraso">
                     <i class="fas fa-info-circle" style="color:#d97706;"></i>

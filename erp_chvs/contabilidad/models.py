@@ -167,6 +167,16 @@ class Factura(models.Model):
         verbose_name="Tiene Formato de Devolución",
         help_text="Indica si esta factura acompaña un formato físico de devolución de mercancía."
     )
+    METODO_PAGO_CHOICES = [
+        ('CREDITO', 'Crédito'),
+        ('CONTADO', 'Contado'),
+    ]
+    metodo_pago = models.CharField(
+        max_length=10,
+        choices=METODO_PAGO_CHOICES,
+        blank=True,
+        verbose_name="Método de Pago",
+    )
 
     class Meta:
         db_table = 'contabilidad_facturas'

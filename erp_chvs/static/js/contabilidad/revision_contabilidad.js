@@ -117,8 +117,9 @@ class RevisionContabilidadManager {
 
         const puedeActuar = REGISTRO_ESTADO === 'APROBADO_COMPRAS';
 
+        const extraMetodoPago = REGISTRO_TIPO === 'SERVICIOS' ? 1 : 0;
         if (!facturas.length) {
-            tbody.innerHTML = `<tr><td colspan="${puedeActuar ? 7 : 6}" class="text-center text-muted">Sin facturas.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${(puedeActuar ? 7 : 6) + extraMetodoPago}" class="text-center text-muted">Sin facturas.</td></tr>`;
         } else {
             const fragment = document.createDocumentFragment();
             let decididas = 0;
@@ -170,6 +171,7 @@ class RevisionContabilidadManager {
                     <td>${f.concepto}</td>
                     <td>${valor}</td>
                     <td>${fecha}</td>
+                    ${REGISTRO_TIPO === 'SERVICIOS' ? `<td style="font-size:12px;">${f.metodo_pago_display || '<span class="text-muted">—</span>'}</td>` : ''}
                     ${puedeActuar ? `<td style="text-align:center;">${accionHtml}</td>` : ''}
                 `;
                 fragment.appendChild(tr);

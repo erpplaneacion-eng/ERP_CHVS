@@ -52,6 +52,9 @@
                     <th>Concepto</th>
                     <th>Valor</th>
                     <th>Fecha Factura</th>
+                    {% if registro.tipo == 'SERVICIOS' %}
+                    <th>Método de Pago</th>
+                    {% endif %}
                     {% if registro.estado == 'APROBADO_COMPRAS' %}
                     <th style="width:140px;">Estado / Acción</th>
                     {% endif %}
