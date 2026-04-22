@@ -1,7 +1,7 @@
 // mis_registros.js — Gestión de registros contables del líder
 
 function estadoDisplayEfectivo(r) {
-    if (r.tipo === 'MATERIAS_PRIMAS' && r.estado === 'APROBADO_COMPRAS') {
+    if ((r.tipo === 'MATERIAS_PRIMAS' || r.tipo === 'SERVICIOS_FIJOS') && r.estado === 'APROBADO_COMPRAS') {
         return 'Enviado a Contabilidad';
     }
     return r.estado_display;

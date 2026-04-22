@@ -200,6 +200,7 @@ def procesar_listados_view(request):
                         'archivo_name': archivo.name,
                         'focalizacion': focalizacion,
                         'programa_id': programa_id,
+                        'municipio': municipio,
                         'tipo_procesamiento': tipo_procesamiento,
                         'total_registros': resultado.get('total_registros', 0),
                         'dataframe_procesado_json': df_json,  # DataFrame ya procesado
@@ -312,7 +313,8 @@ def procesar_listados_view(request):
 
                 RegistroActividad.registrar(
                     request, 'facturacion', 'guardar_listados',
-                    f"Archivo: {archivo_name} | Municipio: {datos_etapa_1.get('tipo_procesamiento', '')} | "
+                    f"Archivo: {archivo_name} | Municipio: {datos_etapa_1.get('municipio', '')} | "
+                    f"Tipo de procesamiento: {tipo_procesamiento} | "
                     f"Focalización: {focalizacion} | Guardados en BD: {contexto['registros_guardados_bd']}",
                     exitoso=resultado.get('success', False)
                 )

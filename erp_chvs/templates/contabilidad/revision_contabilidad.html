@@ -17,7 +17,7 @@
         </div>
         <div class="header-actions">
             <span class="estado-badge estado-badge-{{ registro.estado|lower|cut:'_' }}">
-                {% if registro.tipo == 'MATERIAS_PRIMAS' and registro.estado == 'APROBADO_COMPRAS' %}
+                {% if registro.estado == 'APROBADO_COMPRAS' and registro.tipo != 'SERVICIOS' %}
                     Enviado a Contabilidad
                 {% else %}
                     {{ registro.get_estado_display }}
@@ -31,7 +31,7 @@
         <p><strong>Descripción:</strong> {{ registro.descripcion|default:"(Sin descripción)" }}</p>
         <p><strong>Fecha de creación:</strong> {{ registro.fecha_creacion|date:"d/m/Y H:i" }}</p>
         {% if registro.fecha_aprobacion_compras %}
-        <p><strong>{% if registro.tipo == 'MATERIAS_PRIMAS' %}Recibido del Líder:{% else %}Aprobado por Compras:{% endif %}</strong> {{ registro.fecha_aprobacion_compras|date:"d/m/Y H:i" }}</p>
+        <p><strong>{% if registro.tipo == 'MATERIAS_PRIMAS' or registro.tipo == 'SERVICIOS_FIJOS' %}Recibido del Líder:{% else %}Aprobado por Compras:{% endif %}</strong> {{ registro.fecha_aprobacion_compras|date:"d/m/Y H:i" }}</p>
         {% endif %}
     </div>
 
@@ -52,7 +52,7 @@
                     <th>Concepto</th>
                     <th>Valor</th>
                     <th>Fecha Factura</th>
-                    {% if registro.tipo == 'SERVICIOS' %}
+                    {% if registro.tipo == 'SERVICIOS' or registro.tipo == 'SERVICIOS_FIJOS' %}
                     <th>Método de Pago</th>
                     <th>Tipo de Contrato</th>
                     {% endif %}
@@ -76,7 +76,7 @@
     </div>
 
     <!-- Checklist por factura -->
-    <h3><i class="fas fa-tasks"></i> {% if registro.tipo == 'MATERIAS_PRIMAS' %}Checklist de Contabilidad{% else %}Resultado del Checklist de Compras{% endif %}</h3>
+    <h3><i class="fas fa-tasks"></i> {% if registro.tipo == 'MATERIAS_PRIMAS' or registro.tipo == 'SERVICIOS_FIJOS' %}Checklist de Contabilidad{% else %}Resultado del Checklist de Compras{% endif %}</h3>
     <div id="checklist-facturas-container" style="margin-bottom: 24px;">
         <p class="text-center text-muted">Cargando checklist...</p>
     </div>
@@ -86,20 +86,20 @@
     <div id="modal-devolver-contabilidad" class="modal-overlay" style="display:none;">
         <div class="modal-content" style="max-width:480px;">
             <div class="modal-header modal-header-danger">
-                <h3><i class="fas fa-undo-alt"></i> {% if registro.tipo == 'MATERIAS_PRIMAS' %}Devolver Factura al Líder{% else %}Devolver Factura a Compras{% endif %}</h3>
+                <h3><i class="fas fa-undo-alt"></i> {% if registro.tipo == 'MATERIAS_PRIMAS' or registro.tipo == 'SERVICIOS_FIJOS' %}Devolver Factura al Líder{% else %}Devolver Factura a Compras{% endif %}</h3>
                 <span class="close" id="btn-cerrar-modal-devolver-cont">&times;</span>
             </div>
             <div class="modal-body">
                 <p id="modal-devolver-cont-desc" style="color:#6b7280; margin-bottom:12px;"></p>
                 <div class="form-group">
                     <label for="motivo-devolucion-contabilidad">Motivo de devolución <span style="color:#e74c3c;">*</span></label>
-                    <textarea id="motivo-devolucion-contabilidad" rows="4" placeholder="Explique por qué se devuelve esta factura {% if registro.tipo == 'MATERIAS_PRIMAS' %}al Líder{% else %}a Compras{% endif %}..."></textarea>
+                    <textarea id="motivo-devolucion-contabilidad" rows="4" placeholder="Explique por qué se devuelve esta factura {% if registro.tipo == 'MATERIAS_PRIMAS' or registro.tipo == 'SERVICIOS_FIJOS' %}al Líder{% else %}a Compras{% endif %}..."></textarea>
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="btn-cancelar-devolver-cont">Cancelar</button>
                 <button class="btn btn-danger" id="btn-confirmar-devolver-cont">
-                    <i class="fas fa-undo-alt"></i> {% if registro.tipo == 'MATERIAS_PRIMAS' %}Devolver al Líder{% else %}Devolver a Compras{% endif %}
+                    <i class="fas fa-undo-alt"></i> {% if registro.tipo == 'MATERIAS_PRIMAS' or registro.tipo == 'SERVICIOS_FIJOS' %}Devolver al Líder{% else %}Devolver a Compras{% endif %}
                 </button>
             </div>
         </div>
@@ -110,7 +110,7 @@
         <h4><i class="fas fa-gavel"></i> Finalizar Revisión de Contabilidad</h4>
         <p style="color:#6b7280; font-size:13px; margin-bottom:16px;">
             Aprueba o devuelve cada factura individualmente, luego haz clic en <strong>Finalizar Revisión</strong>.
-            Las facturas aprobadas avanzan al cierre; las devueltas regresan a {% if registro.tipo == 'MATERIAS_PRIMAS' %}el Líder{% else %}Compras{% endif %} para corrección.
+            Las facturas aprobadas avanzan al cierre; las devueltas regresan a {% if registro.tipo == 'MATERIAS_PRIMAS' or registro.tipo == 'SERVICIOS_FIJOS' %}el Líder{% else %}Compras{% endif %} para corrección.
         </p>
         <button class="btn btn-success" id="btn-finalizar-revision" style="min-width:200px;">
             <i class="fas fa-check-circle"></i> Finalizar Revisión

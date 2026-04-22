@@ -316,19 +316,20 @@ class ContabilidadService:
                 estado_compras='PENDIENTE', comentario_devolucion=''
             )
 
-        # MATERIAS_PRIMAS salta Compras completamente → APROBADO_COMPRAS directo
-        if registro.tipo == 'MATERIAS_PRIMAS':
+        # MATERIAS_PRIMAS y SERVICIOS_FIJOS saltan Compras → APROBADO_COMPRAS directo
+        if registro.tipo in ('MATERIAS_PRIMAS', 'SERVICIOS_FIJOS'):
             now = timezone.now()
             registro.fecha_envio = now
             registro.fecha_aprobacion_compras = now
             registro.estado = 'APROBADO_COMPRAS'
             registro.save()
+            tipo_display = registro.get_tipo_display()
             HistorialEstado.objects.create(
                 registro=registro,
                 accion='ENVIO',
                 estado_anterior='BORRADOR',
                 estado_nuevo='APROBADO_COMPRAS',
-                comentario='Registro de Materias Primas enviado directamente a Contabilidad (sin revisión de Compras).',
+                comentario=f'Registro de {tipo_display} enviado directamente a Contabilidad (sin revisión de Compras).',
                 usuario=usuario,
             )
             return registro
@@ -608,19 +609,20 @@ class ContabilidadService:
         Para MATERIAS_PRIMAS, los ítems de formato devolución solo se asignan
         a facturas que tengan tiene_formato_devolucion=True.
         """
-        # Ítems base: solo los del tipo exacto del registro.
-        # SERVICIOS → ítems SERVICIOS | MATERIAS_PRIMAS → ítems MATERIAS_PRIMAS
+        # SERVICIOS_FIJOS comparte los mismos ítems de checklist que SERVICIOS
+        tipo_checklist = 'SERVICIOS' if registro.tipo == 'SERVICIOS_FIJOS' else registro.tipo
+
         items_base = list(ItemChecklist.objects.filter(
             activo=True,
             es_formato_devolucion=False,
-            tipo_proceso=registro.tipo,
+            tipo_proceso=tipo_checklist,
         ))
 
-        # Ítems condicionales de formato devolución (solo para MATERIAS_PRIMAS)
+        # Ítems condicionales de formato devolución
         items_devolucion = list(ItemChecklist.objects.filter(
             activo=True,
             es_formato_devolucion=True,
-            tipo_proceso=registro.tipo,
+            tipo_proceso=tipo_checklist,
         ))
 
         # Solo facturas que están siendo revisadas en esta ronda
@@ -656,10 +658,11 @@ class ContabilidadService:
         factura.save(update_fields=['tiene_formato_devolucion'])
 
         if factura.tiene_formato_devolucion:
+            tipo_checklist_dev = 'SERVICIOS' if factura.registro.tipo == 'SERVICIOS_FIJOS' else factura.registro.tipo
             items_dev = list(ItemChecklist.objects.filter(
                 activo=True,
                 es_formato_devolucion=True,
-                tipo_proceso=factura.registro.tipo,
+                tipo_proceso=tipo_checklist_dev,
             ))
             verificaciones = [
                 VerificacionChecklist(factura=factura, item=item, estado='PENDIENTE')
@@ -711,12 +714,13 @@ class ContabilidadService:
             raise ValueError("Solo se puede aprobar facturas en estado APROBADO_COMPRAS.")
         if factura.estado_contabilidad != 'PENDIENTE':
             raise ValueError("Esta factura ya fue decidida por Contabilidad.")
-        if factura.registro.tipo == 'MATERIAS_PRIMAS':
+        if factura.registro.tipo in ('MATERIAS_PRIMAS', 'SERVICIOS_FIJOS'):
+            tipo_checklist = 'SERVICIOS' if factura.registro.tipo == 'SERVICIOS_FIJOS' else 'MATERIAS_PRIMAS'
             pendientes = VerificacionChecklist.objects.filter(
                 factura=factura,
                 estado='PENDIENTE',
                 item__obligatorio=True,
-                item__tipo_proceso='MATERIAS_PRIMAS',
+                item__tipo_proceso=tipo_checklist,
             ).count()
             if pendientes > 0:
                 raise ValueError(
@@ -1046,11 +1050,11 @@ class ContabilidadService:
                 'APROBADO_COMPRAS', 'OBSERVADO_CONTABILIDAD',
                 'APROBADO_CONTABILIDAD', 'CERRADO',
             )
-        # MATERIAS_PRIMAS nunca pasa por Compras — excluir siempre
+        # MATERIAS_PRIMAS y SERVICIOS_FIJOS nunca pasan por Compras — excluir siempre
         return RegistroContable.objects.filter(
             estado__in=estados
         ).exclude(
-            tipo='MATERIAS_PRIMAS'
+            tipo__in=('MATERIAS_PRIMAS', 'SERVICIOS_FIJOS')
         ).select_related('lider').order_by('-fecha_creacion')
 
     @staticmethod
@@ -1200,8 +1204,8 @@ class ContabilidadService:
                         # SERVICIOS: T2 = tiempo que el líder tardó en corregir tras devolución de Compras
                         tiempo_lider_t2_h = round(horas_laborales_entre(r.fecha_devolucion_compras, r.fecha_reenvio), 1)
                         tiempo_lider_h = round(tiempo_lider_t1_h + tiempo_lider_t2_h, 1)
-                    elif r.tipo == 'MATERIAS_PRIMAS' and r.fecha_observacion_contabilidad and r.fecha_respuesta_compras:
-                        # MATERIAS_PRIMAS: T2 = tiempo que el líder tardó en responder observación de Contabilidad
+                    elif r.tipo in ('MATERIAS_PRIMAS', 'SERVICIOS_FIJOS') and r.fecha_observacion_contabilidad and r.fecha_respuesta_compras:
+                        # MATERIAS_PRIMAS/SERVICIOS_FIJOS: T2 = tiempo que el líder tardó en responder observación de Contabilidad
                         tiempo_lider_t2_h = round(horas_laborales_entre(r.fecha_observacion_contabilidad, r.fecha_respuesta_compras), 1)
                         tiempo_lider_h = round(tiempo_lider_t1_h + tiempo_lider_t2_h, 1)
                     else:
@@ -1211,7 +1215,7 @@ class ContabilidadService:
                 tiempo_compras_t1_h = None
                 tiempo_compras_t2_h = None
                 tiempo_compras_t3_h = None
-                # MATERIAS_PRIMAS nunca pasa por Compras → tiempo siempre None
+                # MATERIAS_PRIMAS y SERVICIOS_FIJOS nunca pasan por Compras → tiempo siempre None
                 if r.tipo == 'SERVICIOS' and r.fecha_aprobacion_compras and r.fecha_envio:
                     if r.fecha_devolucion_compras and r.fecha_reenvio:
                         # Con devolución: T1 = envío líder → devolución, T2 = reenvío → aprobación

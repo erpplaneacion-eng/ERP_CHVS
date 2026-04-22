@@ -117,10 +117,10 @@ class DetalleRegistroManager {
         const btnEnviar = document.getElementById('btn-enviar');
         if (btnEnviar) btnEnviar.addEventListener('click', () => this.enviar());
 
-        // Sección de respuesta a Contabilidad: solo MATERIAS_PRIMAS en OBSERVADO_CONTABILIDAD
+        // Sección de respuesta a Contabilidad: MATERIAS_PRIMAS o SERVICIOS_FIJOS en OBSERVADO_CONTABILIDAD
         const seccionResponder = document.getElementById('seccion-responder-conta');
         if (seccionResponder) {
-            const visible = REGISTRO_TIPO === 'MATERIAS_PRIMAS' && REGISTRO_ESTADO === 'OBSERVADO_CONTABILIDAD';
+            const visible = (REGISTRO_TIPO === 'MATERIAS_PRIMAS' || REGISTRO_TIPO === 'SERVICIOS_FIJOS') && REGISTRO_ESTADO === 'OBSERVADO_CONTABILIDAD';
             seccionResponder.style.display = visible ? '' : 'none';
         }
 
@@ -163,8 +163,8 @@ class DetalleRegistroManager {
                 if (REGISTRO_ESTADO === 'DEVUELTO_COMPRAS') {
                     this.cargarUltimaDevolucion();
                 }
-                // MATERIAS_PRIMAS observado por Contabilidad → mostrar banner de observación
-                if (REGISTRO_TIPO === 'MATERIAS_PRIMAS' && REGISTRO_ESTADO === 'OBSERVADO_CONTABILIDAD') {
+                // MATERIAS_PRIMAS / SERVICIOS_FIJOS observado por Contabilidad → mostrar banner de observación
+                if ((REGISTRO_TIPO === 'MATERIAS_PRIMAS' || REGISTRO_TIPO === 'SERVICIOS_FIJOS') && REGISTRO_ESTADO === 'OBSERVADO_CONTABILIDAD') {
                     this.cargarObservacionContabilidad();
                 }
             }
@@ -226,7 +226,7 @@ class DetalleRegistroManager {
         const esEditable = this.estadosEditables.includes(REGISTRO_ESTADO);
         const esDevuelto = REGISTRO_ESTADO === 'DEVUELTO_COMPRAS';
 
-        const totalColumnas = REGISTRO_TIPO === 'MATERIAS_PRIMAS' ? 13 : REGISTRO_TIPO === 'SERVICIOS' ? 12 : 10;
+        const totalColumnas = REGISTRO_TIPO === 'MATERIAS_PRIMAS' ? 13 : (REGISTRO_TIPO === 'SERVICIOS' || REGISTRO_TIPO === 'SERVICIOS_FIJOS') ? 12 : 10;
 
         if (!facturas.length) {
             tbody.innerHTML = `<tr><td colspan="${totalColumnas}" class="text-center text-muted">Sin facturas agregadas aún.</td></tr>`;
@@ -293,7 +293,7 @@ class DetalleRegistroManager {
                 // Solo las facturas DEVUELTA pueden eliminarse en estado DEVUELTO_COMPRAS
                 const puedeEliminar = esEditable && (REGISTRO_ESTADO === 'BORRADOR' || f.estado_compras === 'DEVUELTA');
 
-                const celdaMetodoPago = REGISTRO_TIPO === 'SERVICIOS'
+                const celdaMetodoPago = (REGISTRO_TIPO === 'SERVICIOS' || REGISTRO_TIPO === 'SERVICIOS_FIJOS')
                     ? `<td style="font-size:12px;">${f.metodo_pago_display || '<span class="text-muted">—</span>'}</td>
                        <td style="font-size:12px;">${f.tipo_contrato || '<span class="text-muted">—</span>'}</td>`
                     : '';
@@ -477,7 +477,7 @@ class DetalleRegistroManager {
         const horas = horasLaboralesEntre(FECHA_CREACION, new Date().toISOString());
         const superaLimite = horas > 5;
 
-        const destino = REGISTRO_TIPO === 'MATERIAS_PRIMAS' ? 'Contabilidad' : 'Compras';
+        const destino = (REGISTRO_TIPO === 'MATERIAS_PRIMAS' || REGISTRO_TIPO === 'SERVICIOS_FIJOS') ? 'Contabilidad' : 'Compras';
         const swalConfig = {
             title: `¿Enviar registro a ${destino}?`,
             icon: 'question',
@@ -518,7 +518,7 @@ class DetalleRegistroManager {
             });
             const data = await response.json();
             if (data.success) {
-                const destino = REGISTRO_TIPO === 'MATERIAS_PRIMAS' ? 'Contabilidad' : 'Compras';
+                const destino = (REGISTRO_TIPO === 'MATERIAS_PRIMAS' || REGISTRO_TIPO === 'SERVICIOS_FIJOS') ? 'Contabilidad' : 'Compras';
                 this.mostrarAlerta(`Registro enviado a ${destino} exitosamente.`, 'success');
                 setTimeout(() => window.location.reload(), 1500);
             } else {

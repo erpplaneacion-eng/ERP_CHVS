@@ -557,7 +557,8 @@ class PDFAsistenciaService:
                 total_raciones_pdf = len(estudiantes_filtrados)
                 nombre_sede_limpio_pdf = sede_obj.nombre_generico_sede.replace(' ', '_').replace('/', '_')
                 item_prefijo_pdf = f"{sede_obj.item}_" if sede_obj.item is not None else ""
-                nombre_archivo_pdf = f"Asistencia_{item_prefijo_pdf}{nombre_sede_limpio_pdf}_{str(codigo)}_{str(mes)}_{str(ano)}_{total_raciones_pdf}raciones.pdf"
+                codigo_archivo_pdf = f"{codigo}AM" if codigo in {"RCRI", "RCPS"} else str(codigo)
+                nombre_archivo_pdf = f"Asistencia_{item_prefijo_pdf}{nombre_sede_limpio_pdf}_{codigo_archivo_pdf}_{str(mes)}_{str(ano)}_{total_raciones_pdf}raciones.pdf"
 
                 zip_file.writestr(nombre_archivo_pdf, pdf_buffer.getvalue())
 

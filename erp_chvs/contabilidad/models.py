@@ -7,6 +7,7 @@ class RegistroContable(models.Model):
     TIPO_CHOICES = [
         ('SERVICIOS', 'Servicios'),
         ('MATERIAS_PRIMAS', 'Materias Primas'),
+        ('SERVICIOS_FIJOS', 'Servicios Fijos'),
     ]
 
     ESTADO_CHOICES = [

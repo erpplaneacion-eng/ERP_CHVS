@@ -117,7 +117,7 @@ class RevisionContabilidadManager {
 
         const puedeActuar = REGISTRO_ESTADO === 'APROBADO_COMPRAS';
 
-        const extraMetodoPago = REGISTRO_TIPO === 'SERVICIOS' ? 2 : 0;
+        const extraMetodoPago = (REGISTRO_TIPO === 'SERVICIOS' || REGISTRO_TIPO === 'SERVICIOS_FIJOS') ? 2 : 0;
         if (!facturas.length) {
             tbody.innerHTML = `<tr><td colspan="${(puedeActuar ? 7 : 6) + extraMetodoPago}" class="text-center text-muted">Sin facturas.</td></tr>`;
         } else {
@@ -171,7 +171,7 @@ class RevisionContabilidadManager {
                     <td>${f.concepto}</td>
                     <td>${valor}</td>
                     <td>${fecha}</td>
-                    ${REGISTRO_TIPO === 'SERVICIOS' ? `<td style="font-size:12px;">${f.metodo_pago_display || '<span class="text-muted">—</span>'}</td><td style="font-size:12px;">${f.tipo_contrato || '<span class="text-muted">—</span>'}</td>` : ''}
+                    ${(REGISTRO_TIPO === 'SERVICIOS' || REGISTRO_TIPO === 'SERVICIOS_FIJOS') ? `<td style="font-size:12px;">${f.metodo_pago_display || '<span class="text-muted">—</span>'}</td><td style="font-size:12px;">${f.tipo_contrato || '<span class="text-muted">—</span>'}</td>` : ''}
                     ${puedeActuar ? `<td style="text-align:center;">${accionHtml}</td>` : ''}
                 `;
                 fragment.appendChild(tr);
@@ -228,8 +228,8 @@ class RevisionContabilidadManager {
         });
         if (!result.isConfirmed) return;
 
-        // Para MATERIAS_PRIMAS: guardar checklist antes de aprobar
-        if (typeof REGISTRO_TIPO !== 'undefined' && REGISTRO_TIPO === 'MATERIAS_PRIMAS') {
+        // Para MATERIAS_PRIMAS / SERVICIOS_FIJOS: guardar checklist antes de aprobar
+        if (typeof REGISTRO_TIPO !== 'undefined' && (REGISTRO_TIPO === 'MATERIAS_PRIMAS' || REGISTRO_TIPO === 'SERVICIOS_FIJOS')) {
             const bloque = document.querySelector(`.checklist-factura-bloque[data-factura-id="${facturaId}"]`);
             if (bloque) await this.guardarChecklistFactura(facturaId, bloque);
         }
@@ -282,8 +282,8 @@ class RevisionContabilidadManager {
         }
         if (this.saving || !this.facturasPendienteDev) return;
 
-        // Para MATERIAS_PRIMAS: guardar checklist antes de devolver
-        if (typeof REGISTRO_TIPO !== 'undefined' && REGISTRO_TIPO === 'MATERIAS_PRIMAS') {
+        // Para MATERIAS_PRIMAS / SERVICIOS_FIJOS: guardar checklist antes de devolver
+        if (typeof REGISTRO_TIPO !== 'undefined' && (REGISTRO_TIPO === 'MATERIAS_PRIMAS' || REGISTRO_TIPO === 'SERVICIOS_FIJOS')) {
             const bloque = document.querySelector(`.checklist-factura-bloque[data-factura-id="${this.facturasPendienteDev}"]`);
             if (bloque) await this.guardarChecklistFactura(this.facturasPendienteDev, bloque);
         }
@@ -405,7 +405,8 @@ class RevisionContabilidadManager {
             return;
         }
 
-        const esEditable = typeof REGISTRO_TIPO !== 'undefined' && REGISTRO_TIPO === 'MATERIAS_PRIMAS'
+        const esEditable = typeof REGISTRO_TIPO !== 'undefined'
+            && (REGISTRO_TIPO === 'MATERIAS_PRIMAS' || REGISTRO_TIPO === 'SERVICIOS_FIJOS')
             && REGISTRO_ESTADO === 'APROBADO_COMPRAS';
         const coloresEstado = { OK: '#d1fae5', NO_OK: '#fee2e2', NA: '#f3f4f6', PENDIENTE: '#fef3c7' };
         const etiquetasEstado = { OK: 'OK', NO_OK: 'No OK', NA: 'N/A', PENDIENTE: 'Pendiente' };

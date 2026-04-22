@@ -26,7 +26,7 @@ def _estado_display_efectivo(registro):
     """Retorna el display del estado considerando el tipo de registro.
     Para MATERIAS_PRIMAS en estado APROBADO_COMPRAS, muestra 'Enviado a Contabilidad'
     porque Compras no intervino en ese proceso."""
-    if registro.tipo == 'MATERIAS_PRIMAS' and registro.estado == 'APROBADO_COMPRAS':
+    if registro.tipo in ('MATERIAS_PRIMAS', 'SERVICIOS_FIJOS') and registro.estado == 'APROBADO_COMPRAS':
         return 'Enviado a Contabilidad'
     return registro.get_estado_display()
 
@@ -124,8 +124,8 @@ def api_crear_registro(request):
         periodo_ano = int(data.get('periodo_ano', 0))
         descripcion = data.get('descripcion', '').strip()
 
-        if tipo not in ('SERVICIOS', 'MATERIAS_PRIMAS'):
-            return JsonResponse({'success': False, 'error': 'Tipo inválido. Use SERVICIOS o MATERIAS_PRIMAS.'})
+        if tipo not in ('SERVICIOS', 'MATERIAS_PRIMAS', 'SERVICIOS_FIJOS'):
+            return JsonResponse({'success': False, 'error': 'Tipo inválido.'})
         if not (1 <= periodo_mes <= 12):
             return JsonResponse({'success': False, 'error': 'Mes inválido (1-12).'})
         if periodo_ano < 2000:
@@ -557,11 +557,14 @@ def api_checklist(request, pk):
         'verificaciones__verificado_por',
     ).order_by('fecha_carga')
 
+    # SERVICIOS_FIJOS comparte ítems de checklist con SERVICIOS
+    tipo_checklist = 'SERVICIOS' if registro.tipo == 'SERVICIOS_FIJOS' else registro.tipo
+
     data = []
     for factura in facturas:
         # Solo mostrar verificaciones cuyo ítem corresponde al tipo del registro
         verificaciones = sorted(
-            [v for v in factura.verificaciones.all() if v.item.tipo_proceso == registro.tipo],
+            [v for v in factura.verificaciones.all() if v.item.tipo_proceso == tipo_checklist],
             key=lambda v: v.item.orden,
         )
         data.append({
@@ -602,7 +605,7 @@ def api_guardar_checklist(request, pk):
     registro = get_object_or_404(RegistroContable, pk=pk)
     puede_guardar = (
         _tiene_rol(request.user, 'COMPRAS_CONTABLE') or
-        (registro.tipo == 'MATERIAS_PRIMAS' and _tiene_rol(request.user, 'CONTABILIDAD'))
+        (registro.tipo in ('MATERIAS_PRIMAS', 'SERVICIOS_FIJOS') and _tiene_rol(request.user, 'CONTABILIDAD'))
     )
     if not puede_guardar:
         return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
@@ -786,7 +789,7 @@ def api_responder_observacion(request, pk):
 
     puede_responder = (
         _tiene_rol(request.user, 'COMPRAS_CONTABLE') or
-        (registro.tipo == 'MATERIAS_PRIMAS' and registro.lider == request.user)
+        (registro.tipo in ('MATERIAS_PRIMAS', 'SERVICIOS_FIJOS') and registro.lider == request.user)
     )
     if not puede_responder:
         return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
