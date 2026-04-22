@@ -137,6 +137,7 @@ class ContabilidadService:
             fecha_recepcion_lider=datos.get('fecha_recepcion_lider') or None,
             observacion_retraso=datos.get('observacion_retraso', '').strip(),
             metodo_pago=datos.get('metodo_pago', '').strip(),
+            tipo_contrato=datos.get('tipo_contrato', '').strip(),
         )
         return factura
 

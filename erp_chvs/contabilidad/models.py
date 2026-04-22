@@ -177,6 +177,11 @@ class Factura(models.Model):
         blank=True,
         verbose_name="Método de Pago",
     )
+    tipo_contrato = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Tipo de Contrato",
+    )
 
     class Meta:
         db_table = 'contabilidad_facturas'

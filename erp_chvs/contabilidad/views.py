@@ -222,6 +222,7 @@ def api_detalle_registro(request, pk):
             'numero_orden_compra': f.numero_orden_compra,
             'metodo_pago': f.metodo_pago,
             'metodo_pago_display': f.get_metodo_pago_display() if f.metodo_pago else '',
+            'tipo_contrato': f.tipo_contrato,
         })
 
     data = {
