@@ -20,6 +20,7 @@ urlpatterns = [
     path('api/registros/crear/', views.api_crear_registro, name='api_crear_registro'),
     path('api/registros/<int:pk>/', views.api_detalle_registro, name='api_detalle_registro'),
     path('api/registros/<int:pk>/facturas/', views.api_agregar_factura, name='api_agregar_factura'),
+    path('api/registros/<int:pk>/cargar-excel/', views.api_cargar_excel, name='api_cargar_excel'),
     path('api/facturas/<int:pk>/eliminar/', views.api_eliminar_factura, name='api_eliminar_factura'),
     path('api/registros/<int:pk>/enviar/', views.api_enviar, name='api_enviar'),
     path('api/registros/<int:pk>/confirmar-recepcion/', views.api_confirmar_recepcion, name='api_confirmar_recepcion'),

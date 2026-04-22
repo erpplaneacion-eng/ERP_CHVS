@@ -217,6 +217,9 @@ def api_detalle_registro(request, pk):
             'comentario_devolucion_contabilidad': f.comentario_devolucion_contabilidad,
             'observacion_retraso': f.observacion_retraso,
             'tiene_formato_devolucion': f.tiene_formato_devolucion,
+            'estado_contable': f.estado_contable,
+            'referencia_appd': f.referencia_appd,
+            'numero_orden_compra': f.numero_orden_compra,
         })
 
     data = {
@@ -352,6 +355,39 @@ def api_agregar_factura(request, pk):
             f"Registro: {pk} | Factura: {factura.numero_factura} | Valor: {factura.valor}"
         )
         return JsonResponse({'success': True, 'id': factura.pk})
+    except ValueError as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'})
+
+
+@login_required
+@csrf_exempt
+def api_cargar_excel(request, pk):
+    """POST multipart — Crea facturas desde Excel (solo MATERIAS_PRIMAS)."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+
+    registro = get_object_or_404(RegistroContable, pk=pk)
+    if registro.lider != request.user and not _tiene_rol(request.user):
+        return JsonResponse({'success': False, 'error': 'Sin permiso'}, status=403)
+
+    archivo = request.FILES.get('archivo_excel')
+    if not archivo:
+        return JsonResponse({'success': False, 'error': 'No se recibió archivo'})
+
+    nombre = archivo.name.lower()
+    if not (nombre.endswith('.xlsx') or nombre.endswith('.xls')):
+        return JsonResponse({'success': False, 'error': 'Solo se aceptan archivos .xlsx o .xls'})
+
+    try:
+        creadas, errores = ContabilidadService.cargar_facturas_desde_excel(registro, archivo)
+        if creadas:
+            RegistroActividad.registrar(
+                request, 'contabilidad', 'cargar_excel_facturas',
+                f"Registro: {pk} | Facturas creadas: {len(creadas)} | Errores: {len(errores)}"
+            )
+        return JsonResponse({'success': True, 'creadas': len(creadas), 'errores': errores})
     except ValueError as e:
         return JsonResponse({'success': False, 'error': str(e)})
     except Exception as e:

@@ -50,6 +50,7 @@ class DetalleRegistroManager {
         this.setupModal();
         this.setupEliminarModal();
         this.configurarBotones();
+        this.setupExcelUpload();
     }
 
     setupModal() {
@@ -102,6 +103,10 @@ class DetalleRegistroManager {
         // Botón agregar factura
         const wrapAgregar = document.getElementById('btn-agregar-factura-wrap');
         if (wrapAgregar) wrapAgregar.style.display = esEditable ? '' : 'none';
+
+        // Botón cargar Excel (solo MATERIAS_PRIMAS)
+        const wrapExcel = document.getElementById('btn-cargar-excel-wrap');
+        if (wrapExcel) wrapExcel.style.display = esEditable ? '' : 'none';
 
         // Botón enviar: BORRADOR siempre, DEVUELTO_COMPRAS solo para SERVICIOS
         const puedeEnviar = REGISTRO_ESTADO === 'BORRADOR' ||
@@ -217,8 +222,10 @@ class DetalleRegistroManager {
         const esEditable = this.estadosEditables.includes(REGISTRO_ESTADO);
         const esDevuelto = REGISTRO_ESTADO === 'DEVUELTO_COMPRAS';
 
+        const totalColumnas = REGISTRO_TIPO === 'MATERIAS_PRIMAS' ? 13 : 10;
+
         if (!facturas.length) {
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Sin facturas agregadas aún.</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="${totalColumnas}" class="text-center text-muted">Sin facturas agregadas aún.</td></tr>`;
         } else {
             const fragment = document.createDocumentFragment();
             facturas.forEach((f, idx) => {
@@ -282,6 +289,12 @@ class DetalleRegistroManager {
                 // Solo las facturas DEVUELTA pueden eliminarse en estado DEVUELTO_COMPRAS
                 const puedeEliminar = esEditable && (REGISTRO_ESTADO === 'BORRADOR' || f.estado_compras === 'DEVUELTA');
 
+                const celdasMateriasPrimas = REGISTRO_TIPO === 'MATERIAS_PRIMAS' ? `
+                    <td style="font-size:12px;">${f.estado_contable || '—'}</td>
+                    <td style="font-size:12px;">${f.referencia_appd || '—'}</td>
+                    <td style="font-size:12px;">${f.numero_orden_compra || '—'}</td>
+                ` : '';
+
                 tr.innerHTML = `
                     <td>${idx + 1}</td>
                     <td>${f.numero_factura} ${estadoBadge}</td>
@@ -296,6 +309,7 @@ class DetalleRegistroManager {
                     <td style="text-align:center;">${indicadorEmision}</td>
                     <td>${fechaRecepcion}</td>
                     <td>${diasRetencionCell}</td>
+                    ${celdasMateriasPrimas}
                     <td>
                         ${puedeEliminar ? `<button class="btn btn-sm btn-danger btn-eliminar-factura" data-id="${f.id}"><i class="fas fa-trash"></i></button>` : '—'}
                     </td>
@@ -316,6 +330,62 @@ class DetalleRegistroManager {
         const totalEl = document.getElementById('valor-total');
         if (totalEl) {
             totalEl.textContent = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(valorTotal);
+        }
+    }
+
+    setupExcelUpload() {
+        const input = document.getElementById('input-excel');
+        if (!input) return;
+        input.addEventListener('change', (e) => {
+            const archivo = e.target.files[0];
+            if (archivo) this.cargarExcel(archivo);
+            input.value = '';
+        });
+    }
+
+    async cargarExcel(archivo) {
+        if (this.saving) return;
+        this.saving = true;
+
+        const label = document.getElementById('btn-cargar-excel-label');
+        if (label) {
+            label.style.pointerEvents = 'none';
+            label.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+        }
+
+        const formData = new FormData();
+        formData.append('archivo_excel', archivo);
+        formData.append('csrfmiddlewaretoken', this.getCookie('csrftoken'));
+
+        try {
+            const response = await fetch(CARGAR_EXCEL_URL, { method: 'POST', body: formData });
+            const data = await response.json();
+
+            if (!data.success) {
+                this.mostrarAlerta(data.error || 'Error al cargar el Excel.', 'error');
+                return;
+            }
+
+            let msg = `Se crearon <strong>${data.creadas}</strong> factura(s) correctamente.`;
+            if (data.errores && data.errores.length) {
+                const detalle = data.errores.map(e => `Fila ${e.fila}: ${e.error}`).join('<br>');
+                msg += `<br><br>Filas con error (${data.errores.length}):<br><small>${detalle}</small>`;
+            }
+            Swal.fire({
+                icon: data.creadas > 0 ? 'success' : 'warning',
+                title: 'Carga completada',
+                html: msg,
+                confirmButtonColor: '#1e3a8a',
+            });
+            if (data.creadas > 0) this.cargarDetalle();
+        } catch {
+            this.mostrarAlerta('Error de conexión al cargar el Excel.', 'error');
+        } finally {
+            this.saving = false;
+            if (label) {
+                label.style.pointerEvents = '';
+                label.innerHTML = '<i class="fas fa-file-excel"></i> Cargar Excel';
+            }
         }
     }
 

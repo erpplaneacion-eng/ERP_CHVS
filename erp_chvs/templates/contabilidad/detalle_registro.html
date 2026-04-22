@@ -55,6 +55,14 @@
             <h3><i class="fas fa-file-invoice-dollar"></i> Facturas</h3>
         </div>
         <div class="header-actions">
+            {% if registro.tipo == 'MATERIAS_PRIMAS' %}
+            <span id="btn-cargar-excel-wrap">
+                <label class="btn btn-secondary" id="btn-cargar-excel-label" style="cursor:pointer; margin-right:8px;">
+                    <i class="fas fa-file-excel"></i> Cargar Excel
+                    <input type="file" id="input-excel" accept=".xlsx,.xls" style="display:none;">
+                </label>
+            </span>
+            {% endif %}
             <span id="btn-agregar-factura-wrap">
                 <button class="btn btn-primary" id="btn-agregar-factura">
                     <i class="fas fa-plus"></i> Agregar Factura
@@ -76,6 +84,11 @@
                     <th title="Días entre fecha de la factura y cuándo fue cargada al sistema">Retraso Carga</th>
                     <th>Recepción Líder</th>
                     <th>Días Retención</th>
+                    {% if registro.tipo == 'MATERIAS_PRIMAS' %}
+                    <th>Estado Contable</th>
+                    <th>Ref. APPD</th>
+                    <th>N° Orden Compra</th>
+                    {% endif %}
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -86,7 +99,7 @@
                 <tr>
                     <td colspan="4" style="text-align:right; font-weight:600; padding: 12px 16px;">Total:</td>
                     <td id="valor-total" style="font-weight:700; padding: 12px 16px;">$0</td>
-                    <td colspan="5"></td>
+                    <td colspan="{% if registro.tipo == 'MATERIAS_PRIMAS' %}8{% else %}5{% endif %}"></td>
                 </tr>
             </tfoot>
         </table>
@@ -204,5 +217,8 @@
     const ENVIAR_URL = '{% url "contabilidad:api_enviar" registro.pk %}';
     const HISTORIAL_URL = '{% url "contabilidad:api_historial" registro.pk %}';
     const RESPONDER_OBSERVACION_URL = '{% url "contabilidad:api_responder_observacion" registro.pk %}';
+    {% if registro.tipo == 'MATERIAS_PRIMAS' %}
+    const CARGAR_EXCEL_URL = '{% url "contabilidad:api_cargar_excel" registro.pk %}';
+    {% endif %}
 </script>
 {% endblock %}

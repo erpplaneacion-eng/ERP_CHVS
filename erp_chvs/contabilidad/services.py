@@ -140,6 +140,109 @@ class ContabilidadService:
         return factura
 
     @staticmethod
+    def cargar_facturas_desde_excel(registro, archivo):
+        """
+        Lee un Excel con 8 columnas (por posición) y crea facturas en bloque.
+        Columnas esperadas: Nro Documento | Fecha | Estado Contable | Ref APPD |
+                            Proveedor | Valor | Nro Orden Compra | Concepto
+        Retorna (creadas: list[Factura], errores: list[dict]).
+        """
+        import re
+        from decimal import Decimal, InvalidOperation
+        import pandas as pd
+
+        if registro.estado not in ContabilidadService.ESTADOS_EDITABLES:
+            raise ValueError(
+                f"No se puede cargar facturas en estado '{registro.estado}'. "
+                f"Solo en: {', '.join(ContabilidadService.ESTADOS_EDITABLES)}"
+            )
+        if registro.tipo != 'MATERIAS_PRIMAS':
+            raise ValueError("La carga por Excel solo aplica para registros de tipo MATERIAS_PRIMAS.")
+
+        df = pd.read_excel(archivo, header=0, dtype=str)
+        df = df.fillna('')
+
+        if df.shape[1] < 8:
+            raise ValueError(
+                f"El archivo debe tener al menos 8 columnas. Se encontraron {df.shape[1]}."
+            )
+
+        tiene_col_recepcion = df.shape[1] >= 9
+
+        creadas, errores = [], []
+
+        for idx, row in df.iterrows():
+            num_fila = idx + 2  # fila 1 = encabezado; datos desde fila 2
+            try:
+                numero_factura = str(row.iloc[0]).strip()
+                if not numero_factura or numero_factura.lower() == 'nan':
+                    errores.append({'fila': num_fila, 'error': 'Número de factura vacío'})
+                    continue
+
+                # Fecha — soporta texto "dd/mm/yyyy" o número serializado por pandas
+                fecha_str = str(row.iloc[1]).strip()
+                try:
+                    fecha_factura = pd.to_datetime(fecha_str, dayfirst=True).date()
+                except Exception:
+                    errores.append({'fila': num_fila, 'error': f"Fecha inválida: '{fecha_str}'"})
+                    continue
+
+                estado_contable = str(row.iloc[2]).strip()
+                referencia_appd = str(row.iloc[3]).strip()
+                proveedor = str(row.iloc[4]).strip()
+                if not proveedor or proveedor.lower() == 'nan':
+                    errores.append({'fila': num_fila, 'error': 'Proveedor vacío'})
+                    continue
+
+                # Valor — soporta "$ 2.959.000,00" (colombiano) y "2959000.0" (numérico)
+                valor_raw = str(row.iloc[5]).strip()
+                valor_limpio = re.sub(r'[^\d.,]', '', valor_raw)
+                if ',' in valor_limpio:
+                    # Formato colombiano: puntos = miles, coma = decimal
+                    valor_limpio = valor_limpio.replace('.', '').replace(',', '.')
+                if not valor_limpio:
+                    errores.append({'fila': num_fila, 'error': f"Valor inválido: '{valor_raw}'"})
+                    continue
+                valor = Decimal(valor_limpio)
+
+                numero_orden_compra = str(row.iloc[6]).strip()
+                observacion_raw = str(row.iloc[7]).strip()
+                observacion_retraso = observacion_raw if observacion_raw and observacion_raw.lower() != 'nan' else ''
+                concepto = f"Factura {numero_factura}"
+
+                # Columna 8 (opcional): fecha de recepción por el líder
+                fecha_recepcion_lider = None
+                if tiene_col_recepcion:
+                    recepcion_str = str(row.iloc[8]).strip()
+                    if recepcion_str and recepcion_str.lower() not in ('nan', ''):
+                        try:
+                            fecha_recepcion_lider = pd.to_datetime(recepcion_str, dayfirst=True).date()
+                        except Exception:
+                            pass  # si no parsea, queda None sin bloquear la fila
+
+                factura = Factura.objects.create(
+                    registro=registro,
+                    numero_factura=numero_factura,
+                    fecha_factura=fecha_factura,
+                    proveedor=proveedor,
+                    concepto=concepto,
+                    valor=valor,
+                    observacion_retraso=observacion_retraso,
+                    estado_contable=estado_contable,
+                    referencia_appd=referencia_appd,
+                    numero_orden_compra=numero_orden_compra,
+                    fecha_recepcion_lider=fecha_recepcion_lider,
+                )
+                creadas.append(factura)
+
+            except InvalidOperation:
+                errores.append({'fila': num_fila, 'error': f"Valor no numérico: '{row.iloc[5]}'"})
+            except Exception as e:
+                errores.append({'fila': num_fila, 'error': str(e)})
+
+        return creadas, errores
+
+    @staticmethod
     def eliminar_factura(factura, usuario):
         """
         Elimina una Factura. En DEVUELTO_COMPRAS solo se pueden eliminar facturas DEVUELTA.

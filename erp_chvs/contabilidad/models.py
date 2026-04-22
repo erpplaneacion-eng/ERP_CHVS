@@ -150,6 +150,18 @@ class Factura(models.Model):
         verbose_name="Observación de Retraso",
         help_text="Explicación opcional del líder sobre el retraso entre la fecha de la factura y su carga al sistema."
     )
+    estado_contable = models.CharField(
+        max_length=50, blank=True,
+        verbose_name="Estado Contable",
+    )
+    referencia_appd = models.CharField(
+        max_length=50, blank=True,
+        verbose_name="Referencia APPD",
+    )
+    numero_orden_compra = models.CharField(
+        max_length=50, blank=True,
+        verbose_name="Número de Orden de Compra",
+    )
     tiene_formato_devolucion = models.BooleanField(
         default=False,
         verbose_name="Tiene Formato de Devolución",
