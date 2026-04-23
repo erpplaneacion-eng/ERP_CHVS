@@ -23,14 +23,17 @@ class BandejaContabilidadManager {
     setupFiltros() {
         const filtroTipo = document.getElementById('filtro-tipo');
         const filtroEstado = document.getElementById('filtro-estado');
+        const filtroContrato = document.getElementById('filtro-contrato');
         const btnLimpiar = document.getElementById('btn-limpiar-filtros');
         const btnToggle = document.getElementById('btn-toggle-historial');
 
         if (filtroTipo) filtroTipo.addEventListener('change', () => this.applyFilters());
         if (filtroEstado) filtroEstado.addEventListener('change', () => this.applyFilters());
+        if (filtroContrato) filtroContrato.addEventListener('change', () => this.applyFilters());
         if (btnLimpiar) btnLimpiar.addEventListener('click', () => {
             if (filtroTipo) filtroTipo.value = '';
             if (filtroEstado) filtroEstado.value = '';
+            if (filtroContrato) filtroContrato.value = '';
             this.applyFilters();
         });
         if (btnToggle) btnToggle.addEventListener('click', () => this.toggleHistorial());
@@ -89,11 +92,14 @@ class BandejaContabilidadManager {
     }
 
     applyFilters() {
-        const tipo = document.getElementById('filtro-tipo')?.value || '';
-        const estado = document.getElementById('filtro-estado')?.value || '';
-        const filtrados = this.allRegistros.filter(r => {
-            return (!tipo || r.tipo === tipo) && (!estado || r.estado === estado);
-        });
+        const tipo     = document.getElementById('filtro-tipo')?.value     || '';
+        const estado   = document.getElementById('filtro-estado')?.value   || '';
+        const contrato = document.getElementById('filtro-contrato')?.value || '';
+        const filtrados = this.allRegistros.filter(r =>
+            (!tipo     || r.tipo === tipo) &&
+            (!estado   || r.estado === estado) &&
+            (!contrato || (r.contratos && r.contratos.includes(contrato)))
+        );
         this.renderTabla(filtrados);
     }
 

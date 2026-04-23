@@ -187,6 +187,11 @@ def api_listar_registros(request):
             'total_documentos': r.total_documentos,
             'registro_origen_id': r.registro_origen_id,
             'es_derivado': r.registro_origen_id is not None,
+            'contratos': list(
+                r.facturas.exclude(tipo_contrato='')
+                           .values_list('tipo_contrato', flat=True)
+                           .distinct()
+            ),
         })
 
     return JsonResponse({'success': True, 'data': registros})

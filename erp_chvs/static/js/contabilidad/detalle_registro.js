@@ -422,6 +422,12 @@ class DetalleRegistroManager {
             this.mostrarAlerta('Todos los campos son obligatorios.', 'warning');
             return;
         }
+        if ((REGISTRO_TIPO === 'SERVICIOS' || REGISTRO_TIPO === 'SERVICIOS_FIJOS') && (!metodo_pago || !tipo_contrato)) {
+            this.saving = false;
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Guardar Factura'; }
+            this.mostrarAlerta('Debe seleccionar Método de Pago y Tipo de Contrato.', 'warning');
+            return;
+        }
 
         try {
             const response = await fetch(FACTURAS_URL, {
