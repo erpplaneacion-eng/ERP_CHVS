@@ -1,0 +1,450 @@
+{
+  "info": {
+    "_postman_id": "277ccb69-58e6-48be-b8b1-b84c135cda17",
+    "name": "VSolidario-PLANEACION",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "5132949"
+  },
+  "item": [
+    {
+      "name": "CENTROS-OPERACIONES",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "password",
+              "value": "nT7$zR!3vWqL9p@h",
+              "type": "string"
+            },
+            {
+              "key": "username",
+              "value": "admin",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://31.97.103.246:9999/vsolidario/planeacion/api/CENTROS-OPERACIONES",
+          "protocol": "http",
+          "host": [
+            "31",
+            "97",
+            "103",
+            "246"
+          ],
+          "port": "9999",
+          "path": [
+            "vsolidario",
+            "planeacion",
+            "api",
+            "CENTROS-OPERACIONES"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "INSTALACIONES",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "password",
+              "value": "nT7$zR!3vWqL9p@h",
+              "type": "string"
+            },
+            {
+              "key": "username",
+              "value": "admin",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://31.97.103.246:9999/vsolidario/planeacion/api/INSTALACIONES",
+          "protocol": "http",
+          "host": [
+            "31",
+            "97",
+            "103",
+            "246"
+          ],
+          "port": "9999",
+          "path": [
+            "vsolidario",
+            "planeacion",
+            "api",
+            "INSTALACIONES"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "TIPOS-DOCUMENTOS",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "password",
+              "value": "nT7$zR!3vWqL9p@h",
+              "type": "string"
+            },
+            {
+              "key": "username",
+              "value": "admin",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://31.97.103.246:9999/vsolidario/planeacion/api/TIPOS-DOCUMENTOS",
+          "protocol": "http",
+          "host": [
+            "31",
+            "97",
+            "103",
+            "246"
+          ],
+          "port": "9999",
+          "path": [
+            "vsolidario",
+            "planeacion",
+            "api",
+            "TIPOS-DOCUMENTOS"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "SOLICITANTES",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "password",
+              "value": "nT7$zR!3vWqL9p@h",
+              "type": "string"
+            },
+            {
+              "key": "username",
+              "value": "admin",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://31.97.103.246:9999/vsolidario/planeacion/api/SOLICITANTES",
+          "protocol": "http",
+          "host": [
+            "31",
+            "97",
+            "103",
+            "246"
+          ],
+          "port": "9999",
+          "path": [
+            "vsolidario",
+            "planeacion",
+            "api",
+            "SOLICITANTES"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "ITEMS",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "password",
+              "value": "nT7$zR!3vWqL9p@h",
+              "type": "string"
+            },
+            {
+              "key": "username",
+              "value": "admin",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://31.97.103.246:9999/vsolidario/planeacion/api/ITEMS",
+          "protocol": "http",
+          "host": [
+            "31",
+            "97",
+            "103",
+            "246"
+          ],
+          "port": "9999",
+          "path": [
+            "vsolidario",
+            "planeacion",
+            "api",
+            "ITEMS"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "UNIDADES-NEGOCIOS",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "password",
+              "value": "nT7$zR!3vWqL9p@h",
+              "type": "string"
+            },
+            {
+              "key": "username",
+              "value": "admin",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://31.97.103.246:9999/vsolidario/planeacion/api/UNIDADES-NEGOCIOS",
+          "protocol": "http",
+          "host": [
+            "31",
+            "97",
+            "103",
+            "246"
+          ],
+          "port": "9999",
+          "path": [
+            "vsolidario",
+            "planeacion",
+            "api",
+            "UNIDADES-NEGOCIOS"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CCOSTOS",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "password",
+              "value": "nT7$zR!3vWqL9p@h",
+              "type": "string"
+            },
+            {
+              "key": "username",
+              "value": "admin",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://31.97.103.246:9999/vsolidario/planeacion/api/CCOSTOS",
+          "protocol": "http",
+          "host": [
+            "31",
+            "97",
+            "103",
+            "246"
+          ],
+          "port": "9999",
+          "path": [
+            "vsolidario",
+            "planeacion",
+            "api",
+            "CCOSTOS"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "PROYECTOS",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "password",
+              "value": "nT7$zR!3vWqL9p@h",
+              "type": "string"
+            },
+            {
+              "key": "username",
+              "value": "admin",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://31.97.103.246:9999/vsolidario/planeacion/api/PROYECTOS",
+          "protocol": "http",
+          "host": [
+            "31",
+            "97",
+            "103",
+            "246"
+          ],
+          "port": "9999",
+          "path": [
+            "vsolidario",
+            "planeacion",
+            "api",
+            "PROYECTOS"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CONCEPTOS",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "password",
+              "value": "nT7$zR!3vWqL9p@h",
+              "type": "string"
+            },
+            {
+              "key": "username",
+              "value": "admin",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://31.97.103.246:9999/vsolidario/planeacion/api/CONCEPTOS",
+          "protocol": "http",
+          "host": [
+            "31",
+            "97",
+            "103",
+            "246"
+          ],
+          "port": "9999",
+          "path": [
+            "vsolidario",
+            "planeacion",
+            "api",
+            "CONCEPTOS"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "MOTIVOS",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "password",
+              "value": "nT7$zR!3vWqL9p@h",
+              "type": "string"
+            },
+            {
+              "key": "username",
+              "value": "admin",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://31.97.103.246:9999/vsolidario/planeacion/api/MOTIVOS",
+          "protocol": "http",
+          "host": [
+            "31",
+            "97",
+            "103",
+            "246"
+          ],
+          "port": "9999",
+          "path": [
+            "vsolidario",
+            "planeacion",
+            "api",
+            "MOTIVOS"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "BODEGAS",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "password",
+              "value": "nT7$zR!3vWqL9p@h",
+              "type": "string"
+            },
+            {
+              "key": "username",
+              "value": "admin",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://31.97.103.246:9999/vsolidario/planeacion/api/UBICACIONES",
+          "protocol": "http",
+          "host": [
+            "31",
+            "97",
+            "103",
+            "246"
+          ],
+          "port": "9999",
+          "path": [
+            "vsolidario",
+            "planeacion",
+            "api",
+            "UBICACIONES"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

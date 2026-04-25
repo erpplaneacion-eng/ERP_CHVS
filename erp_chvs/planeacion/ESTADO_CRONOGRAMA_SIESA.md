@@ -77,13 +77,13 @@ Esta es la fase con mayor riesgo. Varios ítems tienen **dependencias internas**
 
 | Ítem | Estado | Archivo ERP_CHVS |
 |---|---|---|
-| Servicio unificado de consulta | 🔴 No iniciado | `Api/services.py` (vacío) |
-| Filtro por estado activo | 🔴 No iniciado | Idem |
-| Parametrización dinámica de campos | 🔴 No iniciado | Idem |
-| Modelos locales (`SiesaArticulo`, etc.) | 🔴 No iniciado | `Api/models.py` (vacío) |
-| Cron job de sincronización delta | 🔴 No iniciado | `Api/management/commands/sync_siesa.py` |
+| Servicio unificado de consulta | ✅ **Implementado** | `Api/services/sync_service.py` |
+| Filtro por estado activo | 🟡 N/A por ahora | Full sync — endpoints SIESA no exponen filtro por fecha |
+| Parametrización dinámica de campos | ✅ **Implementado** | `Api/services/mappers.py` (mapper por catálogo) |
+| Modelos locales (11 catálogos reales) | ✅ **Implementado** | `Api/models.py` — campos 1:1 con JSON SIESA real |
+| Sincronización (full sync) | ✅ **Implementado** | `python manage.py sync_siesa [--catalogo X] [--dry-run]` |
 
-> **Bloqueante real:** sin tokens no se puede construir ni probar nada de esto.
+> **Desbloqueado**: credenciales y endpoints recibidos de SIESA (abril 2026). App activada, modelos creados, sync operativo. Pendiente: ejecutar `migrate` + primera sincronización en local.
 
 ### 2.3 Desarrollo módulo planeación (lado cliente) — ⚠️ RIESGO ALTO
 

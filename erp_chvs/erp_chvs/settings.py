@@ -133,6 +133,7 @@ INSTALLED_APPS = [
     'calidad',
     'agente',
     'contabilidad',
+    'Api',
 ]
 
 # Cloudinary para MEDIA files (imágenes subidas por usuarios)
@@ -348,6 +349,16 @@ LOGGING = {
             'level': 'DEBUG' if DEBUG else 'WARNING',
             'propagate': False,
         },
+        'Api': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'Api.siesa_client': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
     },
 }
 
@@ -359,3 +370,11 @@ if DEBUG:
         'formatter': 'verbose',
     }
     LOGGING['loggers']['facturacion']['handlers'].append('file_facturacion')
+
+    LOGGING['handlers']['file_api'] = {
+        'class': 'logging.FileHandler',
+        'filename': os.path.join(BASE_DIR, 'logs', 'Api.log'),
+        'formatter': 'verbose',
+    }
+    LOGGING['loggers']['Api']['handlers'].append('file_api')
+    LOGGING['loggers']['Api.siesa_client']['handlers'].append('file_api')

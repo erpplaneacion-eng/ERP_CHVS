@@ -24,6 +24,7 @@ Cada app tiene su propio `CLAUDE.md` con modelos, servicios, endpoints y flujos 
 | `agente` | [agente/CLAUDE.md](erp_chvs/agente/CLAUDE.md) | Generador IA (Gemini), pool de borradores, RAG Pinecone |
 | `contabilidad` | [contabilidad/CLAUDE.md](erp_chvs/contabilidad/CLAUDE.md) | Flujo multi-rol de facturas: Líder → Compras → Contabilidad |
 | `dashboard` | [dashboard/CLAUDE.md](erp_chvs/dashboard/CLAUDE.md) | Punto de entrada post-login |
+| `Api` | [Api/CLAUDE.md](erp_chvs/Api/CLAUDE.md) | Integración SIESA ERP: catálogos locales (CO, Proyectos, Items, Bodegas, etc.) |
 
 ---
 
@@ -178,6 +179,12 @@ GEMINI_API_KEY=your-key
 CALIDAD_WA_API_KEY=<compartida con ERP_API_KEY en servicio apiw>
 EMPLEADOS_DB_URL=<URL PostgreSQL BD externa de empleados>
 
+# Api — Integración SIESA ERP (catálogos locales)
+SIESA_API_BASE_URL=http://31.97.103.246:9999/vsolidario/planeacion/api
+SIESA_API_USER=admin
+SIESA_API_PASSWORD=<ver credenciales SIESA>
+SIESA_API_TIMEOUT=30
+
 # Solo producción (Cloudinary para media):
 # CLOUDINARY_CLOUD_NAME=  CLOUDINARY_API_KEY=  CLOUDINARY_API_SECRET=
 ```
@@ -198,6 +205,7 @@ DJANGO_SECRET_KEY, DJANGO_DEBUG=False, GEMINI_API_KEY
 DATABASE_URL        (auto-set por Railway Postgres plugin)
 CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
 CALIDAD_WA_API_KEY, EMPLEADOS_DB_URL
+SIESA_API_BASE_URL, SIESA_API_USER, SIESA_API_PASSWORD, SIESA_API_TIMEOUT
 # Opcional RAG: PINECONE_API_KEY
 ```
 
