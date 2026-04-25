@@ -208,7 +208,16 @@ SIESA_API_TIMEOUT=30
 - Media: Cloudinary en producción (`DEBUG=False`)
 - Python pinned en `runtime.txt`: `python-3.13.1`
 
-**Variables Railway requeridas**:
+**Servicios Railway (proyecto `ERP`, ID `1bfa7a50-5d56-49cc-b115-d35ce8644a94`)**:
+
+| Servicio | Tipo | Descripción |
+|---|---|---|
+| `ERP_CHVS` | Web | App principal — gunicorn |
+| `ERP` | Web | — |
+| `Railway Service Cron` | Cron | Apagado/encendido programado |
+| `sync-siesa` | Cron | Sincroniza catálogos SIESA → BD local. Schedule: `0 0 * * *` (00:00 UTC = 7pm Colombia). Comando: `cd erp_chvs && python manage.py sync_siesa` |
+
+**Variables Railway requeridas** (servicio `ERP_CHVS`):
 ```
 DJANGO_SECRET_KEY, DJANGO_DEBUG=False, GEMINI_API_KEY
 DATABASE_URL        (auto-set por Railway Postgres plugin)
@@ -216,6 +225,12 @@ CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
 CALIDAD_WA_API_KEY, EMPLEADOS_DB_URL
 SIESA_API_BASE_URL, SIESA_API_USER, SIESA_API_PASSWORD, SIESA_API_TIMEOUT
 # Opcional RAG: PINECONE_API_KEY
+```
+
+**Variables servicio `sync-siesa`** (subconjunto):
+```
+DATABASE_URL, DJANGO_SETTINGS_MODULE, DJANGO_SECRET_KEY, DJANGO_DEBUG
+SIESA_API_BASE_URL, SIESA_API_USER, SIESA_API_PASSWORD, SIESA_API_TIMEOUT
 ```
 
 ## Convenciones
