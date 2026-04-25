@@ -3,6 +3,7 @@ from unittest.mock import patch
 from django.contrib.auth.models import Group, User
 from django.http import HttpResponse
 from django.test import RequestFactory, TestCase
+from django.urls import reverse
 
 from principal.middleware import RoleAccessMiddleware
 from principal.templatetags.group_tags import has_group
@@ -66,3 +67,22 @@ class RoleAccessMiddlewareTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, "/dashboard/")
+
+    @patch("principal.middleware.messages.error")
+    def test_usuario_sin_grupos_es_redirigido_a_home(self, _messages_error):
+        user = User.objects.create_user(username="nogroup", password="test123")
+
+        response = self._request_with_user("/nutricion/", user)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, "/")
+
+
+class PrincipalApiAuthTests(TestCase):
+    def test_api_niveles_grado_requiere_login(self):
+        response = self.client.get(reverse("principal:api_niveles_grado"))
+        self.assertEqual(response.status_code, 302)
+
+    def test_api_nivel_grado_detail_requiere_login(self):
+        response = self.client.get(reverse("principal:api_nivel_grado_detail", args=["NOEXISTE"]))
+        self.assertEqual(response.status_code, 302)

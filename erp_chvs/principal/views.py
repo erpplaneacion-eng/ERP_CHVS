@@ -753,6 +753,7 @@ def lista_niveles_grado(request):
 
 # NOTA: El JavaScript de niveles_grado.html ahora solo se usa para paginación AJAX, creación, edición y eliminación.
 
+@login_required
 @csrf_exempt
 def api_niveles_grado(request):
     """API para gestionar niveles grado escolar (GET, POST)."""
@@ -812,6 +813,7 @@ def api_niveles_grado(request):
             return JsonResponse({'success': False, 'error': f'Error al crear: {str(e)}'})
 
 
+@login_required
 @csrf_exempt
 def api_nivel_grado_detail(request, id_grado_escolar):
     """API para gestionar un nivel grado escolar específico (GET, PUT, DELETE)."""

@@ -9,47 +9,47 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         groups_config = {
             'NUTRICION': {
-                'apps': ['nutricion'],
+                'apps': ['nutricion', 'agente', 'dashboard', 'principal'],
                 'description': 'Acceso a gestion de menus y analisis nutricional'
             },
             'FACTURACION': {
-                'apps': ['facturacion'],
+                'apps': ['facturacion', 'dashboard'],
                 'description': 'Acceso a carga de listados y focalizacion'
             },
             'PLANEACION': {
-                'apps': ['planeacion'],
+                'apps': ['planeacion', 'dashboard'],
                 'description': 'Acceso a configuracion de programas y sedes'
             },
             'COSTOS': {
-                'apps': ['costos'],
+                'apps': ['costos', 'dashboard'],
                 'description': 'Acceso a matriz nutricional y reportes de costos'
             },
             'LOGISTICA': {
-                'apps': ['logistica'],
+                'apps': ['logistica', 'dashboard'],
                 'description': 'Acceso a rutas de entrega y asignación de sedes'
             },
             'CALIDAD': {
-                'apps': ['calidad'],
+                'apps': ['calidad', 'dashboard'],
                 'description': 'Acceso a certificados de calidad del personal'
             },
             'LIDER_CONTABLE': {
-                'apps': ['contabilidad'],
+                'apps': ['contabilidad', 'dashboard'],
                 'description': 'Acceso para líderes que crean y envían registros contables'
             },
             'COMPRAS_CONTABLE': {
-                'apps': ['contabilidad'],
+                'apps': ['contabilidad', 'dashboard'],
                 'description': 'Acceso para el área de Compras: confirma recepción, verifica checklist, aprueba o devuelve'
             },
             'CONTABILIDAD': {
-                'apps': ['contabilidad'],
+                'apps': ['contabilidad', 'dashboard'],
                 'description': 'Acceso para el área de Contabilidad: revisión final, aprobación y cierre'
             },
             'GERENCIA': {
-                'apps': ['contabilidad'],
+                'apps': ['contabilidad', 'dashboard'],
                 'description': 'Acceso de solo lectura con dashboard gerencial y trazabilidad completa'
             },
             'ADMINISTRACION': {
-                'apps': ['nutricion', 'facturacion', 'planeacion', 'principal', 'dashboard', 'costos', 'logistica', 'calidad', 'contabilidad'],
+                'apps': ['nutricion', 'facturacion', 'planeacion', 'principal', 'dashboard', 'costos', 'logistica', 'calidad', 'contabilidad', 'agente'],
                 'description': 'Acceso total al sistema'
             }
         }
