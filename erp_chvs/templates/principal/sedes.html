@@ -139,7 +139,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="cod_interprise">Código Interprise *</label>
-                            <input type="text" id="cod_interprise" name="cod_interprise" required maxlength="50">
+                            <input type="text" id="cod_interprise" name="cod_interprise" required maxlength="50" readonly>
                         </div>
                         <div class="form-group">
                             <label for="cod_dane">Código DANE *</label>
@@ -148,8 +148,18 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="nombre_sede_educativa">Nombre Sede Educativa *</label>
-                        <input type="text" id="nombre_sede_educativa" name="nombre_sede_educativa" required maxlength="255">
+                        <label for="nombre_sede_educativa">Sede Educativa (SIESA) *</label>
+                        <input
+                            type="text"
+                            id="nombre_sede_educativa"
+                            name="nombre_sede_educativa"
+                            class="form-control"
+                            placeholder="Buscar sede por nombre..."
+                            list="sede-siesa-list"
+                            autocomplete="off"
+                            required
+                        >
+                        <datalist id="sede-siesa-list"></datalist>
                     </div>
 
                     <div class="form-group">

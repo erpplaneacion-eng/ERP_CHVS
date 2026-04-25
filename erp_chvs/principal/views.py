@@ -9,6 +9,7 @@ from django.db.models.deletion import ProtectedError
 import json
 from .models import PrincipalDepartamento, PrincipalMunicipio, TipoDocumento, TipoGenero, ModalidadesDeConsumo, NivelGradoEscolar, RegistroActividad
 from planeacion.models import InstitucionesEducativas, SedesEducativas, Programa, ProgramaModalidades
+from Api.models import SiesaProyecto
 from django.db.models import Count
 
 def home(request):
@@ -629,6 +630,17 @@ def lista_sedes(request):
         'sedes': page_obj,
         'total_sedes': sedes.count()
     })
+
+@login_required
+def api_siesa_proyectos(request):
+    """API para listar proyectos SIESA y usarlos como maestro en creación de sedes."""
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    proyectos = SiesaProyecto.objects.all().order_by('f107_descripcion').values(
+        'f107_id', 'f107_descripcion'
+    )
+    return JsonResponse({'proyectos': list(proyectos)})
 
 @login_required
 @csrf_exempt

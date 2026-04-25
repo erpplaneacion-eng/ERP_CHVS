@@ -35,6 +35,7 @@ urlpatterns = [
     path('api/instituciones/<str:codigo_ie>/', views.api_institucion_detail, name='api_institucion_detail'),
 
     # APIs para sedes educativas
+    path('api/siesa/proyectos/', views.api_siesa_proyectos, name='api_siesa_proyectos'),
     path('api/sedes/', views.api_sedes, name='api_sedes'),
     path('api/sedes/<str:cod_interprise>/', views.api_sede_detail, name='api_sede_detail'),
 

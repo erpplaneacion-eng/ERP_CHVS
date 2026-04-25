@@ -2,6 +2,7 @@
 let editingMode = false;
 let currentSedeId = null;
 let instituciones = [];
+let proyectosSiesa = [];
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', function() {
@@ -10,7 +11,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     loadInstituciones();
+    loadProyectosSiesa();
     setupSearch(); // carga allSedes y actualiza stats en una sola llamada
+
+    const sedeInput = document.getElementById('nombre_sede_educativa');
+    if (sedeInput) {
+        sedeInput.addEventListener('input', updateCodInterpriseFromProyecto);
+        sedeInput.addEventListener('change', updateCodInterpriseFromProyecto);
+    }
 });
 
 // Funciones para cargar datos de referencia
@@ -32,6 +40,70 @@ async function loadInstituciones() {
     }
 }
 
+async function loadProyectosSiesa() {
+    try {
+        const response = await fetch('/principal/api/siesa/proyectos/');
+        const data = await response.json();
+        proyectosSiesa = data.proyectos || [];
+        renderProyectosSiesaOptions();
+    } catch (error) {
+        console.error('Error al cargar proyectos SIESA:', error);
+        showNotification('Error al cargar sedes maestras de SIESA', 'error');
+    }
+}
+
+function formatProyectoDisplay(proyecto) {
+    return `${proyecto.f107_id} - ${proyecto.f107_descripcion}`;
+}
+
+function renderProyectosSiesaOptions() {
+    const datalist = document.getElementById('sede-siesa-list');
+    if (!datalist) return;
+
+    let options = '';
+    proyectosSiesa.forEach(proyecto => {
+        options += `<option value="${formatProyectoDisplay(proyecto)}"></option>`;
+    });
+    datalist.innerHTML = options;
+}
+
+function ensureCurrentProyectoOption(codigo, nombre) {
+    const exists = proyectosSiesa.some(p => p.f107_id === codigo);
+    if (!exists) {
+        proyectosSiesa.push({
+            f107_id: codigo,
+            f107_descripcion: nombre
+        });
+    }
+}
+
+function findProyectoFromInput(inputValue) {
+    const valor = (inputValue || '').trim();
+    if (!valor) return null;
+
+    const exactByDisplay = proyectosSiesa.find(p => formatProyectoDisplay(p) === valor);
+    if (exactByDisplay) return exactByDisplay;
+
+    const exactById = proyectosSiesa.find(p => p.f107_id === valor);
+    if (exactById) return exactById;
+
+    const exactByName = proyectosSiesa.find(
+        p => p.f107_descripcion.toLowerCase() === valor.toLowerCase()
+    );
+    if (exactByName) return exactByName;
+
+    return null;
+}
+
+function updateCodInterpriseFromProyecto() {
+    const input = document.getElementById('nombre_sede_educativa');
+    const codInterpriseInput = document.getElementById('cod_interprise');
+    if (!input || !codInterpriseInput) return;
+
+    const proyecto = findProyectoFromInput(input.value);
+    codInterpriseInput.value = proyecto ? proyecto.f107_id : '';
+}
+
 // Funciones del modal
 function showCreateModal() {
     editingMode = false;
@@ -39,7 +111,9 @@ function showCreateModal() {
 
     document.getElementById('modalTitle').textContent = 'Nueva Sede Educativa';
     document.getElementById('sedeForm').reset();
-    document.getElementById('cod_interprise').readOnly = false;
+    document.getElementById('cod_interprise').readOnly = true;
+    renderProyectosSiesaOptions();
+    updateCodInterpriseFromProyecto();
 
     document.getElementById('sedeModal').style.display = 'flex';
 }
@@ -58,10 +132,23 @@ async function saveSede() {
     const formData = new FormData(form);
 
     // Validar campos requeridos
-    if (!formData.get('cod_interprise') || !formData.get('cod_dane') ||
+    if (!formData.get('cod_dane') ||
         !formData.get('nombre_sede_educativa') || !formData.get('codigo_ie') ||
         !formData.get('zona') || !formData.get('preparado') || !formData.get('industrializado')) {
         showNotification('Por favor complete todos los campos requeridos', 'error');
+        return;
+    }
+
+    const proyectoSiesaInput = formData.get('nombre_sede_educativa');
+    const proyectoSiesa = findProyectoFromInput(proyectoSiesaInput);
+
+    if (!proyectoSiesa) {
+        showNotification('Debe seleccionar una sede válida desde el maestro SIESA', 'error');
+        return;
+    }
+
+    if (editingMode && proyectoSiesa.f107_id !== currentSedeId) {
+        showNotification('No se puede cambiar la sede maestra en edición. Crea una nueva sede si necesitas otro código Interprise.', 'error');
         return;
     }
 
@@ -72,9 +159,9 @@ async function saveSede() {
     }
 
     const data = {
-        cod_interprise: formData.get('cod_interprise'),
+        cod_interprise: proyectoSiesa.f107_id,
         cod_dane: formData.get('cod_dane'),
-        nombre_sede_educativa: formData.get('nombre_sede_educativa'),
+        nombre_sede_educativa: proyectoSiesa.f107_descripcion,
         nombre_generico_sede: formData.get('nombre_generico_sede') || 'Sin especificar',
         codigo_ie: formData.get('codigo_ie'),
         zona: formData.get('zona'),
@@ -131,10 +218,15 @@ async function editSede(codInterprise) {
         currentSedeId = codInterprise;
 
         document.getElementById('modalTitle').textContent = 'Editar Sede Educativa';
+        ensureCurrentProyectoOption(sede.cod_interprise, sede.nombre_sede_educativa);
+        renderProyectosSiesaOptions();
         document.getElementById('cod_interprise').value = sede.cod_interprise;
         document.getElementById('cod_interprise').readOnly = true;
         document.getElementById('cod_dane').value = sede.cod_dane;
-        document.getElementById('nombre_sede_educativa').value = sede.nombre_sede_educativa;
+        document.getElementById('nombre_sede_educativa').value = formatProyectoDisplay({
+            f107_id: sede.cod_interprise,
+            f107_descripcion: sede.nombre_sede_educativa
+        });
         document.getElementById('nombre_generico_sede').value = sede.nombre_generico_sede || '';
         document.getElementById('codigo_ie').value = sede.codigo_ie;
         document.getElementById('direccion').value = sede.direccion || '';
