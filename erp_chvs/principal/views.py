@@ -9,7 +9,7 @@ from django.db.models.deletion import ProtectedError
 import json
 from .models import PrincipalDepartamento, PrincipalMunicipio, TipoDocumento, TipoGenero, ModalidadesDeConsumo, NivelGradoEscolar, RegistroActividad
 from planeacion.models import InstitucionesEducativas, SedesEducativas, Programa, ProgramaModalidades
-from Api.models import SiesaProyecto
+from Api.models import SiesaProyecto, SiesaCentroCosto
 from django.db.models import Count
 
 def home(request):
@@ -641,6 +641,18 @@ def api_siesa_proyectos(request):
         'f107_id', 'f107_descripcion'
     )
     return JsonResponse({'proyectos': list(proyectos)})
+
+
+@login_required
+def api_siesa_centros_costo(request):
+    """API para listar centros de costo SIESA como maestro de modalidades."""
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    centros = SiesaCentroCosto.objects.all().order_by('f284_descripcion').values(
+        'f284_id', 'f284_descripcion'
+    )
+    return JsonResponse({'centros': list(centros)})
 
 @login_required
 @csrf_exempt

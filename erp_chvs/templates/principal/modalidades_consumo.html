@@ -85,12 +85,15 @@
         <div class="modal-body">
             <form id="modalidadForm">
                 <div class="form-group">
-                    <label for="id_modalidades">ID Modalidad:</label>
-                    <input type="text" id="id_modalidades" name="id_modalidades" required maxlength="10">
+                    <label for="modalidad_select">Modalidad:</label>
+                    <select id="modalidad_select" required>
+                        <option value="">-- Seleccione una modalidad --</option>
+                    </select>
+                    <input type="text" id="modalidad_input" maxlength="150" style="display:none;">
                 </div>
                 <div class="form-group">
-                    <label for="modalidad">Modalidad:</label>
-                    <input type="text" id="modalidad" name="modalidad" required maxlength="150">
+                    <label for="id_modalidades">ID Modalidad:</label>
+                    <input type="text" id="id_modalidades" name="id_modalidades" required maxlength="10" readonly>
                 </div>
                 <div class="form-group">
                     <label for="cod_modalidad">Código Modalidad:</label>

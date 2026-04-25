@@ -36,6 +36,7 @@ urlpatterns = [
 
     # APIs para sedes educativas
     path('api/siesa/proyectos/', views.api_siesa_proyectos, name='api_siesa_proyectos'),
+    path('api/siesa/centros-costo/', views.api_siesa_centros_costo, name='api_siesa_centros_costo'),
     path('api/sedes/', views.api_sedes, name='api_sedes'),
     path('api/sedes/<str:cod_interprise>/', views.api_sede_detail, name='api_sede_detail'),
 
