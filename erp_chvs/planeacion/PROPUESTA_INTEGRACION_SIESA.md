@@ -347,6 +347,27 @@ class Command(BaseCommand):
 
 ---
 
+## Mapeo nombres propuestos → implementados
+
+Este documento fue escrito antes de recibir las credenciales SIESA (feb. 2026). Los nombres de modelos propuestos aquí difieren de los implementados, que preservan la nomenclatura real de los campos SIESA (`f<num>_<campo>`).
+
+| Nombre propuesto (doc) | Modelo implementado (`Api/models.py`) | Estado |
+|---|---|---|
+| `SiesaArticulo` (Plan de Cuentas) | `SiesaItem` | ✅ Modelo creado — `payload = JSONField()` hasta que SIESA llene el catálogo |
+| `SiesaBodega` | `SiesaUbicacion` | ✅ 33 registros (`f155_id`, `f155_descripcion`, `f150_id`) |
+| `SiesaCO` (Centro Operación) | `SiesaCentroOperacion` | ✅ 1 registro (`f285_id`, `f285_descripcion`) |
+| `SiesaTercero` | `SiesaSolicitante` | ✅ Modelo creado — `payload = JSONField()` hasta que SIESA llene el catálogo |
+| `SiesaProyecto` | `SiesaProyecto` | ✅ 1.718 registros (`f107_id`, `f107_descripcion`, `f107_id_referencia`) |
+| `SiesaCentroCosto` | `SiesaCentroCosto` | ✅ 73 registros (`f284_id`, `f284_descripcion`, `f284_id_co`, `f284_id_un`) |
+| `SiesaTipoDocumento` | `SiesaTipoDocumento` | ✅ 90 registros (`f021_id`, `f021_descripcion`) |
+| Concepto / Motivo | `SiesaConcepto` + `SiesaMotivo` | ✅ 38 + 89 registros |
+| *(no estaba en diseño)* | `SiesaInstalacion` | ✅ 3 registros — instalaciones físicas del operador |
+| *(no estaba en diseño)* | `SiesaUnidadNegocio` | ✅ 13 registros — contratos del operador |
+
+El comando `python manage.py sync_siesa` reemplaza el "cron job de sincronización" descrito en este documento. El "cron job delta" sigue pendiente.
+
+---
+
 ## Pendientes / Preguntas Abiertas
 
 - [ ] Recibir tokens y endpoints de Siesa (bloqueante para Fase 3)

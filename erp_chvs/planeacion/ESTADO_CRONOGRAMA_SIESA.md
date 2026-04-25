@@ -4,9 +4,9 @@
 
 | Fase | Período | Estado ERP_CHVS |
 |---|---|---|
-| Fase 1 — Levantamiento | Días 1–10 | 🟡 **Parcial** — arquitectura y flujos documentados, pendientes de validar con SIESA |
-| Fase 2 — Diseño y Desarrollo | Días 11–30 | 🔴 **No iniciada** — hay trabajo interno crítico que debe arrancar YA en paralelo |
-| Fase 3 — Integración y Pruebas | Días 31–40 | 🔴 **Bloqueada** — depende de tokens SIESA + Fase 2 completa |
+| Fase 1 — Levantamiento | Días 1–10 | ✅ **Completa** — arquitectura documentada, maestros implementados |
+| Fase 2 — Diseño y Desarrollo | Días 11–30 | 🟡 **Parcial** — sincronización y frontend listos; SC/RQI y módulo planeación pendientes |
+| Fase 3 — Integración y Pruebas | Días 31–40 | 🔴 **Bloqueada** — depende de endpoints POST SIESA + Fase 2 completa |
 | Fase 4 — Despliegue y Cierre | Días 41–45 | 🔴 **Bloqueada** — depende de Fase 3 |
 
 ---
@@ -24,22 +24,26 @@
 
 ### 1.2 Definición de maestros a integrar
 
-| Maestro | Estado | Detalle |
+| Maestro | Estado | Modelo real en código |
 |---|---|---|
-| Ítems (activos, unidades, presentaciones, costos) | ✅ Diseñado | Modelo `SiesaArticulo` definido en `PROPUESTA_INTEGRACION_SIESA.md`. **No existe en código.** |
-| Bodegas y centros de operación | ✅ Diseñado | Modelos `SiesaBodega` y `SiesaCO` definidos en doc. **No existen en código.** |
-| Proyectos y centros de costo | ✅ Diseñado | Modelos `SiesaProyecto` y `SiesaCentroCosto` definidos en doc. **No existen en código.** |
-| Conceptos y motivos | ✅ Diseñado | Estructura definida en doc. **No existe en código.** |
+| Ítems / Plan de Cuentas | ✅ **Implementado** | `SiesaItem` (`payload = JSONField()` — SIESA aún vacío) |
+| Bodegas / Ubicaciones | ✅ **Implementado** | `SiesaUbicacion` — 33 registros |
+| Centros de Operación | ✅ **Implementado** | `SiesaCentroOperacion` — 1 registro |
+| Instalaciones | ✅ **Implementado** | `SiesaInstalacion` — 3 registros |
+| Proyectos y centros de costo | ✅ **Implementado** | `SiesaProyecto` (1.718 reg.) + `SiesaCentroCosto` (73 reg.) |
+| Unidades de Negocio | ✅ **Implementado** | `SiesaUnidadNegocio` — 13 registros |
+| Conceptos y motivos | ✅ **Implementado** | `SiesaConcepto` (38 reg.) + `SiesaMotivo` (89 reg.) |
+| Tipos de Documento | ✅ **Implementado** | `SiesaTipoDocumento` — 90 registros |
+| Solicitantes / Terceros | ✅ **Implementado** | `SiesaSolicitante` (`payload = JSONField()` — SIESA aún vacío) |
 
-> **Importante:** Todos los maestros están diseñados conceptualmente pero `Api/models.py` está vacío.
-> No tiene sentido crearlos hasta tener los tokens SIESA — la estructura real puede diferir del diseño.
+> **Nota de nomenclatura**: los campos de los modelos reales preservan la nomenclatura original de SIESA (`f<num>_<campo>`, e.g. `f107_id`, `f107_descripcion`). Los nombres propuestos en `PROPUESTA_INTEGRACION_SIESA.md` (como `SiesaArticulo`, `SiesaBodega`, `SiesaCO`) eran nombres de diseño previo a recibir las credenciales. Ver mapeo completo en `PROPUESTA_INTEGRACION_SIESA.md` — sección "Mapeo nombres propuestos → implementados".
 
 ### 1.3 Definición técnica de integración
 
 | Ítem | Estado | Detalle |
 |---|---|---|
-| Arquitectura (API REST con token) | ✅ Definida | Tablas locales PostgreSQL + cron job delta. Sin polling en tiempo real. |
-| Frecuencia de sincronización | ❓ Pendiente decisión | Webhook vs polling nocturno — depende de capacidad del SAAS de SIESA |
+| Arquitectura (API REST con token) | ✅ Definida | Tablas locales PostgreSQL + full sync vía management command |
+| Frecuencia de sincronización | 🟡 Full sync por ahora | Delta sync pendiente de que SIESA exponga filtro por fecha |
 | Definición estructura JSON | ✅ Parcial | Encabezado y líneas de SC/RQI documentados. Pendiente validar contra diccionario SIESA. |
 
 ### 1.4 Validaciones de negocio
@@ -47,12 +51,12 @@
 | Ítem | Estado | Detalle |
 |---|---|---|
 | Definición campo "Tercero" | ❓ Abierto | ¿Es el proveedor del alimento o el operador (CHVS)? Sin confirmar. |
-| Reglas para costos (promedio unitario) | ✅ Contemplado | Campo `costo_promedio_unitario` en diseño de `SiesaArticulo` |
+| Reglas para costos (promedio unitario) | ✅ Contemplado | Campo previsto en diseño de `SiesaArticulo` (pendiente de datos reales en `SiesaItem`) |
 | Alcance de terceros (proveedores/clientes) | ❓ Abierto | Pendiente confirmar con SIESA |
 
 **Preguntas críticas para llevar al Kickoff:**
 1. ¿Cada presentación de artículo tiene código propio en SIESA, o hay jerarquía artículo-variante?
-2. ¿Qué campo usa SIESA como llave de sede educativa? (confirmamos DANE)
+2. ¿El DANE es la llave de cruce suficiente entre `SedesEducativas` y `SiesaProyecto`?
 3. ¿El SAAS soporta webhooks o solo polling?
 4. ¿Quién es el "Tercero" en una SC/RQI del PAE?
 5. ¿Los tokens de prueba se entregan en el kickoff?
@@ -61,49 +65,45 @@
 
 ## FASE 2 — Diseño y Desarrollo (Días 11–30)
 
-Esta es la fase con mayor riesgo. Varios ítems tienen **dependencias internas** que deben resolverse en paralelo con SIESA o incluso antes.
-
 ### 2.1 Diseño de servicios (APIs)
 
 | Ítem | Estado | Responsable |
 |---|---|---|
-| Endpoint de maestros (artículos, bodegas, etc.) | 🔴 No iniciado | SIESA desarrolla — nosotros consumimos |
-| Endpoint de requisiciones (RQI) | 🔴 No iniciado | SIESA desarrolla |
-| Endpoint de solicitudes de compra (SC) | 🔴 No iniciado | SIESA desarrolla |
-
-> Estos endpoints los construye SIESA. Nosotros los consumimos desde `Api/`.
+| Endpoint de maestros (GET catálogos) | ✅ **Recibidos** | SIESA entregó — ya sincronizados |
+| Endpoint de requisiciones (RQI POST) | 🔴 No entregado | SIESA construye — pendiente |
+| Endpoint de solicitudes de compra (SC POST) | 🔴 No entregado | SIESA construye — pendiente |
 
 ### 2.2 Desarrollo de sincronización de maestros
 
 | Ítem | Estado | Archivo ERP_CHVS |
 |---|---|---|
-| Servicio unificado de consulta | ✅ **Implementado** | `Api/services/sync_service.py` |
-| Filtro por estado activo | 🟡 N/A por ahora | Full sync — endpoints SIESA no exponen filtro por fecha |
-| Parametrización dinámica de campos | ✅ **Implementado** | `Api/services/mappers.py` (mapper por catálogo) |
-| Modelos locales (11 catálogos reales) | ✅ **Implementado** | `Api/models.py` — campos 1:1 con JSON SIESA real |
-| Sincronización (full sync) | ✅ **Implementado** | `python manage.py sync_siesa [--catalogo X] [--dry-run]` |
-
-> **Desbloqueado**: credenciales y endpoints recibidos de SIESA (abril 2026). App activada, modelos creados, sync operativo. Pendiente: ejecutar `migrate` + primera sincronización en local.
+| Cliente HTTP (Basic Auth, retry, timeout) | ✅ **Implementado** | `Api/services/siesa_client.py` — clase `SiesaClient` |
+| Servicio unificado de consulta | ✅ **Implementado** | `Api/services/sync_service.py` — `sincronizar_todo()` / `sincronizar_catalogo()` |
+| Mappers JSON → modelo | ✅ **Implementado** | `Api/services/mappers.py` — `map_*()` por catálogo |
+| Modelos locales (11 catálogos + SyncLog) | ✅ **Implementado** | `Api/models.py` — campos 1:1 con JSON SIESA real |
+| Sincronización full sync | ✅ **Implementado** | `python manage.py sync_siesa [--catalogo X] [--dry-run]` |
+| Exploración de endpoints crudos | ✅ **Implementado** | `python manage.py explorar_siesa [--endpoint X] [--pretty]` |
+| Registro de historial de sync | ✅ **Implementado** | Modelo `SiesaSyncLog` — tabla `siesa_sync_log` |
+| Delta sync (filtro por fecha) | 🔴 Pendiente | Esperando que SIESA exponga filtro por fecha en sus endpoints |
+| **Frontend de catálogos (módulo SIESA)** | ✅ **Implementado** | `/siesa/` — índice + 11 listas read-only con DataTables. Solo `ADMINISTRACION`. |
 
 ### 2.3 Desarrollo módulo planeación (lado cliente) — ⚠️ RIESGO ALTO
 
-Este ítem depende de trabajo **interno nuestro** que todavía no existe. Si no lo arrancamos en paralelo con la Fase 1, llegamos tarde al Día 11.
-
 | Ítem | Estado | Archivo ERP_CHVS | Urgencia |
 |---|---|---|---|
-| Consumo de APIs SIESA (integrar catálogo real) | 🔴 No iniciado | `planeacion/views.py` | Después de tokens |
+| Consumo de APIs SIESA (integrar catálogo real) | 🔴 No iniciado | `planeacion/views.py` | Después de tokens POST |
 | **Modelo `ProgramacionMenus`** | 🔴 **No creado** | `planeacion/models.py` | 🔥 Arrancar YA |
 | **Interfaz de programación de menús** (calendario Despachos) | 🔴 **No iniciada** | `planeacion/` nuevo | 🔥 Arrancar YA |
 | **Modelo `Despacho`** (con rango fecha inicio/fin) | 🔴 **No creado** | `planeacion/models.py` | 🔥 Arrancar YA |
-| Interfaz de selección de ítems (catálogo Siesa) | 🔴 No iniciada | Depende de tokens | Después de tokens |
+| Interfaz de selección de ítems (catálogo Siesa) | 🔴 No iniciada | Depende de tokens POST | Después de tokens |
 | Manejo de unidades y presentaciones | ✅ Base lista | Match ICBF ya implementado | — |
 
 ### 2.4 Desarrollo de generación de documentos
 
 | Ítem | Estado | Archivo ERP_CHVS |
 |---|---|---|
-| Creación de solicitudes de compra (SC) | 🔴 No iniciado | `Api/` |
-| Creación de requisiciones (RQI) | 🔴 No iniciado | `Api/` |
+| Creación de solicitudes de compra (SC) | 🔴 No iniciado | `Api/` — bloqueado por endpoint POST SIESA |
+| Creación de requisiciones (RQI) | 🔴 No iniciado | `Api/` — bloqueado por endpoint POST SIESA |
 | Estructura de envío a SIESA | ✅ Diseñada | Definida en `PROPUESTA_INTEGRACION_SIESA.md` |
 | Servicio `calcular_necesidades_compra()` | 🔴 No iniciado | `planeacion/services.py` |
 | Lógica urbano (multi-RQI por categoría) vs rural (RQI única) | ✅ Diseñada | `DOC_07_LOGISTICA_RUTAS_Y_PERIODOS.md` |
@@ -113,9 +113,9 @@ Este ítem depende de trabajo **interno nuestro** que todavía no existe. Si no 
 
 | Ítem | Estado | Detalle |
 |---|---|---|
-| Rediseño tabla sedes/bodegas | 🟡 Parcial | `SedesEducativas.cod_dane` ↔ `SiesaProyecto.dane` diseñado. Confirmar con SIESA que el DANE es la llave de cruce suficiente. |
-| Campo `categoria_logistica` en artículos | 🔴 No iniciado | Depende de si SIESA ya lo tiene o hay que añadirlo manualmente. |
-| Campo `frecuencia_despacho` en sedes | 🔴 No iniciado | Diseñado en `DOC_07`. Necesario para sedes con pedido semanal consolidado. |
+| Cruce sedes/proyectos | 🟡 Parcial | `SedesEducativas.cod_dane` ↔ `SiesaProyecto.f107_id_referencia` — confirmar con SIESA que es la llave de cruce suficiente |
+| Campo `categoria_logistica` en artículos | 🔴 No iniciado | Depende de estructura real de `SiesaItem` cuando SIESA lo llene |
+| Campo `frecuencia_despacho` en sedes | 🔴 No iniciado | Diseñado en `DOC_07`. Necesario para sedes con pedido semanal consolidado |
 
 ---
 
@@ -123,8 +123,8 @@ Este ítem depende de trabajo **interno nuestro** que todavía no existe. Si no 
 
 | Ítem | Estado | Bloqueo |
 |---|---|---|
-| Conexión APIs ↔ sistema planeación | 🔴 No iniciado | Necesita tokens + Fase 2 completa |
-| Pruebas de sincronización de maestros | 🔴 No iniciado | Idem |
+| Conexión APIs POST ↔ sistema planeación | 🔴 No iniciado | Necesita endpoints POST SIESA + Fase 2 completa |
+| Pruebas de sincronización de maestros | 🟡 Parcial | GET ya funciona; POST pendiente |
 | Pruebas funcionales end-to-end | 🔴 No iniciado | Idem |
 | Ajustes y correcciones | 🔴 No iniciado | Idem |
 
@@ -143,8 +143,6 @@ Este ítem depende de trabajo **interno nuestro** que todavía no existe. Si no 
 
 ## Lo que SÍ está listo (ventaja sobre el cronograma)
 
-Estos elementos nos ponen adelantados en Fase 1 y parte de Fase 2:
-
 | Componente | Archivo | Estado |
 |---|---|---|
 | **Match ICBF → Compras (simulacro)** | `nutricion/views/match_icbf.py` + service | ✅ Completo y funcional |
@@ -156,14 +154,17 @@ Estos elementos nos ponen adelantados en Fase 1 y parte de Fase 2:
 | Arquitectura de integración documentada | `PROPUESTA_INTEGRACION_SIESA.md` | ✅ Flujo completo SC/RQI |
 | Estructura JSON SC/RQI | `PROPUESTA_INTEGRACION_SIESA.md` | ✅ Encabezado + líneas de detalle |
 | Reglas logísticas urbano/rural | `DOC_07_LOGISTICA_RUTAS_Y_PERIODOS.md` | ✅ Diseñadas |
+| **11 modelos locales SIESA + SyncLog** | `Api/models.py` | ✅ Campos 1:1 con JSON SIESA real |
+| **Cliente HTTP + sync service + mappers** | `Api/services/` | ✅ `SiesaClient`, `sincronizar_todo()`, `map_*()` |
+| **Comando sync_siesa** | `Api/management/commands/sync_siesa.py` | ✅ Full sync con `--catalogo` y `--dry-run` |
+| **Comando explorar_siesa** | `Api/management/commands/explorar_siesa.py` | ✅ Inspección de endpoints crudos |
+| **Frontend catálogos SIESA** | `Api/views.py` + `templates/Api/` | ✅ `/siesa/` — índice + 11 listas read-only |
 
 ---
 
 ## Lo que falta construir (trabajo interno crítico)
 
-Ordenado por prioridad:
-
-### Prioridad 1 — Arrancar en paralelo con Fase 1 SIESA
+### Prioridad 1 — Arrancar ya (no dependen de SIESA)
 
 | # | Qué | Dónde | Por qué urgente |
 |---|---|---|---|
@@ -172,46 +173,32 @@ Ordenado por prioridad:
 | 3 | Servicio `calcular_necesidades_compra()` | `planeacion/services.py` | Corazón del cálculo de compra |
 | 4 | Interfaz calendario (Generar / Consultar Despachos) | `planeacion/` | UI que consume los APIs de SIESA en Fase 2.3 |
 
-### Prioridad 2 — Arrancar cuando lleguen tokens SIESA
+### Prioridad 2 — Arrancar cuando lleguen endpoints POST SIESA
 
 | # | Qué | Dónde |
 |---|---|---|
-| 5 | Modelos locales Siesa (`SiesaArticulo`, `SiesaBodega`, etc.) | `Api/models.py` |
-| 6 | Cron job de sincronización delta | `Api/management/commands/sync_siesa.py` |
-| 7 | Conector SC | `Api/services.py` |
-| 8 | Conector RQI | `Api/services.py` |
-| 9 | Migrar FK `EquivalenciaICBFCompras` de simulacro → `SiesaArticulo` real | `nutricion/models.py` |
+| 5 | Conector SC | `Api/services/` |
+| 6 | Conector RQI | `Api/services/` |
+| 7 | Migrar FK `EquivalenciaICBFCompras` de simulacro → `SiesaItem` real | `nutricion/models.py` |
 
 ### Prioridad 3 — Después de validar con SIESA
 
 | # | Qué | Dónde |
 |---|---|---|
-| 10 | Campo `categoria_logistica` en artículos (abarrotes/congelados/refrigerados/fruver) | `Api/models.py` o `TablaIngredientesSiesa` |
-| 11 | Campo `frecuencia_despacho` en `SedesEducativas` (estándar vs semanal consolidado) | `planeacion/models.py` o `principal/models.py` |
-| 12 | Pre-validación de matches incompletos antes de despachar | `planeacion/services.py` |
-| 13 | Lógica multi-RQI por categoría (urbano) vs RQI única (rural) | `planeacion/services.py` + `Api/services.py` |
+| 8 | Campo `categoria_logistica` en artículos (abarrotes/congelados/refrigerados/fruver) | Depende de estructura real de `SiesaItem` |
+| 9 | Campo `frecuencia_despacho` en `SedesEducativas` | `planeacion/models.py` o `principal/models.py` |
+| 10 | Pre-validación de matches incompletos antes de despachar | `planeacion/services.py` |
+| 11 | Lógica multi-RQI por categoría (urbano) vs RQI única (rural) | `planeacion/services.py` + `Api/services/` |
+| 12 | Delta sync cuando SIESA exponga filtro por fecha | `Api/services/siesa_client.py` + `SiesaSyncLog` |
 
 ---
 
-## Ruta crítica — qué pasa si no arrancamos internamente
-
-```
-Días 1-10 (SIESA hace Fase 1)
-└── Si nosotros no construimos ProgramacionMenus + Despacho + Calendario
-         ↓
-Día 11 (SIESA arranca Fase 2.3 "módulo planeación lado cliente")
-└── No tenemos backend listo para conectar → SIESA no puede integrarse con nosotros
-         ↓
-Día 30 (fin Fase 2) → retraso de 2-3 semanas mínimo
-```
-
----
-
-## Dependencias bloqueantes al Día 1
+## Dependencias bloqueantes actuales
 
 | Bloqueante | Impacto | Responsable |
 |---|---|---|
-| Tokens y endpoints de prueba SIESA | Sin esto `Api/` no arranca | SIESA entrega en kickoff |
+| Endpoints POST SC/RQI de SIESA | Sin esto los conectores no arrancan | SIESA |
+| Llenar `SiesaItem` y `SiesaSolicitante` en SIESA | Sin esto el match ICBF no puede apuntar a artículos reales | SIESA |
 | Confirmar DANE como llave de sedes | Sin esto no se puede mapear `SedesEducativas` ↔ `SiesaProyecto` | Validar en Fase 1.4 |
 | Confirmar campo "Tercero" | Afecta encabezado de SC/RQI | Validar en Fase 1.4 |
-| Estructura del catálogo de artículos (código por presentación vs jerarquía) | Define si el match 1:N actual es suficiente o hay que refactorizar | Validar en Fase 1.2 |
+| Estructura real del catálogo de artículos | Define si el match 1:N actual es suficiente o hay que refactorizar | Cuando SIESA llene `ITEMS` |
