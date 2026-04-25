@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load group_tags %}
+
+{% block title %}Catálogos SIESA — ERP CHVS{% endblock %}
+
+{% block content %}
+<div class="container mt-4" id="siesa-dashboard-background">
+    <h2><i class="fas fa-database"></i> Catálogos SIESA</h2>
+    <p class="lead">Réplica local de los catálogos maestros sincronizados desde SIESA ERP.</p>
+
+    <div class="module-dashboard">
+
+        <!-- Proyectos -->
+        <a href="{% url 'Api:lista_proyectos' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-project-diagram"></i>
+            </div>
+            <div class="card-content">
+                <h3>Proyectos</h3>
+                <p>Sedes educativas y proyectos registrados en SIESA. {{ total_proyectos }} registro{{ total_proyectos|pluralize }}.</p>
+            </div>
+        </a>
+
+        <!-- Centros de Costo -->
+        <a href="{% url 'Api:lista_centros_costo' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-sitemap"></i>
+            </div>
+            <div class="card-content">
+                <h3>Centros de Costo</h3>
+                <p>Centros de costo para afectación presupuestal. {{ total_centros_costo }} registro{{ total_centros_costo|pluralize }}.</p>
+            </div>
+        </a>
+
+        <!-- Tipos de Documento -->
+        <a href="{% url 'Api:lista_tipos_documento' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-file-alt"></i>
+            </div>
+            <div class="card-content">
+                <h3>Tipos de Documento</h3>
+                <p>Tipos de documento transaccional en SIESA. {{ total_tipos_documento }} registro{{ total_tipos_documento|pluralize }}.</p>
+            </div>
+        </a>
+
+        <!-- Conceptos -->
+        <a href="{% url 'Api:lista_conceptos' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-tags"></i>
+            </div>
+            <div class="card-content">
+                <h3>Conceptos</h3>
+                <p>Conceptos de movimiento (ventas, compras, inventario). {{ total_conceptos }} registro{{ total_conceptos|pluralize }}.</p>
+            </div>
+        </a>
+
+        <!-- Motivos -->
+        <a href="{% url 'Api:lista_motivos' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-list-ul"></i>
+            </div>
+            <div class="card-content">
+                <h3>Motivos</h3>
+                <p>Motivos asociados a conceptos de movimiento. {{ total_motivos }} registro{{ total_motivos|pluralize }}.</p>
+            </div>
+        </a>
+
+        <!-- Unidades de Negocio -->
+        <a href="{% url 'Api:lista_unidades_negocio' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-briefcase"></i>
+            </div>
+            <div class="card-content">
+                <h3>Unidades de Negocio</h3>
+                <p>Unidades de negocio y contratos del operador. {{ total_unidades_negocio }} registro{{ total_unidades_negocio|pluralize }}.</p>
+            </div>
+        </a>
+
+        <!-- Ubicaciones / Bodegas -->
+        <a href="{% url 'Api:lista_ubicaciones' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-warehouse"></i>
+            </div>
+            <div class="card-content">
+                <h3>Ubicaciones / Bodegas</h3>
+                <p>Ubicaciones físicas y bodegas del operador. {{ total_ubicaciones }} registro{{ total_ubicaciones|pluralize }}.</p>
+            </div>
+        </a>
+
+        <!-- Instalaciones -->
+        <a href="{% url 'Api:lista_instalaciones' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-industry"></i>
+            </div>
+            <div class="card-content">
+                <h3>Instalaciones</h3>
+                <p>Instalaciones físicas (cocinas, plantas). {{ total_instalaciones }} registro{{ total_instalaciones|pluralize }}.</p>
+            </div>
+        </a>
+
+        <!-- Centros de Operación -->
+        <a href="{% url 'Api:lista_centros_operacion' %}" class="card">
+            <div class="card-icon">
+                <i class="fas fa-cogs"></i>
+            </div>
+            <div class="card-content">
+                <h3>Centros de Operación</h3>
+                <p>Centros de operación del operador. {{ total_centros_operacion }} registro{{ total_centros_operacion|pluralize }}.</p>
+            </div>
+        </a>
+
+        <!-- Solicitantes (vacío en SIESA) -->
+        <a href="{% url 'Api:lista_solicitantes' %}" class="card siesa-card-pending">
+            <div class="card-icon">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <div class="card-content">
+                <h3>Solicitantes</h3>
+                <p>Pendiente de datos SIESA. {{ total_solicitantes }} registro{{ total_solicitantes|pluralize }} actualmente.</p>
+            </div>
+        </a>
+
+        <!-- Items / Plan de Cuentas (vacío en SIESA) -->
+        <a href="{% url 'Api:lista_items' %}" class="card siesa-card-pending">
+            <div class="card-icon">
+                <i class="fas fa-boxes"></i>
+            </div>
+            <div class="card-content">
+                <h3>Items (Plan de Cuentas)</h3>
+                <p>Pendiente de datos SIESA. {{ total_items }} registro{{ total_items|pluralize }} actualmente.</p>
+            </div>
+        </a>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ titulo }} — SIESA — ERP CHVS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="siesa-container">
+
+    <div class="page-header">
+        <div class="header-left">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb siesa-breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'Api:siesa_index' %}"><i class="fas fa-database"></i> SIESA</a>
+                    </li>
+                    <li class="breadcrumb-item active">{{ titulo }}</li>
+                </ol>
+            </nav>
+            <h2>{{ titulo }}</h2>
+            <p>Catálogo sincronizado desde SIESA ERP — solo lectura.</p>
+        </div>
+    </div>
+
+    {% if vacio_es_esperado %}
+    <div class="siesa-pending-banner">
+        <i class="fas fa-clock"></i>
+        <div>
+            <strong>Catálogo pendiente de datos SIESA</strong>
+            <p>Este catálogo aún no tiene registros en el sistema SIESA. Estará disponible cuando SIESA lo llene y se ejecute una nueva sincronización con <code>python manage.py sync_siesa</code>.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if filas %}
+    <div class="table-container">
+        <table id="tablaCatalogo" class="data-table table table-hover w-100">
+            <thead>
+                <tr>
+                    {% for col in columnas %}
+                    <th>{{ col }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in filas %}
+                <tr>
+                    {% for celda in fila %}
+                    <td>{{ celda }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% elif not vacio_es_esperado %}
+    <div class="siesa-empty-state">
+        <i class="fas fa-inbox"></i>
+        <p>No hay registros en este catálogo.</p>
+        <small>Ejecuta <code>python manage.py sync_siesa</code> para sincronizar los catálogos desde SIESA.</small>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if filas %}
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script>
+(function () {
+    const pageLength = {{ page_length }};
+    const colCount = {{ columnas|length }};
+    $('#tablaCatalogo').DataTable({
+        pageLength: pageLength,
+        language: {
+            url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+        },
+        order: [[0, 'asc']],
+        columnDefs: [
+            { targets: colCount - 1, orderable: false }
+        ]
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

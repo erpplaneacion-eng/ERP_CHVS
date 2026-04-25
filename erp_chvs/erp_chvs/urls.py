@@ -40,6 +40,7 @@ urlpatterns = [
     path('calidad/', include(('calidad.urls', 'calidad'), namespace='calidad')),
     path('agente/', include(('agente.urls', 'agente'), namespace='agente')),
     path('contabilidad/', include(('contabilidad.urls', 'contabilidad'), namespace='contabilidad')),
+    path('siesa/', include(('Api.urls', 'Api'), namespace='Api')),
 ]
 
 # Servir archivos media en desarrollo Y producción

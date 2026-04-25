@@ -33,6 +33,8 @@
     <link rel="stylesheet" href="{% static 'css/modules/calidad.css' %}">
     {% elif request.resolver_match.app_name == 'contabilidad' %}
     <link rel="stylesheet" href="{% static 'css/modules/contabilidad.css' %}">
+    {% elif request.resolver_match.app_name == 'Api' %}
+    <link rel="stylesheet" href="{% static 'css/modules/siesa.css' %}">
     {% endif %}
 
     {% block extra_css %}{% endblock %}
@@ -116,6 +118,13 @@
                     <li><a href="{% url 'contabilidad:principal' %}"
                             class="nav-contabilidad {% if request.resolver_match.app_name == 'contabilidad' %}active{% endif %}">
                             <i class="fas fa-calculator"></i><span>Contabilidad</span>
+                        </a></li>
+                    {% endif %}
+
+                    {% if user|has_group:"ADMINISTRACION" %}
+                    <li><a href="{% url 'Api:siesa_index' %}"
+                            class="nav-siesa {% if request.resolver_match.app_name == 'Api' %}active{% endif %}">
+                            <i class="fas fa-database"></i><span>SIESA</span>
                         </a></li>
                     {% endif %}
                 </ul>
