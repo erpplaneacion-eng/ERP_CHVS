@@ -16,7 +16,7 @@ Cada app tiene su propio `CLAUDE.md` con modelos, servicios, endpoints y flujos 
 |-----|---------------|-------------|
 | `principal` | [principal/CLAUDE.md](erp_chvs/principal/CLAUDE.md) | Datos maestros, RBAC, audit logging, template tags |
 | `nutricion` | [nutricion/CLAUDE.md](erp_chvs/nutricion/CLAUDE.md) | Menús, preparaciones, análisis nutricional, semaforización, match ICBF |
-| `planeacion` | [planeacion/CLAUDE.md](erp_chvs/planeacion/CLAUDE.md) | Programas, raciones, ciclos de menús |
+| `planeacion` | [planeacion/CLAUDE.md](erp_chvs/planeacion/CLAUDE.md) | Programas, raciones, ciclos de menús, despachos hacia SIESA |
 | `facturacion` | [facturacion/CLAUDE.md](erp_chvs/facturacion/CLAUDE.md) | Carga Excel PAE, PDFs de asistencia |
 | `costos` | [costos/CLAUDE.md](erp_chvs/costos/CLAUDE.md) | Matriz de costos nutricionales, export Excel |
 | `logistica` | [logistica/CLAUDE.md](erp_chvs/logistica/CLAUDE.md) | Rutas de entrega, asignación de sedes |
@@ -71,6 +71,10 @@ python manage.py rellenar_pool         # Llena pool de borradores IA (min 20/mod
 python manage.py rellenar_pool --min 10 --modalidad "COMPLEMENTO PM"
 python manage.py ingestar_normativo    # Ingesta normativos PAE a Pinecone (RAG)
 python manage.py ingestar_normativo --archivo /ruta/archivo.json --dry-run
+python manage.py explorar_siesa        # Descarga JSON crudo de los 11 endpoints SIESA a logs/siesa_samples/
+python manage.py sync_siesa            # Sincroniza todos los catálogos SIESA a BD local (full sync)
+python manage.py sync_siesa --catalogo PROYECTOS   # Solo un catálogo
+python manage.py sync_siesa --dry-run  # Simula sin escribir en BD
 ```
 
 ## Estructura del proyecto
@@ -89,7 +93,7 @@ ERP_CHVS/
 │   ├── agente/            # Generador IA (Gemini) + NIA chat
 │   ├── contabilidad/      # Flujo contable de facturas
 │   ├── dashboard/         # Entrada post-login
-│   ├── Api/               # [Planificado] Integración SIESA — stub vacío
+│   ├── Api/               # Integración SIESA ERP — catálogos locales activos
 │   ├── static/            # CSS/JS por módulo
 │   └── templates/         # base.html + subdirectorios por app
 ├── archivos excel/        # Directorio de entrada/salida Excel
@@ -110,6 +114,11 @@ ERP_CHVS/
 PrincipalDepartamento → PrincipalMunicipio → InstitucionesEducativas → SedesEducativas
                                 ↓
                             Programa → PlanificacionRaciones → ListadosFocalizacion
+
+Api/ (catálogos SIESA — réplica fiel 1:1, solo lectura desde el ERP):
+  SiesaProyecto, SiesaCentroCosto, SiesaUbicacion, SiesaItem, SiesaUnidadNegocio,
+  SiesaCentroOperacion, SiesaInstalacion, SiesaTipoDocumento, SiesaConcepto, SiesaMotivo
+  └── Los cruces con modelos del ERP se hacen en las apps consumidoras (planeacion, nutricion)
 ```
 
 > **Gotcha de modelos duplicados**: `planeacion` define sus propios `InstitucionesEducativas` (`db_table='instituciones_educativas'`) y `SedesEducativas` (`db_table='sedes_educativas'`) que apuntan a las mismas tablas que `principal`. Al hacer queries cross-app, importar desde la app correcta según el contexto para evitar conflictos de migraciones.
@@ -236,7 +245,6 @@ Archivos afectados: `nutricion/services/analisis_service.py` (bloque `logo_path`
 - Migraciones: directorios `migrations/` por app
 - Backup: `python manage.py loaddata backup_utf8.json`
 
-## Apps no activas
+## Apps eliminadas
 
-- `Api/` — integración SIESA planificada. Ver `planeacion/PROPUESTA_INTEGRACION_SIESA.md`
 - `ocr_validation`, `iagenerativa` — eliminadas
