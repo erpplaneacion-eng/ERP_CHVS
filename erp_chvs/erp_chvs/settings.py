@@ -145,6 +145,7 @@ if not DEBUG:
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # Servir archivos estáticos en producción
+    'principal.middleware.ResponseTimingMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -357,6 +358,11 @@ LOGGING = {
         'Api.siesa_client': {
             'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+        'timing': {
+            'handlers': ['console'],
+            'level': 'INFO',
             'propagate': False,
         },
     },

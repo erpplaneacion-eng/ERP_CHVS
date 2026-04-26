@@ -1,6 +1,29 @@
+import time
+import logging
+
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.urls import resolve
+
+logger = logging.getLogger('timing')
+
+
+class ResponseTimingMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        t0 = time.monotonic()
+        response = self.get_response(request)
+        ms = (time.monotonic() - t0) * 1000
+
+        # Solo loguear vistas dinámicas (no estáticos)
+        path = request.path
+        if not path.startswith('/static/') and not path.startswith('/favicon'):
+            nivel = logging.WARNING if ms > 1000 else logging.INFO
+            logger.log(nivel, f"[{ms:7.1f}ms] {request.method} {path} → {response.status_code}")
+
+        return response
 
 
 class RoleAccessMiddleware:
